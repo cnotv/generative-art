@@ -68,20 +68,34 @@ export const boneNamesInGroups = (
 ): Set<string> =>
   new Set(bones.filter((bone) => groups.has(boneBodyPartGroup(bone))).map((bone) => bone.name))
 
+/** Which config field holds each group's Merge Target flag. */
+const TARGET_CONFIG_KEY: Record<RigBodyPartGroup, keyof RigAnimatorConfig> = {
+  leftArm: 'targetLeftArm',
+  rightArm: 'targetRightArm',
+  leftLeg: 'targetLeftLeg',
+  rightLeg: 'targetRightLeg',
+  spineHead: 'targetSpineHead'
+}
+
 /**
- * Read the five "Merge Target" config checkboxes into the set of groups they select.
+ * Read the five Merge Target config flags into the set of groups they select.
  * @param config The rig animator's current config
- * @returns The groups whose checkbox is on
+ * @returns The groups whose flag is on
  */
 export const selectedBodyPartGroups = (config: RigAnimatorConfig): Set<RigBodyPartGroup> =>
-  new Set(
-    [
-      ['leftArm', config.targetLeftArm],
-      ['rightArm', config.targetRightArm],
-      ['leftLeg', config.targetLeftLeg],
-      ['rightLeg', config.targetRightLeg],
-      ['spineHead', config.targetSpineHead]
-    ]
-      .filter(([, enabled]) => enabled)
-      .map(([group]) => group) as RigBodyPartGroup[]
-  )
+  new Set(RIG_BODY_PART_GROUPS.filter((group) => config[TARGET_CONFIG_KEY[group]] as boolean))
+
+/**
+ * Flip one group's Merge Target flag, leaving every other config field untouched — the pure
+ * logic behind clicking a region of the Merge Target diagram.
+ * @param config The rig animator's current config
+ * @param group The clicked group
+ * @returns A new config with only that group's flag flipped
+ */
+export const toggleBodyPartGroupTarget = (
+  config: RigAnimatorConfig,
+  group: RigBodyPartGroup
+): RigAnimatorConfig => {
+  const key = TARGET_CONFIG_KEY[group]
+  return { ...config, [key]: !config[key] }
+}

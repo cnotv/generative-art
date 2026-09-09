@@ -43,7 +43,13 @@ import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { frameCameraOnModel } from './cameraFraming'
 import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
-import { selectedBodyPartGroups, RIG_BODY_PART_GROUP_LABELS } from './bodyPartGroups'
+import {
+  selectedBodyPartGroups,
+  toggleBodyPartGroupTarget,
+  RIG_BODY_PART_GROUP_LABELS,
+  type RigBodyPartGroup
+} from './bodyPartGroups'
+import MergeTargetDiagram from './MergeTargetDiagram.vue'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
 import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
@@ -108,7 +114,7 @@ const cameraPoseMappingOptions = computed(() => ({
 }))
 
 /** Which body-part groups the next capture, photo or preset is allowed to touch, read from the
- * Config panel's "Merge Target" checkboxes; see `bodyPartGroups.ts`. */
+ * Merge Target diagram's own toggled regions; see `bodyPartGroups.ts`. */
 const targetBodyPartGroups = computed(() => selectedBodyPartGroups(reactiveConfig.value))
 const targetBodyPartGroupLabels = computed(() =>
   [...targetBodyPartGroups.value].map((group) => RIG_BODY_PART_GROUP_LABELS[group])
@@ -288,6 +294,11 @@ const handleTogglePlayback = (): void => {
 const toggleCameraCapture = (): void => {
   if (showCameraCapture.value) handleCloseCamera()
   else showCameraCapture.value = true
+}
+
+/** A region of the Merge Target diagram was clicked or activated by keyboard. */
+const handleToggleBodyPartGroup = (group: RigBodyPartGroup): void => {
+  reactiveConfig.value = toggleBodyPartGroupTarget(reactiveConfig.value, group)
 }
 
 /** The docked physics icon turns the simulation on or off, same toggle shape as the camera one. */
@@ -568,6 +579,12 @@ onUnmounted(() => {
       <Circle />
     </IconButton>
   </div>
+  <MergeTargetDiagram
+    v-if="rig.boneNames.value.length > 0"
+    class="rig-merge-target-diagram"
+    :active-groups="targetBodyPartGroups"
+    @toggle-group="handleToggleBodyPartGroup"
+  />
   <RigTimeline
     ref="rigTimelineReference"
     :frame="reactiveConfig.frame"
@@ -625,6 +642,13 @@ canvas {
   z-index: var(--z-overlay);
   display: flex;
   gap: var(--spacing-2);
+}
+
+.rig-merge-target-diagram {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--spacing-3) + var(--btn-sm-height) + var(--spacing-3));
+  left: var(--spacing-3);
+  z-index: var(--z-overlay);
 }
 
 .rig-canvas-controls__hidden-input {

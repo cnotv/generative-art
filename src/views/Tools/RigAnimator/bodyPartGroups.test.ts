@@ -6,6 +6,7 @@ import {
   boneBodyPartGroup,
   boneNamesInGroups,
   selectedBodyPartGroups,
+  toggleBodyPartGroupTarget,
   type RigBodyPartGroup
 } from './bodyPartGroups'
 import type { RigAnimatorConfig } from './types'
@@ -100,5 +101,40 @@ describe('selectedBodyPartGroups', () => {
 
   it('returns an empty set when every flag is false', () => {
     expect(selectedBodyPartGroups(baseConfig).size).toBe(0)
+  })
+})
+
+describe('toggleBodyPartGroupTarget', () => {
+  const baseConfig = {
+    targetLeftArm: false,
+    targetRightArm: false,
+    targetLeftLeg: false,
+    targetRightLeg: false,
+    targetSpineHead: false
+  } as unknown as RigAnimatorConfig
+
+  it.each(RIG_BODY_PART_GROUPS)('flips only the clicked group (%s) on from off', (group) => {
+    const next = toggleBodyPartGroupTarget(baseConfig, group)
+    const groupsOn = selectedBodyPartGroups(next)
+    expect(groupsOn).toEqual(new Set([group]))
+  })
+
+  it('flips the clicked group back off, leaving every other flag as it was', () => {
+    const allOn = {
+      ...baseConfig,
+      targetLeftArm: true,
+      targetRightArm: true,
+      targetSpineHead: true
+    }
+    const next = toggleBodyPartGroupTarget(allOn, 'leftArm')
+    expect(selectedBodyPartGroups(next)).toEqual(
+      new Set<RigBodyPartGroup>(['rightArm', 'spineHead'])
+    )
+  })
+
+  it('returns a new config object rather than mutating the one passed in', () => {
+    const next = toggleBodyPartGroupTarget(baseConfig, 'leftLeg')
+    expect(next).not.toBe(baseConfig)
+    expect(baseConfig.targetLeftLeg).toBe(false)
   })
 })

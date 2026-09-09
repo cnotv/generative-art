@@ -37,12 +37,7 @@ export const buildRigAnimatorSchema = (
           }
         },
         resetBone: { callback: 'resetBone', label: 'Reset Bone to Rest Pose' },
-        showBoneMarkers: { checkbox: true, label: 'Show Bone Markers' },
-        targetLeftArm: { checkbox: true, label: 'Merge Target: Left Arm', sectionStart: true },
-        targetRightArm: { checkbox: true, label: 'Merge Target: Right Arm' },
-        targetLeftLeg: { checkbox: true, label: 'Merge Target: Left Leg' },
-        targetRightLeg: { checkbox: true, label: 'Merge Target: Right Leg' },
-        targetSpineHead: { checkbox: true, label: 'Merge Target: Spine / Head' }
+        showBoneMarkers: { checkbox: true, label: 'Show Bone Markers' }
       }
     : {}),
   ...(canCaptureFromCamera
