@@ -4,27 +4,21 @@ import {
   ROTATION_CONTROL,
   CAMERA_SMOOTHING_FACTOR_RANGE,
   CAMERA_REACH_MULTIPLIER_RANGE,
-  CAMERA_MAX_JUMP_RANGE
+  CAMERA_MAX_JUMP_RANGE,
+  MARBLE_SPAWN_INTERVAL_RANGE,
+  ENCLOSURE_OPACITY_RANGE,
+  ENCLOSURE_SIZE_RANGE
 } from './config'
 
-/**
- * Build the config panel schema for the rig animator. Rebuilt whenever the bone list or the
- * auto-rig availability changes, since those decide which rows even make sense to show. Frame
- * scheduling and import/export (playback, keyframes, the frame axis, poses in and GLB/JSON out)
- * live on the dedicated rig timeline instead of in this panel. Uploading a model and capturing a
- * pose from the camera are both triggered from buttons docked on the canvas itself instead of a
- * panel row, since both are about what is happening in the 3D view rather than a setting.
- * @param boneNames Every bone in the loaded rig, empty when nothing is rigged yet
- * @param needsAutoRig Whether the loaded model has meshes but no skeleton
- * @param positionRange The +/- range the Bone Position field offers, scaled to the loaded rig
- * @param canCaptureFromCamera Whether the loaded rig has the bones camera pose capture needs
- * @returns The schema to hand to registerViewConfig/updateViewSchema
- */
+/** Rebuilt whenever the bone list or the auto-rig availability changes, since those decide
+ * which rows even make sense to show. Playback, keyframes and import/export live on the
+ * dedicated rig timeline instead of in this panel. */
 export const buildRigAnimatorSchema = (
   boneNames: string[],
   needsAutoRig: boolean,
   positionRange: number,
-  canCaptureFromCamera: boolean
+  canCaptureFromCamera: boolean,
+  physicsEnabled: boolean
 ): ConfigControlsSchema => ({
   ...(needsAutoRig ? { autoRig: { callback: 'autoRig', label: 'Auto-rig as Humanoid' } } : {}),
   ...(boneNames.length > 0
@@ -71,6 +65,20 @@ export const buildRigAnimatorSchema = (
           label: 'Camera Pose: Max Jump (Live Feed)'
         },
         cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
+      }
+    : {}),
+  physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },
+  ...(physicsEnabled
+    ? {
+        marbleFlowEnabled: { checkbox: true, label: 'Physics: Spawn Marbles' },
+        marbleSpawnInterval: {
+          ...MARBLE_SPAWN_INTERVAL_RANGE,
+          label: 'Physics: Marble Flow (Frames)'
+        },
+        marbleTextures: { checkbox: true, label: 'Physics: Marble Textures' },
+        respawnMarbles: { callback: 'respawnMarbles', label: 'Physics: Reset Marbles' },
+        enclosureSize: { ...ENCLOSURE_SIZE_RANGE, label: 'Physics: Wall Size' },
+        enclosureOpacity: { ...ENCLOSURE_OPACITY_RANGE, label: 'Physics: Wall Opacity' }
       }
     : {}),
   fps: { min: 1, max: 60, step: 1, label: 'FPS', sectionStart: true }

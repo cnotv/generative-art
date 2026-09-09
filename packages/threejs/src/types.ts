@@ -22,6 +22,9 @@ export interface CommonOptions {
   type?: ModelType
   weight?: number
   enabledRotations?: [boolean, boolean, boolean]
+  /** Continuous collision detection: sweeps the body's whole path each step, for anything fast
+   * enough to pass through what it should hit. */
+  ccd?: boolean
 }
 
 export interface ModelOptions extends CommonOptions {
@@ -39,7 +42,7 @@ export interface ModelOptions extends CommonOptions {
   setUV2?: boolean
   rotation?: CoordinateTuple
   scale?: CoordinateTuple
-  shape?: 'cuboid' | 'ball' | 'cylinder'
+  shape?: 'cuboid' | 'ball' | 'cylinder' | 'capsule'
   castShadow?: boolean
   receiveShadow?: boolean
   hasGravity?: boolean
@@ -81,7 +84,7 @@ export interface ModelOptions extends CommonOptions {
 }
 
 export interface PhysicOptions extends CommonOptions {
-  shape?: 'cuboid' | 'ball' | 'cylinder'
+  shape?: 'cuboid' | 'ball' | 'cylinder' | 'capsule'
 }
 
 export interface StatsLike {

@@ -17,4 +17,10 @@ export interface RigAnimatorConfig {
   cameraSmoothingFactor: number
   cameraMaxJump: number
   cameraShowPreview: boolean
+  physicsEnabled: boolean
+  marbleFlowEnabled: boolean
+  marbleSpawnInterval: number
+  marbleTextures: boolean
+  enclosureSize: number
+  enclosureOpacity: number
 }

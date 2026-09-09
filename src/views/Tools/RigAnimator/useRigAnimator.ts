@@ -4,14 +4,11 @@ import { useRigKeyframes } from './useRigKeyframes'
 import { useRigCameraPose } from './useRigCameraPose'
 import { useRigHandPose } from './useRigHandPose'
 import { useRigRecordedPresets } from './useRigRecordedPresets'
+import { useRigPhysics } from './useRigPhysics'
 import type { RigAnimatorConfig } from './types'
 
-/**
- * Composes the rig/model state with the pose-keyframe, camera-pose-capture and hand-pose state
- * for the rig animator tool. Split across composables so each stays focused: one owns the loaded
- * model and its rig, one owns the authored keyframes and the clips built from them, one owns
- * mapping a detected camera pose onto the rig, and one owns applying a canned hand pose.
- */
+/** Composes the rig/model, keyframe, camera-pose-capture, hand-pose and physics state for the
+ * rig animator tool, each split into its own focused composable. */
 export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   const rigModel = useRigModel(config)
   const rigKeyframes = useRigKeyframes(
@@ -27,11 +24,20 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   )
   const rigHandPose = useRigHandPose(rigModel.bones, config, rigModel.getRestQuaternions)
   const recordedPresets = useRigRecordedPresets()
+  const rigPhysics = useRigPhysics(config, rigModel.bones, rigModel.model)
 
-  /** Load a model and drop whatever keyframes belonged to the one it replaces. */
+  /** Point both the renderer's scene and the physics world at the same scene. */
+  const setScene = (scene: Parameters<typeof rigModel.setScene>[0]): void => {
+    rigModel.setScene(scene)
+    rigPhysics.setPhysicsScene(scene)
+  }
+
+  /** Load a model and drop whatever keyframes and bodies belonged to the one it replaces. */
   const loadModel = async (url: string): Promise<void> => {
+    rigPhysics.clearPhysics()
     await rigModel.loadModel(url)
     rigKeyframes.reset()
+    rigPhysics.rebuildPhysics()
   }
 
   /** Capture the rig's current pose as a keyframe at the panel's current frame. */
@@ -69,6 +75,8 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     ...rigCameraPose,
     ...rigHandPose,
     ...recordedPresets,
+    ...rigPhysics,
+    setScene,
     loadModel,
     addKeyframe,
     captureKeyframeSilently,

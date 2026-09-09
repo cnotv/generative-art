@@ -14,7 +14,7 @@ import {
   type HandSide,
   type HandPoseDefinition
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -33,7 +33,10 @@ import {
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
-  RIG_TIMELINE_KEYBOARD_MAPPING
+  RIG_TIMELINE_KEYBOARD_MAPPING,
+  DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
+  DEFAULT_ENCLOSURE_SIZE_FRACTION,
+  DEFAULT_ENCLOSURE_OPACITY
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
@@ -80,7 +83,13 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
-  cameraShowPreview: false
+  cameraShowPreview: false,
+  physicsEnabled: false,
+  marbleFlowEnabled: false,
+  marbleSpawnInterval: DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
+  marbleTextures: true,
+  enclosureSize: DEFAULT_ENCLOSURE_SIZE_FRACTION,
+  enclosureOpacity: DEFAULT_ENCLOSURE_OPACITY
 })
 
 const cameraPoseMappingOptions = computed(() => ({
@@ -227,7 +236,8 @@ const refreshSchema = (): void => {
       rig.boneNames.value,
       rig.needsAutoRig.value,
       rig.positionRange.value,
-      rig.canCaptureFromCamera.value
+      rig.canCaptureFromCamera.value,
+      reactiveConfig.value.physicsEnabled
     )
   )
 }
@@ -259,6 +269,22 @@ const handleToggleRecord = (): void => {
 const handleTogglePlayback = (): void => {
   if (!rig.isPlaying.value && motionRecording.isRecording.value) stopRecordingAndCommit()
   rig.togglePlayback()
+}
+
+/** The docked camera icon opens the capture dialog, or closes it again if it is already open. */
+const toggleCameraCapture = (): void => {
+  if (showCameraCapture.value) handleCloseCamera()
+  else showCameraCapture.value = true
+}
+
+/** The docked physics icon turns the simulation on or off, same toggle shape as the camera one. */
+const togglePhysics = (): void => {
+  reactiveConfig.value.physicsEnabled = !reactiveConfig.value.physicsEnabled
+}
+
+/** The docked marble icon starts or stops the flow; the enclosing walls follow the same switch. */
+const toggleMarbleFlow = (): void => {
+  reactiveConfig.value.marbleFlowEnabled = !reactiveConfig.value.marbleFlowEnabled
 }
 
 /**
@@ -349,23 +375,50 @@ watch(
   () => reactiveConfig.value.cameraShowPreview,
   () => updateCameraCentering()
 )
+watch(
+  () => reactiveConfig.value.physicsEnabled,
+  () => {
+    rig.rebuildPhysics()
+    refreshSchema()
+  }
+)
+watch(
+  () => [reactiveConfig.value.marbleFlowEnabled, reactiveConfig.value.marbleSpawnInterval],
+  () => rig.updateMarbleFlow()
+)
+watch(
+  // The walls only show while marbles are flowing: the two switches move together.
+  () => [
+    reactiveConfig.value.marbleFlowEnabled,
+    reactiveConfig.value.enclosureSize,
+    reactiveConfig.value.enclosureOpacity
+  ],
+  () => rig.rebuildEnclosure()
+)
 
 const init = async (): Promise<void> => {
   if (!canvas.value) return
-  const { setup, animate, scene, camera, renderer, setActiveCamera } = await getTools({
+  const { setup, animate, scene, camera, renderer, setActiveCamera, world } = await getTools({
     canvas: canvas.value,
     onProgress: handleProgress
   })
 
   rig.setScene(scene)
+  rig.setWorld(world)
   cameraReference = camera
+
+  const timeline = createTimelineManager()
+  rig.setTimeline(timeline)
 
   const { orbit } = await setup({
     config: RIG_ANIMATOR_SETUP_CONFIG,
     defineSetup: async () => {
       animate({
-        beforeTimeline: () => rig.tickPlayback(),
-        timeline: createTimelineManager()
+        beforeTimeline: () => {
+          rig.tickPlayback()
+          rig.tickPhysics()
+        },
+        timeline
       })
     }
   })
@@ -409,7 +462,7 @@ onMounted(async () => {
   registerViewConfig(
     routeName,
     reactiveConfig,
-    buildRigAnimatorSchema([], false, rig.positionRange.value, false),
+    buildRigAnimatorSchema([], false, rig.positionRange.value, false, false),
     undefined,
     {
       autoRig: () => {
@@ -418,6 +471,9 @@ onMounted(async () => {
       },
       resetBone: () => {
         rig.resetSelectedBone()
+      },
+      respawnMarbles: () => {
+        rig.rebuildMarbles()
       }
     }
   )
@@ -445,6 +501,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateCameraCentering)
   onWindowPointerUp()
   timelineControls?.destroyControls()
+  rig.clearPhysics()
   unregisterViewConfig(routeName)
   clearViewPanels()
   clearSceneElements()
@@ -469,10 +526,29 @@ onUnmounted(() => {
       v-if="rig.canCaptureFromCamera.value"
       size="sm"
       variant="outline"
-      title="Capture Pose from Camera"
-      @click="showCameraCapture = true"
+      :title="showCameraCapture ? 'Stop Camera Capture' : 'Capture Pose from Camera'"
+      @click="toggleCameraCapture"
     >
       <CameraIcon />
+    </IconButton>
+    <IconButton
+      size="sm"
+      variant="outline"
+      :active="reactiveConfig.physicsEnabled"
+      :title="reactiveConfig.physicsEnabled ? 'Disable Physics' : 'Enable Physics'"
+      @click="togglePhysics"
+    >
+      <Lightbulb />
+    </IconButton>
+    <IconButton
+      v-if="reactiveConfig.physicsEnabled"
+      size="sm"
+      variant="outline"
+      :active="reactiveConfig.marbleFlowEnabled"
+      :title="reactiveConfig.marbleFlowEnabled ? 'Stop Marble Flow' : 'Start Marble Flow'"
+      @click="toggleMarbleFlow"
+    >
+      <Circle />
     </IconButton>
   </div>
   <RigTimeline

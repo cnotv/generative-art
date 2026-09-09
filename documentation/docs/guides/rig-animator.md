@@ -80,6 +80,15 @@ exist, so two poses are already a movement.
   plain keyframe delete
 - `src/views/Tools/RigAnimator/useRigBoneMarkerVisibility.ts`: whether the rig's bone markers
   render, re-applied whenever the markers are recreated
+- `src/views/Tools/RigAnimator/rigColliders.ts` (+ `.test.ts`): pure derivation of one capsule
+  per bone segment from the loaded skeleton, and the per-frame read of where that capsule sits
+- `src/views/Tools/RigAnimator/marbles.ts` (+ `.test.ts`): pure helpers for one marble's drop
+  point, radius and texture, picking the texture from the Marble Editor's own marble assets
+- `src/views/Tools/RigAnimator/rigPhysicsObjects.ts`: creating and disposing the bone capsules,
+  a marble, the enclosing walls, the hanging lamp and the touch-sensor spawn cube
+- `src/views/Tools/RigAnimator/useRigPhysics.ts`: owns those bodies, driving the continuous
+  marble flow as a timeline action, following the posed bones each frame and checking each frame
+  whether a bone is touching the spawn cube
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
@@ -98,7 +107,11 @@ a rigged glTF character), the bone list appears immediately. The camera re-frame
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
 typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
 
-![Upload Model and Capture Pose from Camera docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
+A third docked button, Physics, sits beside these two. Once it is on, a fourth joins it, Marble
+Flow, which starts and stops the drip; dropping one on demand is a touch, not a button, covered
+in its own section below along with Physics.
+
+![Upload Model, Capture Pose from Camera and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
@@ -551,6 +564,84 @@ A **Record Motion** take that captured any real motion appears in the same dropd
 "Recording 1", "Recording 2" and so on, so a captured performance can be reloaded and replayed
 without re-recording it. These entries are session-only — a refresh drops them, the same as
 every unsaved edit that is not the autosave.
+
+## Dropping marbles on the pose
+
+**Physics**, docked on the canvas next to Upload Model and Capture Pose from Camera, turns the
+posed rig into something other objects can hit. It is a way to see a pose as a physical shape
+rather than a silhouette: a cupped hand catches marbles, a flat one does not, and playing the
+timeline back sweeps them around as the limbs move through them. It mirrors the Config panel's
+own **Physics: Simulate** checkbox, the same toggle either way.
+
+![The rig in its rest pose with physics on: a cone-shaded lamp hanging close against its right side and a touch-sensor cube further out past its left hand](/img/animation/rig-physics-lamp-cube.webp)
+
+Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure,
+a heavy cone-shaded lamp hung close to the camera on a rigid pivot arm, and a cube on the rig's
+other side. The lamp barely swings and gravity pulls it straight back to hanging still, the way
+a real fixture would rather than a pendulum. The cube is a touch sensor, not a button: it has no
+collision response of its own, so posing a hand into it does not push it, but the moment a bone
+overlaps it a marble drops, the same as pressing a spawn button would, except the model itself is
+what presses it. A fourth docked button, Marble Flow, joins Physics once it is on, starting and
+stopping the drip described below.
+
+<video controls loop muted playsinline width="720" src="/video/animation/rig-physics-demo.webm">
+  Physics is switched on: a lamp and a touch-sensor cube appear beside the rig's rest pose. Marble
+  Flow is switched on next, and marbles begin dropping from well above the frame, arriving one at
+  a time and catching on the rig's head and outstretched arms as more keep falling.
+</video>
+
+Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
+segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
+a Mixamo FBX and a glTF character a hundred times smaller. A branching joint such as the hips
+gets one capsule per child rather than one for the joint, and a segment too short to be worth a
+body, a coincident bone or a fingertip with nowhere to go, gets none.
+
+The capsules are kinematic, never simulated. Posing, IK, camera capture and clip playback all
+write bone transforms, and a dynamic body would fight them for the same values every frame; a
+kinematic one is carried by whichever bone it belongs to and pushes everything else out of its
+way instead. So the rig is never knocked over by what lands on it, and nothing physical ever
+changes a pose or a keyframe.
+
+Marbles arrive one at a time rather than as a single dump, so a hand (posed, or mapped live
+from the camera) can be held under the stream and moved through it as it falls, instead of only
+ever seeing the aftermath of a heap that landed all at once.
+
+The rest of the settings appear once the toggle is on:
+
+- **Spawn Marbles**, off by default (the docked Marble Flow button is the same switch), starts
+  the continuous flow; touching the spawn cube drops one regardless of this setting. Physics
+  being on and marbles flowing are separate switches, so enabling one never surprises you with
+  the other, and the enclosing walls come and go with this one too: they only matter while
+  something is actually falling through them.
+- **Marble Flow (Frames)** is the gap between one marble dropping and the next, the same
+  interval-action shape the Timeline view uses for its own ball spawner, defaulting to every
+  frame. Lower is a denser stream; nothing caps how many accumulate, so a long session keeps
+  piling the floor up. **Reset Marbles** clears every marble currently on the floor without
+  stopping the flow.
+- **Marble Textures**, on by default, paints each marble with one of the Marble Editor's own
+  marble images, picked at random per spawn, so the same object drops here as in that game.
+  Turning it off leaves the marble a flat pastel colour instead, which is cheaper to draw and
+  keeps a dense flow usable.
+- **Wall Size** starts at the narrow column the flow falls through rather than the rig's full
+  spread, so the walls frame the stream without dwarfing the rig; raise it for more room to
+  reach a hand or the lamp through the gap. A floor collider spans the enclosure regardless of
+  whether the walls themselves are showing: the view has no ground plane of its own, so without
+  it a marble would fall through the world.
+- **Wall Opacity**, invisible by default, goes up to solid. Zero keeps the collision without
+  drawing anything, useful for looking at the rig unobstructed; solid is the useful one for a
+  recording where the walls are the frame.
+
+![A dozen textured marbles mid-fall around the rig, several caught on its head, arm and hip, the lamp and spawn cube visible on either side](/img/animation/rig-physics-marbles.webp)
+
+Everything above is torn out of both the scene and the physics world the moment the toggle goes
+off, and rebuilt from scratch when a different model is loaded, so switching it on costs
+nothing until it is wanted.
+
+Gravity is scaled to the rig rather than left at the world's own metres per second, since a
+Mixamo FBX is a hundred times the scale of a typical glTF character and falling at 9.81 units
+in it reads as slow motion. What that costs is speed: a marble then crosses more distance in
+one physics step than a wall is thick, which is why they carry continuous collision detection.
+The reasoning is in [scale, gravity and tunnelling](/docs/journey/scale-gravity-and-tunnelling).
 
 ## Saving and loading the animation
 

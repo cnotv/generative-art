@@ -581,6 +581,35 @@ getCylinder(scene, world, {
 rethinking a layout. The collider is a Rapier cylinder rather than a box, so a ball rolling
 against it behaves as the shape looks.
 
+### getPhysic(world, options)
+
+Create a rigid body and its collider without a mesh, for anything that collides but is not drawn
+— the bones of a posed rig, a trigger volume, a hand-authored blocker.
+
+```typescript
+import { getPhysic } from '@webgamekit/threejs'
+
+const { rigidBody, collider } = getPhysic(world, {
+  type: 'kinematicPositionBased',
+  shape: 'capsule',
+  boundary: 1,
+  size: [0.12, 0.4, 0.12], // [diameter, height, diameter], as getCylinder reads it
+  position: [0, 1.2, 0]
+})
+```
+
+`shape` is `'cuboid'`, `'ball'`, `'cylinder'` or `'capsule'`. A capsule reads its size the way a
+cylinder does, with the height being the straight section and the two hemispherical caps sitting
+on top of it, so a capsule can be swapped in for a cylinder to round off the ends of a limb or a
+column. `boundary` scales the collider against the mesh it stands in for; at `1` it is exactly
+the size given, which is what a body with no mesh of its own wants.
+
+`ccd` (continuous collision detection), off by default and available on every model helper too,
+sweeps the body's whole path each step rather than testing only where it lands. A body that
+crosses more ground in one step than the wall it should hit is thick passes straight through it,
+which is what a small fast object in a large-scale scene does otherwise. Background:
+[scale, gravity and tunnelling](/docs/journey/scale-gravity-and-tunnelling).
+
 ### textureRepeat on a model
 
 Without it a texture is stretched once across whatever it is put on, so the same stone reads at
