@@ -201,3 +201,43 @@ resetting the torso bone to rest unconditionally right where the delta was previ
 starting from, before either solve gets near it. Absolute application on top of that fixed
 baseline needs no bookkeeping at all, the same simplification a fixed reset already brought the
 head aim.
+
+## Scaling a detector's confident nonsense into an absurd position
+
+Fixing the winding-up bug did not fix the report that prompted looking at it again: the model
+still, and now more visibly, snapped into inverted, flung-apart poses during exactly the same
+kind of stretch that broke the head aim, a close-up hand with no real body in frame. Two
+increasingly specific guesses, checked directly against the numbers rather than assumed, is what
+it took to find where.
+
+**First guess: the hip landmarks are nearly coincident.** A detector confidently misreading a
+hand as a torso seemed likely to place the "hips" essentially on top of each other, and dividing
+the rig's own real hip width by a landmark-space span that tiny would blow the resulting scale up
+enormously. Raising the degenerate-span floor from a literal near-zero guard (`1e-6`, only large
+enough to avoid an actual division by zero) to something a real hip span is never close to made
+the reported hip scale look almost identical across several bad frames, a coincidence that read
+as confirmation. It was the wrong mechanism: logging every value feeding the target computation
+directly showed the _shoulder_-based scale, driving the head and hands that stayed visually
+correct throughout, sitting in the exact same range as the supposedly-degenerate hip scale. Both
+were simply large because the loaded rig itself is at native FBX scale, roughly a hundred times a
+typical glTF asset's; a scale factor in the hundreds is normal for this rig, on any bone, not a
+symptom of anything.
+
+**Second guess, this time checked against the actual numbers first:** working the real logged
+values through the target formula by hand for one bad frame put the computed ankle target above
+the rig's own shoulder height and off to the side by several times its shoulder width. That is
+where the flung-apart pose was coming from, and it had nothing to do with the scale factor's
+magnitude: an ordinary-looking scale multiplying a garbage landmark offset still produces a
+garbage world position, just not a suspiciously large number that stands out on its own. The
+fix that actually resolved the reported symptom mirrors the head-below-the-shoulders check
+already in place, applied at the other end: a foot, knee-pole or hip target that maps _above_ the
+shoulders is anatomically impossible in any pose this feature supports and is dropped, regardless
+of how ordinary the scale and the hip anchor that produced it looked on their own.
+
+The lesson generalizes past this one feature: a derived value can look unremarkable at every
+individual step (a normal-ish scale, a landmark within its own visibility threshold, a hip pair
+technically below the shoulders) and still combine into a physically absurd result, because
+none of those individual checks constrain the _combination_. Two visually near-identical
+first-hypothesis fixes (a stricter span floor, then a stricter same-shaped hip-position check)
+both shipped, tested, and looked plausible before the real numbers, read directly rather than
+inferred from a plausible mechanism, showed neither was where the actual bug lived.

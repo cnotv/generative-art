@@ -505,6 +505,21 @@ following the feed. A webcam framed for arms and head, the normal way to use thi
 usually leaves the hips out of frame the whole session, so the legs simply hold still for as
 long as that framing lasts, the same as they would with nobody in frame at all.
 
+Confident visibility scores alone turned out not to be enough to trust a hip reading either.
+Fed something other than a body, a hand filling the frame being the most common way that
+happens, a detector can report a hip landmark pair that is visible, and even lands below the
+shoulders, while still being nowhere near a real hip: on a real recorded clip the two landmarks
+came back essentially coincident, a span thousandths of a unit wide. Dividing the rig's own real
+hip width by a span that tiny produces a scale in the hundreds, and multiplying an ankle's
+detected offset by a scale that large flings the resulting target far outside anywhere the rig
+itself reaches, reading as the legs launched to some absurd position rather than merely posed
+wrong. A hip span below a small fixed floor, comfortably under any real hip width but well above
+a coincident pair's, is rejected the same way a missing landmark already is. The foot, knee-pole
+and hip targets themselves carry one more check on top of that, independent of how plausible the
+hip anchor driving them looked: a real foot, knee or hip never sits above the shoulders in any
+pose this feature supports, and a target that maps there, however it got there, is dropped for
+the same reason a head target that maps below the shoulders already is.
+
 Applying a captured pose only drives whichever body-part groups the Merge Target diagram
 currently has active — see **Merging sources by body part** below. A bone outside every active
 group is left exactly as it was, whether that is an earlier capture, a preset, or a manual edit,
