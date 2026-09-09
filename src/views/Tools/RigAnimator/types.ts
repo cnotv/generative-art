@@ -17,6 +17,11 @@ export interface RigAnimatorConfig {
   cameraSmoothingFactor: number
   cameraMaxJump: number
   cameraShowPreview: boolean
+  targetLeftArm: boolean
+  targetRightArm: boolean
+  targetLeftLeg: boolean
+  targetRightLeg: boolean
+  targetSpineHead: boolean
   physicsEnabled: boolean
   marbleFlowEnabled: boolean
   marbleSpawnInterval: number

@@ -34,6 +34,10 @@ const props = defineProps<{
   /** The rig's frame rate, to convert between the timeline's frame numbers and the video
    * element's `currentTime` seconds. */
   fps: number
+  /** Which body-part groups (see `bodyPartGroups.ts`), by display label, the Config panel's
+   * "Merge Target" checkboxes currently scope this capture to; shown so it's clear before
+   * applying rather than only inferable from the panel. */
+  targetGroupLabels: string[]
 }>()
 
 const emit = defineEmits<{
@@ -254,6 +258,13 @@ onUnmounted(() => {
       ></video>
       <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
     </div>
+    <p class="camera-pose-capture__status camera-pose-capture__status--scope">
+      {{
+        targetGroupLabels.length > 0
+          ? `Posing: ${targetGroupLabels.join(', ')}`
+          : 'No merge target selected — nothing will be posed.'
+      }}
+    </p>
     <p v-if="isLoading" class="camera-pose-capture__status">
       {{ pickByMode('Starting camera…', 'Reading video…', 'Reading photo…') }}
     </p>
@@ -398,6 +409,10 @@ onUnmounted(() => {
 
 .camera-pose-capture__status--error {
   color: var(--color-destructive);
+}
+
+.camera-pose-capture__status--scope {
+  font-style: italic;
 }
 
 .camera-pose-capture__actions {

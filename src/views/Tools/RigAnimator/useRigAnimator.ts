@@ -5,6 +5,7 @@ import { useRigCameraPose } from './useRigCameraPose'
 import { useRigHandPose } from './useRigHandPose'
 import { useRigRecordedPresets } from './useRigRecordedPresets'
 import { useRigPhysics } from './useRigPhysics'
+import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
 import type { RigAnimatorConfig } from './types'
 
 /** Composes the rig/model, keyframe, camera-pose-capture, hand-pose and physics state for the
@@ -55,10 +56,20 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   /** Paste the copied pose(s) onto the current frame and apply the landing one to the live rig. */
   const pasteKeyframes = (): void => rigKeyframes.pasteKeyframes(rigModel.bones.value)
 
-  /** Load a session recording back onto the timeline, the same as picking a bundled preset. */
-  const applyRecordedPreset = (index: number): void => {
+  /** Load a bundled example animation, merged into `targetGroups` (see `mergeKeyframes`). */
+  const loadPreset = (url: string, targetGroups: Set<RigBodyPartGroup>): Promise<void> =>
+    rigKeyframes.loadPreset(url, boneNamesInGroups(rigModel.bones.value, targetGroups))
+
+  /** Load a session recording back onto the timeline, merged into `targetGroups` the same way
+   * a bundled preset is. */
+  const applyRecordedPreset = (index: number, targetGroups: Set<RigBodyPartGroup>): void => {
     const preset = recordedPresets.recordedPresets.value[index]
-    if (preset) rigKeyframes.applyLoadedKeyframes(preset.keyframes)
+    if (preset) {
+      rigKeyframes.mergeKeyframes(
+        preset.keyframes,
+        boneNamesInGroups(rigModel.bones.value, targetGroups)
+      )
+    }
   }
 
   /** Clear every keyframe and the autosave behind them, and snap the live rig back to its rest
@@ -83,6 +94,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     commitRecordedKeyframes,
     pasteKeyframes,
     resetAutosave,
+    loadPreset,
     applyRecordedPreset
   }
 }

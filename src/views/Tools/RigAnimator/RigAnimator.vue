@@ -43,6 +43,7 @@ import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { frameCameraOnModel } from './cameraFraming'
 import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
+import { selectedBodyPartGroups, RIG_BODY_PART_GROUP_LABELS } from './bodyPartGroups'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
 import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
@@ -84,6 +85,11 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
   cameraShowPreview: false,
+  targetLeftArm: true,
+  targetRightArm: true,
+  targetLeftLeg: true,
+  targetRightLeg: true,
+  targetSpineHead: true,
   physicsEnabled: false,
   marbleFlowEnabled: false,
   marbleSpawnInterval: DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
@@ -100,6 +106,13 @@ const cameraPoseMappingOptions = computed(() => ({
   includeDepth: reactiveConfig.value.cameraUseDepth,
   reachMultiplier: reactiveConfig.value.cameraReachMultiplier
 }))
+
+/** Which body-part groups the next capture, photo or preset is allowed to touch, read from the
+ * Config panel's "Merge Target" checkboxes; see `bodyPartGroups.ts`. */
+const targetBodyPartGroups = computed(() => selectedBodyPartGroups(reactiveConfig.value))
+const targetBodyPartGroupLabels = computed(() =>
+  [...targetBodyPartGroups.value].map((group) => RIG_BODY_PART_GROUP_LABELS[group])
+)
 
 const rig = useRigAnimator(reactiveConfig)
 const showCameraCapture = ref(false)
@@ -135,8 +148,8 @@ const handleSelectPreset = (value: string): void => {
   const recordingIndex = value.startsWith('recording:')
     ? Number(value.slice('recording:'.length))
     : null
-  if (recordingIndex !== null) rig.applyRecordedPreset(recordingIndex)
-  else rig.loadPreset(value)
+  if (recordingIndex !== null) rig.applyRecordedPreset(recordingIndex, targetBodyPartGroups.value)
+  else rig.loadPreset(value, targetBodyPartGroups.value)
 }
 
 let cameraReference: THREE.Camera | null = null
@@ -297,9 +310,13 @@ const handleCameraApply = (
   landmarks: CameraLandmark[],
   handPoses: Partial<Record<HandSide, HandPoseDefinition>>
 ): void => {
-  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value)
+  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   const restQuaternions = rig.getRestQuaternions()
   Object.entries(handPoses).forEach(([side, pose]) => {
+    // A hand's fingers belong to that side's arm group (see `boneBodyPartGroup`), so a capture
+    // scoped away from that arm must not curl its fingers either.
+    const armGroup = side === 'Left' ? 'leftArm' : 'rightArm'
+    if (!targetBodyPartGroups.value.has(armGroup)) return
     applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
   })
   if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
@@ -585,6 +602,7 @@ onUnmounted(() => {
     :is-recording="motionRecording.isRecording.value"
     :frame="reactiveConfig.frame"
     :fps="reactiveConfig.fps"
+    :target-group-labels="targetBodyPartGroupLabels"
     @apply="handleCameraApply"
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"

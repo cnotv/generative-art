@@ -5,6 +5,9 @@ import { rigGenerateHumanoidSkeleton } from '@webgamekit/rig'
 import { useRigCameraPose } from './useRigCameraPose'
 import { captureRestPoses, applyGizmoDragToChain, type BoneRestPose } from './boneDragTarget'
 import { CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, type CameraLandmark } from './cameraPoseMapping'
+import { RIG_BODY_PART_GROUPS, type RigBodyPartGroup } from './bodyPartGroups'
+
+const ALL_GROUPS = new Set(RIG_BODY_PART_GROUPS)
 
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
   x,
@@ -73,7 +76,7 @@ describe('useRigCameraPose', () => {
       applyBoneDragTarget,
       resetAllBonesToRest
     )
-    applyCameraPose(buildTPoseLandmarks())
+    applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, ALL_GROUPS)
 
     expect(shoulder.quaternion.angleTo(new THREE.Quaternion())).toBeCloseTo(0)
   })
@@ -90,7 +93,7 @@ describe('useRigCameraPose', () => {
       applyBoneDragTarget,
       resetAllBonesToRest
     )
-    applyCameraPose(buildTPoseLandmarks())
+    applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, ALL_GROUPS)
 
     const leftShoulderPosition = findBone('mixamorigLeftShoulder').getWorldPosition(
       new THREE.Vector3()
@@ -119,13 +122,79 @@ describe('useRigCameraPose', () => {
       applyBoneDragTarget,
       resetAllBonesToRest
     )
-    applyCameraPose(buildTPoseLandmarks(), options)
+    applyCameraPose(buildTPoseLandmarks(), options, ALL_GROUPS)
     const hips = findBone('mixamorigHips')
     const drivenPosition = hips.position.clone()
     expect(drivenPosition.equals(new THREE.Vector3(0, 0, 0))).toBe(false)
 
-    applyCameraPose(withHipsOccluded(buildTPoseLandmarks()), options)
+    applyCameraPose(withHipsOccluded(buildTPoseLandmarks()), options, ALL_GROUPS)
 
     expect(hips.position.equals(drivenPosition)).toBe(true)
+  })
+
+  it('leaves a bone outside the target groups exactly as it was, even though the capture has data for it', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
+    const { root, bones } = rigGenerateHumanoidSkeleton(box)
+    root.updateMatrixWorld(true)
+    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
+
+    // A stale pose on the right shoulder, from an earlier source, that a left-arm-only capture
+    // must not touch.
+    const rightShoulder = findBone('mixamorigRightShoulder')
+    rightShoulder.quaternion.setFromEuler(new THREE.Euler(0, 0, Math.PI / 4))
+    const staleRightShoulder = rightShoulder.quaternion.clone()
+
+    const { applyCameraPose } = useRigCameraPose(
+      ref(bones),
+      applyBoneDragTarget,
+      resetAllBonesToRest
+    )
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      new Set<RigBodyPartGroup>(['leftArm'])
+    )
+
+    const shoulderCenterX = 0
+    const leftHandPosition = findBone('mixamorigLeftHand').getWorldPosition(new THREE.Vector3())
+    expect(leftHandPosition.x).toBeLessThan(shoulderCenterX)
+    expect(rightShoulder.quaternion.equals(staleRightShoulder)).toBe(true)
+  })
+
+  it('re-shooting the same group with a new capture replaces only that group', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
+    const { root, bones } = rigGenerateHumanoidSkeleton(box)
+    root.updateMatrixWorld(true)
+    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
+    const leftArmOnly = new Set<RigBodyPartGroup>(['leftArm'])
+    const rightArmOnly = new Set<RigBodyPartGroup>(['rightArm'])
+
+    const { applyCameraPose } = useRigCameraPose(
+      ref(bones),
+      applyBoneDragTarget,
+      resetAllBonesToRest
+    )
+    applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, leftArmOnly)
+    const leftHandAfterFirstShoot = findBone('mixamorigLeftHand')
+      .getWorldPosition(new THREE.Vector3())
+      .clone()
+
+    // A different source drives the right arm; the left arm's own last capture must survive it.
+    applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, rightArmOnly)
+    expect(
+      findBone('mixamorigLeftHand')
+        .getWorldPosition(new THREE.Vector3())
+        .equals(leftHandAfterFirstShoot)
+    ).toBe(true)
+
+    // Re-shooting the left arm with a raised-arm pose replaces its own earlier capture.
+    const raisedLeftArmLandmarks = buildTPoseLandmarks()
+    raisedLeftArmLandmarks[15] = landmark(-0.2, -0.6, 0) // left wrist, raised above the head
+    applyCameraPose(raisedLeftArmLandmarks, CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, leftArmOnly)
+
+    const leftHandAfterReshoot = findBone('mixamorigLeftHand').getWorldPosition(new THREE.Vector3())
+    expect(leftHandAfterReshoot.equals(leftHandAfterFirstShoot)).toBe(false)
   })
 })

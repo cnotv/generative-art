@@ -33,7 +33,11 @@ exist, so two poses are already a movement.
   into a two-bone IK solve, a one-bone aim, a pole-hint re-aim, or (for the skeleton root only)
   a plain translate, and resets whichever bones a drag rotated back to rest
 - `src/views/Tools/RigAnimator/frameRange.ts`, `keyframeOps.ts`: pure helpers for resizing the
-  timeline's frame range and repositioning one or many dragged keyframes together
+  timeline's frame range, repositioning one or many dragged keyframes together, and merging a
+  new source's sampled keyframes into a body-part scope without disturbing the rest
+- `src/views/Tools/RigAnimator/bodyPartGroups.ts` (+ `.test.ts`): the five body-part groups a
+  capture or preset can be scoped to, and reading the Config panel's "Merge Target" checkboxes
+  into the groups they select — see **Merging sources by body part** below
 - `src/views/Tools/RigAnimator/frameSelection.ts`: the drag-select / Shift+click / Shift+arrow
   range selection's pure logic — normalizing the two endpoints and which keyframes fall inside
 - `src/views/Tools/RigAnimator/autosave.ts`: reading and writing the autosaved edit in
@@ -440,8 +444,10 @@ detected ankle reach off the shoulders left the target barely a third of the leg
 forcing the knee to fold into an unnatural crouch just to take up the slack neither end of the
 chain actually had. This falls back to the shoulder anchor and scale when the hips aren't
 confidently detected, same as before.
-Applying a captured pose resets the whole rig to its rest transform first, so a bone the mapping
-does not drive this frame never keeps a stale pose left over from an earlier manual edit or a
+Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
+Config panel's "Merge Target" checkboxes currently select — see **Merging sources by body part**
+below. With every group selected, the default, that is the whole rig: a bone the mapping does
+not drive this frame never keeps a stale pose left over from an earlier manual edit or a
 previous capture.
 
 The head applies before the hands specifically, even though both are just entries in the same
@@ -549,6 +555,33 @@ instead of stepping the playhead — see **Selecting a range of frames** above. 
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
 
+## Merging sources by body part
+
+Every source that can drive the rig — a camera or photo capture, a bundled preset, a
+Record Motion take — is scoped by the same five checkboxes in the Config panel: **Merge
+Target: Left Arm**, **Right Arm**, **Left Leg**, **Right Leg** and **Spine / Head**, all on by
+default. A bone belongs to whichever of those groups its own ancestor chain reaches first
+walking up toward the skeleton root (a shoulder or an upper leg marks the start of a limb
+group; a finger or toe bone inherits its hand or foot's group the same way), with the spine,
+neck, head and the root bone itself falling into Spine / Head.
+
+With every checkbox on, the default, a source drives the whole rig exactly as before. Turning
+some off scopes the _next_ application of a source down to the groups still checked: only bones
+in those groups are reset and re-driven, and every other bone — however it got its current
+pose, an earlier capture, a preset, or a manual edit — is left exactly as it is. That is what
+makes a clip buildable from several sources at once: sample a walk preset for the legs, switch
+to a camera capture scoped to just the arms, and a hand-authored spine curve underneath both
+survives either one.
+
+"Re-shooting" a group falls out of the same rule rather than needing a separate action:
+applying a second source scoped to a group already posed from a different one replaces that
+group's own contribution — a wobbly arm capture is fixed by capturing it again with only that
+group checked, without redoing the legs or the spine that were already right. While the camera
+capture dialog is open, a status line names exactly which groups the current checkboxes will
+apply to, so the scope is visible before capturing rather than only inferable from the panel.
+
+![The camera capture dialog's status line naming the groups the current Merge Target checkboxes will apply to](/img/animation/rig-merge-target-scope.webp)
+
 ## Presets: evaluating the timeline with real motion
 
 Hand-authoring every keyframe is not the only way to get something on the timeline to try.
@@ -556,14 +589,17 @@ Hand-authoring every keyframe is not the only way to get something on the timeli
 `public/animations/` (idle, walk, jump, kick, punch, roll, running), sharing this rig's own
 bone names since they come from the same character set. A mocap clip carries far more frames
 than this tool's sparse pose-keyframe model is meant to show, so picking one samples it down to
-twelve evenly-spaced keyframes rather than importing every original frame, replacing whatever
-was on the timeline. It is a quick way to see the drag, resize and playback interactions
+twelve evenly-spaced keyframes rather than importing every original frame. Loading one merges
+those sampled keyframes into whichever groups the Merge Target checkboxes currently select, the
+same as a camera capture does — with every group selected, the default, that replaces the whole
+timeline, same as before. It is a quick way to see the drag, resize and playback interactions
 working against a real, varied pose, not just a hand-posed test case.
 
 A **Record Motion** take that captured any real motion appears in the same dropdown too, as
 "Recording 1", "Recording 2" and so on, so a captured performance can be reloaded and replayed
-without re-recording it. These entries are session-only — a refresh drops them, the same as
-every unsaved edit that is not the autosave.
+without re-recording it, merged into the Merge Target scope the same way a bundled preset is.
+These entries are session-only — a refresh drops them, the same as every unsaved edit that is
+not the autosave.
 
 ## Dropping marbles on the pose
 

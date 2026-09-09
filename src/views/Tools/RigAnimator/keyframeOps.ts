@@ -1,4 +1,4 @@
-import type { PoseKeyframe } from '@webgamekit/rig'
+import type { Pose, PoseKeyframe } from '@webgamekit/rig'
 
 /**
  * Shift every keyframe in `frames` by the same `deltaFrames`, preserving their spacing — a
@@ -69,4 +69,54 @@ export const insertFrameRangeIntoList = (
   return keyframes.map((keyframe) =>
     keyframe.frame >= atFrame ? { ...keyframe, frame: keyframe.frame + span } : keyframe
   )
+}
+
+const posePickingBones = (pose: Pose, isInScope: (boneName: string) => boolean): Pose =>
+  Object.fromEntries(Object.entries(pose).filter(([boneName]) => isInScope(boneName)))
+
+/**
+ * Merge a source's sampled keyframes into the existing timeline, touching only the bones in
+ * `boneNamesInScope`. Every existing keyframe first has its in-scope bones stripped out
+ * (dropping a keyframe left with none), so a group already posed from an earlier source is
+ * replaced rather than mixed with the new one; the sampled keyframes' own in-scope bones are
+ * then merged in at their own frames, alongside whatever an existing keyframe there still
+ * carries for other bones. Every bone in scope, the case when nothing is actually being
+ * narrowed down, degenerates to a full replace: every existing keyframe ends up empty and
+ * dropped, leaving only the sampled keyframes.
+ * @param existingKeyframes The timeline's current keyframes
+ * @param sampledKeyframes The new source's own keyframes, at its own frame numbers
+ * @param boneNamesInScope Which bones this source is allowed to touch
+ * @returns The merged keyframe list
+ */
+export const mergeSampledKeyframesIntoScope = (
+  existingKeyframes: PoseKeyframe[],
+  sampledKeyframes: PoseKeyframe[],
+  boneNamesInScope: Set<string>
+): PoseKeyframe[] => {
+  const isInScope = (boneName: string): boolean => boneNamesInScope.has(boneName)
+  const isOutOfScope = (boneName: string): boolean => !isInScope(boneName)
+
+  const withoutScope = existingKeyframes
+    .map((keyframe) => ({
+      frame: keyframe.frame,
+      pose: posePickingBones(keyframe.pose, isOutOfScope)
+    }))
+    .filter((keyframe) => Object.keys(keyframe.pose).length > 0)
+
+  const scopedSampled = sampledKeyframes
+    .map((keyframe) => ({
+      frame: keyframe.frame,
+      pose: posePickingBones(keyframe.pose, isInScope)
+    }))
+    .filter((keyframe) => Object.keys(keyframe.pose).length > 0)
+
+  return scopedSampled.reduce<PoseKeyframe[]>((merged, scopedKeyframe) => {
+    const existingAtFrame = merged.find((keyframe) => keyframe.frame === scopedKeyframe.frame)
+    if (!existingAtFrame) return [...merged, scopedKeyframe]
+    return merged.map((keyframe) =>
+      keyframe.frame === scopedKeyframe.frame
+        ? { frame: keyframe.frame, pose: { ...keyframe.pose, ...scopedKeyframe.pose } }
+        : keyframe
+    )
+  }, withoutScope)
 }
