@@ -341,9 +341,7 @@ onUnmounted(() => {
       >
         Try Again
       </Button>
-      <Button size="sm" variant="secondary" @click="handleUploadClick">
-        Upload Photo/Video
-      </Button>
+      <Button size="sm" variant="secondary" @click="handleUploadClick"> Upload Photo/Video </Button>
       <Button
         v-if="mode === 'photo' || mode === 'video'"
         size="sm"
