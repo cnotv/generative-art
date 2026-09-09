@@ -356,18 +356,20 @@ onUnmounted(stopDrag)
         class="rig-timeline__hidden-file-input"
         @change="onFileChange"
       />
-      <IconButton size="sm" title="Import poses (JSON)" @click="fileInputElement?.click()">
-        <Upload />
-      </IconButton>
-      <IconButton size="sm" title="Export poses (JSON)" @click="emit('exportJson')">
-        <Download />
-      </IconButton>
-      <IconButton size="sm" title="Export animated model (GLB)" @click="emit('exportGlb')">
-        <Package />
-      </IconButton>
-      <IconButton size="sm" title="Reset every keyframe" @click="emit('resetAll')">
-        <RotateCcw />
-      </IconButton>
+      <div class="rig-timeline__io-actions rig-timeline__io-actions--wide">
+        <IconButton size="sm" title="Import poses (JSON)" @click="fileInputElement?.click()">
+          <Upload />
+        </IconButton>
+        <IconButton size="sm" title="Export poses (JSON)" @click="emit('exportJson')">
+          <Download />
+        </IconButton>
+        <IconButton size="sm" title="Export animated model (GLB)" @click="emit('exportGlb')">
+          <Package />
+        </IconButton>
+        <IconButton size="sm" title="Reset every keyframe" @click="emit('resetAll')">
+          <RotateCcw />
+        </IconButton>
+      </div>
       <IconButton
         size="sm"
         :title="showExtraControls ? 'Hide hand pose and presets' : 'Show hand pose and presets'"
@@ -397,6 +399,20 @@ onUnmounted(stopDrag)
             <PersonStanding class="h-4 w-4" />
           </template>
         </Select>
+      </div>
+      <div class="rig-timeline__io-actions rig-timeline__io-actions--narrow">
+        <IconButton size="sm" title="Import poses (JSON)" @click="fileInputElement?.click()">
+          <Upload />
+        </IconButton>
+        <IconButton size="sm" title="Export poses (JSON)" @click="emit('exportJson')">
+          <Download />
+        </IconButton>
+        <IconButton size="sm" title="Export animated model (GLB)" @click="emit('exportGlb')">
+          <Package />
+        </IconButton>
+        <IconButton size="sm" title="Reset every keyframe" @click="emit('resetAll')">
+          <RotateCcw />
+        </IconButton>
       </div>
     </div>
   </div>
@@ -542,6 +558,29 @@ onUnmounted(stopDrag)
 
 .rig-timeline__presets {
   flex-shrink: 0;
+}
+
+.rig-timeline__io-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* Import/Export/Reset render twice — once per row — so a narrower viewport can hide the main
+   row's copy and reveal the second row's instead, without a resize listener: only one copy is
+   ever visible at a time, the other stays a plain display:none. */
+.rig-timeline__io-actions--narrow {
+  display: none;
+}
+
+@media (width <= 1080px) {
+  .rig-timeline__io-actions--wide {
+    display: none;
+  }
+
+  .rig-timeline__io-actions--narrow {
+    display: flex;
+  }
 }
 
 .rig-timeline__hidden-file-input {

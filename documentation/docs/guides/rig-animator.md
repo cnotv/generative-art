@@ -224,7 +224,11 @@ row holds transport and editing; a second row, collapsed by default, holds **Han
 **Hand Pose** and **Presets** are reached far less often than the transport and editing actions
 above them, so they live in a second row, collapsed by default: the chevron at the right end of
 the main row opens and closes it, keeping the always-visible row from crowding out the track
-itself.
+itself. Below an 1080px-wide viewport, **Import**, **Export JSON**, **Export GLB** and **Reset**
+move into this second row too, freeing up the main row down to just the controls used
+constantly on a narrower screen; above that width they stay in the main row as usual. Either
+way each of those four is a single button reachable from exactly one row at a time, not two
+separate controls.
 
 ### Selecting a range of frames
 
