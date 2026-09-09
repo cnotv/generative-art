@@ -20,13 +20,17 @@ import {
   LAMP_RADIUS_FRACTION,
   LAMP_RESTITUTION,
   LAMP_ROUGHNESS,
+  LAMP_WEIGHT_MULTIPLIER,
   MARBLE_DAMPING,
   MARBLE_DEFAULT_COLOR,
   MARBLE_FRICTION,
   MARBLE_GRAVITY_REFERENCE_SPREAD,
   MARBLE_METALNESS,
   MARBLE_RESTITUTION,
-  MARBLE_ROUGHNESS
+  MARBLE_ROUGHNESS,
+  SPAWN_CUBE_COLOR,
+  SPAWN_CUBE_METALNESS,
+  SPAWN_CUBE_ROUGHNESS
 } from './config'
 import type { BoneColliderSpec } from './rigColliders'
 
@@ -39,6 +43,7 @@ export interface BoneColliderBody {
   bone: THREE.Bone
   spec: BoneColliderSpec
   body: RAPIER.RigidBody
+  collider: RAPIER.Collider
 }
 
 /** Kinematic rather than dynamic: posing, IK and clip playback all write the bone transforms
@@ -48,7 +53,7 @@ export const createBoneColliderBody = (
   bone: THREE.Bone,
   spec: BoneColliderSpec
 ): BoneColliderBody => {
-  const { rigidBody } = getPhysic(world, {
+  const { rigidBody, collider } = getPhysic(world, {
     type: 'kinematicPositionBased',
     shape: 'capsule',
     // A boundary of 1 is the collider at its stated size rather than scaled against a mesh:
@@ -60,7 +65,7 @@ export const createBoneColliderBody = (
     restitution: BONE_COLLIDER_RESTITUTION
   })
 
-  return { bone, spec, body: rigidBody }
+  return { bone, spec, body: rigidBody, collider }
 }
 
 interface MarbleSpawn {
@@ -192,7 +197,7 @@ export const createHangingLamp = (
     opacity: LAMP_OPACITY,
     type: 'dynamic',
     hasGravity: true,
-    weight: rigDiagonal / MARBLE_GRAVITY_REFERENCE_SPREAD,
+    weight: (rigDiagonal / MARBLE_GRAVITY_REFERENCE_SPREAD) * LAMP_WEIGHT_MULTIPLIER,
     ccd: true,
     restitution: LAMP_RESTITUTION,
     friction: LAMP_FRICTION,
@@ -225,4 +230,52 @@ export const disposeHangingLamp = (world: RAPIER.World, hangingLamp: HangingLamp
   world.removeImpulseJoint(hangingLamp.joint, true)
   world.removeRigidBody(hangingLamp.anchor)
   disposePhysicsMeshes(world, [hangingLamp.lamp])
+}
+
+export interface SpawnCube {
+  body: RAPIER.RigidBody
+  collider: RAPIER.Collider
+  mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
+}
+
+/** A fixed, sensor-only cube on the rig's other side from the lamp: it never moves and never
+ * pushes anything back, it only reports when a bone capsule brushes it, so touching it with the
+ * posed rig itself is the trigger rather than a button click. */
+export const createSpawnCube = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  position: CoordinateTuple,
+  size: number
+): SpawnCube => {
+  const [x, y, z] = position
+  const half = size / 2
+
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, z))
+  const collider = world.createCollider(
+    RAPIER.ColliderDesc.cuboid(half, half, half).setSensor(true),
+    body
+  )
+
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(size, size, size),
+    new THREE.MeshStandardMaterial({
+      color: SPAWN_CUBE_COLOR,
+      roughness: SPAWN_CUBE_ROUGHNESS,
+      metalness: SPAWN_CUBE_METALNESS
+    })
+  )
+  mesh.name = 'spawn-cube'
+  mesh.position.set(x, y, z)
+  scene.add(mesh)
+
+  return { body, collider, mesh }
+}
+
+export const disposeSpawnCube = (world: RAPIER.World, spawnCube: SpawnCube | null): void => {
+  if (!spawnCube) return
+  world.removeCollider(spawnCube.collider, true)
+  world.removeRigidBody(spawnCube.body)
+  spawnCube.mesh.geometry.dispose()
+  spawnCube.mesh.material.dispose()
+  spawnCube.mesh.removeFromParent()
 }

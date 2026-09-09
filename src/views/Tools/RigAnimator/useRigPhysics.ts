@@ -7,10 +7,13 @@ import type { TimelineManager } from '@webgamekit/animation'
 import { computeRigDiagonal } from './boneMarkers'
 import {
   DEFAULT_POSITION_RANGE,
+  LAMP_ANCHOR_DEPTH_FRACTION,
   LAMP_ANCHOR_HEIGHT_FRACTION,
   LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
   MARBLE_DROP_HEIGHT_FRACTION,
-  MARBLE_GRAVITY_REFERENCE_SPREAD
+  MARBLE_GRAVITY_REFERENCE_SPREAD,
+  SPAWN_CUBE_HEIGHT_FRACTION,
+  SPAWN_CUBE_SIZE_FRACTION
 } from './config'
 import { buildMarbleDropPosition, pickMarbleRadius, pickMarbleTexture } from './marbles'
 import { buildBoneColliderSpecs, readBoneColliderTransform } from './rigColliders'
@@ -20,11 +23,14 @@ import {
   createEnclosureFloor,
   createHangingLamp,
   createMarble,
+  createSpawnCube,
   disposeHangingLamp,
   disposePhysicsMeshes,
+  disposeSpawnCube,
   type BoneColliderBody,
   type HangingLamp,
-  type PhysicsMesh
+  type PhysicsMesh,
+  type SpawnCube
 } from './rigPhysicsObjects'
 import type { RigAnimatorConfig } from './types'
 
@@ -49,6 +55,14 @@ const createBoneColliderState = ({ world, bones, model, config }: PhysicsReferen
     boneColliders = []
   }
 
+  /** Whether any bone segment currently overlaps the given collider, for a scene object that
+   * reacts to the rig itself brushing it rather than to a click. */
+  const isTouching = (other: RAPIER.Collider): boolean => {
+    const currentWorld = world.value
+    if (!currentWorld) return false
+    return boneColliders.some(({ collider }) => currentWorld.intersectionPair(collider, other))
+  }
+
   const rebuild = (): void => {
     clear()
     const currentWorld = world.value
@@ -70,7 +84,7 @@ const createBoneColliderState = ({ world, bones, model, config }: PhysicsReferen
     })
   }
 
-  return { clear, rebuild, tick }
+  return { clear, rebuild, tick, isTouching }
 }
 
 /** The enclosure floor and its four optional walls, sized to the rig's own spread. */
@@ -138,13 +152,60 @@ const createHangingLampState = ({
     const anchorPosition: CoordinateTuple = [
       center[0] + diagonal * LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
       center[1] + diagonal * LAMP_ANCHOR_HEIGHT_FRACTION,
-      center[2]
+      center[2] + diagonal * LAMP_ANCHOR_DEPTH_FRACTION
     ]
     hangingLamp = createHangingLamp(currentScene, currentWorld, anchorPosition, diagonal)
   }
 
   const tick = (): void => {
     if (hangingLamp) syncMeshWithBody(hangingLamp.lamp)
+  }
+
+  return { clear, rebuild, tick }
+}
+
+/** A touch-sensor cube on the rig's other side from the lamp. It never moves and has no
+ * collision response of its own; `tick` just asks whether a bone is currently overlapping it
+ * and edge-triggers `onTouch` on the moment contact starts, not on every frame it holds. */
+const createSpawnCubeState = ({ scene, world, model, config, rigDiagonal }: PhysicsReferences) => {
+  let spawnCube: SpawnCube | null = null
+  let wasTouching = false
+
+  const clear = (): void => {
+    if (world.value) disposeSpawnCube(world.value, spawnCube)
+    spawnCube = null
+    wasTouching = false
+  }
+
+  const rebuild = (): void => {
+    clear()
+    const currentScene = scene.value
+    const currentWorld = world.value
+    if (!currentScene || !currentWorld || !config.value.physicsEnabled) return
+
+    const diagonal = rigDiagonal()
+    const center = (model.value?.position.toArray() ?? [0, 0, 0]) as CoordinateTuple
+    const position: CoordinateTuple = [
+      center[0] - diagonal * LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
+      center[1] + diagonal * SPAWN_CUBE_HEIGHT_FRACTION,
+      center[2]
+    ]
+    spawnCube = createSpawnCube(
+      currentScene,
+      currentWorld,
+      position,
+      diagonal * SPAWN_CUBE_SIZE_FRACTION
+    )
+  }
+
+  const tick = (
+    isBoneTouching: (collider: RAPIER.Collider) => boolean,
+    onTouch: () => void
+  ): void => {
+    if (!spawnCube) return
+    const touching = isBoneTouching(spawnCube.collider)
+    if (touching && !wasTouching) onTouch()
+    wasTouching = touching
   }
 
   return { clear, rebuild, tick }
@@ -226,6 +287,7 @@ export const useRigPhysics = (
   const boneColliders = createBoneColliderState(refs)
   const enclosure = createEnclosureState(refs)
   const hangingLamp = createHangingLampState(refs)
+  const spawnCube = createSpawnCubeState(refs)
   const marbleFlow = createMarbleFlowState(refs, timeline)
 
   const colliderPosition = new THREE.Vector3()
@@ -235,6 +297,7 @@ export const useRigPhysics = (
     boneColliders.rebuild()
     enclosure.rebuild()
     hangingLamp.rebuild()
+    spawnCube.rebuild()
     marbleFlow.rebuild()
   }
 
@@ -243,12 +306,14 @@ export const useRigPhysics = (
     marbleFlow.stop()
     marbleFlow.clear()
     hangingLamp.clear()
+    spawnCube.clear()
     enclosure.clear()
   }
 
   const tickPhysics = (): void => {
     boneColliders.tick(colliderPosition, colliderRotation)
     hangingLamp.tick()
+    spawnCube.tick(boneColliders.isTouching, marbleFlow.spawnOne)
     marbleFlow.tick()
   }
 
@@ -265,7 +330,6 @@ export const useRigPhysics = (
     rebuildPhysics: rebuild,
     rebuildMarbles: marbleFlow.rebuild,
     updateMarbleFlow: marbleFlow.start,
-    spawnMarble: marbleFlow.spawnOne,
     rebuildEnclosure: enclosure.rebuild,
     clearPhysics: clear,
     tickPhysics

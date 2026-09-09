@@ -85,9 +85,10 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/marbles.ts` (+ `.test.ts`): pure helpers for one marble's drop
   point, radius and texture, picking the texture from the Marble Editor's own marble assets
 - `src/views/Tools/RigAnimator/rigPhysicsObjects.ts`: creating and disposing the bone capsules,
-  a marble, the enclosing walls and the hanging lamp
+  a marble, the enclosing walls, the hanging lamp and the touch-sensor spawn cube
 - `src/views/Tools/RigAnimator/useRigPhysics.ts`: owns those bodies, driving the continuous
-  marble flow as a timeline action and following the posed bones each frame
+  marble flow as a timeline action, following the posed bones each frame and checking each frame
+  whether a bone is touching the spawn cube
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
@@ -106,9 +107,9 @@ a rigged glTF character), the bone list appears immediately. The camera re-frame
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
 typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
 
-A third docked button, Physics, sits beside these two. Once it is on, two more join it: Marble
-Flow, which starts and stops the drip, and Spawn Marble, which drops one on demand regardless of
-whether the flow is running. All three are covered in their own section below.
+A third docked button, Physics, sits beside these two. Once it is on, a fourth joins it, Marble
+Flow, which starts and stops the drip; dropping one on demand is a touch, not a button, covered
+in its own section below along with Physics.
 
 ![Upload Model and Capture Pose from Camera docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
@@ -574,12 +575,14 @@ own **Physics: Simulate** checkbox, the same toggle either way.
 
 ![Marbles falling around the rig, several caught on its head, chest and arm, inside the pale enclosing walls](/img/animation/rig-physics-marbles.webp)
 
-Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure
-and a cone-shaded lamp hung between the rig and the wall on a rigid pivot arm, so there is
-something to knock into immediately. The lamp barely swings and gravity pulls it straight back
-to hanging still, the way a real fixture would rather than a pendulum. Two more docked buttons
-join Physics once it is on: Marble Flow starts and stops the drip below, and Spawn Marble drops
-one on demand regardless of whether the flow is running.
+Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure,
+a heavy cone-shaded lamp hung close to the camera on a rigid pivot arm, and a cube on the rig's
+other side. The lamp barely swings and gravity pulls it straight back to hanging still, the way
+a real fixture would rather than a pendulum. The cube is a touch sensor, not a button: it has no
+collision response of its own, so posing a hand into it does not push it, but the moment a bone
+overlaps it a marble drops, the same as pressing a spawn button would, except the model itself is
+what presses it. A fourth docked button, Marble Flow, joins Physics once it is on, starting and
+stopping the drip described below.
 
 Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
 segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
@@ -600,9 +603,10 @@ ever seeing the aftermath of a heap that landed all at once.
 The rest of the settings appear once the toggle is on:
 
 - **Spawn Marbles**, off by default (the docked Marble Flow button is the same switch), starts
-  the flow. Physics being on and marbles flowing are separate switches, so enabling one never
-  surprises you with the other, and the enclosing walls come and go with this one too: they only
-  matter while something is actually falling through them.
+  the continuous flow; touching the spawn cube drops one regardless of this setting. Physics
+  being on and marbles flowing are separate switches, so enabling one never surprises you with
+  the other, and the enclosing walls come and go with this one too: they only matter while
+  something is actually falling through them.
 - **Marble Flow (Frames)** is the gap between one marble dropping and the next, the same
   interval-action shape the Timeline view uses for its own ball spawner, defaulting to every
   frame. Lower is a denser stream; nothing caps how many accumulate, so a long session keeps

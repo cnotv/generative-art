@@ -14,7 +14,7 @@ import {
   type HandSide,
   type HandPoseDefinition
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle, Box } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -549,15 +549,6 @@ onUnmounted(() => {
       @click="toggleMarbleFlow"
     >
       <Circle />
-    </IconButton>
-    <IconButton
-      v-if="reactiveConfig.physicsEnabled"
-      size="sm"
-      variant="outline"
-      title="Spawn Marble"
-      @click="rig.spawnMarble"
-    >
-      <Box />
     </IconButton>
   </div>
   <RigTimeline
