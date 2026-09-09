@@ -181,6 +181,12 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   backward as the phase requires. Cross-fade the weight between two such actions over a
   _fraction_ of the phase's own progress, never a fixed number of seconds, or the blend either
   finishes instantly or never finishes once that phase's duration is tunable.
+- **MediaPipe's "world" landmarks carry no room position.** They are normalized to the
+  detected person's own body, centered near the hip, not tracked against the camera's own
+  view of the room: a person who steps sideways produces the same world landmarks as one
+  standing still. Whole-body translation has to come from the normalized image-space
+  landmarks instead, converted through whatever per-frame scale the mapping already computes.
+  See `documentation/docs/journey/rig-camera-calibration.md`.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.
