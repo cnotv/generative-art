@@ -85,7 +85,7 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/marbles.ts` (+ `.test.ts`): pure helpers for one marble's drop
   point, radius and texture, picking the texture from the Marble Editor's own marble assets
 - `src/views/Tools/RigAnimator/rigPhysicsObjects.ts`: creating and disposing the bone capsules,
-  a marble and the enclosing walls
+  a marble, the enclosing walls and the hanging lamp
 - `src/views/Tools/RigAnimator/useRigPhysics.ts`: owns those bodies, driving the continuous
   marble flow as a timeline action and following the posed bones each frame
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
@@ -105,6 +105,8 @@ panel, replaces it with any FBX, GLB or GLTF. If it already carries a skeleton (
 a rigged glTF character), the bone list appears immediately. The camera re-frames to whatever
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
 typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
+
+A third docked button, Physics, sits beside these two; it is covered in its own section below.
 
 ![Upload Model and Capture Pose from Camera docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
@@ -562,12 +564,17 @@ every unsaved edit that is not the autosave.
 
 ## Dropping marbles on the pose
 
-**Physics: Simulate** in the Config panel, off by default, turns the posed rig into something
-other objects can hit. It is a way to see a pose as a physical shape rather than a silhouette:
-a cupped hand catches marbles, a flat one does not, and playing the timeline back sweeps them
-around as the limbs move through them.
+**Physics**, docked on the canvas next to Upload Model and Capture Pose from Camera, turns the
+posed rig into something other objects can hit. It is a way to see a pose as a physical shape
+rather than a silhouette: a cupped hand catches marbles, a flat one does not, and playing the
+timeline back sweeps them around as the limbs move through them. It mirrors the Config panel's
+own **Physics: Simulate** checkbox, the same toggle either way.
 
 ![Marbles falling around the rig, several caught on its head, chest and arm, inside the pale enclosing walls](/img/animation/rig-physics-marbles.webp)
+
+Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure
+and a lamp hung beside the rig on a rigid pivot arm, so there is something to swing a limb into
+immediately. Marbles are a separate choice, below.
 
 Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
 segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
@@ -587,6 +594,8 @@ ever seeing the aftermath of a heap that landed all at once.
 
 The rest of the settings appear once the toggle is on:
 
+- **Spawn Marbles**, off by default, starts the flow described below. Physics being on and
+  marbles flowing are two separate switches, so enabling one never surprises you with the other.
 - **Marble Flow (Frames)** is the gap between one marble dropping and the next, the same
   interval-action shape the Timeline view uses for its own ball spawner. Lower is a denser
   stream; nothing caps how many accumulate, so a long session keeps piling the floor up.

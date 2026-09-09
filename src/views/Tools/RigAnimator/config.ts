@@ -105,6 +105,22 @@ export const ENCLOSURE_COLOR = 0xc9d4e4
 export const ENCLOSURE_OPACITY_RANGE = { min: 0, max: 1, step: 0.05 }
 export const DEFAULT_ENCLOSURE_OPACITY = 0.25
 
+/** How far above the rig's feet the lamp's pivot sits, as a fraction of the rig's spread. */
+export const LAMP_ANCHOR_HEIGHT_FRACTION = 0.9
+/** How far to the side of the rig the pivot sits, clear of a resting T-pose hand. */
+export const LAMP_ANCHOR_SIDE_OFFSET_FRACTION = 0.6
+/** Length of the rigid arm between the pivot and the lamp, as a fraction of the rig's spread. */
+export const LAMP_ARM_LENGTH_FRACTION = 0.4
+export const LAMP_RADIUS_FRACTION = 0.09
+export const LAMP_COLOR = 0xf3e6d0
+export const LAMP_RESTITUTION = 0.2
+export const LAMP_FRICTION = 0.5
+/** Heavier damping than a marble's: a lamp is meant to settle after a knock, not keep swinging. */
+export const LAMP_DAMPING = 0.6
+export const LAMP_ANGULAR_DAMPING = 0.8
+export const LAMP_ROUGHNESS = 0.4
+export const LAMP_METALNESS = 0.1
+
 export const CAMERA_FRAME_DISTANCE_MULTIPLIER = 2.5
 
 export const MEDIAPIPE_WASM_BASE_PATH =

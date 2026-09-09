@@ -14,7 +14,7 @@ import {
   type HandSide,
   type HandPoseDefinition
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -84,6 +84,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
   cameraShowPreview: false,
   physicsEnabled: false,
+  marbleFlowEnabled: false,
   marbleSpawnInterval: DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   marbleTextures: true,
   showEnclosure: true,
@@ -275,6 +276,11 @@ const toggleCameraCapture = (): void => {
   else showCameraCapture.value = true
 }
 
+/** The docked physics icon turns the simulation on or off, same toggle shape as the camera one. */
+const togglePhysics = (): void => {
+  reactiveConfig.value.physicsEnabled = !reactiveConfig.value.physicsEnabled
+}
+
 /**
  * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
  * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
@@ -371,7 +377,7 @@ watch(
   }
 )
 watch(
-  () => reactiveConfig.value.marbleSpawnInterval,
+  () => [reactiveConfig.value.marbleFlowEnabled, reactiveConfig.value.marbleSpawnInterval],
   () => rig.updateMarbleFlow()
 )
 watch(
@@ -513,6 +519,15 @@ onUnmounted(() => {
       @click="toggleCameraCapture"
     >
       <CameraIcon />
+    </IconButton>
+    <IconButton
+      size="sm"
+      variant="outline"
+      :active="reactiveConfig.physicsEnabled"
+      :title="reactiveConfig.physicsEnabled ? 'Disable Physics' : 'Enable Physics'"
+      @click="togglePhysics"
+    >
+      <Lightbulb />
     </IconButton>
   </div>
   <RigTimeline

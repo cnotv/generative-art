@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type RAPIER from '@dimforge/rapier3d-compat'
+import RAPIER from '@dimforge/rapier3d-compat'
 import { getBall, getCube, getPhysic, removeElements } from '@webgamekit/threejs'
 import type { ComplexModel, CoordinateTuple } from '@webgamekit/threejs'
 import {
@@ -9,9 +9,19 @@ import {
   ENCLOSURE_HEIGHT_FRACTION,
   ENCLOSURE_SIZE_FRACTION,
   ENCLOSURE_THICKNESS_FRACTION,
+  LAMP_ANGULAR_DAMPING,
+  LAMP_ARM_LENGTH_FRACTION,
+  LAMP_COLOR,
+  LAMP_DAMPING,
+  LAMP_FRICTION,
+  LAMP_METALNESS,
+  LAMP_RADIUS_FRACTION,
+  LAMP_RESTITUTION,
+  LAMP_ROUGHNESS,
   MARBLE_DAMPING,
   MARBLE_DEFAULT_COLOR,
   MARBLE_FRICTION,
+  MARBLE_GRAVITY_REFERENCE_SPREAD,
   MARBLE_METALNESS,
   MARBLE_RESTITUTION,
   MARBLE_ROUGHNESS
@@ -145,4 +155,60 @@ export const disposePhysicsMeshes = (world: RAPIER.World, meshes: PhysicsMesh[])
     mesh.material.dispose()
   })
   removeElements(world, meshes)
+}
+
+export interface HangingLamp {
+  anchor: RAPIER.RigidBody
+  lamp: PhysicsMesh
+  joint: RAPIER.ImpulseJoint
+}
+
+/** A lamp on a rigid pivot arm, hung from a fixed point beside the rig: something to knock into
+ * and watch swing, rather than only ever something marbles fall onto. The anchor carries no
+ * collider of its own, only the joint the lamp swings from. */
+export const createHangingLamp = (
+  scene: THREE.Scene,
+  world: RAPIER.World,
+  anchorPosition: CoordinateTuple,
+  rigDiagonal: number
+): HangingLamp => {
+  const armLength = rigDiagonal * LAMP_ARM_LENGTH_FRACTION
+  const [anchorX, anchorY, anchorZ] = anchorPosition
+
+  const anchor = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(anchorX, anchorY, anchorZ)
+  )
+
+  const lamp = getBall(scene, world, {
+    name: 'hanging-lamp',
+    size: rigDiagonal * LAMP_RADIUS_FRACTION,
+    position: [anchorX, anchorY - armLength, anchorZ] as CoordinateTuple,
+    color: LAMP_COLOR,
+    type: 'dynamic',
+    hasGravity: true,
+    weight: rigDiagonal / MARBLE_GRAVITY_REFERENCE_SPREAD,
+    ccd: true,
+    restitution: LAMP_RESTITUTION,
+    friction: LAMP_FRICTION,
+    damping: LAMP_DAMPING,
+    angular: LAMP_ANGULAR_DAMPING,
+    roughness: LAMP_ROUGHNESS,
+    metalness: LAMP_METALNESS
+  }) as PhysicsMesh
+
+  const joint = world.createImpulseJoint(
+    RAPIER.JointData.spherical({ x: 0, y: 0, z: 0 }, { x: 0, y: armLength, z: 0 }),
+    anchor,
+    lamp.userData.body,
+    true
+  )
+
+  return { anchor, lamp, joint }
+}
+
+export const disposeHangingLamp = (world: RAPIER.World, hangingLamp: HangingLamp | null): void => {
+  if (!hangingLamp) return
+  world.removeImpulseJoint(hangingLamp.joint, true)
+  world.removeRigidBody(hangingLamp.anchor)
+  disposePhysicsMeshes(world, [hangingLamp.lamp])
 }

@@ -2,11 +2,13 @@ import { shallowRef, type Ref, type ShallowRef } from 'vue'
 import * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat'
 import type { CoordinateTuple } from '@webgamekit/threejs'
-import { syncMeshesWithBodies } from '@webgamekit/threejs'
+import { syncMeshesWithBodies, syncMeshWithBody } from '@webgamekit/threejs'
 import type { TimelineManager } from '@webgamekit/animation'
 import { computeRigDiagonal } from './boneMarkers'
 import {
   DEFAULT_POSITION_RANGE,
+  LAMP_ANCHOR_HEIGHT_FRACTION,
+  LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
   MARBLE_DROP_HEIGHT_FRACTION,
   MARBLE_GRAVITY_REFERENCE_SPREAD
 } from './config'
@@ -16,9 +18,12 @@ import {
   createBoneColliderBody,
   createEnclosure,
   createEnclosureFloor,
+  createHangingLamp,
   createMarble,
+  disposeHangingLamp,
   disposePhysicsMeshes,
   type BoneColliderBody,
+  type HangingLamp,
   type PhysicsMesh
 } from './rigPhysicsObjects'
 import type { RigAnimatorConfig } from './types'
@@ -105,6 +110,45 @@ const createEnclosureState = ({ scene, world, config, rigDiagonal }: PhysicsRefe
   return { clear, rebuild }
 }
 
+/** A lamp hung beside the rig on a rigid pivot arm, there the moment physics turns on so there
+ * is something to knock into and watch swing without waiting on the marble flow. */
+const createHangingLampState = ({
+  scene,
+  world,
+  model,
+  config,
+  rigDiagonal
+}: PhysicsReferences) => {
+  let hangingLamp: HangingLamp | null = null
+
+  const clear = (): void => {
+    if (world.value) disposeHangingLamp(world.value, hangingLamp)
+    hangingLamp = null
+  }
+
+  const rebuild = (): void => {
+    clear()
+    const currentScene = scene.value
+    const currentWorld = world.value
+    if (!currentScene || !currentWorld || !config.value.physicsEnabled) return
+
+    const diagonal = rigDiagonal()
+    const center = (model.value?.position.toArray() ?? [0, 0, 0]) as CoordinateTuple
+    const anchorPosition: CoordinateTuple = [
+      center[0] + diagonal * LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
+      center[1] + diagonal * LAMP_ANCHOR_HEIGHT_FRACTION,
+      center[2]
+    ]
+    hangingLamp = createHangingLamp(currentScene, currentWorld, anchorPosition, diagonal)
+  }
+
+  const tick = (): void => {
+    if (hangingLamp) syncMeshWithBody(hangingLamp.lamp)
+  }
+
+  return { clear, rebuild, tick }
+}
+
 /** A timeline action that drips one marble in at a time, the same interval-action shape the
  * Timeline view uses for its own ball spawner, so a hand can be held under the flow instead of
  * a whole batch landing at once. */
@@ -144,7 +188,7 @@ const createMarbleFlowState = (
 
   const start = (): void => {
     stop()
-    if (!timeline.value || !config.value.physicsEnabled) return
+    if (!timeline.value || !config.value.physicsEnabled || !config.value.marbleFlowEnabled) return
     flowActionId = timeline.value.addAction({
       name: MARBLE_FLOW_ACTION_NAME,
       category: 'physics',
@@ -180,6 +224,7 @@ export const useRigPhysics = (
   const refs: PhysicsReferences = { scene, world, bones, model, config, rigDiagonal }
   const boneColliders = createBoneColliderState(refs)
   const enclosure = createEnclosureState(refs)
+  const hangingLamp = createHangingLampState(refs)
   const marbleFlow = createMarbleFlowState(refs, timeline)
 
   const colliderPosition = new THREE.Vector3()
@@ -188,6 +233,7 @@ export const useRigPhysics = (
   const rebuild = (): void => {
     boneColliders.rebuild()
     enclosure.rebuild()
+    hangingLamp.rebuild()
     marbleFlow.rebuild()
   }
 
@@ -195,11 +241,13 @@ export const useRigPhysics = (
     boneColliders.clear()
     marbleFlow.stop()
     marbleFlow.clear()
+    hangingLamp.clear()
     enclosure.clear()
   }
 
   const tickPhysics = (): void => {
     boneColliders.tick(colliderPosition, colliderRotation)
+    hangingLamp.tick()
     marbleFlow.tick()
   }
 

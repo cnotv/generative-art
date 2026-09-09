@@ -69,6 +69,7 @@ export const buildRigAnimatorSchema = (
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },
   ...(physicsEnabled
     ? {
+        marbleFlowEnabled: { checkbox: true, label: 'Physics: Spawn Marbles' },
         marbleSpawnInterval: {
           ...MARBLE_SPAWN_INTERVAL_RANGE,
           label: 'Physics: Marble Flow (Frames)'
