@@ -580,7 +580,7 @@ onUnmounted(() => {
     </IconButton>
   </div>
   <MergeTargetDiagram
-    v-if="rig.boneNames.value.length > 0"
+    v-if="showCameraCapture"
     class="rig-merge-target-diagram"
     :active-groups="targetBodyPartGroups"
     @toggle-group="handleToggleBodyPartGroup"

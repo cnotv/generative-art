@@ -74,10 +74,12 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
 
   /** Clear every keyframe and the autosave behind them, and snap the live rig back to its rest
    * pose: a blank edit with the rig left wherever the last keyframe or drag happened to leave it
-   * would read as though the reset had failed. */
+   * would read as though the reset had failed. The playhead goes back to frame 0 too, since a
+   * blank timeline with the playhead still parked wherever it was reads the same way. */
   const resetAutosave = (): void => {
     rigKeyframes.resetAutosave()
     rigModel.resetAllBonesToRest()
+    config.value.frame = 0
   }
 
   return {

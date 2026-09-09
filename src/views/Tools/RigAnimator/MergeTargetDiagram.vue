@@ -118,7 +118,7 @@ const regionLabel = (group: RigBodyPartGroup): string =>
 }
 
 /* A relative darken rather than a new colour keeps whichever tone (muted grey or the active
-   periwinkle) the region already carries, instead of a jump to a stark, un-pastel highlight. */
+   green) the region already carries, instead of a jump to a stark, un-pastel highlight. */
 .merge-target-diagram__region:hover {
   filter: brightness(0.85);
 }

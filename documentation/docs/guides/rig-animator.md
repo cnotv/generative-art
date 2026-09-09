@@ -560,17 +560,18 @@ rotation or a Config value never gets hijacked by the arrow keys moving the curs
 ## Merging sources by body part
 
 Every source that can drive the rig — a camera or photo capture, a bundled preset, a
-Record Motion take — is scoped by the **Merge Target** diagram docked on the canvas next to
-Upload Model: a small stick figure with five clickable regions, Left Arm, Right Arm, Left Leg,
-Right Leg and Spine / Head (the torso, neck and head, plus the root bone), all active by
-default. Clicking a region, or focusing it with Tab and pressing Enter or Space, toggles that
-group on or off; an active region is tinted, an inactive one greyed out. A bone belongs to
-whichever region its own ancestor chain reaches first walking up toward the skeleton root (a
-shoulder or an upper leg marks the start of a limb region; a finger or toe bone inherits its
-hand or foot's region the same way), so the figure needs no separate entry for fingers, toes or
-a custom rig's own extra bones.
+Record Motion take — is scoped by the **Merge Target** diagram, a small stick figure with five
+clickable regions, Left Arm, Right Arm, Left Leg, Right Leg and Spine / Head (the torso, neck
+and head, plus the root bone), all active by default. It only shows up while the camera capture
+dialog is open, docked on the canvas next to it, since that is the one place scoping a source
+actually matters. Clicking a region, or focusing it with Tab and pressing Enter or Space,
+toggles that group on or off; an active region is tinted green, an inactive one greyed out. A
+bone belongs to whichever region its own ancestor chain reaches first walking up toward the
+skeleton root (a shoulder or an upper leg marks the start of a limb region; a finger or toe bone
+inherits its hand or foot's region the same way), so the figure needs no separate entry for
+fingers, toes or a custom rig's own extra bones.
 
-![The Merge Target diagram: two regions clicked off (grey) leave the other three (periwinkle) active, and the camera capture dialog's status line names exactly those three](/img/animation/rig-merge-target-scope.webp)
+![The Merge Target diagram: two regions clicked off (grey) leave the other three (green) active, and the camera capture dialog's status line names exactly those three](/img/animation/rig-merge-target-scope.webp)
 
 With every region active, the default, a source drives the whole rig exactly as before. Turning
 some off scopes the _next_ application of a source down to the regions still active: only bones
@@ -596,10 +597,12 @@ Hand-authoring every keyframe is not the only way to get something on the timeli
 bone names since they come from the same character set. A mocap clip carries far more frames
 than this tool's sparse pose-keyframe model is meant to show, so picking one samples it down to
 twelve evenly-spaced keyframes rather than importing every original frame. Loading one merges
-those sampled keyframes into whichever groups the Merge Target diagram currently has active, the
-same as a camera capture does — with every region active, the default, that replaces the whole
-timeline, same as before. It is a quick way to see the drag, resize and playback interactions
-working against a real, varied pose, not just a hand-posed test case.
+those sampled keyframes into whichever groups were last active on the Merge Target diagram, the
+same scope a camera capture would use — with every region active, the default, that replaces
+the whole timeline, same as before. The diagram itself only shows while the camera capture
+dialog is open (see **Merging sources by body part** above), but the scope it last set still
+applies to a preset loaded with the dialog closed. It is a quick way to see the drag, resize and
+playback interactions working against a real, varied pose, not just a hand-posed test case.
 
 A **Record Motion** take that captured any real motion appears in the same dropdown too, as
 "Recording 1", "Recording 2" and so on, so a captured performance can be reloaded and replayed
@@ -699,5 +702,6 @@ happens, and restored automatically the next time the view loads, so an accident
 not lose the work in progress. Only the edit itself is saved, never the loaded model: an
 uploaded file's blob URL cannot survive a refresh anyway, so the restored keyframes apply to
 whatever model loads next, correctly if it is still the same rig. **Reset** on the rig timeline
-clears every keyframe and the autosave behind them, back to a blank edit, and snaps the live rig
-back to its rest pose too, whenever you want to start over rather than undo one thing at a time.
+clears every keyframe and the autosave behind them, back to a blank edit, snaps the live rig
+back to its rest pose, and returns the playhead to frame 0, whenever you want to start over
+rather than undo one thing at a time.
