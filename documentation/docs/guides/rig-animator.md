@@ -602,7 +602,9 @@ then held there rather than the subject having turned at all.
 ### Extra details to try
 
 Checkboxes and sliders in the Config panel, shown once the rig has every bone the base mapping
-needs, control more of what MediaPipe actually detects and how the result is tuned:
+needs, control more of what MediaPipe actually detects and how the result is tuned. The preview
+toggle below lives in the camera capture panel itself instead, alongside the other camera
+capture actions:
 
 - **Bend Elbows to Photo** and **Bend Knees to Photo**, on by default, feed the detected elbow
   and knee landmarks in as the two-bone IK solve's pole hint, the same re-aim a manual drag on
@@ -653,10 +655,11 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   detected angle unscaled read as barely moving next to those presets' own confident range even
   during a real closing-toward-a-fist gesture. See "Fingers from the camera" above for the
   specific readings this default was chosen against.
-- **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
-  on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
-  full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
-  same either way. Uploading a photo or video turns it on automatically even if it was off, see
+- **Show Camera Preview**, a switch in the camera capture panel itself rather than the Config
+  panel, off by default, shows the mirrored video/photo preview when turned on; hidden, the
+  docked panel shrinks down to just its action buttons and the model gets the full canvas to
+  sit in, while the feed keeps being read and applied to the rig exactly the same either way.
+  Uploading a photo or video turns it on automatically even if it was off, see
   **Upload Photo/Video** above.
 
 ### Smoothing the live feed

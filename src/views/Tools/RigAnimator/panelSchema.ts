@@ -67,8 +67,7 @@ export const buildRigAnimatorSchema = (
         cameraHandSensitivity: {
           ...CAMERA_HAND_SENSITIVITY_RANGE,
           label: 'Camera Pose: Hand Sensitivity'
-        },
-        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
+        }
       }
     : {}),
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },

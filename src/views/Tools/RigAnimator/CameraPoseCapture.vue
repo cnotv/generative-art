@@ -66,6 +66,7 @@ const emit = defineEmits<{
   close: []
   toggleRecord: []
   enablePreview: []
+  togglePreview: []
   /** The uploaded video was scrubbed via its own native controls; move the rig timeline's
    * playhead to match. */
   seekFrame: [frame: number]
@@ -360,7 +361,11 @@ onUnmounted(() => {
       >
         Use Camera
       </Button>
-      <label v-if="mode === 'video'" class="camera-pose-capture__sync-toggle">
+      <label class="camera-pose-capture__toggle">
+        <Switch :model-value="showPreview" @update:model-value="emit('togglePreview')" />
+        Show Camera Preview
+      </label>
+      <label v-if="mode === 'video'" class="camera-pose-capture__toggle">
         <Switch v-model="syncEnabled" />
         Sync timeline to video
       </label>
@@ -478,7 +483,7 @@ onUnmounted(() => {
   margin-right: var(--spacing-2);
 }
 
-.camera-pose-capture__sync-toggle {
+.camera-pose-capture__toggle {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);

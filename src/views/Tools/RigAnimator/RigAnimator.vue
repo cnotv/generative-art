@@ -665,6 +665,7 @@ onUnmounted(() => {
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"
+    @toggle-preview="reactiveConfig.cameraShowPreview = !reactiveConfig.cameraShowPreview"
     @seek-frame="(frame) => (reactiveConfig.frame = frame)"
   />
 </template>
