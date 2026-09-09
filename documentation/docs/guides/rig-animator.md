@@ -498,11 +498,16 @@ detected ankle reach off the shoulders left the target barely a third of the leg
 forcing the knee to fold into an unnatural crouch just to take up the slack neither end of the
 chain actually had. This falls back to the shoulder anchor and scale when the hips aren't
 confidently detected, same as before.
-Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
-Merge Target diagram currently has active — see **Merging sources by body part** below. With
-every region active, the default, that is the whole rig: a bone the mapping does
-not drive this frame never keeps a stale pose left over from an earlier manual edit or a
-previous capture.
+Applying a captured pose only drives whichever body-part groups the Merge Target diagram
+currently has active — see **Merging sources by body part** below. A bone outside every active
+group is left exactly as it was, whether that is an earlier capture, a preset, or a manual edit,
+so a capture can be re-shot for just one limb without disturbing the rest of the rig. Within an
+active group, a bone the mapping does not drive this particular frame either, a landmark that
+momentarily drops below the confidence threshold or a bone camera capture never touches at all,
+is likewise left exactly where it already was rather than snapped back to rest: a live feed's
+own confidence dips from one frame to the next, and resetting on every dip reads as the affected
+limb flickering back to rest and forward again instead of just holding still, most visibly on a
+hand that drops out of frame for a moment while the body stays tracked.
 
 The head applies before the hands specifically, even though both are just entries in the same
 mapping table: the head's own IK chain root is the upper spine, an ancestor of both arms, so
