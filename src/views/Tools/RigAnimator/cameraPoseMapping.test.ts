@@ -170,6 +170,18 @@ describe('cameraLandmarksToBoneTargets', () => {
     expect(boneTargets.mixamorigRightHand).toBeDefined()
   })
 
+  it('drops the head target when the nose lands below the shoulders, a confident but nonsensical detection', () => {
+    const landmarks = buildTestLandmarks()
+    // A hand filling the frame with no real body in it is exactly the kind of input a pose
+    // detector can misread with real confidence: the "nose" it reports lands well below the
+    // shoulder line, a placement no real standing or seated person's head ever actually takes.
+    landmarks[0] = landmark(0, 2, 0)
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+    expect(boneTargets.mixamorigHead).toBeUndefined()
+    expect(boneTargets.mixamorigLeftHand).toBeDefined()
+    expect(boneTargets.mixamorigRightHand).toBeDefined()
+  })
+
   it('returns no targets when a shoulder landmark is below the visibility threshold', () => {
     const landmarks = buildTestLandmarks()
     landmarks[11] = { ...landmarks[11], visibility: 0.1 }

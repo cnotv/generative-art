@@ -503,6 +503,20 @@ export const cameraLandmarksToBoneTargets = (
         .filter((entry): entry is [string, THREE.Vector3] => entry[1] !== null)
     )
 
+  // A human head sits above their own shoulders in every pose this feature supports; a target
+  // that maps below them is the detector giving a confident but nonsensical result (most often
+  // something other than a body filling the frame, a hand held up close, misread as a torso)
+  // rather than a real head position, and reads as the head snapping down to the hips or feet
+  // if applied. Dropped the same way a low-visibility landmark already is, rather than posing
+  // the rig from it.
+  const rawUpperBoneTargets = entriesFor(CAMERA_POSE_UPPER_BONE_LANDMARKS, boneTarget)
+  const headTarget = rawUpperBoneTargets.mixamorigHead
+  const { mixamorigHead: _droppedHead, ...upperBoneTargetsWithoutHead } = rawUpperBoneTargets
+  const upperBoneTargets =
+    headTarget && headTarget.y <= anchor.shoulderCenterWorldPosition.y
+      ? upperBoneTargetsWithoutHead
+      : rawUpperBoneTargets
+
   const hipsTarget = (): Record<string, THREE.Vector3> => {
     if (!options.includeHips || !legTarget) return {}
     const leftHip = landmarks[LANDMARK_INDEX.leftHip]
@@ -535,7 +549,7 @@ export const cameraLandmarksToBoneTargets = (
 
   return {
     boneTargets: {
-      ...entriesFor(CAMERA_POSE_UPPER_BONE_LANDMARKS, boneTarget),
+      ...upperBoneTargets,
       ...(legTarget ? entriesFor(CAMERA_POSE_LOWER_BONE_LANDMARKS, legTarget) : {}),
       ...hipsTarget()
     },
