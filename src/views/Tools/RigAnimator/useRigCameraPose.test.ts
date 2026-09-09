@@ -43,8 +43,11 @@ const withHipsOccluded = (landmarks: CameraLandmark[]): CameraLandmark[] => {
 /** The same wiring `useRigModel` gives `useRigCameraPose`, built directly for a focused test. */
 const buildRigWiring = (bones: THREE.Bone[]) => {
   const restPoses: Map<string, BoneRestPose> = captureRestPoses(bones)
-  const applyBoneDragTarget = (bone: THREE.Bone, target: THREE.Vector3): void =>
-    applyGizmoDragToChain(bone, target, restPoses)
+  const applyBoneDragTarget = (
+    bone: THREE.Bone,
+    target: THREE.Vector3,
+    allowRootFollow?: boolean
+  ): void => applyGizmoDragToChain(bone, target, restPoses, allowRootFollow)
   return { applyBoneDragTarget }
 }
 
