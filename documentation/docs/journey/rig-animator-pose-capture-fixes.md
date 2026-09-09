@@ -184,3 +184,20 @@ is actually load-bearing for a specific downstream assumption. Narrowing that re
 bones actually needing a fresh pose is the right fix for the flicker it caused, but it also
 removes whatever else was quietly relying on the broad version, and those call sites need their
 own, scoped reset added back explicitly rather than assumed.
+
+## An assumption that held almost always, until it didn't
+
+The delta-bookkeeping fix above was itself replaced within the same session, by real feedback
+against real footage catching what reasoning about the "almost always" case had missed. Its logic
+depended on the head aim resetting the torso bone every frame the torque also ran; that holds
+whenever the head is confidently and plausibly detected in the same frame as the shoulders, which
+is nearly always true, but "nearly always" is not "always," and a single frame where it wasn't
+left the delta bookkeeping computing a total against a baseline the bone no longer actually had,
+under-rotating by however much the previous frame contributed. The general version of this: a
+value derived from "the last time X ran" needs X to run essentially in lockstep with the value's
+own consumer, and a codebase evolving two related solves independently can quietly break that
+lockstep in a way no single frame of testing surfaces. The fix removed the dependency entirely,
+resetting the torso bone to rest unconditionally right where the delta was previously tracked
+starting from, before either solve gets near it. Absolute application on top of that fixed
+baseline needs no bookkeeping at all, the same simplification a fixed reset already brought the
+head aim.

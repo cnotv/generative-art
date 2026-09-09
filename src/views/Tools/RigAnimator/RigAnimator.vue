@@ -337,20 +337,28 @@ const toggleMarbleFlow = (): void => {
  *
  * `ikTwistAroundWorldAxis` composes its twist on top of the bone's current orientation rather
  * than setting an absolute one (see its own doc comment), which only stays correct applied
- * fresh every frame because `applyCameraPose` resets this same bone to rest immediately before
- * re-aiming it at the head target, whenever the head is driven this frame (see
- * `applyGizmoDragToChain`'s own doc comment on why the aim needs that reset too). Composing the
- * twist onto that freshly rebuilt orientation, rather than onto whatever the previous frame left
- * behind, is what keeps a held turn reading as a single steady angle instead of winding up
- * further every frame.
+ * fresh every frame because the torso bone is reset to rest first, right below, before
+ * `applyCameraPose` gets anywhere near it. The head-aim solve inside that call also resets this
+ * same bone (see `applyGizmoDragToChain`'s own doc comment), but only when the head is actually
+ * driven that frame; a frame where it isn't (a low-confidence or implausible detection) would
+ * otherwise leave the bone exactly where the previous frame's twist left it, and composing
+ * another full twist on top of that wound the torso up further every such frame instead of
+ * ever settling. Resetting unconditionally here, before either solve runs, means both start
+ * from the same fixed baseline regardless of which one actually drove the bone that frame.
  */
 const handleCameraApply = (
   landmarks: CameraLandmark[],
   handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
   handOrientations: Partial<Record<HandSide, HandOrientation>>
 ): void => {
-  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   const restQuaternions = rig.getRestQuaternions()
+  const yaw = estimateCameraYaw(landmarks)
+  const torsoBone = rig.bones.value.find((bone) => bone.name === CAMERA_POSE_TORQUE_BONE)
+  const torsoRestQuaternion = torsoBone && restQuaternions.get(torsoBone.name)
+  if (yaw !== null && torsoBone && torsoRestQuaternion) {
+    torsoBone.quaternion.copy(torsoRestQuaternion)
+  }
+  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   Object.entries(handPoses).forEach(([side, pose]) => {
     // A hand's fingers belong to that side's arm group (see `boneBodyPartGroup`), so a capture
     // scoped away from that arm must not curl its fingers either.
@@ -358,8 +366,6 @@ const handleCameraApply = (
     if (!targetBodyPartGroups.value.has(armGroup)) return
     applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
   })
-  const yaw = estimateCameraYaw(landmarks)
-  const torsoBone = rig.bones.value.find((bone) => bone.name === CAMERA_POSE_TORQUE_BONE)
   if (yaw !== null && torsoBone) {
     ikTwistAroundWorldAxis(torsoBone, yaw, WORLD_UP_AXIS)
   }

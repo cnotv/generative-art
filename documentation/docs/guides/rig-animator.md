@@ -553,13 +553,22 @@ absolute one, since that same bone can already carry a real pitch from aiming th
 above), and overwriting that would fight the head aim on every frame. Composing the same reading
 on top of itself every frame, without anything resetting the bone first, wound the torso up
 further each time instead of ever settling: holding a turned pose for even a few seconds spun it
-far past the angle actually shown. It only reads as a single steady angle instead because the
-head aim right above it already reset the same bone to rest before re-aiming it this frame,
-whenever the head is driven — the torque is really composing onto a freshly rebuilt orientation
-each time, not onto an ever-growing one. A frame where the head specifically drops out of
-confidence while the shoulders stay tracked (rare, since a face is normally at least as
-reliable a detection as a shoulder line) skips that reset and can read as a brief, self-correcting
-mismatch until the head is confidently tracked again.
+far past the angle actually shown. Relying on the head aim's own reset to also keep the torque
+settled turned out not to be enough on its own: the head aim only resets the bone when the head
+itself is actually driven that frame, and a frame where it isn't (a low-confidence or implausible
+detection, more common than it sounds since a single bad reading during a stretch with no real
+body in frame can keep failing the same way for several frames running) left the torque composing
+onto whatever the last twist left behind, right back to winding up. The torso bone is now reset
+to rest unconditionally, before either solve gets anywhere near it, whenever there's a yaw
+reading to apply at all: both solves then always start from the same fixed baseline regardless of
+which one actually drove the bone that frame.
+
+The yaw reading itself is also clamped to what a real capture session plausibly shows: past a
+full profile turn, short of a subject turning their back on the camera entirely. A detector fed
+something other than a body, a hand filling the frame being the most common way that happens,
+can still report a confident shoulder line at some arbitrary, often near-180-degree angle; taking
+that at face value read as the torso snapping to an unrelated, often extreme orientation that
+then held there rather than the subject having turned at all.
 
 ![The Config panel's camera pose options, no "Match Camera Angle to Photo" row among them](/img/animation/rig-camera-pose-no-viewpoint-match.webp)
 
