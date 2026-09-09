@@ -142,8 +142,11 @@ export const createHandFlameSystem = (
       positions.array[index * 3 + 2] = handPosition.z + Math.sin(angle) * outward
       // The flare boost is what actually makes the burst visible: warmth alone only ever
       // reads as a steady open-hand flame once clamped for colour, same as no burst at all.
-      heats.array[index] = (1 - rise) * intensity * (1 + flare * 0.5)
-      sizes.array[index] = (0.5 + (1 - rise) * 0.7) * intensity * (1 + flare)
+      // `amount` is the palm-openness throttle: a barely open hand gets a thin flame, a
+      // wide open one a full blaze, continuously rather than snapping at either threshold.
+      const amount = 0.4 + warmth * 1.1
+      heats.array[index] = (1 - rise) * intensity * amount * (1 + flare * 0.5)
+      sizes.array[index] = (0.5 + (1 - rise) * 0.7) * intensity * amount * (1 + flare)
       warmths.array[index] = warmth
     })
     positions.needsUpdate = true
@@ -198,7 +201,7 @@ export const createFireballSystem = (
   const particleIndices = Array.from({ length: particlesPerBall }, (_, index) => index)
   const particleOffset = Float32Array.from(
     { length: particlesPerBall },
-    () => (Math.random() - 0.5) * 0.22
+    () => (Math.random() - 0.5) * 0.6
   )
   const particlePhase = Float32Array.from(
     { length: particlesPerBall },
@@ -240,9 +243,10 @@ export const createFireballSystem = (
         const angle = particlePhase[particleIndex] + nowMs * 0.01
         positions.array[bufferIndex * 3] = scratchPosition.x + Math.cos(angle) * wobble
         positions.array[bufferIndex * 3 + 1] = scratchPosition.y + Math.sin(angle) * wobble
-        positions.array[bufferIndex * 3 + 2] = scratchPosition.z
+        positions.array[bufferIndex * 3 + 2] =
+          scratchPosition.z + Math.sin(angle * 1.3) * wobble * 0.6
         heats.array[bufferIndex] = slot.active ? 1 - lifeFraction * 0.6 : 0
-        sizes.array[bufferIndex] = slot.active ? 0.85 * (1 - lifeFraction * 0.3) : 0
+        sizes.array[bufferIndex] = slot.active ? 2.2 * (1 - lifeFraction * 0.3) : 0
       })
     })
     positions.needsUpdate = true
