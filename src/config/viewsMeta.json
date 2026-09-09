@@ -193,5 +193,8 @@
   },
   "Picture Slideshow": {
     "description": "A character changes pictures by throwing one aside and catching the next, driven by a tap or a swipe."
+  },
+  "Hand Fire": {
+    "description": "Webcam hand tracking sets your hands ablaze; make a fist and open it to throw a fireball."
   }
 }
