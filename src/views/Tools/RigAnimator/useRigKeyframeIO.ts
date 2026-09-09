@@ -5,6 +5,7 @@ import { exportRigClipAsGlb, exportPosesAsJson, parsePosesJson } from './export'
 import { EXPORT_GLB_FILENAME, EXPORT_JSON_FILENAME } from './config'
 import { clearRigAutosave, type RigAutosave } from './autosave'
 import { loadRigPreset } from './presets'
+import { mergeSampledKeyframesIntoScope } from './keyframeOps'
 import type { RigAnimatorConfig } from './types'
 
 interface RigKeyframeIODeps {
@@ -67,10 +68,30 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
     if (parsed) applyLoadedKeyframes(parsed.keyframes, parsed.fps)
   }
 
-  /** Load a bundled example animation and sample it into keyframes, replacing the current ones. */
-  const loadPreset = async (url: string): Promise<void> => {
+  /**
+   * Merge a source's keyframes into the current timeline, touching only bones in
+   * `boneNamesInScope` (see `mergeSampledKeyframesIntoScope`): a group already posed from an
+   * earlier source is replaced, and every other group's keyframes are left exactly where they
+   * are, at whatever frames they live. Passing every bone on the rig degenerates to today's
+   * full replace.
+   * @param nextKeyframes The new source's own keyframes, at its own frame numbers
+   * @param boneNamesInScope Which bones this source is allowed to touch
+   */
+  const mergeKeyframes = (nextKeyframes: PoseKeyframe[], boneNamesInScope: Set<string>): void => {
+    if (nextKeyframes.length === 0) return
+    keyframes.value = mergeSampledKeyframesIntoScope(
+      keyframes.value,
+      nextKeyframes,
+      boneNamesInScope
+    )
+    setFrameMax(Math.max(frameMax.value, ...keyframeFrames.value))
+    rebuildPreviewClip()
+  }
+
+  /** Load a bundled example animation and sample it into keyframes, merged into `boneNamesInScope`. */
+  const loadPreset = async (url: string, boneNamesInScope: Set<string>): Promise<void> => {
     const sampled = await loadRigPreset(url, config.value.fps)
-    if (sampled.length > 0) applyLoadedKeyframes(sampled)
+    mergeKeyframes(sampled, boneNamesInScope)
   }
 
   /** Restore a previously autosaved edit, rebuilding the preview clip from it. */
@@ -92,6 +113,7 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
     exportJson,
     importJson,
     loadPreset,
+    mergeKeyframes,
     applyLoadedKeyframes,
     restoreAutosave,
     resetAutosave

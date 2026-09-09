@@ -33,7 +33,13 @@ exist, so two poses are already a movement.
   into a two-bone IK solve, a one-bone aim, a pole-hint re-aim, or (for the skeleton root only)
   a plain translate, and resets whichever bones a drag rotated back to rest
 - `src/views/Tools/RigAnimator/frameRange.ts`, `keyframeOps.ts`: pure helpers for resizing the
-  timeline's frame range and repositioning one or many dragged keyframes together
+  timeline's frame range, repositioning one or many dragged keyframes together, and merging a
+  new source's sampled keyframes into a body-part scope without disturbing the rest
+- `src/views/Tools/RigAnimator/bodyPartGroups.ts` (+ `.test.ts`): the five body-part groups a
+  capture or preset can be scoped to, and the pure logic behind toggling one from the Merge
+  Target diagram — see **Merging sources by body part** below
+- `src/views/Tools/RigAnimator/MergeTargetDiagram.vue`: the clickable stick-figure diagram
+  itself, docked on the canvas
 - `src/views/Tools/RigAnimator/frameSelection.ts`: the drag-select / Shift+click / Shift+arrow
   range selection's pure logic — normalizing the two endpoints and which keyframes fall inside
 - `src/views/Tools/RigAnimator/autosave.ts`: reading and writing the autosaved edit in
@@ -440,8 +446,10 @@ detected ankle reach off the shoulders left the target barely a third of the leg
 forcing the knee to fold into an unnatural crouch just to take up the slack neither end of the
 chain actually had. This falls back to the shoulder anchor and scale when the hips aren't
 confidently detected, same as before.
-Applying a captured pose resets the whole rig to its rest transform first, so a bone the mapping
-does not drive this frame never keeps a stale pose left over from an earlier manual edit or a
+Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
+Merge Target diagram currently has active — see **Merging sources by body part** below. With
+every region active, the default, that is the whole rig: a bone the mapping does
+not drive this frame never keeps a stale pose left over from an earlier manual edit or a
 previous capture.
 
 The head applies before the hands specifically, even though both are just entries in the same
@@ -549,6 +557,40 @@ instead of stepping the playhead — see **Selecting a range of frames** above. 
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
 
+## Merging sources by body part
+
+Every source that can drive the rig — a camera or photo capture, a bundled preset, a
+Record Motion take — is scoped by the **Merge Target** diagram, a small stick figure with five
+clickable regions, Left Arm, Right Arm, Left Leg, Right Leg and Spine / Head (the torso, neck
+and head, plus the root bone), all active by default. It only shows up while the camera capture
+dialog is open, docked on the canvas next to it, since that is the one place scoping a source
+actually matters. Clicking a region, or focusing it with Tab and pressing Enter or Space,
+toggles that group on or off; an active region is bright green, an inactive one red — the same
+strong go/no-go pair the performance overlay already uses for good/bad, rather than this
+project's usual pastel palette, since a binary on/off reads faster as a clear colour than as a
+tint. A bone belongs to whichever region its own ancestor chain reaches first walking up toward
+the skeleton root (a shoulder or an upper leg marks the start of a limb region; a finger or toe
+bone inherits its hand or foot's region the same way), so the figure needs no separate entry for
+fingers, toes or a custom rig's own extra bones.
+
+![The Merge Target diagram: two regions clicked off (red) leave the other three (green) active, and the camera capture dialog's status line names exactly those three](/img/animation/rig-merge-target-scope.webp)
+
+With every region active, the default, a source drives the whole rig exactly as before. Turning
+some off scopes the _next_ application of a source down to the regions still active: only bones
+in those regions are reset and re-driven, and every other bone — however it got its current
+pose, an earlier capture, a preset, or a manual edit — is left exactly as it is. That is what
+makes a clip buildable from several sources at once: sample a walk preset for the legs, switch
+to a camera capture scoped to just the arms, and a hand-authored spine curve underneath both
+survives either one.
+
+"Re-shooting" a region falls out of the same rule rather than needing a separate action:
+applying a second source scoped to a region already posed from a different one replaces that
+region's own contribution — a wobbly arm capture is fixed by capturing it again with only that
+region active, without redoing the legs or the spine that were already right. While the camera
+capture dialog is open, a status line names exactly which regions the diagram currently has
+active, so the scope is visible before capturing rather than only inferable from the diagram's
+own colouring.
+
 ## Presets: evaluating the timeline with real motion
 
 Hand-authoring every keyframe is not the only way to get something on the timeline to try.
@@ -556,14 +598,19 @@ Hand-authoring every keyframe is not the only way to get something on the timeli
 `public/animations/` (idle, walk, jump, kick, punch, roll, running), sharing this rig's own
 bone names since they come from the same character set. A mocap clip carries far more frames
 than this tool's sparse pose-keyframe model is meant to show, so picking one samples it down to
-twelve evenly-spaced keyframes rather than importing every original frame, replacing whatever
-was on the timeline. It is a quick way to see the drag, resize and playback interactions
-working against a real, varied pose, not just a hand-posed test case.
+twelve evenly-spaced keyframes rather than importing every original frame. Loading one merges
+those sampled keyframes into whichever groups were last active on the Merge Target diagram, the
+same scope a camera capture would use — with every region active, the default, that replaces
+the whole timeline, same as before. The diagram itself only shows while the camera capture
+dialog is open (see **Merging sources by body part** above), but the scope it last set still
+applies to a preset loaded with the dialog closed. It is a quick way to see the drag, resize and
+playback interactions working against a real, varied pose, not just a hand-posed test case.
 
 A **Record Motion** take that captured any real motion appears in the same dropdown too, as
 "Recording 1", "Recording 2" and so on, so a captured performance can be reloaded and replayed
-without re-recording it. These entries are session-only — a refresh drops them, the same as
-every unsaved edit that is not the autosave.
+without re-recording it, merged into the Merge Target scope the same way a bundled preset is.
+These entries are session-only — a refresh drops them, the same as every unsaved edit that is
+not the autosave.
 
 ## Dropping marbles on the pose
 
@@ -657,5 +704,6 @@ happens, and restored automatically the next time the view loads, so an accident
 not lose the work in progress. Only the edit itself is saved, never the loaded model: an
 uploaded file's blob URL cannot survive a refresh anyway, so the restored keyframes apply to
 whatever model loads next, correctly if it is still the same rig. **Reset** on the rig timeline
-clears every keyframe and the autosave behind them, back to a blank edit, and snaps the live rig
-back to its rest pose too, whenever you want to start over rather than undo one thing at a time.
+clears every keyframe and the autosave behind them, back to a blank edit, snaps the live rig
+back to its rest pose, and returns the playhead to frame 0, whenever you want to start over
+rather than undo one thing at a time.

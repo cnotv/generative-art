@@ -11,6 +11,7 @@ import {
   type CameraPoseMappingOptions
 } from './cameraPoseMapping'
 import { applyPoleDrag } from './boneDragTarget'
+import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
 
 /** Excluded from the per-frame reset in `applyCameraPose`, see its own doc comment. */
 const BONES_KEPT_ACROSS_FRAMES = new Set([CAMERA_POSE_HIPS_BONE])
@@ -44,27 +45,44 @@ export const useRigCameraPose = (
    * already does, until a fresh hip target moves it again. A pole target re-bends an already
    * placed chain toward the detected elbow or knee, the same re-solve a manual pole drag does,
    * so it never changes where the hand or foot itself ended up.
+   *
+   * `targetGroups` scopes both the reset and the application below to the bones that fall
+   * inside those groups (see `boneBodyPartGroup`): a bone outside every selected group is left
+   * exactly as it was, whether that is an earlier capture, a preset, or a manual edit, so a
+   * capture can be re-shot for just one limb without disturbing whatever the rest of the rig
+   * already carries.
    * @param landmarks The detected person's world landmarks, from `useCameraPoseCapture`
    * @param options Which extra details (elbow/knee bend, hips, depth) to derive, see
    *   `CameraPoseMappingOptions`
+   * @param targetGroups Which body-part groups this capture is allowed to touch
    */
   const applyCameraPose = (
     landmarks: CameraLandmark[],
-    options: CameraPoseMappingOptions = CAMERA_POSE_MAPPING_OPTIONS_DEFAULT
+    options: CameraPoseMappingOptions = CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+    targetGroups: Set<RigBodyPartGroup>
   ): void => {
-    resetAllBonesToRest(BONES_KEPT_ACROSS_FRAMES)
+    const boneNamesInScope = boneNamesInGroups(bones.value, targetGroups)
+    const excludeFromReset = new Set([
+      ...bones.value.map((bone) => bone.name).filter((name) => !boneNamesInScope.has(name)),
+      ...BONES_KEPT_ACROSS_FRAMES
+    ])
+    resetAllBonesToRest(excludeFromReset)
     const anchor = computeCameraRigAnchor(bones.value)
     if (!anchor) return
     const { boneTargets, poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, options)
-    Object.entries(boneTargets).forEach(([boneName, targetWorldPosition]) => {
-      const bone = bones.value.find((candidate) => candidate.name === boneName)
-      if (bone) applyBoneDragTarget(bone, targetWorldPosition)
-    })
-    Object.entries(poleTargets).forEach(([endBoneName, poleWorldPosition]) => {
-      const endBone = bones.value.find((candidate) => candidate.name === endBoneName)
-      const chain = endBone ? ikFindTwoBoneChain(endBone) : null
-      if (chain) applyPoleDrag(chain, poleWorldPosition)
-    })
+    Object.entries(boneTargets)
+      .filter(([boneName]) => boneNamesInScope.has(boneName))
+      .forEach(([boneName, targetWorldPosition]) => {
+        const bone = bones.value.find((candidate) => candidate.name === boneName)
+        if (bone) applyBoneDragTarget(bone, targetWorldPosition)
+      })
+    Object.entries(poleTargets)
+      .filter(([endBoneName]) => boneNamesInScope.has(endBoneName))
+      .forEach(([endBoneName, poleWorldPosition]) => {
+        const endBone = bones.value.find((candidate) => candidate.name === endBoneName)
+        const chain = endBone ? ikFindTwoBoneChain(endBone) : null
+        if (chain) applyPoleDrag(chain, poleWorldPosition)
+      })
   }
 
   return { canCaptureFromCamera, applyCameraPose }
