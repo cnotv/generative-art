@@ -108,11 +108,12 @@ export const DEFAULT_ENCLOSURE_OPACITY = 0
 
 /** How far above the rig's feet the lamp's pivot sits, as a fraction of the rig's spread. */
 export const LAMP_ANCHOR_HEIGHT_FRACTION = 1
-/** How far to the side of the rig the pivot sits: inside the enclosure, between the rig and the
- * wall (the wall's inner face is ENCLOSURE_SIZE_FRACTION / 2 out), not past it. */
-export const LAMP_ANCHOR_SIDE_OFFSET_FRACTION = 0.15
-/** How far toward the camera the pivot sits, in front of the rig rather than level with it. */
-export const LAMP_ANCHOR_DEPTH_FRACTION = 0.2
+/** How far to the side of the rig the pivot sits: close against the body rather than out by
+ * the wall. */
+export const LAMP_ANCHOR_SIDE_OFFSET_FRACTION = 0.08
+/** How far toward the camera the lamp and the spawn cube both sit, in front of the rig rather
+ * than level with it, so the two read as a matched pair at the same depth. */
+export const PHYSICS_PROP_DEPTH_FRACTION = 0.2
 /** Length of the rigid arm between the pivot and the lamp, as a fraction of the rig's spread. */
 export const LAMP_ARM_LENGTH_FRACTION = 0.4
 export const LAMP_RADIUS_FRACTION = 0.063
@@ -133,8 +134,10 @@ export const LAMP_METALNESS = 0.1
  * knock can barely budge rather than something light hanging off a wire. */
 export const LAMP_WEIGHT_MULTIPLIER = 4
 
-/** A touch-sensor cube on the rig's other side, mirroring the lamp: no collision response, just
- * detects the rig's own bones brushing it and spawns a marble. */
+/** A touch-sensor cube on the rig's other side, no collision response, just detects the rig's
+ * own bones brushing it and spawns a marble. Further out than the lamp sits close in, so
+ * reaching it takes an actual, deliberate stretch. */
+export const SPAWN_CUBE_SIDE_OFFSET_FRACTION = 0.35
 export const SPAWN_CUBE_SIZE_FRACTION = 0.1
 /** Same height as the lamp's own resting point, so both read as a matched pair. */
 export const SPAWN_CUBE_HEIGHT_FRACTION = LAMP_ANCHOR_HEIGHT_FRACTION - LAMP_ARM_LENGTH_FRACTION

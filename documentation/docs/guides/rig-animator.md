@@ -573,7 +573,7 @@ rather than a silhouette: a cupped hand catches marbles, a flat one does not, an
 timeline back sweeps them around as the limbs move through them. It mirrors the Config panel's
 own **Physics: Simulate** checkbox, the same toggle either way.
 
-![The rig in its rest pose with physics on: a cone-shaded lamp hanging beside its right arm and a touch-sensor cube beside its left](/img/animation/rig-physics-lamp-cube.webp)
+![The rig in its rest pose with physics on: a cone-shaded lamp hanging close against its right side and a touch-sensor cube further out past its left hand](/img/animation/rig-physics-lamp-cube.webp)
 
 Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure,
 a heavy cone-shaded lamp hung close to the camera on a rigid pivot arm, and a cube on the rig's

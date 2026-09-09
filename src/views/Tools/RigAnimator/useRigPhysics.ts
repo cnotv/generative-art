@@ -7,12 +7,13 @@ import type { TimelineManager } from '@webgamekit/animation'
 import { computeRigDiagonal } from './boneMarkers'
 import {
   DEFAULT_POSITION_RANGE,
-  LAMP_ANCHOR_DEPTH_FRACTION,
   LAMP_ANCHOR_HEIGHT_FRACTION,
   LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
   MARBLE_DROP_HEIGHT_FRACTION,
   MARBLE_GRAVITY_REFERENCE_SPREAD,
+  PHYSICS_PROP_DEPTH_FRACTION,
   SPAWN_CUBE_HEIGHT_FRACTION,
+  SPAWN_CUBE_SIDE_OFFSET_FRACTION,
   SPAWN_CUBE_SIZE_FRACTION
 } from './config'
 import { buildMarbleDropPosition, pickMarbleRadius, pickMarbleTexture } from './marbles'
@@ -152,7 +153,7 @@ const createHangingLampState = ({
     const anchorPosition: CoordinateTuple = [
       center[0] + diagonal * LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
       center[1] + diagonal * LAMP_ANCHOR_HEIGHT_FRACTION,
-      center[2] + diagonal * LAMP_ANCHOR_DEPTH_FRACTION
+      center[2] + diagonal * PHYSICS_PROP_DEPTH_FRACTION
     ]
     hangingLamp = createHangingLamp(currentScene, currentWorld, anchorPosition, diagonal)
   }
@@ -186,9 +187,9 @@ const createSpawnCubeState = ({ scene, world, model, config, rigDiagonal }: Phys
     const diagonal = rigDiagonal()
     const center = (model.value?.position.toArray() ?? [0, 0, 0]) as CoordinateTuple
     const position: CoordinateTuple = [
-      center[0] - diagonal * LAMP_ANCHOR_SIDE_OFFSET_FRACTION,
+      center[0] - diagonal * SPAWN_CUBE_SIDE_OFFSET_FRACTION,
       center[1] + diagonal * SPAWN_CUBE_HEIGHT_FRACTION,
-      center[2]
+      center[2] + diagonal * PHYSICS_PROP_DEPTH_FRACTION
     ]
     spawnCube = createSpawnCube(
       currentScene,
