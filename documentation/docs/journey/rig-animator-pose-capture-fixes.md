@@ -6,7 +6,8 @@ sidebar_position: 127
 
 Three unrelated but easy-to-conflate fixes to the Rig Animator's camera pose capture and manual
 posing: turning the model instead of the viewport camera, a root-follow priority for dragging a
-foot or the head, and why the thumb's detected curl looked wrong regardless of sign.
+foot or the head, and two dead ends chasing the thumb's detected curl before a real recorded
+gesture sequence, run through the real pipeline, showed which fix actually held.
 
 ## Turning the model, not the viewport camera
 
@@ -49,32 +50,48 @@ interactive single-target caller and a batch multi-target caller cannot safely d
 whole-body side effect to on, even when that side effect is exactly right for the interactive
 case.
 
-## The thumb's curl looked wrong regardless of sign
+## The thumb: two dead ends, then a way to actually check
 
 An earlier fix corrected the _sign_ of the thumb's first joint (its CMC) for the canned preset
 poses, negating that one joint's angle since its own rest pose carries a real anatomical tilt
 that a positive flexion curls away from the palm instead of into it. That fix held for presets,
-but a live-detected thumb curl still looked wrong, curled in an implausible direction and barely
-responsive to the real thumb's own movement.
+but live tracking still looked wrong against a real camera: curled in an implausible direction,
+barely responsive to the real thumb's own movement.
 
-The root cause was upstream of any sign: every finger's first joint is measured as the angle
-between the wrist-to-knuckle segment and that finger's own first bone, and for the four straight
-fingers this is a reasonable zero-baseline, since a relaxed hand's finger continues roughly the
-same direction the wrist-to-knuckle line already points. The thumb's own metacarpal does not
-share that property. Even fully relaxed, it sits at a real anatomical angle off the wrist (thumb
-opposition), so measuring its first joint's bend the wrist-relative way read a large, constant,
-curl-unrelated offset on every single frame, curled or not. That offset then composed on top of
-the bone's own already-tilted rest quaternion, a second, unrelated tilt, and no amount of sign
-correction on the composed result could make that combination track the thumb's real, live
-motion.
+**First dead end.** Reasoning from a plausible-sounding anatomical argument (the four straight
+fingers use the wrist as their first joint's zero-bend reference because a relaxed finger
+continues roughly the same direction the wrist-to-knuckle line points, but the thumb's own
+metacarpal sits at a real angle off the wrist even relaxed, so the same reference should read a
+large, curl-unrelated baseline), the reference landmark was swapped to the index finger's own
+knuckle. Tried against a live feed, it made the thumb curl worse, not better: further to the
+wrong side of the hand than before. The reasoning was self-consistent and still wrong.
 
-The fix changes which landmark the thumb's first joint is measured against: the index finger's
-own knuckle instead of the wrist. A relaxed thumb's metacarpal already points roughly toward
-that area across the palm, much closer to collinear with it at rest than the far-away wrist ever
-is, so the same "wrist-relative for straight fingers, index-knuckle-relative for the thumb"
-recipe now gives the thumb a genuine near-zero baseline too. The general lesson: a synthetic test
-fixture that builds every finger, thumb included, as points running in a straight line from one
-shared origin will pass even when the underlying assumption (that origin is a valid zero-bend
-reference for every finger) is false for one of them. The fixture has to encode the same
-anatomical relationship the real detector reads, not just produce a plausible-looking straight
-hand.
+**Second dead end.** With two failed reference points, the mechanism itself looked suspect:
+composing any nonzero magnitude around a single fixed local axis, on top of a joint whose rest
+pose already carries a real tilt on every axis, seemed like it could swing the bone toward
+whatever direction that axis happens to point rather than toward the palm. The thumb's first
+joint was left undriven entirely, frozen at its own rest pose, trading the wrong-side flip for a
+thumb that mostly just stopped tracking. Reported back plainly: it no longer looked broken, but
+it no longer followed a real thumb either.
+
+**What actually settled it**: a real recorded gesture sequence (a hand counting on camera) fed
+into the live pipeline through Chromium's fake video-capture flag
+(`--use-fake-device-for-media-stream --use-file-for-fake-video-capture=<file>`), driving the
+exact same code path a real webcam would, with no code changes needed to test it. That is a
+categorically better source of truth than a synthetic landmark fixture or a plausible-sounding
+argument about which reference point should behave better: a synthetic fixture only proves an
+assumption self-consistent, never that the assumption matches anatomy. Reading the composed
+bone rotation at intervals through the clip showed the _original_ wrist-referenced version
+(the one before either dead end) producing smooth, bounded values a few tenths of a radian off
+rest, never near the extremes that would send it to the wrong side of the hand; extracted stills
+from the same timestamps, held up against the rig's own pose at that instant, showed the overall
+hand shape tracking a closed fist and a spread-open hand both reasonably. The wrong-side flip
+traced specifically to the index-knuckle reference point, not to composing a live angle onto
+this joint at all. The fix landed back where it started, this time with recorded evidence instead
+of a plausible argument for why it should work.
+
+The fixture lesson still holds independently: a synthetic test that builds every finger, thumb
+included, as points running in a straight line from one shared origin passes even when the
+underlying assumption (that the origin is a valid zero-bend reference for every finger) is false
+for one of them. It just was not, on its own, enough to tell a plausible-but-wrong fix from a
+plausible-and-right one; only a real gesture sequence run through the real pipeline could.

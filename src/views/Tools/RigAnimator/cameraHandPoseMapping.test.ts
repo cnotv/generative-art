@@ -57,32 +57,15 @@ describe('cameraHandLandmarksToPose', () => {
     Object.values(pose).forEach((angles) => expect(angles).toHaveLength(3))
   })
 
-  it('never drives the thumb CMC joint, however sharply that segment is bent', () => {
+  it('reads a bent thumb CMC joint as a nonzero curl, the same as any other joint', () => {
     const landmarks = buildOpenHandLandmarks()
-    // Fold the thumb's wrist->CMC->MCP angle sharply, exactly the shape a real detected curl
-    // (or the anatomical rest tilt neither reference point tried so far read correctly) takes.
-    landmarks[2] = point(landmarks[1].x - 1, landmarks[1].y, landmarks[1].z)
+    // Fold the thumb's wrist->CMC->MCP angle the same way the index finger's bent-joint test
+    // folds its own PIP: still in line up to the joint, then a clean fold past it.
+    landmarks[2] = point(landmarks[1].x, landmarks[1].y, landmarks[1].z - 1)
 
     const pose = cameraHandLandmarksToPose(landmarks)
 
-    // Confirmed against a live feed: composing any nonzero magnitude here, from either
-    // reference point tried, swung the joint to the wrong side of the hand rather than
-    // merely curling it wrong, since its real motion is opposition, not a hinge around a
-    // single fixed axis. Left at 0 so it stays at its own rest pose instead.
-    expect(pose.thumb[0]).toBe(0)
-  })
-
-  it('still drives the thumb’s other two joints normally', () => {
-    const landmarks = buildOpenHandLandmarks()
-    // Fold the thumb's MCP->IP->TIP the same way the index finger's bent-joint test does.
-    landmarks[3] = point(landmarks[2].x, landmarks[2].y, landmarks[2].z - 1)
-    landmarks[4] = point(landmarks[2].x, landmarks[2].y, landmarks[2].z - 2)
-
-    const pose = cameraHandLandmarksToPose(landmarks)
-
-    expect(pose.thumb[0]).toBe(0)
-    expect(pose.thumb[1]).toBeCloseTo(Math.PI / 2)
-    expect(pose.thumb[2]).toBeCloseTo(0)
+    expect(pose.thumb[0]).toBeGreaterThan(0.3)
   })
 })
 

@@ -323,16 +323,17 @@ would. This rides along on the same live application the body mapping already do
 button, no separate confidence gate, since a hand simply not being detected in frame just leaves
 whatever the fingers were doing untouched.
 
-Every joint's bend is measured between the landmark before it, the joint itself, and the
-landmark after it; the four straight fingers use the wrist as the "before" point for their own
-first joint, since a relaxed hand's own base segment already continues roughly the same
-direction the wrist-to-knuckle line points. The thumb's first joint (its CMC) uses the index
-finger's own knuckle instead: its metacarpal sits at a real anatomical angle off the wrist even
-fully relaxed (thumb opposition), so measuring it the wrist-relative way read a large,
-curl-unrelated angle on every frame, curled or not, which then rode on top of that bone's own
-already-tilted rest pose and looked stuck rotated the wrong way. The index knuckle sits roughly
-where a relaxed thumb's own metacarpal already points across the palm, much closer to collinear
-with it at rest than the wrist ever is.
+Every joint's bend, the thumb's included, is measured the same way: the angle between the
+landmark before it, the joint itself, and the landmark after it, using the wrist as the "before"
+point for each finger's own first joint. `applyHandPose` composes that angle onto the joint's own
+rest-pose quaternion rather than overwriting it outright, which is what makes a single shared
+formula work for the thumb's first joint (its CMC) too, despite that joint's own rest pose
+carrying a real tilt on every axis that the four straight fingers' own first joints do not (see
+"Hand pose presets" above). Verified against a real recorded gesture sequence run through the
+live pipeline, not only synthetic landmarks: see
+[the journey doc](/docs/journey/rig-animator-pose-capture-fixes) for two dead ends ruled out
+along the way, including one that reads as anatomically reasonable right up until a real camera
+disagrees with it.
 
 MediaPipe's own handedness label, and its own left/right landmark indices, are read straight
 through with no swap: an earlier version swapped the Hand Landmarker's label specifically,
