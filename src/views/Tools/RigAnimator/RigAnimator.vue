@@ -507,10 +507,13 @@ onUnmounted(() => {
     :max-jump="reactiveConfig.cameraMaxJump"
     :show-preview="reactiveConfig.cameraShowPreview"
     :is-recording="motionRecording.isRecording.value"
+    :frame="reactiveConfig.frame"
+    :fps="reactiveConfig.fps"
     @apply="handleCameraApply"
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"
+    @seek-frame="(frame) => (reactiveConfig.frame = frame)"
   />
 </template>
 

@@ -9,9 +9,11 @@ import {
 import { Circle, Square } from 'lucide-vue-next'
 import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
+import Switch from '@/components/ui/switch/Switch.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { useVideoPoseCapture } from './useVideoPoseCapture'
+import { useVideoTimelineSync } from './useVideoTimelineSync'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
 
@@ -26,6 +28,12 @@ const props = defineProps<{
   /** Whether the parent is currently sampling the live feed onto the rig timeline as
    * keyframes; only meaningful in camera mode, see `useRigMotionRecording`. */
   isRecording: boolean
+  /** The rig timeline's current frame, for keeping an uploaded video's playback in sync with
+   * it while `syncEnabled` is on. */
+  frame: number
+  /** The rig's frame rate, to convert between the timeline's frame numbers and the video
+   * element's `currentTime` seconds. */
+  fps: number
 }>()
 
 const emit = defineEmits<{
@@ -33,6 +41,9 @@ const emit = defineEmits<{
   close: []
   toggleRecord: []
   enablePreview: []
+  /** The uploaded video was scrubbed via its own native controls; move the rig timeline's
+   * playhead to match. */
+  seekFrame: [frame: number]
 }>()
 
 const videoReference = ref<HTMLVideoElement | null>(null)
@@ -158,16 +169,20 @@ watch(worldLandmarks, (landmarks) => {
  * preview always comes on regardless of whatever the Config panel's checkbox was last left at
  * — leaving it off would run detection against the upload with nothing on screen to show for
  * it. A video plays at its own rate and samples live the exact same way the camera does,
- * useful for testing against a known performance; a photo applies once. */
-const handleMediaChange = (event: Event): void => {
+ * useful for testing against a known performance; a photo applies once. Uploading a video
+ * also starts Record Motion automatically, since scrubbing back through the timeline to redo
+ * a manual start is exactly the friction this dialog exists to avoid. */
+const handleMediaChange = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
+  if (props.isRecording) emit('toggleRecord')
   camera.stop()
   if (file.type.startsWith('video/')) {
     mode.value = 'video'
-    uploadedVideo.loadVideo(file)
+    await uploadedVideo.loadVideo(file)
+    if (uploadedVideo.isActive.value) emit('toggleRecord')
   } else {
     uploadedVideo.stop()
     mode.value = 'photo'
@@ -183,12 +198,25 @@ const handleUseCamera = (): void => {
   camera.start()
 }
 
-// Recording only makes sense against a continuously updating source: switching to photo mode
-// mid recording would otherwise keep sampling the same still pose onto the timeline forever.
-// Switching between camera and an uploaded video, both continuous, never stops it.
-watch(mode, (value) => {
-  if (value === 'photo' && props.isRecording) emit('toggleRecord')
+/** The uploaded video reached its natural end: stop recording the same as a manual click
+ * would, rather than leaving the take open with nothing left to sample. A live camera feed's
+ * `srcObject` stream never fires this, so the handler only ever does anything in video mode. */
+const handleVideoEnded = (): void => {
+  if (mode.value === 'video' && props.isRecording) emit('toggleRecord')
+}
+
+const { syncEnabled, handleVideoSeeked: resolveSeekedFrame } = useVideoTimelineSync({
+  videoElement: videoReference,
+  frame: () => props.frame,
+  fps: () => props.fps,
+  isVideoMode: () => mode.value === 'video',
+  isRecording: () => props.isRecording
 })
+
+const handleVideoSeeked = (): void => {
+  const seekedFrame = resolveSeekedFrame()
+  if (seekedFrame !== null) emit('seekFrame', seekedFrame)
+}
 
 onMounted(async () => {
   camera.videoElement.value = videoReference.value
@@ -220,6 +248,9 @@ onUnmounted(() => {
         class="camera-pose-capture__video"
         muted
         playsinline
+        :controls="mode === 'video'"
+        @ended="handleVideoEnded"
+        @seeked="handleVideoSeeked"
       ></video>
       <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
     </div>
@@ -278,6 +309,10 @@ onUnmounted(() => {
       >
         Use Camera
       </Button>
+      <label v-if="mode === 'video'" class="camera-pose-capture__sync-toggle">
+        <Switch v-model="syncEnabled" />
+        Sync timeline to video
+      </label>
       <Button
         v-if="isContinuousMode"
         size="lg"
@@ -386,6 +421,15 @@ onUnmounted(() => {
   width: var(--spacing-5);
   height: var(--spacing-5);
   margin-right: var(--spacing-2);
+}
+
+.camera-pose-capture__sync-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
 }
 
 .camera-pose-capture__hidden-input {

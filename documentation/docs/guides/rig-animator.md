@@ -63,8 +63,10 @@ exist, so two poses are already a movement.
   the live webcam feed and an uploaded video file
 - `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream for the capture
   dialog's overlay, wiring `useVideoLandmarkDetection` against it
-- `src/views/Tools/RigAnimator/useVideoPoseCapture.ts`: an uploaded video file played on loop,
-  wiring `useVideoLandmarkDetection` against it the same way the webcam stream does
+- `src/views/Tools/RigAnimator/useVideoPoseCapture.ts`: an uploaded video file played through
+  once, wiring `useVideoLandmarkDetection` against it the same way the webcam stream does
+- `src/views/Tools/RigAnimator/useVideoTimelineSync.ts`: keeps the rig timeline's frame and an
+  uploaded video's playback position in sync while the **Sync timeline to video** toggle is on
 - `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body and hand pose from a
   single uploaded photo instead of a continuous feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
@@ -365,17 +367,30 @@ mocap clip can.
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays on loop at its own rate and runs the exact same live VIDEO-mode detection loop the camera
-feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig continuously
-the same way a webcam does — Record Motion works against it exactly as it does against the
-camera. Either kind stays available once something is already loaded, so picking a different
-file never needs switching back to the camera first, and **Use Camera** switches back from
-either. A photo or video is shown as it is, not mirrored, since neither is a self-view the way
-a live webcam feed is, and the detected pose maps onto the rig unmirrored too, matching what
-the upload actually shows. Uploading either always turns **Show Camera Preview** on too,
-regardless of whatever it was last left at: the whole point of picking one is to look at it and
-its detected pose together, and running detection against an upload with the preview still
-hidden would show nothing for it.
+plays through once at its own rate and runs the exact same live VIDEO-mode detection loop the
+camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
+continuously the same way a webcam does — Record Motion works against it exactly as it does
+against the camera, and starts automatically: uploading a video begins a take as soon as
+playback starts, and the take ends on its own once the video reaches its natural end, the same
+as a manual **Stop Recording** click would. It plays once rather than looping specifically so
+that end has something to trigger on. Either kind stays available once something is already
+loaded, so picking a different file never needs switching back to the camera first, and **Use
+Camera** switches back from either. A photo or video is shown as it is, not mirrored, since
+neither is a self-view the way a live webcam feed is, and the detected pose maps onto the rig
+unmirrored too, matching what the upload actually shows. Uploading either always turns **Show
+Camera Preview** on too, regardless of whatever it was last left at: the whole point of picking
+one is to look at it and its detected pose together, and running detection against an upload
+with the preview still hidden would show nothing for it.
+
+An uploaded video also gets its own native scrub bar, and a **Sync timeline to video** toggle
+next to Record Motion, on by default. With sync on, dragging the rig timeline's own playhead
+seeks the video to match, and scrubbing the video's native controls moves the timeline's frame
+back the same way — the two stay locked together in both directions, so comparing a specific
+moment in the source against the rig it drove is a single scrub rather than two. Sync only
+applies outside a take: while Record Motion is running the timeline is already advancing from
+the capture itself, not from playback or a scrub, so sync stands aside rather than fighting it.
+Turning the toggle off frees the video to be scrubbed on its own — useful for stepping back
+through a longer clip without the timeline chasing every frame of it.
 
 ### Mirrored like a real mirror
 

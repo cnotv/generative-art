@@ -31,8 +31,10 @@ export const useVideoPoseCapture = (
     mirror: false
   })
 
-  /** Play an uploaded video file on loop and start live detection against it, replacing
-   * whatever was loaded before. */
+  /** Play an uploaded video file through once and start live detection against it, replacing
+   * whatever was loaded before. Plays once rather than looping: a caller driving Record Motion
+   * from this needs a real end to stop the take on, see `CameraPoseCapture.vue`'s own
+   * `ended` handling. */
   const loadVideo = async (file: File): Promise<void> => {
     if (isLoading.value) return
     isLoading.value = true
@@ -41,7 +43,7 @@ export const useVideoPoseCapture = (
       if (!videoElement.value) throw new Error('Video preview is not ready')
       objectUrl = URL.createObjectURL(file)
       videoElement.value.src = objectUrl
-      videoElement.value.loop = true
+      videoElement.value.loop = false
       await videoElement.value.play()
       await detection.startDetectionLoop()
       isActive.value = true
