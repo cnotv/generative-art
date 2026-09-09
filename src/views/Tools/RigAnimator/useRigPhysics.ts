@@ -8,8 +8,7 @@ import { computeRigDiagonal } from './boneMarkers'
 import {
   DEFAULT_POSITION_RANGE,
   MARBLE_DROP_HEIGHT_FRACTION,
-  MARBLE_GRAVITY_REFERENCE_SPREAD,
-  MARBLE_MAX_ALIVE
+  MARBLE_GRAVITY_REFERENCE_SPREAD
 } from './config'
 import { buildMarbleDropPosition, pickMarbleRadius, pickMarbleTexture } from './marbles'
 import { buildBoneColliderSpecs, readBoneColliderTransform } from './rigColliders'
@@ -131,11 +130,6 @@ const createMarbleFlowState = (
         gravityScale: diagonal / MARBLE_GRAVITY_REFERENCE_SPREAD
       })
     )
-
-    if (marbles.length > MARBLE_MAX_ALIVE) {
-      const [oldest] = marbles.splice(0, 1)
-      disposePhysicsMeshes(currentWorld, [oldest])
-    }
   }
 
   const clear = (): void => {

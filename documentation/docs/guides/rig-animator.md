@@ -589,9 +589,8 @@ The rest of the settings appear once the toggle is on:
 
 - **Marble Flow (Frames)** is the gap between one marble dropping and the next, the same
   interval-action shape the Timeline view uses for its own ball spawner. Lower is a denser
-  stream. The oldest marble is recycled once the flow reaches a cap, so a long session settles
-  into a steady stream rather than piling up forever. **Reset Marbles** clears every marble
-  currently on the floor without stopping the flow.
+  stream; nothing caps how many accumulate, so a long session keeps piling the floor up.
+  **Reset Marbles** clears every marble currently on the floor without stopping the flow.
 - **Marble Textures**, on by default, paints each marble with one of the Marble Editor's own
   marble images, picked at random per spawn, so the same object drops here as in that game.
   Turning it off leaves the marble a flat pastel colour instead, which is cheaper to draw and
@@ -604,8 +603,9 @@ The rest of the settings appear once the toggle is on:
   enclosure whether or not the walls are drawn: the scene's own ground is a fixed forty units
   across, which a rig authored in centimetres overruns, and marbles landing past it would fall
   through the world.
-- **Wall Opacity** goes from barely visible to solid. Low is the useful setting for looking at
-  the rig through them; solid is the useful one for a recording where the walls are the frame.
+- **Wall Opacity** goes from fully invisible to solid. Zero keeps the collision without drawing
+  anything, useful for looking at the rig unobstructed; solid is the useful one for a recording
+  where the walls are the frame.
 
 ![The same marbles settled into a heap across the floor, the rig standing untouched among them](/img/animation/rig-physics-settled.webp)
 

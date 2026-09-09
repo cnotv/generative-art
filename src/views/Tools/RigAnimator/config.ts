@@ -69,9 +69,6 @@ export const BONE_COLLIDER_FRICTION = 0.6
  * ball-spawn action, so the flow can be walked into rather than landing as one dump. */
 export const DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES = 30
 export const MARBLE_SPAWN_INTERVAL_RANGE = { min: 1, max: 200, step: 1 }
-/** Oldest live marble is recycled once the flow reaches this many, so a long session settles
- * into a steady stream rather than piling up forever. */
-export const MARBLE_MAX_ALIVE = 60
 /** Marble radius range, as fractions of the rig's spread, so marbles scale with any model. */
 export const MARBLE_RADIUS_FRACTION_RANGE: [number, number] = [0.014, 0.028]
 /** Height of the drop point above the rig's feet, as a fraction of the rig's spread. */
@@ -105,7 +102,7 @@ export const ENCLOSURE_SIZE_FRACTION = 0.55
 export const ENCLOSURE_HEIGHT_FRACTION = 1.1
 export const ENCLOSURE_THICKNESS_FRACTION = 0.04
 export const ENCLOSURE_COLOR = 0xc9d4e4
-export const ENCLOSURE_OPACITY_RANGE = { min: 0.05, max: 1, step: 0.05 }
+export const ENCLOSURE_OPACITY_RANGE = { min: 0, max: 1, step: 0.05 }
 export const DEFAULT_ENCLOSURE_OPACITY = 0.25
 
 export const CAMERA_FRAME_DISTANCE_MULTIPLIER = 2.5
