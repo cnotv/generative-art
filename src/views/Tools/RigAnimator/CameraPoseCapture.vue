@@ -11,8 +11,9 @@ import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
+import { useVideoPoseCapture } from './useVideoPoseCapture'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
-import { CAMERA_PANEL_WIDTH_VW } from './config'
+import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
 
 const props = defineProps<{
   /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
@@ -39,29 +40,56 @@ const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
 const camera = useCameraPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
 const photo = useCameraPhotoPose()
-const mode = ref<'camera' | 'photo'>('camera')
+const uploadedVideo = useVideoPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
+const mode = ref<'camera' | 'photo' | 'video'>('camera')
+/** Whether the current mode drives the rig from a continuously updating source, the same as a
+ * live webcam feed does, versus a single still photo. Both camera and an uploaded video can
+ * be recorded from; a still photo cannot. */
+const isContinuousMode = computed(() => mode.value === 'camera' || mode.value === 'video')
+
+/** Picks the field from whichever source is active in the current mode. */
+const pickByMode = <T,>(cameraValue: T, videoValue: T, photoValue: T): T => {
+  if (mode.value === 'camera') return cameraValue
+  if (mode.value === 'video') return videoValue
+  return photoValue
+}
 
 const isLoading = computed(() =>
-  mode.value === 'camera' ? camera.isLoading.value : photo.isLoading.value
+  pickByMode(camera.isLoading.value, uploadedVideo.isLoading.value, photo.isLoading.value)
 )
-const error = computed(() => (mode.value === 'camera' ? camera.error.value : photo.error.value))
+const error = computed(() =>
+  pickByMode(camera.error.value, uploadedVideo.error.value, photo.error.value)
+)
 const previewLandmarks = computed(() =>
-  mode.value === 'camera' ? camera.previewLandmarks.value : photo.previewLandmarks.value
+  pickByMode(
+    camera.previewLandmarks.value,
+    uploadedVideo.previewLandmarks.value,
+    photo.previewLandmarks.value
+  )
 )
 const previewHandLandmarks = computed(() =>
-  mode.value === 'camera' ? camera.previewHandLandmarks.value : photo.previewHandLandmarks.value
+  pickByMode(
+    camera.previewHandLandmarks.value,
+    uploadedVideo.previewHandLandmarks.value,
+    photo.previewHandLandmarks.value
+  )
 )
 const worldLandmarks = computed(() =>
-  mode.value === 'camera' ? camera.worldLandmarks.value : photo.worldLandmarks.value
+  pickByMode(
+    camera.worldLandmarks.value,
+    uploadedVideo.worldLandmarks.value,
+    photo.worldLandmarks.value
+  )
 )
 const handPoses = computed(() =>
-  mode.value === 'camera' ? camera.handPoses.value : photo.handPoses.value
+  pickByMode(camera.handPoses.value, uploadedVideo.handPoses.value, photo.handPoses.value)
 )
 
 let drawingUtilities: DrawingUtils | null = null
 
-/** Redraws the preview: the photo (in photo mode) or nothing behind the live video, then the
- * skeleton overlay on top, for whichever landmarks a detection actually found confidently. */
+/** Redraws the preview: the photo (in photo mode) or nothing behind the live/uploaded video,
+ * then the skeleton overlay on top, for whichever landmarks a detection actually found
+ * confidently. */
 const drawOverlay = (): void => {
   const canvas = canvasReference.value
   const video = videoReference.value
@@ -73,6 +101,8 @@ const drawOverlay = (): void => {
     canvas.height = photo.photoImage.value.height
     context.drawImage(photo.photoImage.value, 0, 0)
   } else {
+    // Camera and an uploaded video are both a literal <video> element already showing its own
+    // frames; the canvas only ever needs to carry the skeleton overlay on top of it.
     if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
@@ -124,39 +154,52 @@ watch(worldLandmarks, (landmarks) => {
   if (landmarks) emit('apply', landmarks, handPoses.value)
 })
 
-/** An uploaded photo (or, once supported, a video/gif) is the whole reason to look at this
- * panel right then, so its preview always comes on regardless of whatever the Config panel's
- * checkbox was last left at — leaving it off would run detection against the upload with
- * nothing on screen to show for it. */
-const handlePhotoChange = (event: Event): void => {
+/** An uploaded photo or video is the whole reason to look at this panel right then, so its
+ * preview always comes on regardless of whatever the Config panel's checkbox was last left at
+ * — leaving it off would run detection against the upload with nothing on screen to show for
+ * it. A video plays at its own rate and samples live the exact same way the camera does,
+ * useful for testing against a known performance; a photo applies once. */
+const handleMediaChange = (event: Event): void => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
   camera.stop()
-  mode.value = 'photo'
-  photo.detectPhoto(file)
+  if (file.type.startsWith('video/')) {
+    mode.value = 'video'
+    uploadedVideo.loadVideo(file)
+  } else {
+    uploadedVideo.stop()
+    mode.value = 'photo'
+    photo.detectPhoto(file)
+  }
   emit('enablePreview')
 }
 
 const handleUseCamera = (): void => {
   photo.reset()
+  uploadedVideo.stop()
   mode.value = 'camera'
   camera.start()
 }
 
-// Recording only makes sense against a continuous live feed: switching to photo mode mid
-// recording would otherwise keep sampling the same still pose onto the timeline forever.
+// Recording only makes sense against a continuously updating source: switching to photo mode
+// mid recording would otherwise keep sampling the same still pose onto the timeline forever.
+// Switching between camera and an uploaded video, both continuous, never stops it.
 watch(mode, (value) => {
   if (value === 'photo' && props.isRecording) emit('toggleRecord')
 })
 
 onMounted(async () => {
   camera.videoElement.value = videoReference.value
+  uploadedVideo.videoElement.value = videoReference.value
   await camera.start()
 })
 
-onUnmounted(() => camera.stop())
+onUnmounted(() => {
+  camera.stop()
+  uploadedVideo.stop()
+})
 </script>
 
 <template>
@@ -172,7 +215,7 @@ onUnmounted(() => camera.stop())
       }"
     >
       <video
-        v-show="mode === 'camera'"
+        v-show="mode === 'camera' || mode === 'video'"
         ref="videoReference"
         class="camera-pose-capture__video"
         muted
@@ -181,7 +224,7 @@ onUnmounted(() => camera.stop())
       <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
     </div>
     <p v-if="isLoading" class="camera-pose-capture__status">
-      {{ mode === 'camera' ? 'Starting camera…' : 'Reading photo…' }}
+      {{ pickByMode('Starting camera…', 'Reading video…', 'Reading photo…') }}
     </p>
     <p v-else-if="error" class="camera-pose-capture__status camera-pose-capture__status--error">
       {{ error }}
@@ -191,6 +234,12 @@ onUnmounted(() => camera.stop())
       class="camera-pose-capture__status"
     >
       No person detected yet. Step into frame.
+    </p>
+    <p
+      v-else-if="mode === 'video' && uploadedVideo.isActive.value && !worldLandmarks"
+      class="camera-pose-capture__status"
+    >
+      No person detected in this video.
     </p>
     <p
       v-else-if="mode === 'photo' && photo.photoImage.value && !worldLandmarks"
@@ -205,9 +254,9 @@ onUnmounted(() => camera.stop())
     <input
       ref="fileInputReference"
       type="file"
-      accept="image/*"
+      :accept="MEDIA_FILE_ACCEPT"
       class="camera-pose-capture__hidden-input"
-      @change="handlePhotoChange"
+      @change="handleMediaChange"
     />
     <div class="camera-pose-capture__actions">
       <Button
@@ -219,13 +268,18 @@ onUnmounted(() => camera.stop())
         Try Again
       </Button>
       <Button size="sm" variant="secondary" @click="fileInputReference?.click()">
-        Upload Photo
+        Upload Photo/Video
       </Button>
-      <Button v-if="mode === 'photo'" size="sm" variant="secondary" @click="handleUseCamera">
+      <Button
+        v-if="mode === 'photo' || mode === 'video'"
+        size="sm"
+        variant="secondary"
+        @click="handleUseCamera"
+      >
         Use Camera
       </Button>
       <Button
-        v-if="mode === 'camera'"
+        v-if="isContinuousMode"
         size="lg"
         variant="ghost"
         class="camera-pose-capture__record-toggle"

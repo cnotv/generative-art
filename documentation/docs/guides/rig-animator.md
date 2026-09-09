@@ -58,10 +58,15 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/cameraHandPoseMapping.ts` (+ `.test.ts`): pure mapping from
   detected hand landmarks to per-finger joint curl, and MediaPipe's handedness label to the
   rig's actual left/right
-- `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream and the MediaPipe
-  Pose and Hand Landmarkers, running live detection for the capture dialog's overlay
+- `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs MediaPipe's Pose and Hand
+  Landmarkers against a playing `<video>` element in a `requestAnimationFrame` loop, shared by
+  the live webcam feed and an uploaded video file
+- `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream for the capture
+  dialog's overlay, wiring `useVideoLandmarkDetection` against it
+- `src/views/Tools/RigAnimator/useVideoPoseCapture.ts`: an uploaded video file played on loop,
+  wiring `useVideoLandmarkDetection` against it the same way the webcam stream does
 - `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body and hand pose from a
-  single uploaded photo instead of the live feed
+  single uploaded photo instead of a continuous feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
   and applying a detected pose onto the rig
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
@@ -331,8 +336,9 @@ scrubbing the timeline afterward plays back the performance the same way any han
 clip does. The visible frame range grows to keep up with a long take rather than cutting it
 off, the same way the timeline's own resize handle only ever extends to fit real content.
 **Stop Recording**, the toggle's own second click, ends the take; closing the camera panel or
-switching to **Upload Photo** stops it too, since a still photo has nothing to keep sampling.
-Recording is only available in camera mode, not against an uploaded photo.
+switching to an uploaded photo stops it too, since a still photo has nothing to keep sampling.
+Recording works the same way against an uploaded video, see below — only a still photo cannot
+be recorded from.
 
 ![The camera panel's action row mid-recording: Record Motion toggled to a red Stop Recording button, next to Upload Photo and Close](/img/animation/rig-record-motion.webp)
 
@@ -351,16 +357,21 @@ already sat there instead, a visible twitch right at the seam. Once a take ends,
 to **Presets** — see below — so it can be played back or reloaded the same way a bundled
 mocap clip can.
 
-**Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
-from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
-its image mode and feeds the result through the exact same mapping, applying it once as soon as
-a person is found, and stays available once a photo is already loaded so picking a different
-one never needs switching back to the camera first. **Use Camera** switches back. A photo is
-shown as it is, not mirrored, since it is not a self-view the way a live webcam feed is, and its
-detected pose maps onto the rig unmirrored too, matching what the photo actually shows.
-Uploading one always turns **Show Camera Preview** on too, regardless of whatever it was last
-left at: the whole point of picking a photo is to look at it and its detected pose together,
-and running detection against an upload with the preview still hidden would show nothing for it.
+**Upload Photo/Video** reads a pose from an uploaded file instead of the live feed, useful for
+posing from a reference photo, testing against a known performance, or when there is no
+working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
+through the exact same mapping, applying it once as soon as a person is found. A video instead
+plays on loop at its own rate and runs the exact same live VIDEO-mode detection loop the camera
+feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig continuously
+the same way a webcam does — Record Motion works against it exactly as it does against the
+camera. Either kind stays available once something is already loaded, so picking a different
+file never needs switching back to the camera first, and **Use Camera** switches back from
+either. A photo or video is shown as it is, not mirrored, since neither is a self-view the way
+a live webcam feed is, and the detected pose maps onto the rig unmirrored too, matching what
+the upload actually shows. Uploading either always turns **Show Camera Preview** on too,
+regardless of whatever it was last left at: the whole point of picking one is to look at it and
+its detected pose together, and running detection against an upload with the preview still
+hidden would show nothing for it.
 
 ### Mirrored like a real mirror
 
@@ -373,8 +384,8 @@ where MediaPipe's landmarks are first read, before any of the mapping above ever
 `mirrorCameraHandPoses` does the equivalent swap for which side a detected hand's finger curl
 lands on. Everything downstream, the bone mapping and the camera-angle-matching yaw estimate
 alike, needed no changes of its own: both simply read whichever pose they are handed, and a
-pre-mirrored one comes out correctly mirrored on its own. A photo gets neither of these, since
-its own preview is not mirrored either.
+pre-mirrored one comes out correctly mirrored on its own. A photo or an uploaded video gets
+neither of these, since its own preview is not mirrored either.
 
 The mapping reads the detector's 3D world landmarks for the wrist, ankle and nose, anchors them
 to the rig's own shoulder center, and scales them by the ratio between the rig's shoulder width
@@ -470,8 +481,8 @@ needs, control more of what MediaPipe actually detects and how the result is tun
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
-  same either way. Uploading a photo turns it on automatically even if it was off, see
-  **Upload Photo** above.
+  same either way. Uploading a photo or video turns it on automatically even if it was off, see
+  **Upload Photo/Video** above.
 
 ### Smoothing the live feed
 
