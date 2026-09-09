@@ -124,8 +124,9 @@ order, and each one is only visible after the previous is fixed:
 - **Everything drifts down in slow motion.** Scale a falling body's gravity by the scene's own
   spread against a human-sized reference — Rapier's per-body gravity scale, not the world's.
 - **Bodies then vanish on the first step.** At that speed a body crosses more ground per step
-  than a wall is thick and is never inside it at any tested instant. Pass `ccd: true`, on the
-  few fast bodies only.
+  than a wall is thick and is never inside it at any tested instant. Pass `ccd: true` (continuous
+  collision detection, which sweeps the whole step instead of just testing where it lands), on
+  the few fast bodies only.
 - **Bodies then bounce forever.** Restitution is a fraction of impact speed, so a value that is
   lively at human scale returns hundreds of units per second at a hundred times that.
 

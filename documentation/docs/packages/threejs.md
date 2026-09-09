@@ -604,10 +604,10 @@ on top of it, so a capsule can be swapped in for a cylinder to round off the end
 column. `boundary` scales the collider against the mesh it stands in for; at `1` it is exactly
 the size given, which is what a body with no mesh of its own wants.
 
-`ccd`, off by default and available on every model helper too, sweeps the body's whole path each
-step rather than testing only where it lands. A body that crosses more ground in one step than
-the wall it should hit is thick passes straight through it, which is what a small fast object in
-a large-scale scene does otherwise. Background:
+`ccd` (continuous collision detection), off by default and available on every model helper too,
+sweeps the body's whole path each step rather than testing only where it lands. A body that
+crosses more ground in one step than the wall it should hit is thick passes straight through it,
+which is what a small fast object in a large-scale scene does otherwise. Background:
 [scale, gravity and tunnelling](/docs/journey/scale-gravity-and-tunnelling).
 
 ### textureRepeat on a model
