@@ -65,10 +65,7 @@ Either way: a fresh branch off main every time, never the current branch, never 
   alias to keep old callers working. Fix it properly rather than layering a workaround.
 - **Comments explain why, never what.** If code needs a comment to say what it does, rewrite
   the code. No commented-out debug notes, no "was X, now Y", no section labels.
-- **Spell out a domain acronym the first time it appears.** `ccd`, `IK`, `UV` and the like mean
-  nothing to a reader outside that domain. A one-line comment on the field, parameter or first
-  use in a file — `ccd` (continuous collision detection) — costs nothing and saves a search.
-  Ordinary developer terms (`API`, `URL`, `ID`) don't need this.
+- **Spell out a domain acronym on first use**, e.g. `ccd` (continuous collision detection).
 - **DRY and KISS.** If a pattern appears twice, extract it. Prefer the simplest thing that
   works over an abstraction you might need later.
 - **Reuse before writing.** Check `src/components/`, `src/utils/` and `src/stores/` first.
@@ -80,9 +77,8 @@ Either way: a fresh branch off main every time, never the current branch, never 
 
 ## Git
 
-- Branches are always `<type>/<issue-number>-<description>` once an issue exists, type one
-  of `feat`, `fix`, `docs`, `refactor`, `test`, `chore`. A prototype branch that started
-  before its issue did gets renamed to match, before the PR opens — never left as-is.
+- Branches are always `<type>/<issue-number>-<description>` once an issue exists (`feat`,
+  `fix`, `docs`, `refactor`, `test`, `chore`); a prototype branch gets renamed to match before the PR opens.
 - **Rebase, never merge.** `git fetch origin main && git rebase origin/main`. Never `git pull`,
   which merges by default. After a rebase, `git push --force-with-lease`, never `--force`.
 - **Commit subjects never reference an issue number** — no `#123`, no `(#123)`, no
