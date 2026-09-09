@@ -19,10 +19,12 @@ import {
 import {
   cameraDetectedHandsToPoses,
   mirrorCameraHandPoses,
+  mirrorCameraHandRotations,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
   type CameraHandLandmark
 } from './cameraHandPoseMapping'
+import { computeHandRotationAngle } from './cameraCalibration'
 
 interface Dependencies {
   videoElement: ShallowRef<HTMLVideoElement | null>
@@ -51,6 +53,9 @@ export const useVideoLandmarkDetection = ({
   const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
   const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
   const handPoses = shallowRef<Partial<Record<HandSide, HandPoseDefinition>>>({})
+  /** Wrist-rotation angle per detected hand, alongside `handPoses`' curl angles; see
+   * `computeHandRotationAngle` and the camera calibration flow that reads its baseline off it. */
+  const handRotations = shallowRef<Partial<Record<HandSide, number>>>({})
 
   let landmarker: PoseLandmarker | null = null
   let handLandmarker: HandLandmarker | null = null
@@ -99,6 +104,18 @@ export const useVideoLandmarkDetection = ({
     const detectedHandPoses = cameraDetectedHandsToPoses(smoothedHands)
     handPoses.value = mirror ? mirrorCameraHandPoses(detectedHandPoses) : detectedHandPoses
 
+    const detectedHandRotations = Object.fromEntries(
+      smoothedHands
+        .map((hand): [HandSide | null, number] => [
+          resolveCameraHandSide(hand.categoryName),
+          computeHandRotationAngle(hand.worldLandmarks)
+        ])
+        .filter((entry): entry is [HandSide, number] => entry[0] !== null)
+    )
+    handRotations.value = mirror
+      ? mirrorCameraHandRotations(detectedHandRotations)
+      : detectedHandRotations
+
     animationFrame = requestAnimationFrame(detectFrame)
   }
 
@@ -141,6 +158,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
+    handRotations.value = {}
     previousWorldLandmarks = null
     previousHandLandmarksBySide = {}
   }
@@ -150,6 +168,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks,
     worldLandmarks,
     handPoses,
+    handRotations,
     startDetectionLoop,
     stopDetectionLoop
   }

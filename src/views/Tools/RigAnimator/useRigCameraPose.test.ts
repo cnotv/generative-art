@@ -197,4 +197,56 @@ describe('useRigCameraPose', () => {
     const leftHandAfterReshoot = findBone('mixamorigLeftHand').getWorldPosition(new THREE.Vector3())
     expect(leftHandAfterReshoot.equals(leftHandAfterFirstShoot)).toBe(false)
   })
+
+  it('moves the hips by a calibrated body offset even with includeHips off, unlike the dead default', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
+    const { root, bones } = rigGenerateHumanoidSkeleton(box)
+    root.updateMatrixWorld(true)
+    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
+
+    const { applyCameraPose } = useRigCameraPose(
+      ref(bones),
+      applyBoneDragTarget,
+      resetAllBonesToRest
+    )
+    const restHipsPosition = findBone('mixamorigHips').position.clone()
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      ALL_GROUPS,
+      undefined,
+      new THREE.Vector3(0.3, 0, 0)
+    )
+
+    expect(findBone('mixamorigHips').position.equals(restHipsPosition)).toBe(false)
+  })
+
+  it('classifies bones by a calibrated root-bone override instead of the fixed mixamorig names', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
+    const { root, bones } = rigGenerateHumanoidSkeleton(box)
+    root.updateMatrixWorld(true)
+    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
+
+    // Points "leftArm" at the elbow instead of the shoulder, so the shoulder itself now falls
+    // outside a leftArm-only capture's scope and must be left exactly as it was.
+    const shoulder = findBone('mixamorigLeftShoulder')
+    shoulder.quaternion.setFromEuler(new THREE.Euler(0, 0, Math.PI / 4))
+    const staleShoulder = shoulder.quaternion.clone()
+
+    const { applyCameraPose } = useRigCameraPose(
+      ref(bones),
+      applyBoneDragTarget,
+      resetAllBonesToRest
+    )
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      new Set<RigBodyPartGroup>(['leftArm']),
+      { leftArm: 'mixamorigLeftArm' }
+    )
+
+    expect(shoulder.quaternion.equals(staleShoulder)).toBe(true)
+  })
 })

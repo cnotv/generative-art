@@ -37,9 +37,21 @@ exist, so two poses are already a movement.
   new source's sampled keyframes into a body-part scope without disturbing the rest
 - `src/views/Tools/RigAnimator/bodyPartGroups.ts` (+ `.test.ts`): the five body-part groups a
   capture or preset can be scoped to, and the pure logic behind toggling one from the Merge
-  Target diagram — see **Merging sources by body part** below
+  Target diagram — see **Merging sources by body part** below. Which bone marks each limb
+  group's root defaults to the fixed mixamorig names but can be overridden per rig, see
+  **Calibrating before you capture** below
 - `src/views/Tools/RigAnimator/MergeTargetDiagram.vue`: the clickable stick-figure diagram
   itself, docked on the canvas
+- `src/views/Tools/RigAnimator/cameraCalibration.ts` (+ `.test.ts`): pure logic behind
+  calibration: reading a wrist's rotation angle, a body's on-screen center, a side-view reach
+  multiplier and the offset a body's later drift maps to, from whatever a settled frame or two
+  captures. See **Calibrating before you capture** below
+- `src/views/Tools/RigAnimator/useCameraCalibration.ts`: owns one calibration session's step and
+  captured baseline
+- `src/views/Tools/RigAnimator/CameraCalibrationPanel.vue`: the docked panel driving the
+  calibration flow's steps and actions
+- `src/views/Tools/RigAnimator/CalibrationSilhouette.vue`: the traced-stance guide drawn over the
+  live feed during the front and side capture steps
 - `src/views/Tools/RigAnimator/frameSelection.ts`: the drag-select / Shift+click / Shift+arrow
   range selection's pure logic — normalizing the two endpoints and which keyframes fall inside
 - `src/views/Tools/RigAnimator/autosave.ts`: reading and writing the autosaved edit in
@@ -66,7 +78,8 @@ exist, so two poses are already a movement.
   rig's actual left/right
 - `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs MediaPipe's Pose and Hand
   Landmarkers against a playing `<video>` element in a `requestAnimationFrame` loop, shared by
-  the live webcam feed and an uploaded video file
+  the live webcam feed and an uploaded video file, alongside each hand's wrist-rotation angle for
+  calibration to read a baseline off
 - `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream for the capture
   dialog's overlay, wiring `useVideoLandmarkDetection` against it
 - `src/views/Tools/RigAnimator/useVideoPoseCapture.ts`: an uploaded video file played through
@@ -76,7 +89,8 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body and hand pose from a
   single uploaded photo instead of a continuous feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
-  and applying a detected pose onto the rig
+  and applying a detected pose onto the rig, including a calibrated whole-body offset on the
+  hips independent of **Move Hips to Photo**
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
 - `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting one keyframe's
@@ -96,7 +110,7 @@ exist, so two poses are already a movement.
   marble flow as a timeline action, following the posed bones each frame and checking each frame
   whether a bone is touching the spawn cube
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
-  preview, skeleton overlay, Capture/Cancel)
+  preview, skeleton overlay, calibration stance guide and step instructions)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
   applying a preset to whichever hand the selected bone belongs to
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
@@ -311,6 +325,42 @@ real camera session immediately surfaced that as wrong, an arm and its own hand 
 as if they belonged to each other. The body Pose Landmarker's own left/right needs no swap
 either, confirmed separately against a real photo. What the live camera path does instead, for
 both detectors together, is described below.
+
+## Calibrating before you capture
+
+**Calibrate Camera**, docked on the canvas next to Capture Pose from Camera, opens the camera
+dialog (if it isn't already open) and starts a short calibration flow instead of applying live.
+It builds a session-only baseline the live capture reads back from, so a real neutral stance,
+rotation and reach map onto the rig's own, rather than whatever the mapping's fixed formulas
+guess. Nothing here persists past a reload.
+
+![The "assign parts" step: four limb buttons, Cancel and Next, alongside the capture dialog reporting no camera found](/img/animation/rig-calibration-assign-parts.webp)
+
+Three steps, each optional on its own:
+
+- **Assign parts** lets you click a limb button, then click that limb's actual root bone on the
+  model, before falling back to the fixed mixamorig names (`mixamorigLeftShoulder`, and so on)
+  for whatever you skip. This is what lets the Merge Target diagram's own five groups (see
+  **Merging sources by body part** below) work correctly on a rig whose bone names differ from
+  that convention.
+- **Face Camera** captures one settled frame standing square-on: the shoulder line's own yaw
+  becomes the zero point **Match Camera Angle to Photo** reads relative to instead of true
+  square-on, each hand's wrist-to-knuckle angle becomes the zero point a live hand's rotation is
+  read against, and the body's on-screen center becomes the origin later movement is measured
+  from.
+- **Turn to Your Side** captures one settled frame with an arm stretched to its fullest, turned
+  so the reach reads along the camera's more reliable x/y instead of its noisy depth axis. The
+  measured reach against the rig's own arm chain length sets **Reach Multiplier** automatically,
+  in place of tuning that slider by eye.
+
+Once calibrated, a live capture drives two things a raw detection alone cannot: each hand
+rotates by how far it has turned since the calibrated stance (approximated as a screen-plane
+spin; unverified against a real camera session, since the wrist-rotation mapping has never been
+confirmed against one), and the hips move by how far the body's on-screen center has drifted
+since calibration, scaled into the rig's own world units. This works independent of **Move Hips
+to Photo**, whose own hip mapping has no real translation signal to read from at all: MediaPipe's
+world landmarks are normalized to the detected person's own body, carrying no cue about where in
+the room they are standing.
 
 ## Auto-rig for a model with no skeleton
 

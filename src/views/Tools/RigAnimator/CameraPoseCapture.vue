@@ -16,6 +16,8 @@ import { useVideoPoseCapture } from './useVideoPoseCapture'
 import { useVideoTimelineSync } from './useVideoTimelineSync'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
+import { computeBodyCenterImage, type CameraCalibrationStep } from './cameraCalibration'
+import CalibrationSilhouette from './CalibrationSilhouette.vue'
 
 const props = defineProps<{
   /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
@@ -38,10 +40,18 @@ const props = defineProps<{
    * "Merge Target" checkboxes currently scope this capture to; shown so it's clear before
    * applying rather than only inferable from the panel. */
   targetGroupLabels: string[]
+  /** Which step of the camera calibration flow is active, or null while it isn't running; see
+   * `useCameraCalibration`. Drives the silhouette guide and step instructions shown here. */
+  calibrationStep: CameraCalibrationStep
 }>()
 
 const emit = defineEmits<{
-  apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
+  apply: [
+    landmarks: CameraLandmark[],
+    handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
+    handRotations: Partial<Record<HandSide, number>>,
+    bodyCenterImage: { x: number; y: number } | null
+  ]
   close: []
   toggleRecord: []
   enablePreview: []
@@ -98,6 +108,17 @@ const worldLandmarks = computed(() =>
 )
 const handPoses = computed(() =>
   pickByMode(camera.handPoses.value, uploadedVideo.handPoses.value, photo.handPoses.value)
+)
+// Calibration only runs against a live or uploaded feed (see `useCameraCalibration`'s own
+// 'assignParts' -> 'front' -> 'side' flow); a still photo has no rotation angle to read here.
+const handRotations = computed(() =>
+  pickByMode(camera.handRotations.value, uploadedVideo.handRotations.value, {})
+)
+const bodyCenterImage = computed(() => computeBodyCenterImage(previewLandmarks.value))
+/** Only while the stream is actually up: matches the user's ask to gate the silhouette guide on
+ * whether a camera is genuinely available right now, not just requested. */
+const cameraAvailable = computed(
+  () => mode.value === 'camera' && camera.isActive.value && !camera.error.value
 )
 
 let drawingUtilities: DrawingUtils | null = null
@@ -166,7 +187,8 @@ watch([previewLandmarks, previewHandLandmarks, () => photo.photoImage.value], dr
 // mapping matches, rather than only a snapshot of it. Hand poses ride along on the same emit,
 // since both detections finish within the same detectFrame/detectPhoto call.
 watch(worldLandmarks, (landmarks) => {
-  if (landmarks) emit('apply', landmarks, handPoses.value)
+  if (landmarks)
+    emit('apply', landmarks, handPoses.value, handRotations.value, bodyCenterImage.value)
 })
 
 /** An uploaded photo or video is the whole reason to look at this panel right then, so its
@@ -257,7 +279,28 @@ onUnmounted(() => {
         @seeked="handleVideoSeeked"
       ></video>
       <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
+      <CalibrationSilhouette
+        v-if="calibrationStep && calibrationStep !== 'assignParts' && cameraAvailable"
+        class="camera-pose-capture__silhouette"
+        :step="calibrationStep"
+      />
     </div>
+    <p
+      v-if="calibrationStep"
+      class="camera-pose-capture__status camera-pose-capture__status--calibration"
+    >
+      {{
+        calibrationStep === 'assignParts'
+          ? 'Assigning body parts. Click a limb below, then click the matching bone on the model.'
+          : calibrationStep === 'front'
+            ? cameraAvailable
+              ? 'Face the camera in a relaxed neutral stance, then capture.'
+              : 'Waiting for the camera…'
+            : cameraAvailable
+              ? 'Turn to your side and stretch that arm out fully, then capture.'
+              : 'Waiting for the camera…'
+      }}
+    </p>
     <p class="camera-pose-capture__status camera-pose-capture__status--scope">
       {{
         targetGroupLabels.length > 0
@@ -413,6 +456,19 @@ onUnmounted(() => {
 
 .camera-pose-capture__status--scope {
   font-style: italic;
+}
+
+.camera-pose-capture__status--calibration {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+.camera-pose-capture__silhouette {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .camera-pose-capture__actions {

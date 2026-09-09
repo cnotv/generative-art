@@ -11,7 +11,11 @@ import {
   type CameraPoseMappingOptions
 } from './cameraPoseMapping'
 import { applyPoleDrag } from './boneDragTarget'
-import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
+import {
+  boneNamesInGroups,
+  type RigBodyPartGroup,
+  type RigGroupRootBoneNames
+} from './bodyPartGroups'
 
 /** Excluded from the per-frame reset in `applyCameraPose`, see its own doc comment. */
 const BONES_KEPT_ACROSS_FRAMES = new Set([CAMERA_POSE_HIPS_BONE])
@@ -55,13 +59,20 @@ export const useRigCameraPose = (
    * @param options Which extra details (elbow/knee bend, hips, depth) to derive, see
    *   `CameraPoseMappingOptions`
    * @param targetGroups Which body-part groups this capture is allowed to touch
+   * @param rootBoneNames Which bone name marks each limb group's root on this rig, from a
+   *   calibration's "assign parts" step; defaults to the fixed mixamorig convention
+   * @param bodyOffsetWorld A calibrated whole-body drift to add to the hips bone's rest
+   *   position, from `computeBodyOffsetWorld`; independent of `options.includeHips`, which
+   *   otherwise has no real translation signal to move that bone with at all
    */
   const applyCameraPose = (
     landmarks: CameraLandmark[],
     options: CameraPoseMappingOptions = CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
-    targetGroups: Set<RigBodyPartGroup>
+    targetGroups: Set<RigBodyPartGroup>,
+    rootBoneNames?: RigGroupRootBoneNames,
+    bodyOffsetWorld: THREE.Vector3 | null = null
   ): void => {
-    const boneNamesInScope = boneNamesInGroups(bones.value, targetGroups)
+    const boneNamesInScope = boneNamesInGroups(bones.value, targetGroups, rootBoneNames)
     const excludeFromReset = new Set([
       ...bones.value.map((bone) => bone.name).filter((name) => !boneNamesInScope.has(name)),
       ...BONES_KEPT_ACROSS_FRAMES
@@ -83,6 +94,11 @@ export const useRigCameraPose = (
         const chain = endBone ? ikFindTwoBoneChain(endBone) : null
         if (chain) applyPoleDrag(chain, poleWorldPosition)
       })
+    if (bodyOffsetWorld && boneNamesInScope.has(CAMERA_POSE_HIPS_BONE)) {
+      const hipsBone = bones.value.find((candidate) => candidate.name === CAMERA_POSE_HIPS_BONE)
+      const restPosition = anchor.hipCenterWorldPosition ?? anchor.shoulderCenterWorldPosition
+      if (hipsBone) applyBoneDragTarget(hipsBone, restPosition.clone().add(bodyOffsetWorld))
+    }
   }
 
   return { canCaptureFromCamera, applyCameraPose }

@@ -20,21 +20,20 @@ export const RIG_BODY_PART_GROUP_LABELS: Record<RigBodyPartGroup, string> = {
   spineHead: 'Spine / Head'
 }
 
-/** The chain-root bone that marks the start of each limb group; a bone found while walking up
- * past this point belongs to that group. Anything that reaches the skeleton root without
- * passing through one of these (the spine chain itself, and the root bone) falls into
- * `spineHead` instead, so the mapping needs no separate entry for it. */
-const GROUP_ROOT_BONE_NAMES: Record<Exclude<RigBodyPartGroup, 'spineHead'>, string> = {
+/** Which bone is each limb group's root on a given rig: a bone found while walking up past this
+ * point belongs to that group. Only the four limb groups need an entry: anything that reaches
+ * the skeleton root without passing through one of these (the spine chain, the root bone, and
+ * any group whose entry is missing here) falls into `spineHead` instead. */
+export type RigGroupRootBoneNames = Partial<Record<Exclude<RigBodyPartGroup, 'spineHead'>, string>>
+
+/** The fixed mixamorig-named default, used whenever a rig hasn't been calibrated with its own
+ * bone names. See `RigGroupRootBoneNames` and the camera calibration's "assign parts" step. */
+export const DEFAULT_GROUP_ROOT_BONE_NAMES: RigGroupRootBoneNames = {
   leftArm: 'mixamorigLeftShoulder',
   rightArm: 'mixamorigRightShoulder',
   leftLeg: 'mixamorigLeftUpLeg',
   rightLeg: 'mixamorigRightUpLeg'
 }
-
-const LIMB_GROUP_ENTRIES = Object.entries(GROUP_ROOT_BONE_NAMES) as [
-  Exclude<RigBodyPartGroup, 'spineHead'>,
-  string
-][]
 
 /** A bone and every Bone ancestor above it, itself first, up to the skeleton root. */
 const ancestorBoneChain = (bone: THREE.Bone): THREE.Bone[] =>
@@ -48,11 +47,20 @@ const ancestorBoneChain = (bone: THREE.Bone): THREE.Bone[] =>
  * without passing through a limb root — the spine, neck and head, and the root bone itself —
  * belongs to `spineHead`.
  * @param bone The bone to classify
+ * @param rootBoneNames Which bone name marks each limb group's root on this rig; defaults to
+ *   the fixed mixamorig convention, overridden once a rig has been calibrated with its own names
  * @returns The group this bone's pose belongs to
  */
-export const boneBodyPartGroup = (bone: THREE.Bone): RigBodyPartGroup => {
+export const boneBodyPartGroup = (
+  bone: THREE.Bone,
+  rootBoneNames: RigGroupRootBoneNames = DEFAULT_GROUP_ROOT_BONE_NAMES
+): RigBodyPartGroup => {
   const chainNames = new Set(ancestorBoneChain(bone).map((ancestor) => ancestor.name))
-  const match = LIMB_GROUP_ENTRIES.find(([, rootName]) => chainNames.has(rootName))
+  const entries = Object.entries(rootBoneNames) as [
+    Exclude<RigBodyPartGroup, 'spineHead'>,
+    string
+  ][]
+  const match = entries.find(([, rootName]) => chainNames.has(rootName))
   return match ? match[0] : 'spineHead'
 }
 
@@ -60,13 +68,20 @@ export const boneBodyPartGroup = (bone: THREE.Bone): RigBodyPartGroup => {
  * Every bone name in a loaded rig whose group is one of `groups`.
  * @param bones The rig's bones
  * @param groups The groups a source is scoped to
+ * @param rootBoneNames Which bone name marks each limb group's root on this rig, see
+ *   `boneBodyPartGroup`
  * @returns The names of every bone that scope covers
  */
 export const boneNamesInGroups = (
   bones: THREE.Bone[],
-  groups: Set<RigBodyPartGroup>
+  groups: Set<RigBodyPartGroup>,
+  rootBoneNames: RigGroupRootBoneNames = DEFAULT_GROUP_ROOT_BONE_NAMES
 ): Set<string> =>
-  new Set(bones.filter((bone) => groups.has(boneBodyPartGroup(bone))).map((bone) => bone.name))
+  new Set(
+    bones
+      .filter((bone) => groups.has(boneBodyPartGroup(bone, rootBoneNames)))
+      .map((bone) => bone.name)
+  )
 
 /** Which config field holds each group's Merge Target flag. */
 const TARGET_CONFIG_KEY: Record<RigBodyPartGroup, keyof RigAnimatorConfig> = {
