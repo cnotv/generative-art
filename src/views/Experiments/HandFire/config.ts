@@ -29,7 +29,7 @@ export const HAND_FIRE_SETUP_CONFIG: SetupConfig = {
 
 export const FLAME_PARTICLES_PER_HAND = 90
 export const MAX_FIREBALLS = 10
-export const FIREBALL_PARTICLES_PER_BALL = 18
+export const FIREBALL_PARTICLES_PER_BALL = 30
 /** How long a thrown fireball flies before despawning, in milliseconds. */
 export const FIREBALL_LIFETIME_MS = 1800
 export const AMBIENT_EMBER_COUNT = 160
