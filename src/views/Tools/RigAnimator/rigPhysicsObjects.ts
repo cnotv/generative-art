@@ -11,9 +11,12 @@ import {
   LAMP_ANGULAR_DAMPING,
   LAMP_ARM_LENGTH_FRACTION,
   LAMP_COLOR,
+  LAMP_CONE_SEGMENTS,
   LAMP_DAMPING,
   LAMP_FRICTION,
+  LAMP_HEIGHT_FRACTION,
   LAMP_METALNESS,
+  LAMP_OPACITY,
   LAMP_RADIUS_FRACTION,
   LAMP_RESTITUTION,
   LAMP_ROUGHNESS,
@@ -174,6 +177,7 @@ export const createHangingLamp = (
   rigDiagonal: number
 ): HangingLamp => {
   const armLength = rigDiagonal * LAMP_ARM_LENGTH_FRACTION
+  const radius = rigDiagonal * LAMP_RADIUS_FRACTION
   const [anchorX, anchorY, anchorZ] = anchorPosition
 
   const anchor = world.createRigidBody(
@@ -182,9 +186,10 @@ export const createHangingLamp = (
 
   const lamp = getBall(scene, world, {
     name: 'hanging-lamp',
-    size: rigDiagonal * LAMP_RADIUS_FRACTION,
+    size: radius,
     position: [anchorX, anchorY - armLength, anchorZ] as CoordinateTuple,
     color: LAMP_COLOR,
+    opacity: LAMP_OPACITY,
     type: 'dynamic',
     hasGravity: true,
     weight: rigDiagonal / MARBLE_GRAVITY_REFERENCE_SPREAD,
@@ -196,6 +201,14 @@ export const createHangingLamp = (
     roughness: LAMP_ROUGHNESS,
     metalness: LAMP_METALNESS
   }) as PhysicsMesh
+
+  // A cone reads as a lampshade; the collider stays the ball getBall already built for it.
+  lamp.geometry.dispose()
+  lamp.geometry = new THREE.ConeGeometry(
+    radius,
+    rigDiagonal * LAMP_HEIGHT_FRACTION,
+    LAMP_CONE_SEGMENTS
+  )
 
   const joint = world.createImpulseJoint(
     RAPIER.JointData.spherical({ x: 0, y: 0, z: 0 }, { x: 0, y: armLength, z: 0 }),

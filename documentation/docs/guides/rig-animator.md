@@ -106,8 +106,9 @@ a rigged glTF character), the bone list appears immediately. The camera re-frame
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
 typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
 
-A third docked button, Physics, sits beside these two, and a fourth, Spawn Marble, joins it once
-physics is on; both are covered in their own section below.
+A third docked button, Physics, sits beside these two. Once it is on, two more join it: Marble
+Flow, which starts and stops the drip, and Spawn Marble, which drops one on demand regardless of
+whether the flow is running. All three are covered in their own section below.
 
 ![Upload Model and Capture Pose from Camera docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
@@ -574,10 +575,11 @@ own **Physics: Simulate** checkbox, the same toggle either way.
 ![Marbles falling around the rig, several caught on its head, chest and arm, inside the pale enclosing walls](/img/animation/rig-physics-marbles.webp)
 
 Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure
-and a lamp hung between the rig and the wall on a rigid pivot arm, so there is something to
-swing a limb into immediately. Marbles are a separate choice, below. A second docked button,
-Spawn Marble, appears next to Physics once it is on, for dropping one marble on demand without
-waiting on the flow.
+and a cone-shaded lamp hung between the rig and the wall on a rigid pivot arm, so there is
+something to knock into immediately. The lamp barely swings and gravity pulls it straight back
+to hanging still, the way a real fixture would rather than a pendulum. Two more docked buttons
+join Physics once it is on: Marble Flow starts and stops the drip below, and Spawn Marble drops
+one on demand regardless of whether the flow is running.
 
 Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
 segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
@@ -597,27 +599,27 @@ ever seeing the aftermath of a heap that landed all at once.
 
 The rest of the settings appear once the toggle is on:
 
-- **Spawn Marbles**, off by default, starts the flow described below. Physics being on and
-  marbles flowing are two separate switches, so enabling one never surprises you with the other.
+- **Spawn Marbles**, off by default (the docked Marble Flow button is the same switch), starts
+  the flow. Physics being on and marbles flowing are separate switches, so enabling one never
+  surprises you with the other, and the enclosing walls come and go with this one too: they only
+  matter while something is actually falling through them.
 - **Marble Flow (Frames)** is the gap between one marble dropping and the next, the same
-  interval-action shape the Timeline view uses for its own ball spawner. Lower is a denser
-  stream; nothing caps how many accumulate, so a long session keeps piling the floor up.
-  **Reset Marbles** clears every marble currently on the floor without stopping the flow.
+  interval-action shape the Timeline view uses for its own ball spawner, defaulting to every
+  frame. Lower is a denser stream; nothing caps how many accumulate, so a long session keeps
+  piling the floor up. **Reset Marbles** clears every marble currently on the floor without
+  stopping the flow.
 - **Marble Textures**, on by default, paints each marble with one of the Marble Editor's own
   marble images, picked at random per spawn, so the same object drops here as in that game.
   Turning it off leaves the marble a flat pastel colour instead, which is cheaper to draw and
   keeps a dense flow usable.
-- **Enclosing Walls**, on by default, puts four walls around the drop point so the marbles stay
-  in shot instead of rolling off. Each run is a wall thickness longer than the space it
-  encloses, so perpendicular walls overlap inside each corner rather than leaving a gap to
-  squeeze through. A floor collider spans the enclosure whether or not the walls are drawn: the
-  view has no ground plane of its own, so without it a marble would fall through the world.
 - **Wall Size** starts at the narrow column the flow falls through rather than the rig's full
   spread, so the walls frame the stream without dwarfing the rig; raise it for more room to
-  reach a hand or the lamp through the gap.
-- **Wall Opacity** goes from fully invisible to solid. Zero keeps the collision without drawing
-  anything, useful for looking at the rig unobstructed; solid is the useful one for a recording
-  where the walls are the frame.
+  reach a hand or the lamp through the gap. A floor collider spans the enclosure regardless of
+  whether the walls themselves are showing: the view has no ground plane of its own, so without
+  it a marble would fall through the world.
+- **Wall Opacity**, invisible by default, goes up to solid. Zero keeps the collision without
+  drawing anything, useful for looking at the rig unobstructed; solid is the useful one for a
+  recording where the walls are the frame.
 
 ![The same marbles settled into a heap across the floor, the rig standing untouched among them](/img/animation/rig-physics-settled.webp)
 

@@ -77,7 +77,6 @@ export const buildRigAnimatorSchema = (
         },
         marbleTextures: { checkbox: true, label: 'Physics: Marble Textures' },
         respawnMarbles: { callback: 'respawnMarbles', label: 'Physics: Reset Marbles' },
-        showEnclosure: { checkbox: true, label: 'Physics: Enclosing Walls' },
         enclosureSize: { ...ENCLOSURE_SIZE_RANGE, label: 'Physics: Wall Size' },
         enclosureOpacity: { ...ENCLOSURE_OPACITY_RANGE, label: 'Physics: Wall Opacity' }
       }

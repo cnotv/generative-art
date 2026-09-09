@@ -97,7 +97,7 @@ const createEnclosureState = ({ scene, world, config, rigDiagonal }: PhysicsRefe
     // The floor is not part of the walls toggle: without it marbles fall through the world
     // wherever the scene's own smaller ground does not reach.
     floor = createEnclosureFloor(currentWorld, rigDiagonal(), config.value.enclosureSize)
-    if (!config.value.showEnclosure) return
+    if (!config.value.marbleFlowEnabled) return
 
     walls = createEnclosure(
       currentScene,

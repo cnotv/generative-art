@@ -14,7 +14,7 @@ import {
   type HandSide,
   type HandPoseDefinition
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle, Box } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -88,7 +88,6 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   marbleFlowEnabled: false,
   marbleSpawnInterval: DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   marbleTextures: true,
-  showEnclosure: true,
   enclosureSize: DEFAULT_ENCLOSURE_SIZE_FRACTION,
   enclosureOpacity: DEFAULT_ENCLOSURE_OPACITY
 })
@@ -283,6 +282,11 @@ const togglePhysics = (): void => {
   reactiveConfig.value.physicsEnabled = !reactiveConfig.value.physicsEnabled
 }
 
+/** The docked marble icon starts or stops the flow; the enclosing walls follow the same switch. */
+const toggleMarbleFlow = (): void => {
+  reactiveConfig.value.marbleFlowEnabled = !reactiveConfig.value.marbleFlowEnabled
+}
+
 /**
  * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
  * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
@@ -383,8 +387,9 @@ watch(
   () => rig.updateMarbleFlow()
 )
 watch(
+  // The walls only show while marbles are flowing: the two switches move together.
   () => [
-    reactiveConfig.value.showEnclosure,
+    reactiveConfig.value.marbleFlowEnabled,
     reactiveConfig.value.enclosureSize,
     reactiveConfig.value.enclosureOpacity
   ],
@@ -539,10 +544,20 @@ onUnmounted(() => {
       v-if="reactiveConfig.physicsEnabled"
       size="sm"
       variant="outline"
+      :active="reactiveConfig.marbleFlowEnabled"
+      :title="reactiveConfig.marbleFlowEnabled ? 'Stop Marble Flow' : 'Start Marble Flow'"
+      @click="toggleMarbleFlow"
+    >
+      <Circle />
+    </IconButton>
+    <IconButton
+      v-if="reactiveConfig.physicsEnabled"
+      size="sm"
+      variant="outline"
       title="Spawn Marble"
       @click="rig.spawnMarble"
     >
-      <Circle />
+      <Box />
     </IconButton>
   </div>
   <RigTimeline
