@@ -111,7 +111,7 @@ A third docked button, Physics, sits beside these two. Once it is on, a fourth j
 Flow, which starts and stops the drip; dropping one on demand is a touch, not a button, covered
 in its own section below along with Physics.
 
-![Upload Model and Capture Pose from Camera docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
+![Upload Model, Capture Pose from Camera and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
@@ -573,7 +573,7 @@ rather than a silhouette: a cupped hand catches marbles, a flat one does not, an
 timeline back sweeps them around as the limbs move through them. It mirrors the Config panel's
 own **Physics: Simulate** checkbox, the same toggle either way.
 
-![Marbles falling around the rig, several caught on its head, chest and arm, inside the pale enclosing walls](/img/animation/rig-physics-marbles.webp)
+![The rig in its rest pose with physics on: a cone-shaded lamp hanging beside its right arm and a touch-sensor cube beside its left](/img/animation/rig-physics-lamp-cube.webp)
 
 Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure,
 a heavy cone-shaded lamp hung close to the camera on a rigid pivot arm, and a cube on the rig's
@@ -583,6 +583,12 @@ collision response of its own, so posing a hand into it does not push it, but th
 overlaps it a marble drops, the same as pressing a spawn button would, except the model itself is
 what presses it. A fourth docked button, Marble Flow, joins Physics once it is on, starting and
 stopping the drip described below.
+
+<video controls loop muted playsinline width="720" src="/video/animation/rig-physics-demo.webm">
+  Physics is switched on: a lamp and a touch-sensor cube appear beside the rig's rest pose. Marble
+  Flow is switched on next, and marbles begin dropping from well above the frame, arriving one at
+  a time and catching on the rig's head and outstretched arms as more keep falling.
+</video>
 
 Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
 segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
@@ -625,7 +631,7 @@ The rest of the settings appear once the toggle is on:
   drawing anything, useful for looking at the rig unobstructed; solid is the useful one for a
   recording where the walls are the frame.
 
-![The same marbles settled into a heap across the floor, the rig standing untouched among them](/img/animation/rig-physics-settled.webp)
+![A dozen textured marbles mid-fall around the rig, several caught on its head, arm and hip, the lamp and spawn cube visible on either side](/img/animation/rig-physics-marbles.webp)
 
 Everything above is torn out of both the scene and the physics world the moment the toggle goes
 off, and rebuilt from scratch when a different model is loaded, so switching it on costs
