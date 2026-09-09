@@ -565,13 +565,15 @@ clickable regions, Left Arm, Right Arm, Left Leg, Right Leg and Spine / Head (th
 and head, plus the root bone), all active by default. It only shows up while the camera capture
 dialog is open, docked on the canvas next to it, since that is the one place scoping a source
 actually matters. Clicking a region, or focusing it with Tab and pressing Enter or Space,
-toggles that group on or off; an active region is tinted green, an inactive one greyed out. A
-bone belongs to whichever region its own ancestor chain reaches first walking up toward the
-skeleton root (a shoulder or an upper leg marks the start of a limb region; a finger or toe bone
-inherits its hand or foot's region the same way), so the figure needs no separate entry for
+toggles that group on or off; an active region is bright green, an inactive one red — the same
+strong go/no-go pair the performance overlay already uses for good/bad, rather than this
+project's usual pastel palette, since a binary on/off reads faster as a clear colour than as a
+tint. A bone belongs to whichever region its own ancestor chain reaches first walking up toward
+the skeleton root (a shoulder or an upper leg marks the start of a limb region; a finger or toe
+bone inherits its hand or foot's region the same way), so the figure needs no separate entry for
 fingers, toes or a custom rig's own extra bones.
 
-![The Merge Target diagram: two regions clicked off (grey) leave the other three (green) active, and the camera capture dialog's status line names exactly those three](/img/animation/rig-merge-target-scope.webp)
+![The Merge Target diagram: two regions clicked off (red) leave the other three (green) active, and the camera capture dialog's status line names exactly those three](/img/animation/rig-merge-target-scope.webp)
 
 With every region active, the default, a source drives the whole rig exactly as before. Turning
 some off scopes the _next_ application of a source down to the regions still active: only bones

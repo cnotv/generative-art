@@ -105,20 +105,21 @@ const regionLabel = (group: RigBodyPartGroup): string =>
   display: block;
 }
 
+/* Reuses the same strong green/red pair the performance overlay already signals good/bad
+   with, rather than the pastel palette everything else here uses: a merge target is a binary
+   on/off, and a clear go/no-go colour communicates that faster than a tint would. */
 .merge-target-diagram__region {
   cursor: pointer;
-  stroke: var(--color-muted-foreground);
+  stroke: var(--color-perf-bad);
   stroke-width: 12;
   stroke-linecap: round;
-  fill: var(--color-muted-foreground);
+  fill: var(--color-perf-bad);
   transition:
     filter 0.15s ease,
     stroke 0.15s ease,
     fill 0.15s ease;
 }
 
-/* A relative darken rather than a new colour keeps whichever tone (muted grey or the active
-   green) the region already carries, instead of a jump to a stark, un-pastel highlight. */
 .merge-target-diagram__region:hover {
   filter: brightness(0.85);
 }
@@ -129,7 +130,7 @@ const regionLabel = (group: RigBodyPartGroup): string =>
 }
 
 .merge-target-diagram__region--active {
-  stroke: var(--color-body-part-active);
-  fill: var(--color-body-part-active);
+  stroke: var(--color-perf-ok);
+  fill: var(--color-perf-ok);
 }
 </style>
