@@ -273,3 +273,23 @@ sections above it: not every report of "the pipeline isn't working" is a bug in 
 Confirming the underlying capability first, with a real number rather than an assumption, is
 what kept this from becoming a fourth speculative patch to code that was already doing exactly
 what it measured.
+
+## A safety clamp that traded a real capability for a rejected false positive
+
+The yaw clamp above (`MAXIMUM_PLAUSIBLE_YAW`) fixed a real bug: a hand filling the frame could
+be misread as a torso turned to some arbitrary, often near-180-degree angle, snapping the model
+into an unrelated pose. The fix at the time was a flat magnitude cap at 100 degrees, past which
+any reading was rejected outright. It worked, but it was a broader fix than the bug needed: it
+rejected every large angle, not just the false ones, so a subject genuinely turning most of the
+way around in front of the camera lost torso tracking at exactly the same threshold a hand
+filling the frame did. Reported back as "no node ever reaches anywhere near a full turn," across
+every bone downstream of the torso as well as the hips-and-shoulders read directly.
+
+The two cases turn out to differ on more than the angle itself: a hand filling the frame has no
+reason to also produce a confident pair of hip landmarks, where a subject actually turning their
+back to the camera does. Requiring that corroborating signal past the clamp threshold, rather
+than rejecting the angle outright, keeps the original false positive rejected (no hips detected)
+while letting a real full turn read all the way around (hips detected, same as the shoulders).
+The general shape carries beyond this one case: a flat threshold on a single signal is often a
+proxy for "this reading is probably not real," and reaching for a second, independent signal that
+the false case lacks but the real case has is usually a tighter fix than moving the threshold.

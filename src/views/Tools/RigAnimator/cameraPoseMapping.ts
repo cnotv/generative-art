@@ -303,12 +303,12 @@ export interface CameraRigAnchor {
 }
 
 /**
- * The furthest a subject is ever expected to turn away from the camera in a normal capture
- * session: past a full profile, short of turning their back on it entirely. A detection beyond
- * this is far more likely a confidently wrong read (a hand filling the frame, the most common
- * source, misread as a torso at some arbitrary angle) than a real turn nobody sits through a
- * webcam capture in, and applying it read as the torso snapping to an extreme, unrelated angle
- * that then held there rather than a body actually turning.
+ * Past a full profile turn, a shoulder-line reading alone is no longer enough evidence on its
+ * own: a hand filling the frame can be confidently misread as a torso at some arbitrary, often
+ * near-180-degree angle, and applying that read the torso snapping to an extreme, unrelated
+ * angle that then held there rather than a body actually turning. Beyond this point,
+ * `estimateCameraYaw` additionally requires the hips to be confidently detected too, which a
+ * hand-filling-the-frame misread has no reason to also produce, before trusting the angle.
  */
 const MAXIMUM_PLAUSIBLE_YAW = (5 * Math.PI) / 9 // 100 degrees
 
@@ -323,8 +323,8 @@ const MAXIMUM_PLAUSIBLE_YAW = (5 * Math.PI) / 9 // 100 degrees
  * or how zoomed in the original camera was), just which way the subject is facing.
  * @param landmarks The detected person's world landmarks
  * @returns The estimated yaw in radians, matching `frameCameraOnModel`'s own convention (0 is
- *   square-on), or null when the shoulders aren't both confidently detected or the estimate
- *   falls outside any turn a real capture session plausibly shows
+ *   square-on), or null when the shoulders aren't both confidently detected, or the estimate
+ *   passes `MAXIMUM_PLAUSIBLE_YAW` without the hips also being confidently detected to back it up
  */
 export const estimateCameraYaw = (landmarks: CameraLandmark[]): number | null => {
   const leftShoulder = landmarks[LANDMARK_INDEX.leftShoulder]
@@ -345,7 +345,21 @@ export const estimateCameraYaw = (landmarks: CameraLandmark[]): number | null =>
   // `cameraLandmarksToBoneTargets` applies to every mapped position.
   const dz = -(rightShoulder.z - leftShoulder.z)
   const yaw = Math.atan2(dz, dx)
-  return Math.abs(yaw) <= MAXIMUM_PLAUSIBLE_YAW ? yaw : null
+  if (Math.abs(yaw) <= MAXIMUM_PLAUSIBLE_YAW) return yaw
+  // Past that angle, only trust the reading when the hips are also confidently detected: a
+  // detector fed something other than a body (a hand filling the frame, most often) can still
+  // report a confident shoulder line at some arbitrary, often near-180-degree angle, but has
+  // no reason to also confidently place a pair of hips. A real subject turning their back on
+  // the camera has both, so this is what actually distinguishes a genuine full turn from that
+  // false read, rather than a flat cap that rejects both alike.
+  const leftHip = landmarks[LANDMARK_INDEX.leftHip]
+  const rightHip = landmarks[LANDMARK_INDEX.rightHip]
+  const hipsConfidentlyVisible =
+    leftHip !== undefined &&
+    rightHip !== undefined &&
+    leftHip.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD &&
+    rightHip.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD
+  return hipsConfidentlyVisible ? yaw : null
 }
 
 /**

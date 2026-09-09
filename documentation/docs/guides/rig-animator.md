@@ -590,12 +590,16 @@ to rest unconditionally, before either solve gets anywhere near it, whenever the
 reading to apply at all: both solves then always start from the same fixed baseline regardless of
 which one actually drove the bone that frame.
 
-The yaw reading itself is also clamped to what a real capture session plausibly shows: past a
-full profile turn, short of a subject turning their back on the camera entirely. A detector fed
+The yaw reading itself is also gated against what a real capture session plausibly shows. Past a
+full profile turn, a shoulder-line reading alone is no longer trusted by itself: a detector fed
 something other than a body, a hand filling the frame being the most common way that happens,
-can still report a confident shoulder line at some arbitrary, often near-180-degree angle; taking
-that at face value read as the torso snapping to an unrelated, often extreme orientation that
-then held there rather than the subject having turned at all.
+can still report a confident shoulder line at some arbitrary, often near-180-degree angle, and
+taking that at face value read as the torso snapping to an unrelated, often extreme orientation
+that then held there rather than the subject having turned at all. Past that point the hips also
+have to be confidently detected before the reading is trusted: a hand filling the frame has no
+reason to also confidently place a pair of hips, while a subject genuinely turning their back to
+the camera does, so a real full turn now reaches all the way around while the false read still
+gets rejected.
 
 ![The Config panel's camera pose options, no "Match Camera Angle to Photo" row among them](/img/animation/rig-camera-pose-no-viewpoint-match.webp)
 

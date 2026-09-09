@@ -92,12 +92,32 @@ describe('estimateCameraYaw', () => {
     expect(estimateCameraYaw(landmarks)).toBeNull()
   })
 
-  it('returns null for a turn beyond what a real capture session plausibly shows', () => {
+  it('returns null for a turn beyond what a real capture session plausibly shows, with no hips to back it up', () => {
     // Shoulders read in reverse order (left where a square-on right shoulder would be), the
     // shape a hand filling the frame with no real body in it can produce: a confident but
     // physically implausible near-180-degree turn, not a real subject facing away entirely.
+    // No hip landmarks are set, the same as a hand filling the frame would leave them.
     const yaw = estimateCameraYaw(landmarksWithShoulders([-0.2, -0.5, 0], [0.2, -0.5, 0]))
     expect(yaw).toBeNull()
+  })
+
+  it('returns the yaw past that same angle once the hips are also confidently detected', () => {
+    // Same reversed shoulder reading as above, a subject who has turned to show their back to
+    // the camera, but this time with hip landmarks a hand filling the frame has no reason to
+    // also confidently produce, distinguishing a real full turn from that false read.
+    const landmarks = landmarksWithShoulders([-0.2, -0.5, 0], [0.2, -0.5, 0])
+    landmarks[23] = landmark(-0.1, 0, 0) // left hip
+    landmarks[24] = landmark(0.1, 0, 0) // right hip
+    const yaw = estimateCameraYaw(landmarks)
+    expect(yaw).not.toBeNull()
+    expect(Math.abs(yaw!)).toBeCloseTo(Math.PI)
+  })
+
+  it('still returns null past that angle when the hips are present but not confidently visible', () => {
+    const landmarks = landmarksWithShoulders([-0.2, -0.5, 0], [0.2, -0.5, 0])
+    landmarks[23] = landmark(-0.1, 0, 0, 0.1)
+    landmarks[24] = landmark(0.1, 0, 0, 0.1)
+    expect(estimateCameraYaw(landmarks)).toBeNull()
   })
 })
 
