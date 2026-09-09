@@ -38,6 +38,8 @@ const props = defineProps<{
   /** Furthest a landmark may move in one frame before the excess is clamped off as a sudden
    * jump; tuned from the Config panel. */
   maxJump: number
+  /** Scales every detected finger joint's curl angle; tuned from the Config panel. */
+  handSensitivity: number
   /** Whether the mirrored camera preview is actually visible, versus detecting headlessly. */
   showPreview: boolean
   /** Whether the parent is currently sampling the live feed onto the rig timeline as
@@ -72,9 +74,17 @@ const emit = defineEmits<{
 const videoReference = ref<HTMLVideoElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
-const camera = useCameraPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
-const photo = useCameraPhotoPose()
-const uploadedVideo = useVideoPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
+const camera = useCameraPoseCapture(
+  toRef(props, 'smoothingFactor'),
+  toRef(props, 'maxJump'),
+  toRef(props, 'handSensitivity')
+)
+const photo = useCameraPhotoPose(toRef(props, 'handSensitivity'))
+const uploadedVideo = useVideoPoseCapture(
+  toRef(props, 'smoothingFactor'),
+  toRef(props, 'maxJump'),
+  toRef(props, 'handSensitivity')
+)
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 /** Whether the current mode drives the rig from a continuously updating source, the same as a
  * live webcam feed does, versus a single still photo. Both camera and an uploaded video can

@@ -174,6 +174,17 @@ export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
 /** Range and step the Config panel's max jump slider offers. */
 export const CAMERA_MAX_JUMP_RANGE = { min: 0.02, max: 0.5, step: 0.01 }
 
+/** How much a detected finger joint's own curl angle is scaled before driving the rig: 1 applies
+ * it exactly as measured. A real hand rarely folds a joint (the thumb's own base joint
+ * especially) as far as the canned presets' hand-picked extremes do, so this defaults above 1 to
+ * read closer to that same visual range without changing the detection itself. */
+export const CAMERA_HAND_SENSITIVITY_DEFAULT = 1.5
+/** Range and step the Config panel's hand sensitivity slider offers, the same bounds
+ * `CAMERA_REACH_MULTIPLIER_RANGE` already uses. The default sits well above the middle of this
+ * range without pinning it to the top, leaving room to push curl further for an especially
+ * subtle feed. */
+export const CAMERA_HAND_SENSITIVITY_RANGE = { min: 0.5, max: 2, step: 0.1 }
+
 /**
  * Keyboard and gamepad shortcuts for the rig timeline. X and Square are the same physical
  * button under two different platforms' naming, so "X to save, Square for next" as asked

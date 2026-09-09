@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { HandOrientation, HandPoseDefinition, HandSide } from '@webgamekit/rig'
 import { clampLandmarkJump } from './cameraPoseMapping'
-import { CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
+import { CAMERA_LANDMARK_MAX_JUMP_METERS, CAMERA_HAND_SENSITIVITY_DEFAULT } from './config'
 
 /**
  * One hand landmark from MediaPipe's Hand Landmarker. Unlike a body pose landmark, a hand
@@ -58,12 +58,23 @@ const jointBendAngle = (
  * just synthetic landmarks: see `rig-animator-pose-capture-fixes.md` for the two dead ends ruled
  * out along the way.
  * @param landmarks The 21 landmarks for one detected hand, in MediaPipe's own point order
+ * @param sensitivity Each joint's own measured bend angle is scaled by this before being
+ *   returned: a real hand rarely folds a joint as far as the canned presets' hand-picked
+ *   extremes do, so a value above 1 (`CAMERA_HAND_SENSITIVITY_DEFAULT`) reads closer to that
+ *   same visual range without changing what was actually detected.
  * @returns The per-finger joint curl angles, ready for `applyHandPose`
  */
-export const cameraHandLandmarksToPose = (landmarks: CameraHandLandmark[]): HandPoseDefinition => {
+export const cameraHandLandmarksToPose = (
+  landmarks: CameraHandLandmark[],
+  sensitivity: number = CAMERA_HAND_SENSITIVITY_DEFAULT
+): HandPoseDefinition => {
   const fingerAngles = (indices: readonly number[]): [number, number, number] => {
     const [a, b, c, d, e] = indices.map((index) => landmarks[index])
-    return [jointBendAngle(a, b, c), jointBendAngle(b, c, d), jointBendAngle(c, d, e)]
+    return [
+      jointBendAngle(a, b, c) * sensitivity,
+      jointBendAngle(b, c, d) * sensitivity,
+      jointBendAngle(c, d, e) * sensitivity
+    ]
   }
 
   return {
@@ -159,16 +170,19 @@ export interface CameraDetectedHand {
  * Map every hand MediaPipe found in one frame or photo onto per-side finger poses, resolving
  * each hand's actual side and reading its curl angles in one pass.
  * @param detectedHands Every hand MediaPipe reported for this detection
+ * @param sensitivity Threaded straight through to `cameraHandLandmarksToPose`; see its own doc
+ *   comment for what it scales and why.
  * @returns The detected pose for whichever side(s) were found, keyed by side
  */
 export const cameraDetectedHandsToPoses = (
-  detectedHands: CameraDetectedHand[]
+  detectedHands: CameraDetectedHand[],
+  sensitivity: number = CAMERA_HAND_SENSITIVITY_DEFAULT
 ): Partial<Record<HandSide, HandPoseDefinition>> =>
   Object.fromEntries(
     detectedHands
       .map((hand): [HandSide | null, HandPoseDefinition] => [
         resolveCameraHandSide(hand.categoryName),
-        cameraHandLandmarksToPose(hand.worldLandmarks)
+        cameraHandLandmarksToPose(hand.worldLandmarks, sensitivity)
       ])
       .filter((entry): entry is [HandSide, HandPoseDefinition] => entry[0] !== null)
   )

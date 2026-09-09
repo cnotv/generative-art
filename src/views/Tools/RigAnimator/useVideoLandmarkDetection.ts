@@ -30,6 +30,9 @@ interface Dependencies {
   videoElement: ShallowRef<HTMLVideoElement | null>
   smoothingFactor: Ref<number>
   maxJump: Ref<number>
+  /** Scales every detected finger joint's curl angle; see `cameraHandLandmarksToPose`'s own doc
+   * comment for why the default reads above the raw geometry. */
+  handSensitivity: Ref<number>
   /** Whether the source reads as a mirror (a live self-view, matching how the subject sees
    * themselves) or should be taken as shown (an uploaded clip is not a self-view, the same as
    * an uploaded photo isn't) — see `mirrorCameraLandmarks`'s own doc comment for why this has
@@ -47,6 +50,7 @@ export const useVideoLandmarkDetection = ({
   videoElement,
   smoothingFactor,
   maxJump,
+  handSensitivity,
   mirror
 }: Dependencies) => {
   const previewLandmarks = shallowRef<NormalizedLandmark[] | null>(null)
@@ -99,7 +103,7 @@ export const useVideoLandmarkDetection = ({
       if (side) previousHandLandmarksBySide = { ...previousHandLandmarksBySide, [side]: smoothed }
       return { worldLandmarks: smoothed, categoryName }
     })
-    const detectedHandPoses = cameraDetectedHandsToPoses(smoothedHands)
+    const detectedHandPoses = cameraDetectedHandsToPoses(smoothedHands, handSensitivity.value)
     handPoses.value = mirror ? mirrorCameraHandPoses(detectedHandPoses) : detectedHandPoses
     const detectedHandOrientations = cameraDetectedHandsToOrientations(smoothedHands, mirror)
     handOrientations.value = mirror

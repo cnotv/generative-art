@@ -1,5 +1,9 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
-import { CAMERA_LANDMARK_SMOOTHING_FACTOR, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
+import {
+  CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  CAMERA_LANDMARK_MAX_JUMP_METERS,
+  CAMERA_HAND_SENSITIVITY_DEFAULT
+} from './config'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
 
 /**
@@ -10,10 +14,13 @@ import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
  *   Config panel slider takes effect immediately rather than only on the next `start()`
  * @param maxJump The furthest a landmark may move from its previous position in one frame,
  *   read fresh every frame the same way `smoothingFactor` is
+ * @param handSensitivity Scales every detected finger joint's curl angle, read fresh every
+ *   frame the same way `smoothingFactor` is
  */
 export const useCameraPoseCapture = (
   smoothingFactor: Ref<number> = ref(CAMERA_LANDMARK_SMOOTHING_FACTOR),
-  maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS)
+  maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS),
+  handSensitivity: Ref<number> = ref(CAMERA_HAND_SENSITIVITY_DEFAULT)
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
@@ -26,6 +33,7 @@ export const useCameraPoseCapture = (
     videoElement,
     smoothingFactor,
     maxJump,
+    handSensitivity,
     mirror: true
   })
 

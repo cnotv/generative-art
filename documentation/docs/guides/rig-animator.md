@@ -336,6 +336,18 @@ live pipeline, not only synthetic landmarks: see
 along the way, including one that reads as anatomically reasonable right up until a real camera
 disagrees with it.
 
+The measured angle is scaled by **Hand Sensitivity** (1.5 by default) before it drives the rig,
+the same idea as **Reach Multiplier** above but for finger curl instead of limb reach. A real
+hand rarely folds a joint, the thumb's own base joint especially, as far as the canned presets'
+hand-picked extremes do: reading a recorded clip's raw angles directly against those presets, the
+thumb's outer two joints reached or passed the preset's own reference values, but its base joint
+topped out well short of it, even during a gesture the video showed clearly closing toward a
+fist. Applying it exactly as measured is a real, defensible choice (see "Extra details to try"
+below for that trade-off), but it reads as barely moving next to a preset's own confident range,
+so the default asks for something closer to that range instead. See
+[the journey doc](/docs/journey/rig-animator-pose-capture-fixes) for the two earlier findings
+(what the raw geometry can and cannot reach on its own) this scaling builds on.
+
 MediaPipe's own handedness label, and its own left/right landmark indices, are read straight
 through with no swap: an earlier version swapped the Hand Landmarker's label specifically,
 reasoning from MediaPipe's documented caveat that it assumes a mirrored ("selfie") input; a
@@ -634,6 +646,13 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   nose landmark can pull the neck into a bend that reads as the head always pointing down,
   independent of whatever the photo actually shows. This slider is the manual escape hatch for
   that, tuned by eye per rig rather than solved by a fixed formula.
+- **Hand Sensitivity**, 1.5 by default, scales every detected finger joint's own curl angle by
+  this factor before it drives the rig, the same idea as Reach Multiplier just above but for
+  finger curl instead of limb reach. A real hand rarely folds a joint, the thumb's own base
+  joint especially, as far as the canned presets' hand-picked extremes do, so applying the raw
+  detected angle unscaled read as barely moving next to those presets' own confident range even
+  during a real closing-toward-a-fist gesture. See "Fingers from the camera" above for the
+  specific readings this default was chosen against.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the

@@ -241,3 +241,35 @@ none of those individual checks constrain the _combination_. Two visually near-i
 first-hypothesis fixes (a stricter span floor, then a stricter same-shaped hip-position check)
 both shipped, tested, and looked plausible before the real numbers, read directly rather than
 inferred from a plausible mechanism, showed neither was where the actual bug lived.
+
+## A capable pipeline that still reads as barely moving
+
+A report that live-tracked fingers "barely move" looked, at first read, like it should be the
+same class of bug as everything above: something clamping or damping the signal before it
+reaches the rig. It wasn't. Logging the raw per-joint curl angle (before any composition, any
+smoothing, any scaling) directly against a real recorded clip showed real, substantial motion:
+the thumb's outer two joints reached 0.632 and 0.839 radians across the clip, at or past the
+canned "curled fist" preset's own reference values for those same joints (0.6 and 0.5). A
+synthetic unit test independently confirmed the underlying geometry, `into.angleTo(outOf)`
+between three landmarks, has no structural ceiling either: given a clean 90-degree fold it
+reports exactly that, regardless of which finger or which joint.
+
+What stayed narrow was one specific number: the thumb's own first joint (the CMC, closest to the
+wrist) topped out at 0.486 across the whole clip, well short of the same preset's 0.7 for that
+joint, even during a gesture the recording showed visibly closing toward a fist. The presets
+were never derived from any geometric measurement; they are values a person picked by eye,
+adjusting a slider until the 3D model looked like a closed fist. There is no guarantee a real
+hand's own geometry, measured the same way live detection measures it, ever produces that same
+number for what looks like an equivalent gesture, and for this joint specifically it mostly
+didn't.
+
+The fix is a scaling factor, `CAMERA_HAND_SENSITIVITY_DEFAULT`, applied to every detected joint's
+curl angle before it drives the rig, the same shape `CAMERA_REACH_MULTIPLIER_RANGE` already gives
+body-pose reach for exactly the same underlying reason: a rig's own proportions, or here a
+preset's own hand-picked drama, do not have to match what a real body's geometry naturally
+produces, and a fixed escape-hatch multiplier is the simpler fix over trying to make the
+detection itself somehow guess the "correct" scale. The lesson distinguishes this from the
+sections above it: not every report of "the pipeline isn't working" is a bug in the pipeline.
+Confirming the underlying capability first, with a real number rather than an assumption, is
+what kept this from becoming a fourth speculative patch to code that was already doing exactly
+what it measured.

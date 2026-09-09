@@ -36,6 +36,7 @@ import {
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
+  CAMERA_HAND_SENSITIVITY_DEFAULT,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
@@ -100,6 +101,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
+  cameraHandSensitivity: CAMERA_HAND_SENSITIVITY_DEFAULT,
   cameraShowPreview: false,
   targetLeftArm: true,
   targetRightArm: true,
@@ -653,6 +655,7 @@ onUnmounted(() => {
     v-if="showCameraCapture"
     :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
     :max-jump="reactiveConfig.cameraMaxJump"
+    :hand-sensitivity="reactiveConfig.cameraHandSensitivity"
     :show-preview="reactiveConfig.cameraShowPreview"
     :is-recording="motionRecording.isRecording.value"
     :frame="reactiveConfig.frame"

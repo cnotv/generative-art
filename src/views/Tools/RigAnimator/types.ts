@@ -15,6 +15,7 @@ export interface RigAnimatorConfig {
   cameraReachMultiplier: number
   cameraSmoothingFactor: number
   cameraMaxJump: number
+  cameraHandSensitivity: number
   cameraShowPreview: boolean
   targetLeftArm: boolean
   targetRightArm: boolean

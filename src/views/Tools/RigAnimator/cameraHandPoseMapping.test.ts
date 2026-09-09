@@ -11,6 +11,7 @@ import {
   mirrorCameraHandOrientations,
   type CameraHandLandmark
 } from './cameraHandPoseMapping'
+import { CAMERA_HAND_SENSITIVITY_DEFAULT } from './config'
 
 const point = (x: number, y: number, z: number): CameraHandLandmark => ({ x, y, z })
 
@@ -46,7 +47,9 @@ describe('cameraHandLandmarksToPose', () => {
     landmarks[7] = point(0, 2, -1) // DIP folds back
     landmarks[8] = point(0, 2, -2) // TIP follows
 
-    const pose = cameraHandLandmarksToPose(landmarks)
+    // sensitivity: 1 to read the raw detected geometry, isolated from the tunable scaling
+    // `CAMERA_HAND_SENSITIVITY_DEFAULT` applies by default.
+    const pose = cameraHandLandmarksToPose(landmarks, 1)
 
     expect(pose.index[0]).toBeCloseTo(0) // MCP: still straight
     expect(pose.index[1]).toBeCloseTo(Math.PI / 2) // PIP: bent a quarter turn
@@ -70,6 +73,20 @@ describe('cameraHandLandmarksToPose', () => {
     const pose = cameraHandLandmarksToPose(landmarks)
 
     expect(pose.thumb[0]).toBeGreaterThan(0.3)
+  })
+
+  it('scales every joint angle by the given sensitivity, defaulting to CAMERA_HAND_SENSITIVITY_DEFAULT', () => {
+    const landmarks = buildOpenHandLandmarks()
+    landmarks[6] = point(0, 2, 0)
+    landmarks[7] = point(0, 2, -1)
+    landmarks[8] = point(0, 2, -2)
+
+    const raw = cameraHandLandmarksToPose(landmarks, 1)
+    const doubled = cameraHandLandmarksToPose(landmarks, 2)
+    const defaulted = cameraHandLandmarksToPose(landmarks)
+
+    expect(doubled.index[1]).toBeCloseTo(raw.index[1] * 2)
+    expect(defaulted.index[1]).toBeCloseTo(raw.index[1] * CAMERA_HAND_SENSITIVITY_DEFAULT)
   })
 })
 

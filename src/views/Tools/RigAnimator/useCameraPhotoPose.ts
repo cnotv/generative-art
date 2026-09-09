@@ -1,4 +1,4 @@
-import { ref, shallowRef } from 'vue'
+import { ref, shallowRef, type Ref } from 'vue'
 import type { HandSide, HandPoseDefinition, HandOrientation } from '@webgamekit/rig'
 import {
   FilesetResolver,
@@ -9,7 +9,8 @@ import {
 import {
   MEDIAPIPE_WASM_BASE_PATH,
   MEDIAPIPE_POSE_MODEL_URL,
-  MEDIAPIPE_HAND_MODEL_URL
+  MEDIAPIPE_HAND_MODEL_URL,
+  CAMERA_HAND_SENSITIVITY_DEFAULT
 } from './config'
 import type { CameraLandmark } from './cameraPoseMapping'
 import {
@@ -21,8 +22,12 @@ import {
  * Owns detecting a pose from a single uploaded photo, the static-image counterpart to
  * `useCameraPoseCapture`: useful for posing from a reference photo, and for anyone without a
  * working webcam.
+ * @param handSensitivity Scales every detected finger joint's curl angle, read fresh on every
+ *   `detectPhoto` call the same way `useCameraPoseCapture`'s own is read fresh every frame
  */
-export const useCameraPhotoPose = () => {
+export const useCameraPhotoPose = (
+  handSensitivity: Ref<number> = ref(CAMERA_HAND_SENSITIVITY_DEFAULT)
+) => {
   const photoImage = shallowRef<ImageBitmap | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -71,7 +76,7 @@ export const useCameraPhotoPose = () => {
         worldLandmarks: landmarksForHand,
         categoryName: handResult.handedness[index]?.[0]?.categoryName ?? ''
       }))
-      handPoses.value = cameraDetectedHandsToPoses(detectedHands)
+      handPoses.value = cameraDetectedHandsToPoses(detectedHands, handSensitivity.value)
       handOrientations.value = cameraDetectedHandsToOrientations(detectedHands, false)
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Could not read that photo'
