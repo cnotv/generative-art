@@ -23,12 +23,20 @@ import {
   FIREBALL_LIFETIME_MS,
   AMBIENT_EMBER_COUNT,
   AMBIENT_EMBER_BOUNDS,
+  SPARK_POOL_SIZE,
+  SPARK_BURST_COUNT,
+  SPARK_LIFETIME_MS,
+  FLAME_BURST_DURATION_MS,
+  FLAME_BURST_FLARE_BOOST,
+  FIST_OPENNESS_THRESHOLD,
+  OPEN_OPENNESS_THRESHOLD,
   defaultConfigValues,
   configControls
 } from './config'
 import {
   createHandFlameSystem,
   createFireballSystem,
+  createSparkSystem,
   createEmberField,
   mirroredImagePointToWorld
 } from './helpers/flames'
@@ -62,10 +70,18 @@ let mediaStream: MediaStream | null = null
 let toolsCleanup: (() => void) | null = null
 let handFlames: ReturnType<typeof createHandFlameSystem> | null = null
 let fireballs: ReturnType<typeof createFireballSystem> | null = null
+let sparks: ReturnType<typeof createSparkSystem> | null = null
 let embers: ReturnType<typeof createEmberField> | null = null
 
 const handWorldPositions: (THREE.Vector3 | null)[] = HAND_SIDES.map(() => null)
 const handPositionScratch = HAND_SIDES.map(() => new THREE.Vector3())
+/** How lit each hand's flame is right now: near 0 reads as smoke, 1 as a steady open-hand
+ * flame. Purely a function of the current grip, so it never needs a burst added on top. */
+const handWarmth: number[] = HAND_SIDES.map(() => 0)
+/** Extra size/brightness on top of the steady flame, decaying to 0 over the burst window
+ * right after a throw: this, not warmth, is what makes the burst actually visible. */
+const handFlareBoost: number[] = HAND_SIDES.map(() => 0)
+const handBurstUntilMs: number[] = HAND_SIDES.map(() => 0)
 const originScratch = new THREE.Vector3()
 const aimTargetScratch = new THREE.Vector3()
 const aimDirectionScratch = new THREE.Vector3()
@@ -100,9 +116,19 @@ const detectHands = (nowMs: number, aspect: number): void => {
     )
     handWorldPositions[slotIndex] = handPositionScratch[slotIndex]
 
+    const openness = handOpenness(landmarks)
+    handWarmth[slotIndex] = THREE.MathUtils.smoothstep(
+      openness,
+      FIST_OPENNESS_THRESHOLD,
+      OPEN_OPENNESS_THRESHOLD
+    )
+    const burstFraction = Math.max(handBurstUntilMs[slotIndex] - nowMs, 0) / FLAME_BURST_DURATION_MS
+    handFlareBoost[slotIndex] = FLAME_BURST_FLARE_BOOST * burstFraction
+
     const cooldownMs = reactiveConfig.value.fireballCooldownSeconds * 1000
-    const threw = gestureTrackers[side].update(handOpenness(landmarks), nowMs, cooldownMs)
+    const threw = gestureTrackers[side].update(openness, nowMs, cooldownMs)
     if (threw && fireballs) {
+      handBurstUntilMs[slotIndex] = nowMs + FLAME_BURST_DURATION_MS
       mirroredImagePointToWorld(palm, CAMERA_DISTANCE, CAMERA_FOV, aspect, originScratch)
       mirroredImagePointToWorld(
         handPointingTarget(landmarks),
@@ -113,6 +139,7 @@ const detectHands = (nowMs: number, aspect: number): void => {
       )
       aimDirectionScratch.subVectors(aimTargetScratch, originScratch)
       fireballs.spawn(originScratch, aimDirectionScratch, reactiveConfig.value.fireballSpeed, nowMs)
+      sparks?.burst(handPositionScratch[slotIndex], SPARK_BURST_COUNT, nowMs)
     }
   })
 }
@@ -130,6 +157,7 @@ const initScene = async (): Promise<void> => {
 
   handFlames = createHandFlameSystem(scene, HAND_SIDES.length, FLAME_PARTICLES_PER_HAND)
   fireballs = createFireballSystem(scene, MAX_FIREBALLS, FIREBALL_PARTICLES_PER_BALL)
+  sparks = createSparkSystem(scene, SPARK_POOL_SIZE)
   embers = createEmberField(scene, AMBIENT_EMBER_COUNT, AMBIENT_EMBER_BOUNDS)
 
   animate({
@@ -137,8 +165,15 @@ const initScene = async (): Promise<void> => {
     beforeTimeline: () => {
       const nowMs = performance.now()
       if (isActive.value) detectHands(nowMs, (camera as THREE.PerspectiveCamera).aspect)
-      handFlames?.update(nowMs / 1000, handWorldPositions, reactiveConfig.value.flameIntensity)
+      handFlames?.update(
+        nowMs / 1000,
+        handWorldPositions,
+        reactiveConfig.value.flameIntensity,
+        handWarmth,
+        handFlareBoost
+      )
       fireballs?.update(nowMs, FIREBALL_LIFETIME_MS)
+      sparks?.update(nowMs, SPARK_LIFETIME_MS)
       embers?.update(nowMs / 1000)
     }
   })
@@ -194,6 +229,7 @@ onUnmounted(() => {
   toolsCleanup?.()
   handFlames?.dispose()
   fireballs?.dispose()
+  sparks?.dispose()
   embers?.dispose()
   clearSceneElements()
   unregisterViewConfig(route.name as string)
