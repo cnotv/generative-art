@@ -65,6 +65,10 @@ Either way: a fresh branch off main every time, never the current branch, never 
   alias to keep old callers working. Fix it properly rather than layering a workaround.
 - **Comments explain why, never what.** If code needs a comment to say what it does, rewrite
   the code. No commented-out debug notes, no "was X, now Y", no section labels.
+- **Spell out a domain acronym the first time it appears.** `ccd`, `IK`, `UV` and the like mean
+  nothing to a reader outside that domain. A one-line comment on the field, parameter or first
+  use in a file — `ccd` (continuous collision detection) — costs nothing and saves a search.
+  Ordinary developer terms (`API`, `URL`, `ID`) don't need this.
 - **DRY and KISS.** If a pattern appears twice, extract it. Prefer the simplest thing that
   works over an abstraction you might need later.
 - **Reuse before writing.** Check `src/components/`, `src/utils/` and `src/stores/` first.

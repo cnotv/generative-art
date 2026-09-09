@@ -22,7 +22,8 @@ export interface CommonOptions {
   type?: ModelType
   weight?: number
   enabledRotations?: [boolean, boolean, boolean]
-  /** Sweep the body's whole path each step, for anything fast enough to pass through what it should hit. */
+  /** Continuous collision detection: sweeps the body's whole path each step, for anything fast
+   * enough to pass through what it should hit. */
   ccd?: boolean
 }
 

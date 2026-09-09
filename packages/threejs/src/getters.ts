@@ -306,7 +306,7 @@ const buildCollider = (
  * @param {number} [options.dominance=1] - The influence level from other bodies.
  * @param {'fixed' | 'dynamic'} [options.type='fixed'] - The type of the rigid body.
  * @param {'cuboid' | 'ball' | 'cylinder' | 'capsule'} [options.shape='cuboid'] - The shape of the collider.
- * @param {boolean} [options.ccd=false] - Sweep the body's whole path each step, for anything fast enough to pass through what it should hit.
+ * @param {boolean} [options.ccd=false] - Continuous collision detection: sweeps the body's whole path each step, for anything fast enough to pass through what it should hit.
  * @returns {Object} The created rigid body and collider.
  * @returns
  */
