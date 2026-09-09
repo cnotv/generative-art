@@ -4,11 +4,13 @@ sidebar_position: 127
 
 # Rig Animator: pose-capture fixes
 
-Five unrelated but easy-to-conflate fixes to the Rig Animator's camera pose capture and manual
-posing: turning the torso instead of the viewport camera (then turning it correctly), a
+A cluster of unrelated but easy-to-conflate fixes to the Rig Animator's camera pose capture and
+manual posing: turning the torso instead of the viewport camera (then turning it correctly), a
 root-follow priority for dragging a foot or the head, two dead ends chasing the thumb's detected
-curl before a real recorded gesture sequence settled it, and a from-scratch hand orientation
-feature that needed the same real-footage testing to get right, twice over.
+curl before a real recorded gesture sequence settled it, a from-scratch hand orientation feature
+that needed the same real-footage testing to get right twice over, and, once undriven bones
+started holding their last pose instead of resetting every frame, an invariant that reset had
+been quietly propping up the whole time.
 
 ## Torque, not rotate: turning the torso
 
@@ -143,3 +145,42 @@ general lesson, stated once for both this and the torso torque: `ikApplyWorldDir
 minimal-rotation-from-current approach is only as stable as "current" is close to "desired"; the
 moment a caller's own "current" is itself driven by something unrelated to the target, building
 the result directly is the safer choice, not a minor style preference.
+
+## The reset a global reset had been quietly guaranteeing
+
+Removing the per-frame reset to rest (so an undriven bone holds its last pose instead of
+flickering back to rest and forward again) surfaced a second, unrelated bug the reset had been
+masking the whole time: the head-aim solve and the torso torque, composed together on the same
+bone, would occasionally leave the model bent over or twisted into a pose with no relation to
+what the camera actually showed, and the bad pose would then simply sit there, held rather than
+overwritten on the very next frame the way it always used to be.
+
+The mechanism was already documented, just not where it could be checked against this call site.
+`ikApplyWorldDirectionToBone`'s own doc comment names two chains as safe because their "current"
+is each chain's own rest geometry, reset immediately before every solve. That was true for the
+two-bone chains (a dragged hand or foot resets its own local position from `restPoses` before
+`ikSolveTwoBoneChain` runs) and had, before this session, also been true for the one-bone aim
+that drives the head: the reset every captured pose did to the _whole rig_ first meant the torso
+bone always started an aim solve from its own rest orientation too, incidentally, without the
+aim's own call site ever asking for that itself. Deleting the whole-rig reset removed that
+incidental guarantee along with the flicker it was meant to fix, and nothing was left resetting
+the torso bone's rotation before the aim solve read its "current" direction from it. Once that
+"current" carried forward whatever the previous frame's aim, or the torque composed after it, had
+left behind, the shortest-rotation construction was reading from an increasingly arbitrary
+starting point rather than a fixed one, occasionally landing far from anything a real turn of the
+head would produce, and holding that instead of correcting itself the next frame.
+
+The fix adds back exactly the reset the aim's own contract always assumed, but scoped to the one
+call site missing it (`applyGizmoDragToChain`'s one-bone-parent branch, right where the dragged
+bone's own position was already being reset) rather than to the whole rig: the torso bone's
+rotation is set back to rest immediately before the aim solve runs, every time the head is
+actually driven that frame. That, in turn, meant the torso torque no longer needed the delta
+bookkeeping an earlier version of this fix added (twisting only by the change since the last
+applied frame, to avoid winding up further every frame): once the aim underneath it reliably
+starts from rest each time, applying the full estimated yaw on top is correct again, the same
+simple form the very first version used before any of this. The general lesson: a reset applied
+broadly, "to the whole rig" or "every frame," is easy to mistake for incidental cleanup when it
+is actually load-bearing for a specific downstream assumption. Narrowing that reset to only the
+bones actually needing a fresh pose is the right fix for the flicker it caused, but it also
+removes whatever else was quietly relying on the broad version, and those call sites need their
+own, scoped reset added back explicitly rather than assumed.

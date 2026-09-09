@@ -521,6 +521,16 @@ mapping table: the head's own IK chain root is the upper spine, an ancestor of b
 aiming the head bends the spine the arms hang off. Applying it after the hands would drag an
 already-placed hand out of position along with that bend.
 
+Aiming the head resets that spine bone to its rest orientation immediately before re-aiming it,
+every time the head is driven, the same way the dragged bone's own position is reset before any
+drag-to-chain solve. The aim itself turns the bone by the shortest rotation from wherever it
+currently faces to the target, so without that reset it turns from whatever a previous frame (or
+the torso twist below) left it at rather than from a fixed, known starting point — a live feed's
+own frame-to-frame noise, or simply enough frames accumulating something the shortest-rotation
+math does not perfectly cancel back out, could then read as the head, and the spine it bends,
+lurching into a bent or twisted pose with no relation to the target actually driving it that
+frame. Resetting first makes the result a function of this frame's target alone.
+
 Spine bend is not driven by the camera: the Pose Landmarker has no per-vertebra landmarks to
 drive a convincing torso curve, so this only drives the limbs and the head. Fingers are, through
 a second detector alongside it, covered in "Fingers from the camera" above.
@@ -540,13 +550,16 @@ fighting whatever orbiting was done in between.
 
 The twist itself composes on top of the torso bone's current orientation rather than setting an
 absolute one, since that same bone can already carry a real pitch from aiming the head (see
-above), and overwriting that would fight the head aim on every frame. Composing a fresh reading
-of the same angle on top of itself every frame, the way a first version of this did, wound the
-torso up further each time instead of ever settling: holding a turned pose for even a few
-seconds spun it far past the angle actually shown. Twisting only by the change since the last
-applied frame keeps the total twist equal to the latest reading, converging on it rather than
-compounding past it, the same way a thermostat adjusts by the gap to a target instead of adding
-a fixed increment every cycle regardless of where it already is.
+above), and overwriting that would fight the head aim on every frame. Composing the same reading
+on top of itself every frame, without anything resetting the bone first, wound the torso up
+further each time instead of ever settling: holding a turned pose for even a few seconds spun it
+far past the angle actually shown. It only reads as a single steady angle instead because the
+head aim right above it already reset the same bone to rest before re-aiming it this frame,
+whenever the head is driven — the torque is really composing onto a freshly rebuilt orientation
+each time, not onto an ever-growing one. A frame where the head specifically drops out of
+confidence while the shoulders stay tracked (rare, since a face is normally at least as
+reliable a detection as a shoulder line) skips that reset and can read as a brief, self-correcting
+mismatch until the head is confidently tracked again.
 
 ![The Config panel's camera pose options, no "Match Camera Angle to Photo" row among them](/img/animation/rig-camera-pose-no-viewpoint-match.webp)
 

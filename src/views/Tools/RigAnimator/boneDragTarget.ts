@@ -97,6 +97,17 @@ export const applyGizmoDragToChain = (
   }
   if (bone.parent instanceof THREE.Bone) {
     if (rest) bone.position.copy(rest.position)
+    // The parent is the bone the aim solve actually rotates, and it aims by the shortest turn
+    // from whatever direction it currently faces: resetting its rotation to rest first, the
+    // same way the dragged bone's own position is reset above, gives every aim a fixed,
+    // history-independent starting point. Without this, a rig left mid-capture (rather than
+    // reset between drags the way a mouse drag always is) carries forward whatever an earlier
+    // frame's aim, or something else applied to this same bone (a body-turn twist, say), left
+    // it at, and the shortest-turn solve can pick a wildly different axis than the same target
+    // would from rest, reading as the bone flipping into a bent or twisted pose that has
+    // nothing to do with the target actually driving it that frame.
+    const parentRest = restPoses.get(bone.parent.name)
+    if (parentRest) bone.parent.quaternion.copy(parentRest.quaternion)
     ikSolveOneBoneAim(bone.parent, bone, targetWorldPosition)
     return
   }
