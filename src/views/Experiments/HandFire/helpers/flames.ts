@@ -114,7 +114,7 @@ export const createHandFlameSystem = (
   const phase = Float32Array.from(indices, () => Math.random())
   const spin = Float32Array.from(indices, () => Math.random() * Math.PI * 2)
   const riseSpeed = Float32Array.from(indices, () => 0.5 + Math.random() * 0.4)
-  const wobbleRadius = Float32Array.from(indices, () => 0.08 + Math.random() * 0.22)
+  const wobbleRadius = Float32Array.from(indices, () => 0.2 + Math.random() * 0.6)
 
   const update = (
     timeSeconds: number,
@@ -138,7 +138,7 @@ export const createHandFlameSystem = (
       // Smoke drifts wider and slower than a tight flame lick, so warmth also spreads the wobble.
       const outward = wobbleRadius[index] * (1 - rise) * (1.4 - warmth * 0.5)
       positions.array[index * 3] = handPosition.x + Math.cos(angle) * outward
-      positions.array[index * 3 + 1] = handPosition.y + rise * (1.3 + (1 - warmth) * 0.6)
+      positions.array[index * 3 + 1] = handPosition.y + rise * (3.5 + (1 - warmth) * 1.5)
       positions.array[index * 3 + 2] = handPosition.z + Math.sin(angle) * outward
       // The flare boost is what actually makes the burst visible: warmth alone only ever
       // reads as a steady open-hand flame once clamped for colour, same as no burst at all.
@@ -146,7 +146,7 @@ export const createHandFlameSystem = (
       // wide open one a full blaze, continuously rather than snapping at either threshold.
       const amount = 0.4 + warmth * 1.1
       heats.array[index] = (1 - rise) * intensity * amount * (1 + flare * 0.5)
-      sizes.array[index] = (0.5 + (1 - rise) * 0.7) * intensity * amount * (1 + flare)
+      sizes.array[index] = (2.5 + (1 - rise) * 3.5) * intensity * amount * (1 + flare)
       warmths.array[index] = warmth
     })
     positions.needsUpdate = true
@@ -201,7 +201,7 @@ export const createFireballSystem = (
   const particleIndices = Array.from({ length: particlesPerBall }, (_, index) => index)
   const particleOffset = Float32Array.from(
     { length: particlesPerBall },
-    () => (Math.random() - 0.5) * 0.6
+    () => (Math.random() - 0.5) * 1.4
   )
   const particlePhase = Float32Array.from(
     { length: particlesPerBall },
@@ -246,7 +246,7 @@ export const createFireballSystem = (
         positions.array[bufferIndex * 3 + 2] =
           scratchPosition.z + Math.sin(angle * 1.3) * wobble * 0.6
         heats.array[bufferIndex] = slot.active ? 1 - lifeFraction * 0.6 : 0
-        sizes.array[bufferIndex] = slot.active ? 2.2 * (1 - lifeFraction * 0.3) : 0
+        sizes.array[bufferIndex] = slot.active ? 5 * (1 - lifeFraction * 0.3) : 0
       })
     })
     positions.needsUpdate = true
