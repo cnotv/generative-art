@@ -196,6 +196,10 @@ this is the same reason applying a captured camera pose does not carry the root 
 (every limb has to reach its own already-correct target independently in that pass; only an
 interactive single-bone drag gets this).
 
+| Before the drag                                                                                  | After dragging one foot                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![Standing T-pose, bone markers on, both feet level](/img/animation/rig-root-follow-before.webp) | ![The same rig after dragging the right foot marker upward: the whole body has risen with it, the leg itself barely bent](/img/animation/rig-root-follow-after.webp) |
+
 ![mixamorigRightHand dragged upward: the elbow bent to follow it, the mesh at the shoulder and elbow intact, the Bone Position field still reading the hand's rest offset since only its shoulder and elbow ancestors rotated](/img/animation/rig-ik-reach.webp)
 
 ### Re-aiming the bend without moving the hand
@@ -500,6 +504,8 @@ straight on, both shoulders sit at the same depth, and turning moves one shoulde
 camera than the other by exactly the angle turned. This turns the model, not the 3D view's own
 camera: the viewport stays entirely under manual orbit control throughout capture, rather than
 swinging around on every applied frame and fighting whatever orbiting was done in between.
+
+![The Config panel's camera pose options, no "Match Camera Angle to Photo" row among them](/img/animation/rig-camera-pose-no-viewpoint-match.webp)
 
 ### Extra details to try
 
