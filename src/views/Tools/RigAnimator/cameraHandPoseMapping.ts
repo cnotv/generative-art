@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { HandPoseDefinition, HandSide } from '@webgamekit/rig'
+import type { HandOrientation, HandPoseDefinition, HandSide } from '@webgamekit/rig'
 import { clampLandmarkJump } from './cameraPoseMapping'
 import { CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 
@@ -72,6 +72,30 @@ export const cameraHandLandmarksToPose = (landmarks: CameraHandLandmark[]): Hand
     middle: fingerAngles(FINGER_LANDMARK_INDEX.middle),
     ring: fingerAngles(FINGER_LANDMARK_INDEX.ring),
     pinky: fingerAngles(FINGER_LANDMARK_INDEX.pinky)
+  }
+}
+
+/**
+ * Read a detected hand's own orientation from its landmarks: which way its fingers point and
+ * which way its knuckle row runs, both converted into scene world-space (the same y/z flip the
+ * body mapping uses, MediaPipe's image-space convention extended to 3D). Only ever the direction
+ * between two landmarks, never an absolute position, so this needs no anchor or scale the way
+ * the body and finger-curl mappings do.
+ * @param landmarks The 21 landmarks for one detected hand, in MediaPipe's own point order
+ * @param mirror Negate x to match a mirrored live preview; false for a photo, shown as captured.
+ * @returns The hand's own along/across directions, ready for `applyHandOrientation`
+ */
+export const cameraHandLandmarksToOrientation = (
+  landmarks: CameraHandLandmark[],
+  mirror: boolean
+): HandOrientation => {
+  const mirrorSign = mirror ? -1 : 1
+  const sceneDirection = (from: CameraHandLandmark, to: CameraHandLandmark): THREE.Vector3 =>
+    new THREE.Vector3((to.x - from.x) * mirrorSign, -(to.y - from.y), -(to.z - from.z)).normalize()
+
+  return {
+    along: sceneDirection(landmarks[0], landmarks[9]),
+    across: sceneDirection(landmarks[5], landmarks[17])
   }
 }
 
@@ -163,4 +187,39 @@ export const mirrorCameraHandPoses = (
 ): Partial<Record<HandSide, HandPoseDefinition>> => ({
   ...(handPoses.Left ? { Right: handPoses.Left } : {}),
   ...(handPoses.Right ? { Left: handPoses.Right } : {})
+})
+
+/**
+ * Map every hand MediaPipe found in one frame or photo onto per-side orientations, resolving
+ * each hand's actual side and reading its along/across directions in one pass. `mirror` is
+ * threaded straight through to `cameraHandLandmarksToOrientation`; it is a separate concern from
+ * `mirrorCameraHandOrientations` below, which swaps sides rather than coordinates.
+ * @param detectedHands Every hand MediaPipe reported for this detection
+ * @param mirror Negate x to match a mirrored live preview; false for a photo, shown as captured.
+ * @returns The detected orientation for whichever side(s) were found, keyed by side
+ */
+export const cameraDetectedHandsToOrientations = (
+  detectedHands: CameraDetectedHand[],
+  mirror: boolean
+): Partial<Record<HandSide, HandOrientation>> =>
+  Object.fromEntries(
+    detectedHands
+      .map((hand): [HandSide | null, HandOrientation] => [
+        resolveCameraHandSide(hand.categoryName),
+        cameraHandLandmarksToOrientation(hand.worldLandmarks, mirror)
+      ])
+      .filter((entry): entry is [HandSide, HandOrientation] => entry[0] !== null)
+  )
+
+/**
+ * Swap which side each detected hand's orientation is keyed under, the same side-swap
+ * `mirrorCameraHandPoses` does for finger curl; see that function's own doc comment for why.
+ * @param handOrientations Orientations keyed by each hand's own detected (unmirrored) side
+ * @returns The same orientations, keyed by the opposite side
+ */
+export const mirrorCameraHandOrientations = (
+  handOrientations: Partial<Record<HandSide, HandOrientation>>
+): Partial<Record<HandSide, HandOrientation>> => ({
+  ...(handOrientations.Left ? { Right: handOrientations.Left } : {}),
+  ...(handOrientations.Right ? { Left: handOrientations.Right } : {})
 })

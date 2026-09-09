@@ -53,3 +53,14 @@ export interface HandPoseDefinition {
   ring: [number, number, number]
   pinky: [number, number, number]
 }
+
+/**
+ * A hand's own orientation in world space, as two independent directions: along the fingers
+ * (wrist toward the middle-finger base) and across the knuckle row (the index-finger base
+ * toward the pinky-finger base). Two directions, not one, because a hand's roll around the
+ * "along" axis (palm up versus palm down) is real signal a single direction cannot capture.
+ */
+export interface HandOrientation {
+  along: THREE.Vector3
+  across: THREE.Vector3
+}

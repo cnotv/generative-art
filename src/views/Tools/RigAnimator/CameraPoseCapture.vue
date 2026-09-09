@@ -7,7 +7,7 @@ import {
   type NormalizedLandmark
 } from '@mediapipe/tasks-vision'
 import { Circle, Square } from 'lucide-vue-next'
-import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
+import type { HandSide, HandPoseDefinition, HandOrientation } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
 import Switch from '@/components/ui/switch/Switch.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
@@ -56,7 +56,11 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
+  apply: [
+    landmarks: CameraLandmark[],
+    handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
+    handOrientations: Partial<Record<HandSide, HandOrientation>>
+  ]
   close: []
   toggleRecord: []
   enablePreview: []
@@ -113,6 +117,13 @@ const worldLandmarks = computed(() =>
 )
 const handPoses = computed(() =>
   pickByMode(camera.handPoses.value, uploadedVideo.handPoses.value, photo.handPoses.value)
+)
+const handOrientations = computed(() =>
+  pickByMode(
+    camera.handOrientations.value,
+    uploadedVideo.handOrientations.value,
+    photo.handOrientations.value
+  )
 )
 
 let drawingUtilities: DrawingUtils | null = null
@@ -180,10 +191,10 @@ watch([previewLandmarks, previewHandLandmarks, () => photo.photoImage.value], dr
 // Applies live: every newly detected frame (continuous for the camera, once for a photo) goes
 // straight to the rig, so the model mirrors the source in real time instead of waiting for a
 // separate capture click. This is what makes the side-by-side comparison actually prove the
-// mapping matches, rather than only a snapshot of it. Hand poses ride along on the same emit,
-// since both detections finish within the same detectFrame/detectPhoto call.
+// mapping matches, rather than only a snapshot of it. Hand poses and orientations ride along on
+// the same emit, since both detections finish within the same detectFrame/detectPhoto call.
 watch(worldLandmarks, (landmarks) => {
-  if (landmarks) emit('apply', landmarks, handPoses.value)
+  if (landmarks) emit('apply', landmarks, handPoses.value, handOrientations.value)
 })
 
 /** An uploaded photo or video is the whole reason to look at this panel right then, so its
@@ -193,13 +204,17 @@ watch(worldLandmarks, (landmarks) => {
  * useful for testing against a known performance; a photo applies once. Uploading a video
  * also starts Record Motion automatically, since scrubbing back through the timeline to redo
  * a manual start is exactly the friction this dialog exists to avoid. */
+const handleUploadClick = (): void => {
+  camera.stop()
+  fileInputReference.value?.click()
+}
+
 const handleMediaChange = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
   if (props.isRecording) emit('toggleRecord')
-  camera.stop()
   if (file.type.startsWith('video/')) {
     mode.value = 'video'
     await uploadedVideo.loadVideo(file)
@@ -322,11 +337,11 @@ onUnmounted(() => {
         v-if="error"
         size="sm"
         variant="secondary"
-        @click="mode === 'camera' ? camera.start() : fileInputReference?.click()"
+        @click="mode === 'camera' ? camera.start() : handleUploadClick()"
       >
         Try Again
       </Button>
-      <Button size="sm" variant="secondary" @click="fileInputReference?.click()">
+      <Button size="sm" variant="secondary" @click="handleUploadClick">
         Upload Photo/Video
       </Button>
       <Button

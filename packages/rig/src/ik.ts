@@ -9,7 +9,14 @@ const IK_EPSILON = 1e-6
  * this twice in a row on the same bone, once per reference direction, fully orients it: the
  * second call's minimal rotation is necessarily a pure roll around the first call's now-matched
  * axis, since both the current and desired second direction stay perpendicular to that shared
- * axis by construction (see `cameraHandPoseMapping.ts`'s palm orientation for a worked case).
+ * axis by construction. Only safe when "current" and "desired" stay reasonably close together;
+ * `setFromUnitVectors`'s minimal-rotation construction is ill-defined right at the antipodal
+ * point, and near it picks between two very different rotation axes unpredictably from one call
+ * to the next, which reads as the bone flipping rather than turning. A caller whose "current"
+ * direction is itself something that moves independently of "desired" (an ancestor's own
+ * separately-solved orientation, say) can end up there by surprise; building the target
+ * orientation directly, with no dependency on "current" at all, sidesteps the whole class of
+ * failure (see `applyHandOrientation` in `handPose.ts` for a case that needed exactly that).
  * @param bone The bone to rotate
  * @param currentWorldDirection The direction the bone points right now, normalized
  * @param desiredWorldDirection The direction the bone should point, normalized
@@ -26,6 +33,36 @@ export const ikApplyWorldDirectionToBone = (
   )
   const currentWorldQuaternion = bone.getWorldQuaternion(new THREE.Quaternion())
   const desiredWorldQuaternion = deltaRotation.multiply(currentWorldQuaternion)
+  const parentWorldQuaternion = bone.parent
+    ? bone.parent.getWorldQuaternion(new THREE.Quaternion())
+    : new THREE.Quaternion()
+  bone.quaternion.copy(parentWorldQuaternion.invert().multiply(desiredWorldQuaternion))
+}
+
+/**
+ * Twist a bone by `angle` radians around a fixed world-space axis, composed on top of whatever
+ * its current world orientation already is, rather than overwriting one raw Euler component of
+ * its local rotation directly. Those read the same only when the bone's local rotation has
+ * nothing else going on; a bone another solve already aimed for its own reasons (the Rig
+ * Animator's torso bone doubles as the head IK chain's own root, so it can carry a real pitch
+ * from aiming the head before this ever runs) composes unpredictably with a raw Euler-component
+ * overwrite once that existing rotation is not near identity, reading as the bone flipping
+ * rather than merely turning further. Composing in world space avoids that: the twist always
+ * lands the same way relative to the true world axis, regardless of whatever local rotation the
+ * bone already carried in.
+ * @param bone The bone to twist
+ * @param angle How far to twist, in radians
+ * @param worldAxis The axis to twist around, in world space, normalized
+ * @returns Nothing; mutates the bone's local quaternion
+ */
+export const ikTwistAroundWorldAxis = (
+  bone: THREE.Bone,
+  angle: number,
+  worldAxis: THREE.Vector3
+): void => {
+  const twistQuaternion = new THREE.Quaternion().setFromAxisAngle(worldAxis, angle)
+  const currentWorldQuaternion = bone.getWorldQuaternion(new THREE.Quaternion())
+  const desiredWorldQuaternion = twistQuaternion.multiply(currentWorldQuaternion)
   const parentWorldQuaternion = bone.parent
     ? bone.parent.getWorldQuaternion(new THREE.Quaternion())
     : new THREE.Quaternion()

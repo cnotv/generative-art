@@ -1,5 +1,5 @@
 import { shallowRef, type Ref, type ShallowRef } from 'vue'
-import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
+import type { HandSide, HandPoseDefinition, HandOrientation } from '@webgamekit/rig'
 import {
   FilesetResolver,
   PoseLandmarker,
@@ -18,7 +18,9 @@ import {
 } from './cameraPoseMapping'
 import {
   cameraDetectedHandsToPoses,
+  cameraDetectedHandsToOrientations,
   mirrorCameraHandPoses,
+  mirrorCameraHandOrientations,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
   type CameraHandLandmark
@@ -51,6 +53,7 @@ export const useVideoLandmarkDetection = ({
   const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
   const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
   const handPoses = shallowRef<Partial<Record<HandSide, HandPoseDefinition>>>({})
+  const handOrientations = shallowRef<Partial<Record<HandSide, HandOrientation>>>({})
 
   let landmarker: PoseLandmarker | null = null
   let handLandmarker: HandLandmarker | null = null
@@ -98,6 +101,10 @@ export const useVideoLandmarkDetection = ({
     })
     const detectedHandPoses = cameraDetectedHandsToPoses(smoothedHands)
     handPoses.value = mirror ? mirrorCameraHandPoses(detectedHandPoses) : detectedHandPoses
+    const detectedHandOrientations = cameraDetectedHandsToOrientations(smoothedHands, mirror)
+    handOrientations.value = mirror
+      ? mirrorCameraHandOrientations(detectedHandOrientations)
+      : detectedHandOrientations
 
     animationFrame = requestAnimationFrame(detectFrame)
   }
@@ -141,6 +148,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
+    handOrientations.value = {}
     previousWorldLandmarks = null
     previousHandLandmarksBySide = {}
   }
@@ -150,6 +158,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks,
     worldLandmarks,
     handPoses,
+    handOrientations,
     startDetectionLoop,
     stopDetectionLoop
   }

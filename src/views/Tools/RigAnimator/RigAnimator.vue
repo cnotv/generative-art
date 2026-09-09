@@ -9,10 +9,13 @@ import { createTimelineManager } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import {
   ikFindTwoBoneChain,
+  ikTwistAroundWorldAxis,
   applyHandPose,
+  applyHandOrientation,
   type TwoBoneIkChain,
   type HandSide,
-  type HandPoseDefinition
+  type HandPoseDefinition,
+  type HandOrientation
 } from '@webgamekit/rig'
 import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
@@ -42,7 +45,11 @@ import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { frameCameraOnModel } from './cameraFraming'
-import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
+import {
+  estimateCameraYaw,
+  CAMERA_POSE_TORQUE_BONE,
+  type CameraLandmark
+} from './cameraPoseMapping'
 import {
   selectedBodyPartGroups,
   toggleBodyPartGroupTarget,
@@ -56,6 +63,10 @@ import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
 import CameraPoseCapture from './CameraPoseCapture.vue'
 import type { RigAnimatorConfig } from './types'
+
+/** The torso torque's own twist axis: straight up, regardless of whatever the model's own
+ * current orientation happens to be. */
+const WORLD_UP_AXIS = new THREE.Vector3(0, 1, 0)
 
 const route = useRoute()
 const routeName = route.name as string
@@ -311,16 +322,23 @@ const toggleMarbleFlow = (): void => {
 }
 
 /**
- * Applies a detected body pose and, riding along on the same emit, any detected hand poses. Also
- * turns the model itself to roughly the angle the photo shows the subject from, the one
- * camera-relative detail a single photo's body landmarks can actually support (see
- * `estimateCameraYaw`'s own doc comment for why not more than that): the model turns to follow
- * the subject instead of the viewing camera swinging around it, which stays entirely under the
- * user's own orbit control throughout capture.
+ * Applies a detected body pose and, riding along on the same emit, any detected hand poses and
+ * orientations. Also turns the torso to roughly the angle the photo shows the subject from, the
+ * one camera-relative detail a single photo's body landmarks can actually support (see
+ * `estimateCameraYaw`'s own doc comment for why not more than that): the upper body twists to
+ * follow the subject, hips and feet planted the way a real turn reads, instead of the whole rig
+ * spinning like a rigid turntable, and instead of the viewing camera swinging around it, which
+ * stays entirely under the user's own orbit control throughout capture.
+ *
+ * Hand orientation applies last, after the torso twist: `applyHandOrientation` aligns a hand
+ * bone to an absolute world direction regardless of whatever rotation it inherited from its
+ * now-twisted ancestors, so applying it any earlier would have the twist carry the hand away
+ * from the very orientation just set for it.
  */
 const handleCameraApply = (
   landmarks: CameraLandmark[],
-  handPoses: Partial<Record<HandSide, HandPoseDefinition>>
+  handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
+  handOrientations: Partial<Record<HandSide, HandOrientation>>
 ): void => {
   rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   const restQuaternions = rig.getRestQuaternions()
@@ -331,10 +349,12 @@ const handleCameraApply = (
     if (!targetBodyPartGroups.value.has(armGroup)) return
     applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
   })
-  if (rig.model.value) {
-    const yaw = estimateCameraYaw(landmarks)
-    if (yaw !== null) rig.model.value.rotation.y = yaw
-  }
+  const yaw = estimateCameraYaw(landmarks)
+  const torsoBone = rig.bones.value.find((bone) => bone.name === CAMERA_POSE_TORQUE_BONE)
+  if (yaw !== null && torsoBone) ikTwistAroundWorldAxis(torsoBone, yaw, WORLD_UP_AXIS)
+  Object.entries(handOrientations).forEach(([side, orientation]) => {
+    applyHandOrientation(rig.bones.value, side as HandSide, orientation)
+  })
   motionRecording.recordFrameIfActive()
 }
 

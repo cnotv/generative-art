@@ -184,11 +184,62 @@ row on the same bone, once per reference direction, fully orients it: the second
 rotation is necessarily a pure roll around the first call's now-matched axis, since both the
 current and desired second direction stay perpendicular to that shared axis by construction.
 
+Only safe when "current" and "desired" stay reasonably close together. The minimal-rotation
+construction is ill-defined right at the antipodal point and picks between two very different
+rotation axes unpredictably near it, which reads as the bone flipping rather than turning. That
+holds for `ikSolveTwoBoneChain` and `ikSolveOneBoneAim`, where "current" is the chain's own
+rest geometry and stays close to "desired" by construction, but not for every caller: one that
+reads "current" from something solved independently of "desired" (an ancestor's own separately
+re-solving position IK, say) can end up antipodal by surprise. Building the target orientation
+directly, with no dependency on "current" at all, sidesteps the whole failure — see
+`applyHandOrientation` below for a worked case, and the Rig Animator's own
+[journey doc](/docs/journey/rig-animator-pose-capture-fixes) for what the failure actually
+looked like against a real camera feed before the fix.
+
 ```typescript
 import { ikApplyWorldDirectionToBone } from '@webgamekit/rig'
 
 // Aim the bone's own current direction (toward a child, say) at a new one.
 ikApplyWorldDirectionToBone(bone, currentWorldDirection, desiredWorldDirection)
+```
+
+## ikTwistAroundWorldAxis
+
+Twist a bone by an angle around a fixed world-space axis, composed on top of whatever its
+current world orientation already is, rather than overwriting one raw Euler component of its
+local rotation directly. Those read the same only when the bone's local rotation has nothing
+else going on; a bone another solve already aimed for its own reasons composes unpredictably
+with a raw Euler-component overwrite once that existing rotation is not near identity, reading
+as the bone flipping rather than merely turning further. The Rig Animator's own torso torque
+uses this for exactly that reason: the torso bone doubles as the head-aim IK chain's own root,
+so it can carry a real pitch from aiming the head before the twist ever runs.
+
+```typescript
+import { ikTwistAroundWorldAxis } from '@webgamekit/rig'
+
+const worldUp = new THREE.Vector3(0, 1, 0)
+ikTwistAroundWorldAxis(bone, yawRadians, worldUp)
+```
+
+## applyHandOrientation
+
+Turn a hand bone to face the way a detected hand does, given its own along/across directions
+(see `HandOrientation` below): builds the bone's full target world orientation directly from
+those two detected directions and the rig's own rest-local equivalents (read straight off the
+middle, index and pinky first finger bones' own rest positions, direct children of the hand
+bone, so no world transform is needed to read them), rather than a minimal rotation from
+wherever the bone currently points — the same antipodal-instability reasoning
+`ikApplyWorldDirectionToBone` covers above applies here in particular, since a hand bone's
+current orientation is left wherever the arm's own independently-solving position IK put it,
+unrelated to the detected orientation. Requires the middle, index and pinky first finger bones;
+a rig with no finger bones (the auto-rig heuristic's own generated skeleton never has any) is
+left untouched.
+
+```typescript
+import { applyHandOrientation } from '@webgamekit/rig'
+
+// orientation: { along: Vector3, across: Vector3 }, both in world space
+applyHandOrientation(bones, side, orientation)
 ```
 
 ## Types
@@ -236,5 +287,10 @@ interface HandPoseDefinition {
   middle: [number, number, number]
   ring: [number, number, number]
   pinky: [number, number, number]
+}
+
+interface HandOrientation {
+  along: THREE.Vector3 // wrist toward the middle-finger base, world space
+  across: THREE.Vector3 // index-finger base toward the pinky-finger base, world space
 }
 ```

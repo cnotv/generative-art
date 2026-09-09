@@ -2,29 +2,38 @@
 sidebar_position: 127
 ---
 
-# Rig Animator: three pose-capture fixes
+# Rig Animator: pose-capture fixes
 
-Three unrelated but easy-to-conflate fixes to the Rig Animator's camera pose capture and manual
-posing: turning the model instead of the viewport camera, a root-follow priority for dragging a
-foot or the head, and two dead ends chasing the thumb's detected curl before a real recorded
-gesture sequence, run through the real pipeline, showed which fix actually held.
+Five unrelated but easy-to-conflate fixes to the Rig Animator's camera pose capture and manual
+posing: turning the torso instead of the viewport camera (then turning it correctly), a
+root-follow priority for dragging a foot or the head, two dead ends chasing the thumb's detected
+curl before a real recorded gesture sequence settled it, and a from-scratch hand orientation
+feature that needed the same real-footage testing to get right, twice over.
 
-## Turning the model, not the viewport camera
+## Torque, not rotate: turning the torso
 
-Matching a captured photo's viewing angle used to turn the 3D view's own camera around the
-model, so the model always stayed square to a fixed rest orientation while the camera swung to
-the angle the photo implied. That fights manual orbiting: every applied frame (continuous for a
+Matching a captured photo's viewing angle first turned the 3D view's own camera around the
+model, so the model stayed square to a fixed rest orientation while the camera swung to the
+angle the photo implied. That fights manual orbiting: every applied frame (continuous for a
 live webcam) yanked the camera back to the estimated angle, undoing whatever the person driving
-the tool had just done with the mouse.
+the tool had just done with the mouse. Turning the whole model instead, rigidly, fixed that, but
+read as the entire rig spinning on the spot like a turntable rather than a body turning, feet
+and all. Retargeting the same yaw onto the torso bone alone leaves the hips and feet planted and
+only the chest, arms and head twist, the way a real turn reads.
 
-The fix keeps the same yaw estimate (still the one camera-relative detail a single photo's body
-landmarks can support, since MediaPipe's world landmarks carry no cue about the original
-camera's distance or zoom) but applies it to the model's own rotation instead. The viewport
-camera is never touched by pose capture again; orbiting stays entirely under manual control
-throughout a live session. The same rotation formula that used to offset the camera around the
-model's bounding-sphere center now turns the model itself by that angle, which reproduces the
-same relative on-screen appearance whenever the camera sits at its default framing, the common
-case right after loading a model or closing the capture panel.
+That torso bone doubles as the root of the head-aim IK chain (aiming the head at a detected face
+position bends this same bone), so it can already carry a real, camera-driven pitch before the
+torque ever runs. The first version set the bone's own Euler Y component directly, which was
+exactly as safe as it had been on the untouched top-level model (where X and Z were always
+zero) and not remotely as safe here: once the head-aim solve had already given the bone a
+substantial X, composing an unrelated Y write on top of it read as the body flipping rather than
+turning, confirmed against a real recorded gesture sequence (the person's hand frequently
+crosses in front of their own face, which is exactly when the head-aim solve's own target gets
+least reliable). The fix composes the torque as a world-space quaternion twist around the true
+vertical axis instead, on top of whatever orientation the bone already has, the same
+current-independent composition `ikApplyWorldDirectionToBone` already uses elsewhere in this
+package: predictable regardless of what else already rotated the bone, rather than reading the
+result as one more Euler component fighting whatever the other two already were.
 
 ## Root-follow is a drag-time behavior, not a pose-application one
 
@@ -95,3 +104,42 @@ included, as points running in a straight line from one shared origin passes eve
 underlying assumption (that the origin is a valid zero-bend reference for every finger) is false
 for one of them. It just was not, on its own, enough to tell a plausible-but-wrong fix from a
 plausible-and-right one; only a real gesture sequence run through the real pipeline could.
+
+## Hand orientation: driving a bone's rotation that never moved before
+
+Before this, a detected hand only ever drove two things: where its wrist bone sat (the arm's own
+two-bone reach) and how curled each finger was. The hand bone's own rotation, which way the palm
+faces, was never touched by any of it — position and curl both leave the dragged bone's own
+local transform alone by design, only ever rotating its ancestors or its children. Turning that
+into a real feature needed two attempts, each caught by the same real-footage harness the thumb
+fix used.
+
+**The first version was a handedness bug**, caught by a synthetic unit test before it ever
+reached a browser. Orienting a bone from two independent directions (along the fingers, across
+the knuckle row) needs a third, their cross product, to build a complete basis; `along × across`
+gives a vector such that `(along, across, normal)` is a right-handed triple in that order.
+Building the basis as `(along, normal, across)` instead, an easy transcription slip, silently
+swaps two axes: a reflection, not a rotation, and decomposing a reflection into a quaternion
+(which can only ever represent rotations) produces something with no defined meaning rather than
+an obvious error. The bone ends up perpendicular to where it should point, not merely wrong; a
+minimal test that constructs a known basis and checks the bone's own resulting world directions
+against it catches this immediately, since the synthetic test doesn't require anatomical realism
+to expose a pure linear-algebra mistake, unlike the thumb's reference-point question.
+
+**The second version was the same antipodal instability the torso torque hit**, independently.
+The very first cut aligned the hand's own current wrist-to-middle-knuckle direction to the
+detected one with `ikApplyWorldDirectionToBone`, the same primitive the arm and leg IK chains
+already use safely. The difference: in those chains, "current" is the chain's own rest geometry,
+essentially fixed frame to frame. Here, "current" was wherever the arm's own independently
+re-solving position IK happened to leave the hand pointing, which has no relationship at all to
+the detected hand orientation — on some frames of the real recorded clip the two ended up close
+to antipodal, the exact degenerate case `setFromUnitVectors` cannot resolve consistently, and the
+hand (visibly, in extracted screenshots) snapped between wildly different rotations frame to
+frame. The fix builds the bone's target world orientation directly from the two detected
+directions and the rig's own fixed rest-local equivalents (read straight off the finger bones'
+own rest positions, since they are direct children of the hand bone and so need no world
+transform at all), with no reference to wherever the bone currently happens to be pointing. The
+general lesson, stated once for both this and the torso torque: `ikApplyWorldDirectionToBone`'s
+minimal-rotation-from-current approach is only as stable as "current" is close to "desired"; the
+moment a caller's own "current" is itself driven by something unrelated to the target, building
+the result directly is the safer choice, not a minor style preference.

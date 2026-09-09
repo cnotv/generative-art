@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { applyHandPose, resolveHandSide, handPoseRequiredBoneNames } from './handPose'
+import {
+  applyHandPose,
+  applyHandOrientation,
+  resolveHandSide,
+  handPoseRequiredBoneNames
+} from './handPose'
 import { HAND_POSE_PRESETS } from './config'
 
 const buildBone = (name: string): THREE.Bone => {
@@ -161,5 +166,81 @@ describe('applyHandPose', () => {
 
     const distanceAfter = thumb3.getWorldPosition(new THREE.Vector3()).distanceTo(palmPosition)
     expect(distanceAfter).toBeLessThan(distanceBefore)
+  })
+})
+
+describe('applyHandOrientation', () => {
+  /** A hand with its three orientation-reference fingers as direct children, rest pointing
+   * along (0,1,0) (hand to middle knuckle) and across (1,0,0) (index to pinky knuckle). */
+  const buildOrientableHand = (): {
+    hand: THREE.Bone
+    middle1: THREE.Bone
+    index1: THREE.Bone
+    pinky1: THREE.Bone
+  } => {
+    const hand = buildBone('mixamorigLeftHand')
+    const middle1 = buildBone('mixamorigLeftHandMiddle1')
+    const index1 = buildBone('mixamorigLeftHandIndex1')
+    const pinky1 = buildBone('mixamorigLeftHandPinky1')
+    middle1.position.set(0, 1, 0)
+    index1.position.set(-0.5, 1, 0)
+    pinky1.position.set(0.5, 1, 0)
+    hand.add(middle1)
+    hand.add(index1)
+    hand.add(pinky1)
+    hand.updateMatrixWorld(true)
+    return { hand, middle1, index1, pinky1 }
+  }
+
+  it('turns the hand so its own along/across directions match the detected orientation', () => {
+    const { hand, middle1, index1, pinky1 } = buildOrientableHand()
+    const bones = [hand, middle1, index1, pinky1]
+    const along = new THREE.Vector3(1, 0, 0)
+    const across = new THREE.Vector3(0, 0, 1)
+
+    applyHandOrientation(bones, 'Left', { along, across })
+    hand.updateMatrixWorld(true)
+
+    const actualAlong = middle1
+      .getWorldPosition(new THREE.Vector3())
+      .sub(hand.getWorldPosition(new THREE.Vector3()))
+      .normalize()
+    const actualAcross = pinky1
+      .getWorldPosition(new THREE.Vector3())
+      .sub(index1.getWorldPosition(new THREE.Vector3()))
+      .normalize()
+    expect(actualAlong.distanceTo(along)).toBeLessThan(1e-5)
+    expect(actualAcross.distanceTo(across)).toBeLessThan(1e-5)
+  })
+
+  it('never touches the other hand', () => {
+    const { hand, middle1, index1, pinky1 } = buildOrientableHand()
+    const otherHand = buildBone('mixamorigRightHand')
+    const otherMiddle1 = buildBone('mixamorigRightHandMiddle1')
+    otherMiddle1.position.set(0, 1, 0)
+    otherHand.add(otherMiddle1)
+    otherHand.updateMatrixWorld(true)
+    const originalOtherQuaternion = otherHand.quaternion.clone()
+
+    applyHandOrientation([hand, middle1, index1, pinky1, otherHand, otherMiddle1], 'Left', {
+      along: new THREE.Vector3(1, 0, 0),
+      across: new THREE.Vector3(0, 0, 1)
+    })
+
+    expect(otherHand.quaternion.equals(originalOtherQuaternion)).toBe(true)
+  })
+
+  it('does nothing when the rig has no finger bones to read a current direction from', () => {
+    const hand = buildBone('mixamorigLeftHand')
+    hand.updateMatrixWorld(true)
+    const originalQuaternion = hand.quaternion.clone()
+
+    expect(() =>
+      applyHandOrientation([hand], 'Left', {
+        along: new THREE.Vector3(1, 0, 0),
+        across: new THREE.Vector3(0, 0, 1)
+      })
+    ).not.toThrow()
+    expect(hand.quaternion.equals(originalQuaternion)).toBe(true)
   })
 })

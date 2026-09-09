@@ -182,6 +182,14 @@ export const CAMERA_POSE_BONE_LANDMARKS: Record<string, number> = {
 /** The rig's root bone, optionally driven to the detected hip midpoint. */
 export const CAMERA_POSE_HIPS_BONE = 'mixamorigHips'
 
+/**
+ * The bone a detected photo's viewing angle turns to face it: the upper spine, an ancestor of
+ * both arms and the head but not the hips or legs, so turning it reads as the torso and head
+ * twisting toward the camera while the hips and feet stay planted, the way a real body turns
+ * rather than the whole rig spinning on the spot like a rigid turntable.
+ */
+export const CAMERA_POSE_TORQUE_BONE = 'mixamorigSpine2'
+
 /** Which landmark bends the elbow's chain toward it, when that detail is turned on. */
 export const CAMERA_POSE_ELBOW_POLE_LANDMARKS: Record<string, number> = {
   mixamorigLeftHand: LANDMARK_INDEX.leftElbow,

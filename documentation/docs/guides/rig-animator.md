@@ -66,11 +66,12 @@ exist, so two poses are already a movement.
   landmarks to world-space bone targets, anchored and scaled to the loaded rig, plus the
   exponential-moving-average landmark smoothing the live camera feed uses
 - `src/views/Tools/RigAnimator/cameraHandPoseMapping.ts` (+ `.test.ts`): pure mapping from
-  detected hand landmarks to per-finger joint curl, and MediaPipe's handedness label to the
-  rig's actual left/right
+  detected hand landmarks to per-finger joint curl, hand orientation, and MediaPipe's
+  handedness label to the rig's actual left/right
 - `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs MediaPipe's Pose and Hand
-  Landmarkers against a playing `<video>` element in a `requestAnimationFrame` loop, shared by
-  the live webcam feed and an uploaded video file
+  Landmarkers against a playing `<video>` element in a `requestAnimationFrame` loop, including
+  hand orientation alongside finger curl, shared by the live webcam feed and an uploaded video
+  file
 - `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream for the capture
   dialog's overlay, wiring `useVideoLandmarkDetection` against it
 - `src/views/Tools/RigAnimator/useVideoPoseCapture.ts`: an uploaded video file played through
@@ -343,6 +344,23 @@ as if they belonged to each other. The body Pose Landmarker's own left/right nee
 either, confirmed separately against a real photo. What the live camera path does instead, for
 both detectors together, is described below.
 
+### Hand rotation from the camera
+
+A detected hand also turns its own hand bone: which way the palm faces, not only where the
+wrist sits or how curled each finger is. Two directions from the hand's own landmarks (along the
+fingers, from the wrist to the middle knuckle; across the knuckle row, from the index knuckle to
+the pinky knuckle) are enough to fully orient it, matched against the rig's own equivalent rest
+directions (read straight off the middle, index and pinky finger bones' own rest positions,
+since they are direct children of the hand bone) rather than against wherever the hand bone
+happens to be pointing at that instant. That distinction matters here specifically: the arm's
+own position solve leaves the hand pointing wherever its own target happens to put it, with no
+relationship to the hand's own detected orientation, so an alignment measured from "wherever it
+currently is" can land close enough to the exact opposite of the target to flip unpredictably
+between frames — confirmed against a real recorded gesture sequence before this shipped; see
+[the journey doc](/docs/journey/rig-animator-pose-capture-fixes) for what that looked like and
+why building the target directly, with no reference to "current" at all, fixed it. Requires the
+same finger bones the finger-curl detection above does; a rig with no fingers is left untouched.
+
 ## Auto-rig for a model with no skeleton
 
 A model with meshes but no skeleton shows **Auto-rig as Humanoid** in the Config panel instead
@@ -495,16 +513,18 @@ Spine bend is not driven by the camera: the Pose Landmarker has no per-vertebra 
 drive a convincing torso curve, so this only drives the limbs and the head. Fingers are, through
 a second detector alongside it, covered in "Fingers from the camera" above.
 
-The model itself also turns to roughly the angle the photo shows the subject from, so a turned
-pose reads as turned on screen too instead of always facing forward. This is the one
-camera-relative detail a single photo's body landmarks can actually support: MediaPipe's world
-landmarks are already normalized to a real-world body scale, so unlike the subject's facing
-direction, nothing in them hints at how close or how zoomed in the original camera was. The
-angle comes from the shoulder line's own tilt in the horizontal plane: facing the camera
-straight on, both shoulders sit at the same depth, and turning moves one shoulder closer to the
-camera than the other by exactly the angle turned. This turns the model, not the 3D view's own
-camera: the viewport stays entirely under manual orbit control throughout capture, rather than
-swinging around on every applied frame and fighting whatever orbiting was done in between.
+The torso also twists to roughly the angle the photo shows the subject from, so a turned pose
+reads as turned on screen too instead of always facing forward: the hips and feet stay planted,
+only the chest, arms and head turn, the way a real turn reads rather than the whole rig spinning
+in place like a turntable. This is the one camera-relative detail a single photo's body
+landmarks can actually support: MediaPipe's world landmarks are already normalized to a
+real-world body scale, so unlike the subject's facing direction, nothing in them hints at how
+close or how zoomed in the original camera was. The angle comes from the shoulder line's own
+tilt in the horizontal plane: facing the camera straight on, both shoulders sit at the same
+depth, and turning moves one shoulder closer to the camera than the other by exactly the angle
+turned. This turns the torso, not the 3D view's own camera: the viewport stays entirely under
+manual orbit control throughout capture, rather than swinging around on every applied frame and
+fighting whatever orbiting was done in between.
 
 ![The Config panel's camera pose options, no "Match Camera Angle to Photo" row among them](/img/animation/rig-camera-pose-no-viewpoint-match.webp)
 

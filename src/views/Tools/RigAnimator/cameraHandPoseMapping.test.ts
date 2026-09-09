@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest'
+import * as THREE from 'three'
 import {
   cameraHandLandmarksToPose,
+  cameraHandLandmarksToOrientation,
   cameraDetectedHandsToPoses,
+  cameraDetectedHandsToOrientations,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
   mirrorCameraHandPoses,
+  mirrorCameraHandOrientations,
   type CameraHandLandmark
 } from './cameraHandPoseMapping'
 
@@ -66,6 +70,73 @@ describe('cameraHandLandmarksToPose', () => {
     const pose = cameraHandLandmarksToPose(landmarks)
 
     expect(pose.thumb[0]).toBeGreaterThan(0.3)
+  })
+})
+
+describe('cameraHandLandmarksToOrientation', () => {
+  it('reads along as wrist-to-middle-knuckle and across as index-to-pinky-knuckle, y/z flipped', () => {
+    const landmarks = buildOpenHandLandmarks()
+    // From buildOpenHandLandmarks: wrist (0,0,0), middle MCP (0.2,1,0), index MCP (0,1,0),
+    // pinky MCP (0.6,1,0).
+
+    const orientation = cameraHandLandmarksToOrientation(landmarks, false)
+
+    const expectedAlong = new THREE.Vector3(0.2, -1, 0).normalize()
+    const expectedAcross = new THREE.Vector3(0.6, 0, 0).normalize()
+    expect(orientation.along.distanceTo(expectedAlong)).toBeLessThan(1e-6)
+    expect(orientation.across.distanceTo(expectedAcross)).toBeLessThan(1e-6)
+  })
+
+  it('negates x when mirrored, matching the mirrored live preview', () => {
+    const landmarks = buildOpenHandLandmarks()
+
+    const orientation = cameraHandLandmarksToOrientation(landmarks, true)
+
+    const expectedAlong = new THREE.Vector3(-0.2, -1, 0).normalize()
+    const expectedAcross = new THREE.Vector3(-0.6, 0, 0).normalize()
+    expect(orientation.along.distanceTo(expectedAlong)).toBeLessThan(1e-6)
+    expect(orientation.across.distanceTo(expectedAcross)).toBeLessThan(1e-6)
+  })
+
+  it('always returns unit-length directions', () => {
+    const orientation = cameraHandLandmarksToOrientation(buildOpenHandLandmarks(), false)
+    expect(orientation.along.length()).toBeCloseTo(1)
+    expect(orientation.across.length()).toBeCloseTo(1)
+  })
+})
+
+describe('cameraDetectedHandsToOrientations', () => {
+  it('keys each detected hand orientation by its resolved side', () => {
+    const openHand = buildOpenHandLandmarks()
+    const orientations = cameraDetectedHandsToOrientations(
+      [
+        { worldLandmarks: openHand, categoryName: 'Left' },
+        { worldLandmarks: openHand, categoryName: 'Right' }
+      ],
+      false
+    )
+    expect(Object.keys(orientations).sort()).toEqual(['Left', 'Right'])
+  })
+
+  it('drops a hand MediaPipe could not classify', () => {
+    const orientations = cameraDetectedHandsToOrientations(
+      [{ worldLandmarks: buildOpenHandLandmarks(), categoryName: 'unknown' }],
+      false
+    )
+    expect(orientations).toEqual({})
+  })
+})
+
+describe('mirrorCameraHandOrientations', () => {
+  it('swaps a left orientation onto the right side and vice versa', () => {
+    const leftOrientation = cameraHandLandmarksToOrientation(buildOpenHandLandmarks(), true)
+    const rightOrientation = cameraHandLandmarksToOrientation(buildOpenHandLandmarks(), true)
+    const mirrored = mirrorCameraHandOrientations({
+      Left: leftOrientation,
+      Right: rightOrientation
+    })
+    expect(mirrored.Right).toBe(leftOrientation)
+    expect(mirrored.Left).toBe(rightOrientation)
   })
 })
 
