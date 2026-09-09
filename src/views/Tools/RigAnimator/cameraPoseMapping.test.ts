@@ -28,6 +28,14 @@ const buildTestRig = (): THREE.Bone[] => [
   buildBone('mixamorigRightArm', [0.4, 1, 0])
 ]
 
+/** The same rig, plus hip bones: legs only ever map with a hip anchor available, see
+ * `computeLegAnchor`'s own doc comment. */
+const buildTestRigWithHips = (): THREE.Bone[] => [
+  ...buildTestRig(),
+  buildBone('mixamorigLeftUpLeg', [-0.2, 0, 0]),
+  buildBone('mixamorigRightUpLeg', [0.2, 0, 0])
+]
+
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
   x,
   y,
@@ -43,6 +51,8 @@ const buildTestLandmarks = (): CameraLandmark[] => {
   landmarks[12] = landmark(0.2, -0.5, 0) // right shoulder
   landmarks[15] = landmark(-0.5, -0.5, 0) // left wrist
   landmarks[16] = landmark(0.5, -0.5, 0) // right wrist
+  landmarks[23] = landmark(-0.1, 0, 0) // left hip
+  landmarks[24] = landmark(0.1, 0, 0) // right hip
   landmarks[27] = landmark(-0.1, 0.5, 0) // left ankle, below shoulder height
   landmarks[28] = landmark(0.1, 0.5, 0) // right ankle
   return landmarks
@@ -127,7 +137,7 @@ describe('computeCameraRigAnchor', () => {
 })
 
 describe('cameraLandmarksToBoneTargets', () => {
-  const anchor = computeCameraRigAnchor(buildTestRig())!
+  const anchor = computeCameraRigAnchor(buildTestRigWithHips())!
 
   it('maps every bone with a visible landmark', () => {
     const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
@@ -265,58 +275,64 @@ describe('cameraLandmarksToBoneTargets', () => {
   })
 })
 
-describe('legs scale off the hip anchor, not the shoulder one', () => {
+describe('legs scale off the hip anchor, never the shoulder one', () => {
   // A rig whose legs are proportioned very differently from its shoulders: hips only 0.2
   // apart against an 0.8 shoulder width, a 4:1 ratio well past a real body's. This is exactly
   // the shape a real detected pose surfaced: scaling the ankle reach off the shoulders left it
   // barely a third of the rig's own leg length, folding the knee into an unnatural crouch.
-  const buildRigWithHips = (): THREE.Bone[] => [
+  const buildRigWithNarrowHips = (): THREE.Bone[] => [
     ...buildTestRig(),
     buildBone('mixamorigLeftUpLeg', [-0.1, 0, 0]),
     buildBone('mixamorigRightUpLeg', [0.1, 0, 0])
   ]
 
-  const landmarksWithHips = (): CameraLandmark[] => {
-    const landmarks = buildTestLandmarks()
-    landmarks[23] = landmark(-0.1, 0, 0) // left hip, 0.2 apart from the right, same as the rig
-    landmarks[24] = landmark(0.1, 0, 0) // right hip
-    return landmarks
-  }
-
-  it('reaches a different target for the foot than the shoulder scale would, once a hip anchor is available', () => {
-    const withHipAnchor = cameraLandmarksToBoneTargets(
-      landmarksWithHips(),
-      computeCameraRigAnchor(buildRigWithHips())!
+  it('reaches a different target for the foot than a wider hip anchor would', () => {
+    const narrowHips = cameraLandmarksToBoneTargets(
+      buildTestLandmarks(),
+      computeCameraRigAnchor(buildRigWithNarrowHips())!
     )
-    const shoulderScaleOnly = cameraLandmarksToBoneTargets(
-      landmarksWithHips(),
-      computeCameraRigAnchor(buildTestRig())!
+    const widerHips = cameraLandmarksToBoneTargets(
+      buildTestLandmarks(),
+      computeCameraRigAnchor(buildTestRigWithHips())!
     )
-    expect(withHipAnchor.boneTargets.mixamorigLeftFoot.y).not.toBeCloseTo(
-      shoulderScaleOnly.boneTargets.mixamorigLeftFoot.y
+    expect(narrowHips.boneTargets.mixamorigLeftFoot.y).not.toBeCloseTo(
+      widerHips.boneTargets.mixamorigLeftFoot.y
     )
   })
 
-  it('falls back to the shoulder anchor and scale when the hip landmarks are not visible', () => {
-    const anchor = computeCameraRigAnchor(buildRigWithHips())!
-    const withoutHipLandmarks = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
-    const shoulderScaleOnly = cameraLandmarksToBoneTargets(
-      buildTestLandmarks(),
-      computeCameraRigAnchor(buildTestRig())!
-    )
-    expect(withoutHipLandmarks.boneTargets.mixamorigLeftFoot.y).toBeCloseTo(
-      shoulderScaleOnly.boneTargets.mixamorigLeftFoot.y
-    )
+  it('leaves the foot bone untouched when the hip landmarks are not visible, instead of falling back to a different anchor', () => {
+    const anchor = computeCameraRigAnchor(buildRigWithNarrowHips())!
+    const landmarks = buildTestLandmarks()
+    landmarks[23] = { ...landmarks[23], visibility: 0.1 } // left hip, below the threshold
+    landmarks[24] = { ...landmarks[24], visibility: 0.1 } // right hip
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+
+    expect(boneTargets.mixamorigLeftFoot).toBeUndefined()
+    expect(boneTargets.mixamorigRightFoot).toBeUndefined()
+  })
+
+  it('leaves every leg-related bone untouched when the rig itself has no hip bones to anchor against', () => {
+    const anchor = computeCameraRigAnchor(buildTestRig())!
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      includeHips: true
+    })
+
+    expect(boneTargets.mixamorigLeftFoot).toBeUndefined()
+    expect(boneTargets.mixamorigRightFoot).toBeUndefined()
+    expect(boneTargets.mixamorigHips).toBeUndefined()
   })
 
   it('also scales a knee pole target off the hip anchor', () => {
-    const landmarks = landmarksWithHips()
+    const landmarks = buildTestLandmarks()
     landmarks[25] = landmark(-0.15, 0.2, 0) // left knee
     landmarks[26] = landmark(0.15, 0.2, 0) // right knee
 
     const { poleTargets } = cameraLandmarksToBoneTargets(
       landmarks,
-      computeCameraRigAnchor(buildRigWithHips())!,
+      computeCameraRigAnchor(buildRigWithNarrowHips())!,
       { ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, includeKnees: true }
     )
     expect(poleTargets.mixamorigLeftFoot).toBeDefined()
@@ -478,6 +494,8 @@ describe('full pipeline: a T-pose maps onto the rig sensibly', () => {
     landmarks[12] = landmark(0.2, 0, 0) // right shoulder
     landmarks[15] = landmark(-0.7, 0, 0) // left wrist, extended out level with the shoulder
     landmarks[16] = landmark(0.7, 0, 0) // right wrist, extended out level with the shoulder
+    landmarks[23] = landmark(-0.15, 0.9, 0) // left hip
+    landmarks[24] = landmark(0.15, 0.9, 0) // right hip
     landmarks[27] = landmark(-0.15, 1.4, 0) // left ankle, near the floor
     landmarks[28] = landmark(0.15, 1.4, 0) // right ankle
     return landmarks

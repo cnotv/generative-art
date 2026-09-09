@@ -496,8 +496,15 @@ does. A real seated photo surfaced this directly on a stylized character whose o
 to rest, measured four times its shoulder width, a ratio well past a real body's: scaling the
 detected ankle reach off the shoulders left the target barely a third of the leg's own length,
 forcing the knee to fold into an unnatural crouch just to take up the slack neither end of the
-chain actually had. This falls back to the shoulder anchor and scale when the hips aren't
-confidently detected, same as before.
+chain actually had. Feet, knees and the hips themselves are simply left untouched, the same as
+any other bone the mapping doesn't drive this frame, whenever the hips aren't confidently
+detected: an earlier version fell back to scaling and anchoring them off the shoulders instead,
+which kept the ankle visually tracked but moving relative to a basis that had nothing to do with
+where the camera actually showed it, reading as the legs drifting on their own rather than
+following the feed. A webcam framed for arms and head, the normal way to use this feature,
+usually leaves the hips out of frame the whole session, so the legs simply hold still for as
+long as that framing lasts, the same as they would with nobody in frame at all.
+
 Applying a captured pose only drives whichever body-part groups the Merge Target diagram
 currently has active — see **Merging sources by body part** below. A bone outside every active
 group is left exactly as it was, whether that is an earlier capture, a preset, or a manual edit,

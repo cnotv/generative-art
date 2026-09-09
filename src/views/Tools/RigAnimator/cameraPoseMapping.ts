@@ -382,22 +382,22 @@ interface LegAnchor {
 
 /**
  * Work out what to scale and anchor leg-related targets (feet, knees, hips) against: the rig's
- * own hip center and hip-width scale when both the rig and the detected landmarks have one, or
- * the shoulder anchor and scale as a fallback otherwise. A webcam framed for arms and head, the
- * normal way to use this feature, usually leaves the hips out of frame, so the fallback is the
- * common case, not an edge case.
+ * own hip center and hip-width scale, whenever both the rig and the detected landmarks have
+ * one. Anchoring feet against the shoulders instead, whenever the hips specifically drop out,
+ * used to read as the legs jumping to a target unrelated to what the camera actually showed:
+ * the ankle landmark itself stays visible and tracked the whole time, only the anchor it was
+ * being measured against was swapped out from under it. Returning null here instead leaves
+ * every leg-related bone at wherever it was last driven to, the same as any other bone the
+ * mapping doesn't touch this frame.
  * @param landmarks The detected person's world landmarks
  * @param anchor The rig's own anchor, from `computeCameraRigAnchor`
- * @param shoulderCenter The already-validated shoulder landmark midpoint, the fallback center
- * @param shoulderScale The already-computed shoulder-based scale, the fallback scale
- * @returns Where and how large to map a leg-related landmark
+ * @returns Where and how large to map a leg-related landmark, or null when the hips aren't
+ *   confidently placed this frame
  */
 const computeLegAnchor = (
   landmarks: CameraLandmark[],
-  anchor: CameraRigAnchor,
-  shoulderCenter: CameraLandmark,
-  shoulderScale: number
-): LegAnchor => {
+  anchor: CameraRigAnchor
+): LegAnchor | null => {
   const leftHip = landmarks[LANDMARK_INDEX.leftHip]
   const rightHip = landmarks[LANDMARK_INDEX.rightHip]
   const hipLandmarksVisible =
@@ -412,13 +412,7 @@ const computeLegAnchor = (
     anchor.hipWidthWorld !== null &&
     hipWidthLandmark >= MINIMUM_LANDMARK_SHOULDER_SPAN
 
-  if (!hasLegAnchor) {
-    return {
-      legCenter: shoulderCenter,
-      legScale: shoulderScale,
-      legAnchorWorldPosition: anchor.shoulderCenterWorldPosition
-    }
-  }
+  if (!hasLegAnchor) return null
   return {
     legCenter: landmarkMidpoint(leftHip, rightHip),
     legScale: anchor.hipWidthWorld! / hipWidthLandmark,
@@ -458,13 +452,8 @@ export const cameraLandmarksToBoneTargets = (
   if (shoulderWidthLandmark < MINIMUM_LANDMARK_SHOULDER_SPAN)
     return { boneTargets: {}, poleTargets: {} }
   const rawScale = anchor.shoulderWidthWorld / shoulderWidthLandmark
-  const {
-    legCenter,
-    legScale: rawLegScale,
-    legAnchorWorldPosition
-  } = computeLegAnchor(landmarks, anchor, shoulderCenter, rawScale)
+  const legAnchor = computeLegAnchor(landmarks, anchor)
   const scale = rawScale * options.reachMultiplier
-  const legScale = rawLegScale * options.reachMultiplier
 
   // Landmark y grows downward and z grows away from the camera (MediaPipe's image-space
   // convention extended to 3D); the scene's y grows upward and, since the rig faces the scene
@@ -488,8 +477,15 @@ export const cameraLandmarksToBoneTargets = (
 
   const boneTarget = (landmark: CameraLandmark): THREE.Vector3 =>
     targetRelativeTo(anchor.shoulderCenterWorldPosition, shoulderCenter, scale, landmark)
-  const legTarget = (landmark: CameraLandmark): THREE.Vector3 =>
-    targetRelativeTo(legAnchorWorldPosition, legCenter, legScale, landmark)
+  const legTarget = legAnchor
+    ? (landmark: CameraLandmark): THREE.Vector3 =>
+        targetRelativeTo(
+          legAnchor.legAnchorWorldPosition,
+          legAnchor.legCenter,
+          legAnchor.legScale * options.reachMultiplier,
+          landmark
+        )
+    : null
 
   const entriesFor = (
     landmarksByBone: Record<string, number>,
@@ -508,7 +504,7 @@ export const cameraLandmarksToBoneTargets = (
     )
 
   const hipsTarget = (): Record<string, THREE.Vector3> => {
-    if (!options.includeHips) return {}
+    if (!options.includeHips || !legTarget) return {}
     const leftHip = landmarks[LANDMARK_INDEX.leftHip]
     const rightHip = landmarks[LANDMARK_INDEX.rightHip]
     if (
@@ -540,12 +536,14 @@ export const cameraLandmarksToBoneTargets = (
   return {
     boneTargets: {
       ...entriesFor(CAMERA_POSE_UPPER_BONE_LANDMARKS, boneTarget),
-      ...entriesFor(CAMERA_POSE_LOWER_BONE_LANDMARKS, legTarget),
+      ...(legTarget ? entriesFor(CAMERA_POSE_LOWER_BONE_LANDMARKS, legTarget) : {}),
       ...hipsTarget()
     },
     poleTargets: {
       ...(options.includeElbows ? entriesFor(CAMERA_POSE_ELBOW_POLE_LANDMARKS, boneTarget) : {}),
-      ...(options.includeKnees ? entriesFor(CAMERA_POSE_KNEE_POLE_LANDMARKS, legTarget) : {}),
+      ...(options.includeKnees && legTarget
+        ? entriesFor(CAMERA_POSE_KNEE_POLE_LANDMARKS, legTarget)
+        : {}),
       ...neckPoleTarget()
     }
   }
