@@ -538,6 +538,16 @@ turned. This turns the torso, not the 3D view's own camera: the viewport stays e
 manual orbit control throughout capture, rather than swinging around on every applied frame and
 fighting whatever orbiting was done in between.
 
+The twist itself composes on top of the torso bone's current orientation rather than setting an
+absolute one, since that same bone can already carry a real pitch from aiming the head (see
+above), and overwriting that would fight the head aim on every frame. Composing a fresh reading
+of the same angle on top of itself every frame, the way a first version of this did, wound the
+torso up further each time instead of ever settling: holding a turned pose for even a few
+seconds spun it far past the angle actually shown. Twisting only by the change since the last
+applied frame keeps the total twist equal to the latest reading, converging on it rather than
+compounding past it, the same way a thermostat adjusts by the gap to a target instead of adding
+a fixed increment every cycle regardless of where it already is.
+
 ![The Config panel's camera pose options, no "Match Camera Angle to Photo" row among them](/img/animation/rig-camera-pose-no-viewpoint-match.webp)
 
 ### Extra details to try

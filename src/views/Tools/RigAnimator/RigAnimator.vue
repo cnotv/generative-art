@@ -68,6 +68,10 @@ import type { RigAnimatorConfig } from './types'
  * current orientation happens to be. */
 const WORLD_UP_AXIS = new THREE.Vector3(0, 1, 0)
 
+/** How much of the torso's current twist came from a previous `handleCameraApply` call, so
+ * only the change since then gets applied next time; see that function's own doc comment. */
+let previousAppliedTorsoYaw = 0
+
 const route = useRoute()
 const routeName = route.name as string
 const { setViewPanels, clearViewPanels } = useViewPanelsStore()
@@ -334,6 +338,13 @@ const toggleMarbleFlow = (): void => {
  * bone to an absolute world direction regardless of whatever rotation it inherited from its
  * now-twisted ancestors, so applying it any earlier would have the twist carry the hand away
  * from the very orientation just set for it.
+ *
+ * `ikTwistAroundWorldAxis` composes its twist on top of the bone's current orientation rather
+ * than setting an absolute one (see its own doc comment), which suits a one-shot drag but not
+ * a value applied fresh every frame: re-applying the same estimated yaw each frame would twist
+ * the torso further every time instead of settling at it, winding it up without bound the
+ * longer a capture session ran. Twisting by only the change since the last applied frame keeps
+ * the total twist equal to the latest estimate, converging on it rather than compounding past it.
  */
 const handleCameraApply = (
   landmarks: CameraLandmark[],
@@ -351,7 +362,10 @@ const handleCameraApply = (
   })
   const yaw = estimateCameraYaw(landmarks)
   const torsoBone = rig.bones.value.find((bone) => bone.name === CAMERA_POSE_TORQUE_BONE)
-  if (yaw !== null && torsoBone) ikTwistAroundWorldAxis(torsoBone, yaw, WORLD_UP_AXIS)
+  if (yaw !== null && torsoBone) {
+    ikTwistAroundWorldAxis(torsoBone, yaw - previousAppliedTorsoYaw, WORLD_UP_AXIS)
+    previousAppliedTorsoYaw = yaw
+  }
   Object.entries(handOrientations).forEach(([side, orientation]) => {
     applyHandOrientation(rig.bones.value, side as HandSide, orientation)
   })
