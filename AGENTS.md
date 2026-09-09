@@ -4,9 +4,8 @@ A pnpm workspace monorepo: a framework-agnostic toolkit for 3D scenes, games and
 in `packages/@webgamekit/*`, and a Vue 3 playground that uses it in `src/`. Architecture:
 `documentation/docs/architecture/monorepo.md`.
 
-This file holds the rules that apply to every change. Rules that apply to one area load from
-`.claude/rules/`, and procedures load from `.claude/skills/` — both indexed at the
-bottom.
+This file holds the rules that apply to every change. Rules for one area load from
+`.claude/rules/`, procedures from `.claude/skills/` — both indexed below.
 
 ## How work starts
 
@@ -21,10 +20,10 @@ Two entry paths, chosen by whether an issue exists yet.
   Validate it together, and only once it is in good shape write the issue documenting what
   was built and why. Never gate this path behind a design doc, spec review or issue-first
   process; the friction is the whole thing it is avoiding. Prototypes are exempt from
-  tests-first, but they owe tests before a pull request is opened.
+  tests-first, but they owe tests and, once validated, the issue and the pull request that
+  closes it — run `open-pr` without waiting to be asked; work is not done at the last commit.
 
-Either way: a fresh branch off main every time. Never commit to the current branch and never
-reuse an existing feature branch, however related it looks.
+Either way: a fresh branch off main every time, never the current branch, never reused.
 
 ## Working agreements
 
@@ -37,7 +36,7 @@ reuse an existing feature branch, however related it looks.
 - **Write it once, at the length it earns.** A one-line fix gets one line; a surprising
   constraint gets a paragraph. Prose that repeats the diff or restates something already
   written above is noise that hides what matters. Each kind of writing has one home, below.
-- **Never open a pull request unless explicitly asked.**
+- **Always ship an issue and a pull request** once work is done — see "How work starts".
 - **Never modify `eslint.config.js`** unless explicitly asked. Fix violations by changing the
   code, not by loosening the rule.
 - **Never use `eslint-disable`**, in any form, and never `--no-verify`. If a hook or a rule
@@ -77,8 +76,9 @@ reuse an existing feature branch, however related it looks.
 
 ## Git
 
-- Branches are `<type>/<issue-number>-<description>`, with type one of `feat`, `fix`, `docs`,
-  `refactor`, `test`, `chore`.
+- Branches are always `<type>/<issue-number>-<description>` once an issue exists, type one
+  of `feat`, `fix`, `docs`, `refactor`, `test`, `chore`. A prototype branch that started
+  before its issue did gets renamed to match, before the PR opens — never left as-is.
 - **Rebase, never merge.** `git fetch origin main && git rebase origin/main`. Never `git pull`,
   which merges by default. After a rebase, `git push --force-with-lease`, never `--force`.
 - **Commit subjects never reference an issue number** — no `#123`, no `(#123)`, no
@@ -113,7 +113,7 @@ These are the steps that are easy to omit and impossible to notice missing. Run 
 - [ ] Changed package API is reflected in `documentation/docs/packages/`
 - [ ] Any guide that tracks a file you changed has been re-read and fixed
 - [ ] A journey doc exists if the work produced a non-obvious finding
-- [ ] The linked issue and any open PR still describe the work accurately, edited rather than
+- [ ] An issue and an open PR both exist for this work, describing it accurately rather than
       left to be inferred from a thread of comments
 - [ ] Every artifact the plan named exists, not just the ones that were forced by a deletion
 - [ ] `pnpm lint`, `pnpm lint:css` and `pnpm test:unit` pass, and you saw them pass
@@ -145,4 +145,4 @@ Skills in `.claude/skills/<name>/SKILL.md`, as plain markdown any agent can read
 | `journey-doc`   | a finding is worth recording — a repeated fix, a framework quirk, an invisible constraint |
 | `sync-docs`     | you changed a file that a tutorial documents                                              |
 | `finish-change` | before claiming work is complete                                                          |
-| `open-pr`       | a pull request was explicitly requested                                                   |
+| `open-pr`       | the work is validated and ready to ship, or a pull request was explicitly requested       |

@@ -20,6 +20,8 @@ exist, so two poses are already a movement.
   its rest poses and the selected bone
 - `src/views/Tools/RigAnimator/useRigKeyframes.ts`: the authored pose keyframes, the preview
   clip built from them, and explicit autosave persistence on every genuine edit
+- `src/views/Tools/RigAnimator/useRigPlayback.ts`: real-time playback of the preview clip
+  (play/pause, per-tick advance, scrubbing to a frame)
 - `src/views/Tools/RigAnimator/useRigKeyframeIO.ts`: every way keyframes enter or leave the
   tool: GLB/JSON export, JSON import, loading a bundled preset, autosave restore and reset
 - `src/views/Tools/RigAnimator/rigModel.ts` (+ `.test.ts`): loading a model file, generating an
@@ -31,11 +33,17 @@ exist, so two poses are already a movement.
   into a two-bone IK solve, a one-bone aim, a pole-hint re-aim, or (for the skeleton root only)
   a plain translate, and resets whichever bones a drag rotated back to rest
 - `src/views/Tools/RigAnimator/frameRange.ts`, `keyframeOps.ts`: pure helpers for resizing the
-  timeline's frame range and repositioning a dragged keyframe
+  timeline's frame range and repositioning one or many dragged keyframes together
+- `src/views/Tools/RigAnimator/frameSelection.ts`: the drag-select / Shift+click / Shift+arrow
+  range selection's pure logic — normalizing the two endpoints and which keyframes fall inside
 - `src/views/Tools/RigAnimator/autosave.ts`: reading and writing the autosaved edit in
   `localStorage`
 - `src/views/Tools/RigAnimator/presets.ts`: the bundled example animations, and sampling one
   into a sparse set of pose keyframes
+- `src/views/Tools/RigAnimator/useRigMotionRecording.ts`: the frame-timing logic behind
+  **Record Motion** — when real elapsed time has reached a new frame to sample
+- `src/views/Tools/RigAnimator/useRigRecordedPresets.ts`: session-only presets built from a
+  finished Record Motion take, offered in the same **Presets** picker as the bundled clips
 - `src/views/Tools/RigAnimator/RigTimeline.vue`: the dedicated panel for playback, keyframes,
   the frame axis, presets, import and export (see below)
 - `src/views/Tools/RigAnimator/cameraFraming.ts` (+ `.test.ts`): framing the camera to whatever
@@ -50,15 +58,26 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/cameraHandPoseMapping.ts` (+ `.test.ts`): pure mapping from
   detected hand landmarks to per-finger joint curl, and MediaPipe's handedness label to the
   rig's actual left/right
-- `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream and the MediaPipe
-  Pose and Hand Landmarkers, running live detection for the capture dialog's overlay
+- `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs MediaPipe's Pose and Hand
+  Landmarkers against a playing `<video>` element in a `requestAnimationFrame` loop, shared by
+  the live webcam feed and an uploaded video file
+- `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream for the capture
+  dialog's overlay, wiring `useVideoLandmarkDetection` against it
+- `src/views/Tools/RigAnimator/useVideoPoseCapture.ts`: an uploaded video file played through
+  once, wiring `useVideoLandmarkDetection` against it the same way the webcam stream does
+- `src/views/Tools/RigAnimator/useVideoTimelineSync.ts`: keeps the rig timeline's frame and an
+  uploaded video's playback position in sync while the **Sync timeline to video** toggle is on
 - `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body and hand pose from a
-  single uploaded photo instead of the live feed
+  single uploaded photo instead of a continuous feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
   and applying a detected pose onto the rig
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
-- `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting a keyframe's pose
+- `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting one keyframe's
+  pose or a whole selected block of them, offset-relative so paste can drop it anywhere
+- `src/views/Tools/RigAnimator/useRigFrameRipple.ts`: ripple removing or inserting a selected
+  frame range, shifting everything after it and changing the timeline's own length, unlike a
+  plain keyframe delete
 - `src/views/Tools/RigAnimator/useRigBoneMarkerVisibility.ts`: whether the rig's bone markers
   render, re-applied whenever the markers are recreated
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
@@ -168,31 +187,76 @@ bone or any keyframe already captured.
 
 Frame scheduling, keyframes and every way an animation enters or leaves the tool live on one
 dedicated bar docked along the bottom of the view, not in the Config panel and not on the
-app's shared Timeline panel (built for generic scheduled actions, not pose keyframes): a single
-row, split into parts left to right.
+app's shared Timeline panel (built for generic scheduled actions, not pose keyframes). The main
+row holds transport and editing; a second row, collapsed by default, holds **Hand Pose** and
+**Presets** — see **A second row for Hand Pose and Presets** below.
 
 ![The rig timeline: Play/Add/Delete/Copy/Paste, the ruler and draggable/resizable track with its keyframe markers, a bundled preset picker, and icon-only import/export/reset](/img/animation/rig-timeline.webp)
 
-- **Play/Pause**, **Add keyframe** and **Delete keyframe** act on the current frame.
-- **Copy** and **Paste** copy the pose at the current frame onto a clipboard and paste it onto
-  whatever frame you scrub to afterward, replacing any keyframe already there. Paste applies the
-  pose to the live rig immediately, the same as scrubbing onto an existing keyframe would.
+- **Play/Pause** and **Add keyframe** act on the current frame.
+- **Delete** and **Copy** act on the current selection when one covers any keyframes (see
+  below), or on the keyframe at the current frame otherwise. **Paste** drops the copied
+  keyframe(s) starting at the current frame, replacing any keyframe already there, and applies
+  the pose landing on the current frame to the live rig immediately, the same as scrubbing onto
+  an existing keyframe would.
+- **Remove Frames** and **Insert Frames** act on the current selection only (both disabled with
+  none active) and change the timeline's own length, unlike Delete: **Remove Frames** cuts the
+  selected range out entirely and shifts everything after it back to close the gap, shrinking
+  the timeline; **Insert Frames** opens up blank room the size of the selection at its own
+  start and shifts everything after it forward, growing the timeline by that much. Either way
+  the selection is gone afterward, since the frames it covered no longer mean the same thing.
 - **The ruler**, above the track, marks frames at whatever round interval keeps roughly fifteen
   ticks readable across the current range (every 10 frames at the default 150-frame range,
-  further apart for a longer one). Clicking or dragging the ruler scrubs the playhead exactly
-  like the track below it does.
-- **The track** is the frame axis. Click or drag anywhere on it to scrub the playhead;
-  interpolation between whichever keyframes bracket that instant is what makes two poses ten
-  frames apart already read as a movement. Each keyframe shows as a small diamond you can drag
-  to reposition it, dropping onto an already-occupied frame replaces whatever sat there, same
-  as **Add Keyframe** does. A handle at the track's right edge extends or shrinks the visible
-  frame range; it never shrinks past the current frame or the furthest keyframe.
-- **Presets**, **Import**, **Export JSON**, **Export GLB** and **Reset** sit at the right, the
-  first as a labelled dropdown and the rest as plain icons: see the next two sections.
+  further apart for a longer one). Clicking or dragging the ruler behaves exactly like the track
+  below it does — see the next two bullets.
+- **The track** is the frame axis. A plain click scrubs the playhead there, same as it always
+  has; click-and-drag instead grows a range selection live from where the drag started to
+  wherever it ends, released, shaded across the track behind the keyframe markers so they stay
+  visible on top of it — see **Selecting a range of frames** below. Each keyframe still shows as
+  a small diamond you can drag to reposition it, dropping onto an already-occupied frame
+  replaces whatever sat there, same as **Add Keyframe** does; dragging one that is part of the
+  current selection instead moves the whole selected block together, preserving its spacing. A
+  handle at the track's right edge extends or shrinks the visible frame range; it never shrinks
+  past the current frame or the furthest keyframe.
+- **Import**, **Export JSON**, **Export GLB** and **Reset** sit at the right as plain icons,
+  followed by the chevron that opens the second row.
+
+### A second row for Hand Pose and Presets
+
+**Hand Pose** and **Presets** are reached far less often than the transport and editing actions
+above them, so they live in a second row, collapsed by default: the chevron at the right end of
+the main row opens and closes it, keeping the always-visible row from crowding out the track
+itself. Below an 1080px-wide viewport, **Import**, **Export JSON**, **Export GLB** and **Reset**
+move into this second row too, freeing up the main row down to just the controls used
+constantly on a narrower screen; above that width they stay in the main row as usual. Either
+way each of those four is a single button reachable from exactly one row at a time, not two
+separate controls.
+
+### Selecting a range of frames
+
+Copy, Delete and dragging a keyframe all act on more than one frame at once once a selection is
+active, shown as a translucent red band across the track — the same red as the playhead —
+sitting behind the keyframe markers rather than covering them. Three ways to set or extend it:
+
+- **Click and drag** on the ruler or the track: the band grows live from the frame the drag
+  started on to wherever the pointer currently is, and freezes there on release. Releasing
+  without ever having moved the pointer is just a plain click instead — it seeks the playhead
+  there and drops any existing selection, exactly like a click always did before selection
+  existed.
+- **Shift+click** a frame to extend the existing selection to it (or, with nothing selected yet,
+  to start one running from the current playhead frame to the clicked one). This never seeks the
+  playhead and never clears the selection, even without a drag.
+- **Shift+Left Arrow / Shift+Right Arrow** extends the selection by one frame at a time in either
+  direction, starting from the current playhead frame if nothing is selected yet — see **Frame
+  shortcuts** below.
+
+A keyframe inside the active selection gets a highlighted ring so it is clear which ones Copy,
+Delete or a block drag will actually touch.
 
 ## Hand pose presets
 
-**Hand Pose**, next to Copy/Paste, offers a handful of canned finger poses (**Open**, **Fist**,
+**Hand Pose**, in the rig timeline's second row (see **A second row for Hand Pose and Presets**
+above), offers a handful of canned finger poses (**Open**, **Fist**,
 **Point**, **Thumbs Up**) for whichever hand the currently selected bone belongs to: select the
 hand itself or any of its fingers, and the dropdown enables once every finger bone that hand
 needs is present on the rig. Applying a preset curls each finger joint by the preset's angle
@@ -267,13 +331,66 @@ matches, rather than only a snapshot of it, since you can move and immediately s
 rig moved the same way. **Add Keyframe** on the rig timeline still commits whatever the rig's
 current pose happens to be to the animation, the same as it always has.
 
-**Upload Photo** reads a pose from a still image instead of the live feed, useful for posing
-from a reference photo or when there is no working camera. It runs the same Pose Landmarker in
-its image mode and feeds the result through the exact same mapping, applying it once as soon as
-a person is found, and stays available once a photo is already loaded so picking a different
-one never needs switching back to the camera first. **Use Camera** switches back. A photo is
-shown as it is, not mirrored, since it is not a self-view the way a live webcam feed is, and its
-detected pose maps onto the rig unmirrored too, matching what the photo actually shows.
+### Recording motion instead of posing one keyframe at a time
+
+Every detected frame already applies live to the rig, but committing it to the timeline
+normally still takes a manual **Add Keyframe** click per pose. **Record Motion**, next to
+Close in the camera panel, turns a live performance into an authored clip automatically
+instead: while it is on, every applied camera frame samples the rig's current pose onto the
+timeline at whatever frame real elapsed time has reached, at the panel's own FPS setting, so
+scrubbing the timeline afterward plays back the performance the same way any hand-authored
+clip does. The visible frame range grows to keep up with a long take rather than cutting it
+off, the same way the timeline's own resize handle only ever extends to fit real content.
+**Stop Recording**, the toggle's own second click, ends the take; closing the camera panel or
+switching to an uploaded photo stops it too, since a still photo has nothing to keep sampling.
+Recording works the same way against an uploaded video, see below — only a still photo cannot
+be recorded from.
+
+![The camera panel's action row mid-recording: Record Motion toggled to a red Stop Recording button, next to Upload Photo and Close](/img/animation/rig-record-motion.webp)
+
+Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
+either one stops the other first rather than letting them fight over it. While recording, the
+preview clip is not rebuilt or scrubbed on every sampled frame either — only once, when the
+take ends — since rebuilding it from the whole keyframe list on every one of several samples a
+second made each capture slower than the last and read as the model stuttering, even though
+every frame was still captured correctly underneath it.
+
+Starting a take also captures the live pose already on the rig at that exact instant, before
+any elapsed-time sampling begins. Without that, the take's very first frame carried no
+keyframe of its own — sampling only ever adds one once real time has moved past it — so
+scrubbing or playing into the start of the recording interpolated from whatever pose, if any,
+already sat there instead, a visible twitch right at the seam. Once a take ends, it is added
+to **Presets** — see below — so it can be played back or reloaded the same way a bundled
+mocap clip can.
+
+**Upload Photo/Video** reads a pose from an uploaded file instead of the live feed, useful for
+posing from a reference photo, testing against a known performance, or when there is no
+working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
+through the exact same mapping, applying it once as soon as a person is found. A video instead
+plays through once at its own rate and runs the exact same live VIDEO-mode detection loop the
+camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
+continuously the same way a webcam does — Record Motion works against it exactly as it does
+against the camera, and starts automatically: uploading a video begins a take as soon as
+playback starts, and the take ends on its own once the video reaches its natural end, the same
+as a manual **Stop Recording** click would. It plays once rather than looping specifically so
+that end has something to trigger on. Either kind stays available once something is already
+loaded, so picking a different file never needs switching back to the camera first, and **Use
+Camera** switches back from either. A photo or video is shown as it is, not mirrored, since
+neither is a self-view the way a live webcam feed is, and the detected pose maps onto the rig
+unmirrored too, matching what the upload actually shows. Uploading either always turns **Show
+Camera Preview** on too, regardless of whatever it was last left at: the whole point of picking
+one is to look at it and its detected pose together, and running detection against an upload
+with the preview still hidden would show nothing for it.
+
+An uploaded video also gets its own native scrub bar, and a **Sync timeline to video** toggle
+next to Record Motion, on by default. With sync on, dragging the rig timeline's own playhead
+seeks the video to match, and scrubbing the video's native controls moves the timeline's frame
+back the same way — the two stay locked together in both directions, so comparing a specific
+moment in the source against the rig it drove is a single scrub rather than two. Sync only
+applies outside a take: while Record Motion is running the timeline is already advancing from
+the capture itself, not from playback or a scrub, so sync stands aside rather than fighting it.
+Turning the toggle off frees the video to be scrubbed on its own — useful for stepping back
+through a longer clip without the timeline chasing every frame of it.
 
 ### Mirrored like a real mirror
 
@@ -286,8 +403,8 @@ where MediaPipe's landmarks are first read, before any of the mapping above ever
 `mirrorCameraHandPoses` does the equivalent swap for which side a detected hand's finger curl
 lands on. Everything downstream, the bone mapping and the camera-angle-matching yaw estimate
 alike, needed no changes of its own: both simply read whichever pose they are handed, and a
-pre-mirrored one comes out correctly mirrored on its own. A photo gets neither of these, since
-its own preview is not mirrored either.
+pre-mirrored one comes out correctly mirrored on its own. A photo or an uploaded video gets
+neither of these, since its own preview is not mirrored either.
 
 The mapping reads the detector's 3D world landmarks for the wrist, ankle and nose, anchors them
 to the rig's own shoulder center, and scales them by the ratio between the rig's shoulder width
@@ -350,6 +467,12 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   instead of leaving it at rest, so a lean or a step reads in the root position too, not only the
   limbs. Left off by default since it did not measurably improve the seated case above on its
   own, and moving the whole root is a bigger, more visible change than re-aiming a limb's bend.
+  Unlike every other mapped bone, the root is never snapped back to rest on a frame with no hip
+  target of its own — a webcam framed for arms and head routinely loses the hips out of the
+  bottom of the frame for a stretch of frames at a time, and resetting the whole rig to the
+  origin on each of those read as the model twitching back to rest rather than simply not moving
+  that frame. It holds wherever it was last driven to instead, until a fresh hip detection moves
+  it again.
 - **Use Depth (Z Axis)**, on by default, is the original behaviour: a landmark's estimated depth
   scales into the target the same as its x and y. A single photo gives MediaPipe far less to
   judge depth from than two eyes or a video's own motion parallax do, making z the least
@@ -377,7 +500,8 @@ needs, control more of what MediaPipe actually detects and how the result is tun
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
-  same either way.
+  same either way. Uploading a photo or video turns it on automatically even if it was off, see
+  **Upload Photo/Video** above.
 
 ### Smoothing the live feed
 
@@ -406,7 +530,9 @@ detected hand.
 
 **Space** (keyboard) or the gamepad's left face button adds a keyframe at the current frame, the
 same as the timeline's own **Add Keyframe** button. **Left Arrow** or the gamepad's D-pad left
-steps to the next frame; **Right Arrow** or D-pad right steps to the previous one. These are
+steps to the next frame; **Right Arrow** or D-pad right steps to the previous one. **Shift+Left
+Arrow** and **Shift+Right Arrow** extend the frame selection by one frame in that same direction
+instead of stepping the playhead — see **Selecting a range of frames** above. These are
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
 
@@ -420,6 +546,11 @@ than this tool's sparse pose-keyframe model is meant to show, so picking one sam
 twelve evenly-spaced keyframes rather than importing every original frame, replacing whatever
 was on the timeline. It is a quick way to see the drag, resize and playback interactions
 working against a real, varied pose, not just a hand-posed test case.
+
+A **Record Motion** take that captured any real motion appears in the same dropdown too, as
+"Recording 1", "Recording 2" and so on, so a captured performance can be reloaded and replayed
+without re-recording it. These entries are session-only — a refresh drops them, the same as
+every unsaved edit that is not the autosave.
 
 ## Saving and loading the animation
 
@@ -435,5 +566,5 @@ happens, and restored automatically the next time the view loads, so an accident
 not lose the work in progress. Only the edit itself is saved, never the loaded model: an
 uploaded file's blob URL cannot survive a refresh anyway, so the restored keyframes apply to
 whatever model loads next, correctly if it is still the same rig. **Reset** on the rig timeline
-clears every keyframe and the autosave behind them, back to a blank edit, whenever you want to
-start over rather than undo one thing at a time.
+clears every keyframe and the autosave behind them, back to a blank edit, and snaps the live rig
+back to its rest pose too, whenever you want to start over rather than undo one thing at a time.

@@ -1,5 +1,9 @@
 Closes #
 
+**Preview:** <!-- Full deploy-preview URL, including the route to the view being changed,
+e.g. https://deploy-preview-<pr-number>--cnotv-generative-art.netlify.app/tools/RigAnimator.
+Filled in once `deploy/netlify` succeeds — see the open-pr procedure. -->
+
 ## Summary
 
 <!-- What does this PR do and why? 1–3 sentences. -->

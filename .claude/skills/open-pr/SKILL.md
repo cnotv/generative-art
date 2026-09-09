@@ -1,17 +1,26 @@
 ---
 name: open-pr
 description: >-
-  Use when explicitly asked to open, raise, create, submit or update a pull request — "open
-  the PR", "raise a PR", "make a pull request", "push this up", "update the PR description".
-  Covers rebasing onto main, force-pushing safely, the PR body format, keeping the
-  description current after each push, watching CI to green, and the abstraction review
-  that closes out the work. Never open a pull request unless it was explicitly requested.
+  Use when a change is validated and ready to ship — per AGENTS.md, every change ships with
+  a pull request, opened without waiting to be asked — and when explicitly asked to open,
+  raise, create, submit or update one: "open the PR", "raise a PR", "make a pull request",
+  "push this up", "update the PR description". Covers making sure an issue exists first,
+  rebasing onto main, force-pushing safely, the PR body format, keeping the description
+  current after each push, watching CI to green, and the abstraction review that closes out
+  the work.
 ---
 
 # Opening a pull request
 
-A pull request is only ever opened on explicit request. If nobody asked for one, the work
-ends at the last commit.
+Work is not done at the last commit — it is done once the PR exists and its checks are
+green. Open one as soon as the change is validated (`finish-change` passed); do not wait to
+be asked.
+
+## 0. Make sure an issue exists
+
+The PR title and body both need an issue number (step 3). Work that started from a linked
+issue already has one. A prototype (AGENTS.md's "How work starts") does not — write it now,
+covering what was built and why, before opening the PR.
 
 ## 1. Rebase onto main
 
@@ -100,6 +109,13 @@ Pin the link to the **commit sha**, not the branch: a branch link dies when the 
 on merge, and the pull request is the record afterwards. GitHub will not play a `.webm` linked
 this way, so link the file for a video and keep the stills inline.
 
+**After writing the body, re-fetch the PR and confirm the image actually renders** — never
+trust that the markup you wrote is what got stored. A stray escape (quoted backticks or
+quotes wrapped around the URL, a mangled character) turns `![alt](url)` into literal text
+with no image, and it looks identical to a working link in the tool call that wrote it. Read
+the body back and check the image line is exactly `![alt](raw-url)`, no extra characters
+inside the parentheses.
+
 ## 4. Watch CI
 
 ```sh
@@ -115,10 +131,12 @@ gh run view <run-id> --log-failed
 Fix the cause, commit, push, and repeat until every check passes. Never bypass hooks with
 `--no-verify` — if a hook fails, the hook is usually right.
 
-Once `deploy/netlify` succeeds, hand over its preview link (`targetUrl` in
-`gh pr view <number> --json statusCheckRollup`) rather than making the reader dig for it.
-Append any query parameter the change relies on, so the link opens straight to the state
-being demonstrated instead of the bare root.
+Once `deploy/netlify` succeeds, take its preview link (`targetUrl` in
+`gh pr view <number> --json statusCheckRollup`) and append the route to the view being
+changed — `/tools/RigAnimator`, not the bare root — so it opens straight to the state being
+demonstrated. Put the full URL into the **Preview** line at the top of the PR body (the
+template carries the placeholder) and edit it in via step 5, the same as any other body
+update; do not only mention it in the chat reply, which the next reader of the PR never sees.
 
 Whenever a pull request exists for the work, end the report with a link to it too, so it is
 one click away rather than something the reader has to go find.
@@ -147,5 +165,6 @@ it stops happening.
 ## Definition of done
 
 Every CI check is green, the PR description matches what is actually on the branch, the
-linked issue still describes the work accurately, and the abstraction review section is
-filled in — including when the answer is that nothing generalizes.
+linked issue still describes the work accurately, the abstraction review section is filled
+in — including when the answer is that nothing generalizes — and any embedded screenshot or
+video was confirmed to render, not just written.

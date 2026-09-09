@@ -3,10 +3,12 @@ import * as THREE from 'three'
 import { poseCapture, poseBuildClip, type PoseKeyframe } from '@webgamekit/rig'
 import { DEFAULT_FRAME_MAX } from './config'
 import { clampFrameMax } from './frameRange'
-import { moveKeyframeInList } from './keyframeOps'
+import { moveKeyframesInList } from './keyframeOps'
 import { saveRigAutosave } from './autosave'
 import { useRigKeyframeIO } from './useRigKeyframeIO'
 import { useRigKeyframeClipboard } from './useRigKeyframeClipboard'
+import { useRigFrameRipple } from './useRigFrameRipple'
+import { useRigPlayback } from './useRigPlayback'
 import type { RigAnimatorConfig } from './types'
 
 /** Owns the authored pose keyframes and the preview clip built from them. */
@@ -17,10 +19,8 @@ export const useRigKeyframes = (
   boneNames: Ref<string[]>
 ) => {
   const keyframes = ref<PoseKeyframe[]>([])
-  const isPlaying = ref(false)
   const mixer = shallowRef<THREE.AnimationMixer | null>(null)
   const action = shallowRef<THREE.AnimationAction | null>(null)
-  const clock = new THREE.Clock()
   /** The rig timeline's visible frame range, resized by dragging its right edge. */
   const frameMax = ref(DEFAULT_FRAME_MAX)
   const keyframeFrames = computed(() =>
@@ -65,54 +65,56 @@ export const useRigKeyframes = (
     action.value = nextAction
   }
 
-  /** Scrub the preview to a given frame without advancing playback. */
-  const scrubToFrame = (frame: number): void => {
-    if (mixer.value) mixer.value.setTime(frame / config.value.fps)
-  }
-
-  /** Capture the rig's current pose as a keyframe at the panel's current frame. */
-  const addKeyframe = (bones: THREE.Bone[]): void => {
+  /** Push the rig's current pose into the keyframe list, without rebuilding the preview clip
+   * or persisting. `rebuildPreviewClip` rebuilds every bone's track from the whole keyframe
+   * list, so it costs more the longer the list already is; calling it on every single one of
+   * a fast burst of captures (motion recording sampling several times a second) makes each
+   * capture slower than the last. Callers batch the rebuild and persist via `commitKeyframes`
+   * once the burst ends instead of paying that cost per frame. */
+  const captureKeyframeSilently = (bones: THREE.Bone[]): void => {
     if (bones.length === 0) return
     const pose = poseCapture(bones)
     const withoutSameFrame = keyframes.value.filter(
       (keyframe) => keyframe.frame !== config.value.frame
     )
     keyframes.value = [...withoutSameFrame, { frame: config.value.frame, pose }]
+  }
+
+  /** Rebuild the preview clip and persist the autosave; the shared tail end of any change to
+   * the keyframe list that has to actually show up and survive a refresh. */
+  const commitKeyframes = (): void => {
     rebuildPreviewClip()
     persistAutosave()
   }
 
-  /** Remove the keyframe at the panel's current frame, if one exists there. */
-  const deleteKeyframe = (): void => {
-    keyframes.value = keyframes.value.filter((keyframe) => keyframe.frame !== config.value.frame)
+  /** Capture the rig's current pose as a keyframe at the panel's current frame. */
+  const addKeyframe = (bones: THREE.Bone[]): void => {
+    captureKeyframeSilently(bones)
+    commitKeyframes()
+  }
+
+  /** Remove every keyframe in `frames` at once — a single current-frame delete is just a
+   * one-frame list, and a multi-select delete is every frame the selection covered. One
+   * rebuild and persist for the whole batch rather than one per frame. */
+  const deleteKeyframesAt = (frames: number[]): void => {
+    if (frames.length === 0) return
+    const framesToDelete = new Set(frames)
+    keyframes.value = keyframes.value.filter((keyframe) => !framesToDelete.has(keyframe.frame))
     rebuildPreviewClip()
     persistAutosave()
   }
 
-  /** Reposition a keyframe dragged on the rig timeline, see `moveKeyframeInList`. */
-  const moveKeyframe = (oldFrame: number, newFrame: number): void => {
-    const next = moveKeyframeInList(keyframes.value, oldFrame, newFrame)
+  /** Drag every keyframe in `frames` by the same delta, see `moveKeyframesInList`. A plain
+   * single-keyframe drag is just a one-frame list. */
+  const moveKeyframesBy = (frames: number[], deltaFrames: number): void => {
+    const next = moveKeyframesInList(keyframes.value, frames, deltaFrames)
     if (next === keyframes.value) return
     keyframes.value = next
     rebuildPreviewClip()
     persistAutosave()
   }
 
-  /** Start or stop real-time playback of the preview clip. */
-  const togglePlayback = (): void => {
-    isPlaying.value = !isPlaying.value
-    if (isPlaying.value) clock.start()
-  }
-
-  /** Advance playback by one frame tick; a no-op while paused or with nothing to play. */
-  const tickPlayback = (): void => {
-    if (!isPlaying.value || !mixer.value || !action.value) return
-    const delta = clock.getDelta()
-    mixer.value.update(delta)
-    const clipDuration = action.value.getClip().duration
-    config.value.frame =
-      clipDuration > 0 ? Math.round((mixer.value.time % clipDuration) * config.value.fps) : 0
-  }
+  const playback = useRigPlayback({ config, mixer, action })
 
   const io = useRigKeyframeIO({
     config,
@@ -131,21 +133,29 @@ export const useRigKeyframes = (
     rebuildPreviewClip,
     persistAutosave
   })
+  const frameRipple = useRigFrameRipple({
+    config,
+    keyframes,
+    keyframeFrames,
+    frameMax,
+    rebuildPreviewClip,
+    persistAutosave
+  })
 
   return {
     keyframes,
     keyframeFrames,
     frameMax,
     setFrameMax,
-    isPlaying,
     reset,
     addKeyframe,
-    deleteKeyframe,
-    moveKeyframe,
-    scrubToFrame,
-    togglePlayback,
-    tickPlayback,
+    captureKeyframeSilently,
+    commitKeyframes,
+    deleteKeyframesAt,
+    moveKeyframesBy,
+    ...playback,
     ...io,
-    ...clipboard
+    ...clipboard,
+    ...frameRipple
   }
 }

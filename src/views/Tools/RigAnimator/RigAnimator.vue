@@ -37,6 +37,7 @@ import {
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
+import { useRigMotionRecording } from './useRigMotionRecording'
 import { frameCameraOnModel } from './cameraFraming'
 import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
@@ -94,6 +95,40 @@ const cameraPoseMappingOptions = computed(() => ({
 const rig = useRigAnimator(reactiveConfig)
 const showCameraCapture = ref(false)
 const modelFileInput = ref<HTMLInputElement | null>(null)
+const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
+const motionRecording = useRigMotionRecording({
+  fps: () => reactiveConfig.value.fps,
+  currentFrame: () => reactiveConfig.value.frame,
+  frameMax: () => rig.frameMax.value,
+  setFrame: (frame) => (reactiveConfig.value.frame = frame),
+  setFrameMax: (frameMax) => rig.setFrameMax(frameMax),
+  // Silent: rebuilding the preview clip and persisting on every one of a fast burst of
+  // sampled frames made each capture slower than the last (see captureKeyframeSilently's own
+  // doc comment) and was the actual cause of the stutter recording had — not the camera feed
+  // itself. stopRecordingAndCommit below pays that cost once, when the burst ends.
+  addKeyframe: () => rig.captureKeyframeSilently()
+})
+
+/** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
+ * skipped on every sampled frame — see the `addKeyframe` comment above. Both call sites that
+ * stop a recording (the toggle and closing the panel) go through this so neither forgets it.
+ * A take that actually captured motion is also snapshotted into the preset picker, the same
+ * way a bundled mocap clip is offered there, so it can be reloaded later in the session. */
+const stopRecordingAndCommit = (): void => {
+  motionRecording.stopRecording()
+  rig.commitRecordedKeyframes()
+  if (motionRecording.capturedFrameCount.value > 0) rig.addRecordedPreset(rig.keyframes.value)
+}
+
+/** A preset picked in the timeline dropdown is either a bundled mocap URL or a session
+ * recording, encoded as `recording:<index>` by `RigTimeline`'s own option list. */
+const handleSelectPreset = (value: string): void => {
+  const recordingIndex = value.startsWith('recording:')
+    ? Number(value.slice('recording:'.length))
+    : null
+  if (recordingIndex !== null) rig.applyRecordedPreset(recordingIndex)
+  else rig.loadPreset(value)
+}
 
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
@@ -204,9 +239,26 @@ const refreshSchema = (): void => {
  */
 const handleCloseCamera = (): void => {
   showCameraCapture.value = false
+  if (motionRecording.isRecording.value) stopRecordingAndCommit()
   if (rig.model.value && cameraReference) {
     frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
   }
+}
+
+/** Recording and timeline playback both drive the current frame, so only one may run at
+ * once: starting either stops the other first rather than letting them fight over it. */
+const handleToggleRecord = (): void => {
+  if (motionRecording.isRecording.value) {
+    stopRecordingAndCommit()
+    return
+  }
+  if (rig.isPlaying.value) rig.togglePlayback()
+  motionRecording.startRecording()
+}
+
+const handleTogglePlayback = (): void => {
+  if (!rig.isPlaying.value && motionRecording.isRecording.value) stopRecordingAndCommit()
+  rig.togglePlayback()
 }
 
 /**
@@ -228,6 +280,7 @@ const handleCameraApply = (
     const yaw = estimateCameraYaw(landmarks)
     if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
   }
+  motionRecording.recordFrameIfActive()
 }
 
 const handleModelFileChange = (event: Event): void => {
@@ -283,8 +336,12 @@ watch(
   () => reactiveConfig.value.frame,
   (frame) => {
     // During playback the frame field only displays where tickPlayback already put the
-    // mixer; scrubbing it back would fight that same-tick update every frame.
-    if (!rig.isPlaying.value) rig.scrubToFrame(frame)
+    // mixer; scrubbing it back would fight that same-tick update every frame. During
+    // recording, handleCameraApply already applied this exact frame's pose straight to the
+    // rig's bones before this watcher fires; scrubbing the (unrebuilt, skipped for cost —
+    // see captureKeyframeSilently) preview clip on top of it every sampled frame was
+    // fighting the live pose it was trying to show, which read as the model stuttering.
+    if (!rig.isPlaying.value && !motionRecording.isRecording.value) rig.scrubToFrame(frame)
   }
 )
 watch(showCameraCapture, () => updateCameraCentering())
@@ -374,6 +431,11 @@ onMounted(async () => {
       if (action === 'addKeyframe') rig.addKeyframe()
       else if (action === 'nextFrame') stepFrame(1)
       else if (action === 'previousFrame') stepFrame(-1)
+      else if (action === 'extendSelectionNext')
+        rigTimelineReference.value?.extendSelectionByFrames(1)
+      else if (action === 'extendSelectionPrevious') {
+        rigTimelineReference.value?.extendSelectionByFrames(-1)
+      }
     }
   })
 })
@@ -414,25 +476,29 @@ onUnmounted(() => {
     </IconButton>
   </div>
   <RigTimeline
+    ref="rigTimelineReference"
     :frame="reactiveConfig.frame"
     :frame-max="rig.frameMax.value"
     :keyframe-frames="rig.keyframeFrames.value"
     :is-playing="rig.isPlaying.value"
     :has-clipboard="rig.hasClipboard.value"
     :can-apply-hand-pose="rig.canApplyHandPose.value"
+    :recorded-presets="rig.recordedPresets.value"
     @update:frame="(value) => (reactiveConfig.frame = value)"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
-    @delete-keyframe="rig.deleteKeyframe"
-    @copy-keyframe="rig.copyKeyframe"
-    @paste-keyframe="rig.pasteKeyframe"
+    @delete-keyframes="rig.deleteKeyframesAt"
+    @copy-keyframes="rig.copyKeyframes"
+    @paste-keyframes="rig.pasteKeyframes"
     @select-hand-pose="rig.applyHandPosePreset"
-    @move-keyframe="rig.moveKeyframe"
-    @toggle-playback="rig.togglePlayback"
+    @move-keyframes="rig.moveKeyframesBy"
+    @remove-frame-range="rig.removeFrameRange"
+    @insert-frame-range="rig.insertFrameRange"
+    @toggle-playback="handleTogglePlayback"
     @import-poses="(url) => (reactiveConfig.poses = url)"
     @export-glb="rig.exportGlb"
     @export-json="rig.exportJson"
-    @select-preset="rig.loadPreset"
+    @select-preset="handleSelectPreset"
     @reset-all="rig.resetAutosave"
   />
   <CameraPoseCapture
@@ -440,8 +506,14 @@ onUnmounted(() => {
     :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
     :max-jump="reactiveConfig.cameraMaxJump"
     :show-preview="reactiveConfig.cameraShowPreview"
+    :is-recording="motionRecording.isRecording.value"
+    :frame="reactiveConfig.frame"
+    :fps="reactiveConfig.fps"
     @apply="handleCameraApply"
     @close="handleCloseCamera"
+    @toggle-record="handleToggleRecord"
+    @enable-preview="reactiveConfig.cameraShowPreview = true"
+    @seek-frame="(frame) => (reactiveConfig.frame = frame)"
   />
 </template>
 

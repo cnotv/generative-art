@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { rigGenerateHumanoidSkeleton } from '@webgamekit/rig'
 import { useRigCameraPose } from './useRigCameraPose'
 import { captureRestPoses, applyGizmoDragToChain, type BoneRestPose } from './boneDragTarget'
-import type { CameraLandmark } from './cameraPoseMapping'
+import { CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, type CameraLandmark } from './cameraPoseMapping'
 
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
   x,
@@ -21,9 +21,20 @@ const buildTPoseLandmarks = (): CameraLandmark[] => {
   landmarks[12] = landmark(0.2, 0, 0) // right shoulder
   landmarks[15] = landmark(-0.7, 0, 0) // left wrist, extended out level with the shoulder
   landmarks[16] = landmark(0.7, 0, 0) // right wrist, extended out level with the shoulder
+  landmarks[23] = landmark(-0.15, 0.9, 0) // left hip
+  landmarks[24] = landmark(0.15, 0.9, 0) // right hip
   landmarks[27] = landmark(-0.15, 1.4, 0) // left ankle, near the floor
   landmarks[28] = landmark(0.15, 1.4, 0) // right ankle
   return landmarks
+}
+
+/** The same landmarks, but with the hips occluded this frame, the way a webcam framed tight on
+ * the upper body or a brief tracking dropout leaves them. */
+const withHipsOccluded = (landmarks: CameraLandmark[]): CameraLandmark[] => {
+  const occluded = [...landmarks]
+  occluded[23] = landmark(0, 0, 0, 0)
+  occluded[24] = landmark(0, 0, 0, 0)
+  return occluded
 }
 
 /** The same wiring `useRigModel` gives `useRigCameraPose`, built directly for a focused test. */
@@ -31,8 +42,9 @@ const buildRigWiring = (bones: THREE.Bone[]) => {
   const restPoses: Map<string, BoneRestPose> = captureRestPoses(bones)
   const applyBoneDragTarget = (bone: THREE.Bone, target: THREE.Vector3): void =>
     applyGizmoDragToChain(bone, target, restPoses)
-  const resetAllBonesToRest = (): void => {
+  const resetAllBonesToRest = (excludeBoneNames?: Set<string>): void => {
     bones.forEach((bone) => {
+      if (excludeBoneNames?.has(bone.name)) return
       const rest = restPoses.get(bone.name)
       if (rest) {
         bone.position.copy(rest.position)
@@ -92,5 +104,28 @@ describe('useRigCameraPose', () => {
 
     expect(leftHandPosition.x).toBeLessThan(shoulderCenterX)
     expect(rightHandPosition.x).toBeGreaterThan(shoulderCenterX)
+  })
+
+  it('keeps the root bone at its last driven position when hips drop out, instead of snapping it back to rest', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
+    const { root, bones } = rigGenerateHumanoidSkeleton(box)
+    root.updateMatrixWorld(true)
+    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
+    const options = { ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, includeHips: true }
+
+    const { applyCameraPose } = useRigCameraPose(
+      ref(bones),
+      applyBoneDragTarget,
+      resetAllBonesToRest
+    )
+    applyCameraPose(buildTPoseLandmarks(), options)
+    const hips = findBone('mixamorigHips')
+    const drivenPosition = hips.position.clone()
+    expect(drivenPosition.equals(new THREE.Vector3(0, 0, 0))).toBe(false)
+
+    applyCameraPose(withHipsOccluded(buildTPoseLandmarks()), options)
+
+    expect(hips.position.equals(drivenPosition)).toBe(true)
   })
 })

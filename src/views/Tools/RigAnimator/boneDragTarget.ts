@@ -113,13 +113,20 @@ export const resetBoneChainToRest = (
  * to be left at from an earlier edit.
  * @param bones The rig's bones
  * @param restPoses Every rigged bone's transform as loaded, keyed by name
- * @returns Nothing; mutates every bone back to its rest transform
+ * @param excludeBoneNames Bones to leave untouched, kept at whatever transform they already
+ *   have. A per-frame caller that only sometimes has a fresh target for one of these (camera
+ *   pose capture's root bone, when hip landmarks are occluded for a frame) uses this so that
+ *   bone holds its last driven position instead of snapping back to rest every frame it isn't
+ *   redriven.
+ * @returns Nothing; mutates every non-excluded bone back to its rest transform
  */
 export const resetAllBonesToRest = (
   bones: THREE.Bone[],
-  restPoses: Map<string, BoneRestPose>
+  restPoses: Map<string, BoneRestPose>,
+  excludeBoneNames?: Set<string>
 ): void => {
   bones.forEach((bone) => {
+    if (excludeBoneNames?.has(bone.name)) return
     const rest = restPoses.get(bone.name)
     if (rest) {
       bone.position.copy(rest.position)

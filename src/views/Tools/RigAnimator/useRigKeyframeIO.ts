@@ -87,5 +87,13 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
     clearRigAutosave()
   }
 
-  return { exportGlb, exportJson, importJson, loadPreset, restoreAutosave, resetAutosave }
+  return {
+    exportGlb,
+    exportJson,
+    importJson,
+    loadPreset,
+    applyLoadedKeyframes,
+    restoreAutosave,
+    resetAutosave
+  }
 }
