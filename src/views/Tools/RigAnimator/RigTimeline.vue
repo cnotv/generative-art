@@ -11,7 +11,11 @@ import {
   Download,
   Package,
   RotateCcw,
-  PersonStanding
+  PersonStanding,
+  FoldHorizontal,
+  UnfoldHorizontal,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import { Select } from '@/components/ui/select'
@@ -43,6 +47,8 @@ const emit = defineEmits<{
   pasteKeyframes: []
   selectHandPose: [presetName: string]
   moveKeyframes: [frames: number[], deltaFrames: number]
+  removeFrameRange: [startFrame: number, endFrame: number]
+  insertFrameRange: [atFrame: number, span: number]
   togglePlayback: []
   importPoses: [url: string]
   exportGlb: []
@@ -104,6 +110,30 @@ const clearSelection = (): void => {
   selectionAnchorFrame.value = null
   selectionActiveFrame.value = null
 }
+
+/** Cut the selected range out of the timeline entirely, shifting everything after it back to
+ * close the gap — unlike Delete, which only clears the poses inside the range and leaves the
+ * timeline's own length untouched. The selection itself no longer means anything once the
+ * frames it covered are gone, so it clears along with the cut. */
+const handleRemoveFrameRange = (): void => {
+  if (!selectionRange.value) return
+  emit('removeFrameRange', selectionRange.value.start, selectionRange.value.end)
+  clearSelection()
+}
+
+/** Open up blank room the size of the selection at its own start, shifting everything after it
+ * later and growing the timeline's own length to fit. */
+const handleInsertFrameRange = (): void => {
+  if (!selectionRange.value) return
+  const span = selectionRange.value.end - selectionRange.value.start + 1
+  emit('insertFrameRange', selectionRange.value.start, span)
+  clearSelection()
+}
+
+/** Hand Pose and Presets sit in a second row, collapsed by default: they are used far less
+ * often than the always-visible transport and edit actions, and hiding them keeps the main row
+ * from crowding out the track itself. */
+const showExtraControls = ref(false)
 
 /** Extend the selection by one frame via Shift+Arrow, starting a new one-frame selection from
  * the current playhead if nothing is selected yet. */
@@ -229,117 +259,146 @@ onUnmounted(stopDrag)
 
 <template>
   <div class="rig-timeline">
-    <IconButton size="sm" :title="isPlaying ? 'Pause' : 'Play'" @click="emit('togglePlayback')">
-      <Pause v-if="isPlaying" />
-      <Play v-else />
-    </IconButton>
-    <IconButton size="sm" title="Add keyframe at the current frame" @click="emit('addKeyframe')">
-      <Plus />
-    </IconButton>
-    <IconButton
-      size="sm"
-      title="Delete the selected keyframes, or the one at the current frame"
-      :disabled="targetFrames.length === 0"
-      @click="emit('deleteKeyframes', targetFrames)"
-    >
-      <Trash2 />
-    </IconButton>
-    <IconButton
-      size="sm"
-      title="Copy the selected keyframes, or the one at the current frame"
-      :disabled="targetFrames.length === 0"
-      @click="emit('copyKeyframes', targetFrames)"
-    >
-      <Copy />
-    </IconButton>
-    <IconButton
-      size="sm"
-      title="Paste the copied keyframe(s) starting at the current frame"
-      :disabled="!hasClipboard"
-      @click="emit('pasteKeyframes')"
-    >
-      <ClipboardPaste />
-    </IconButton>
-    <div class="rig-timeline__hand-pose">
-      <Select
-        placeholder="Hand Pose"
-        :options="handPoseOptions"
-        :disabled="!canApplyHandPose"
-        @update:model-value="emit('selectHandPose', $event)"
-      />
-    </div>
-    <div class="rig-timeline__scrubber">
-      <div class="rig-timeline__ruler" @pointerdown="onTrackPointerDown">
-        <span
-          v-for="tick in ticks"
-          :key="tick"
-          class="rig-timeline__tick"
-          :style="{ left: `${percentFor(tick)}%` }"
-        >
-          <span class="rig-timeline__tick-mark" />
-          <span class="rig-timeline__tick-label">{{ tick }}</span>
-        </span>
-      </div>
-      <div ref="trackElement" class="rig-timeline__track" @pointerdown="onTrackPointerDown">
-        <div
-          v-if="selectionRange"
-          class="rig-timeline__selection"
-          :style="{
-            left: `${percentFor(selectionRange.start)}%`,
-            width: `${percentFor(selectionRange.end) - percentFor(selectionRange.start)}%`
-          }"
-        />
-        <button
-          v-for="keyframeFrame in keyframeFrames"
-          :key="keyframeFrame"
-          type="button"
-          class="rig-timeline__keyframe"
-          :class="{
-            'rig-timeline__keyframe--current': keyframeFrame === frame,
-            'rig-timeline__keyframe--selected': selectedKeyframeFrames.includes(keyframeFrame)
-          }"
-          :style="{ left: `${percentFor(keyframeFrame)}%` }"
-          :title="`Pose @ frame ${keyframeFrame}`"
-          @pointerdown="onKeyframePointerDown(keyframeFrame, $event)"
-        />
-        <div class="rig-timeline__playhead" :style="{ left: `${percentFor(frame)}%` }" />
-        <div
-          class="rig-timeline__resize-handle"
-          title="Drag to extend or shrink the frame range"
-          @pointerdown="onResizePointerDown"
-        />
-      </div>
-    </div>
-    <div class="rig-timeline__presets">
-      <Select
-        placeholder="Presets"
-        :options="presetOptions"
-        @update:model-value="emit('selectPreset', $event)"
+    <div class="rig-timeline__row">
+      <IconButton size="sm" :title="isPlaying ? 'Pause' : 'Play'" @click="emit('togglePlayback')">
+        <Pause v-if="isPlaying" />
+        <Play v-else />
+      </IconButton>
+      <IconButton size="sm" title="Add keyframe at the current frame" @click="emit('addKeyframe')">
+        <Plus />
+      </IconButton>
+      <IconButton
+        size="sm"
+        title="Delete the selected keyframes, or the one at the current frame"
+        :disabled="targetFrames.length === 0"
+        @click="emit('deleteKeyframes', targetFrames)"
       >
-        <template #icon>
-          <PersonStanding class="h-4 w-4" />
-        </template>
-      </Select>
+        <Trash2 />
+      </IconButton>
+      <IconButton
+        size="sm"
+        title="Copy the selected keyframes, or the one at the current frame"
+        :disabled="targetFrames.length === 0"
+        @click="emit('copyKeyframes', targetFrames)"
+      >
+        <Copy />
+      </IconButton>
+      <IconButton
+        size="sm"
+        title="Paste the copied keyframe(s) starting at the current frame"
+        :disabled="!hasClipboard"
+        @click="emit('pasteKeyframes')"
+      >
+        <ClipboardPaste />
+      </IconButton>
+      <IconButton
+        size="sm"
+        title="Remove the selected frames entirely, shifting later frames back to close the gap"
+        :disabled="!selectionRange"
+        @click="handleRemoveFrameRange"
+      >
+        <FoldHorizontal />
+      </IconButton>
+      <IconButton
+        size="sm"
+        title="Insert blank frames the size of the selection, shifting later frames forward"
+        :disabled="!selectionRange"
+        @click="handleInsertFrameRange"
+      >
+        <UnfoldHorizontal />
+      </IconButton>
+      <div class="rig-timeline__scrubber">
+        <div class="rig-timeline__ruler" @pointerdown="onTrackPointerDown">
+          <span
+            v-for="tick in ticks"
+            :key="tick"
+            class="rig-timeline__tick"
+            :style="{ left: `${percentFor(tick)}%` }"
+          >
+            <span class="rig-timeline__tick-mark" />
+            <span class="rig-timeline__tick-label">{{ tick }}</span>
+          </span>
+        </div>
+        <div ref="trackElement" class="rig-timeline__track" @pointerdown="onTrackPointerDown">
+          <div
+            v-if="selectionRange"
+            class="rig-timeline__selection"
+            :style="{
+              left: `${percentFor(selectionRange.start)}%`,
+              width: `${percentFor(selectionRange.end) - percentFor(selectionRange.start)}%`
+            }"
+          />
+          <button
+            v-for="keyframeFrame in keyframeFrames"
+            :key="keyframeFrame"
+            type="button"
+            class="rig-timeline__keyframe"
+            :class="{
+              'rig-timeline__keyframe--current': keyframeFrame === frame,
+              'rig-timeline__keyframe--selected': selectedKeyframeFrames.includes(keyframeFrame)
+            }"
+            :style="{ left: `${percentFor(keyframeFrame)}%` }"
+            :title="`Pose @ frame ${keyframeFrame}`"
+            @pointerdown="onKeyframePointerDown(keyframeFrame, $event)"
+          />
+          <div class="rig-timeline__playhead" :style="{ left: `${percentFor(frame)}%` }" />
+          <div
+            class="rig-timeline__resize-handle"
+            title="Drag to extend or shrink the frame range"
+            @pointerdown="onResizePointerDown"
+          />
+        </div>
+      </div>
+      <input
+        ref="fileInputElement"
+        type="file"
+        :accept="POSES_FILE_ACCEPT"
+        class="rig-timeline__hidden-file-input"
+        @change="onFileChange"
+      />
+      <IconButton size="sm" title="Import poses (JSON)" @click="fileInputElement?.click()">
+        <Upload />
+      </IconButton>
+      <IconButton size="sm" title="Export poses (JSON)" @click="emit('exportJson')">
+        <Download />
+      </IconButton>
+      <IconButton size="sm" title="Export animated model (GLB)" @click="emit('exportGlb')">
+        <Package />
+      </IconButton>
+      <IconButton size="sm" title="Reset every keyframe" @click="emit('resetAll')">
+        <RotateCcw />
+      </IconButton>
+      <IconButton
+        size="sm"
+        :title="showExtraControls ? 'Hide hand pose and presets' : 'Show hand pose and presets'"
+        :active="showExtraControls"
+        @click="showExtraControls = !showExtraControls"
+      >
+        <ChevronUp v-if="showExtraControls" />
+        <ChevronDown v-else />
+      </IconButton>
     </div>
-    <input
-      ref="fileInputElement"
-      type="file"
-      :accept="POSES_FILE_ACCEPT"
-      class="rig-timeline__hidden-file-input"
-      @change="onFileChange"
-    />
-    <IconButton size="sm" title="Import poses (JSON)" @click="fileInputElement?.click()">
-      <Upload />
-    </IconButton>
-    <IconButton size="sm" title="Export poses (JSON)" @click="emit('exportJson')">
-      <Download />
-    </IconButton>
-    <IconButton size="sm" title="Export animated model (GLB)" @click="emit('exportGlb')">
-      <Package />
-    </IconButton>
-    <IconButton size="sm" title="Reset every keyframe" @click="emit('resetAll')">
-      <RotateCcw />
-    </IconButton>
+    <div v-if="showExtraControls" class="rig-timeline__row rig-timeline__row--extra">
+      <div class="rig-timeline__hand-pose">
+        <Select
+          placeholder="Hand Pose"
+          :options="handPoseOptions"
+          :disabled="!canApplyHandPose"
+          @update:model-value="emit('selectHandPose', $event)"
+        />
+      </div>
+      <div class="rig-timeline__presets">
+        <Select
+          placeholder="Presets"
+          :options="presetOptions"
+          @update:model-value="emit('selectPreset', $event)"
+        >
+          <template #icon>
+            <PersonStanding class="h-4 w-4" />
+          </template>
+        </Select>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -351,7 +410,7 @@ onUnmounted(stopDrag)
   bottom: 0;
   min-height: var(--rig-timeline-height);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
   background-color: var(--color-background);
@@ -362,6 +421,19 @@ onUnmounted(stopDrag)
      text labels; without this every drag also selects that text like a click-drag on a
      paragraph would. */
   user-select: none;
+}
+
+.rig-timeline__row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* Hand Pose and Presets, toggled open on demand rather than always taking up room in the
+   main row: a thin rule separates it from the transport/edit row above it. */
+.rig-timeline__row--extra {
+  padding-top: var(--spacing-2);
+  border-top: 1px solid var(--color-border);
 }
 
 .rig-timeline__scrubber {

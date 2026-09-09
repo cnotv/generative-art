@@ -7,6 +7,7 @@ import { moveKeyframesInList } from './keyframeOps'
 import { saveRigAutosave } from './autosave'
 import { useRigKeyframeIO } from './useRigKeyframeIO'
 import { useRigKeyframeClipboard } from './useRigKeyframeClipboard'
+import { useRigFrameRipple } from './useRigFrameRipple'
 import { useRigPlayback } from './useRigPlayback'
 import type { RigAnimatorConfig } from './types'
 
@@ -132,6 +133,14 @@ export const useRigKeyframes = (
     rebuildPreviewClip,
     persistAutosave
   })
+  const frameRipple = useRigFrameRipple({
+    config,
+    keyframes,
+    keyframeFrames,
+    frameMax,
+    rebuildPreviewClip,
+    persistAutosave
+  })
 
   return {
     keyframes,
@@ -146,6 +155,7 @@ export const useRigKeyframes = (
     moveKeyframesBy,
     ...playback,
     ...io,
-    ...clipboard
+    ...clipboard,
+    ...frameRipple
   }
 }

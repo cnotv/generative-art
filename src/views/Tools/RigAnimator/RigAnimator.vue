@@ -492,6 +492,8 @@ onUnmounted(() => {
     @paste-keyframes="rig.pasteKeyframes"
     @select-hand-pose="rig.applyHandPosePreset"
     @move-keyframes="rig.moveKeyframesBy"
+    @remove-frame-range="rig.removeFrameRange"
+    @insert-frame-range="rig.insertFrameRange"
     @toggle-playback="handleTogglePlayback"
     @import-poses="(url) => (reactiveConfig.poses = url)"
     @export-glb="rig.exportGlb"

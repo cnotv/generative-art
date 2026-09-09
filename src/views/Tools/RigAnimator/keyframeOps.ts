@@ -26,3 +26,47 @@ export const moveKeyframesInList = (
   )
   return [...untouched, ...moved]
 }
+
+/**
+ * Cut the frames from `startFrame` to `endFrame` (inclusive) out of the timeline entirely — a
+ * ripple delete, not just clearing the poses inside the range: every keyframe after the cut
+ * shifts left by the span removed, so it keeps the same spacing to whatever follows it instead
+ * of leaving a gap behind.
+ * @param keyframes The current keyframe list
+ * @param startFrame The first frame of the range to remove
+ * @param endFrame The last frame of the range to remove, inclusive
+ * @returns The updated list, or the same list unchanged when the range is empty or inverted
+ */
+export const removeFrameRangeFromList = (
+  keyframes: PoseKeyframe[],
+  startFrame: number,
+  endFrame: number
+): PoseKeyframe[] => {
+  const span = endFrame - startFrame + 1
+  if (span <= 0) return keyframes
+  return keyframes
+    .filter((keyframe) => keyframe.frame < startFrame || keyframe.frame > endFrame)
+    .map((keyframe) =>
+      keyframe.frame > endFrame ? { ...keyframe, frame: keyframe.frame - span } : keyframe
+    )
+}
+
+/**
+ * Open up `span` blank frames starting at `atFrame` — a ripple insert: every keyframe already
+ * at or past that frame shifts later by `span` to make room, rather than anything being
+ * overwritten the way dropping a single keyframe there would.
+ * @param keyframes The current keyframe list
+ * @param atFrame Where the new blank space starts
+ * @param span How many frames of room to open up
+ * @returns The updated list, or the same list unchanged when `span` isn't positive
+ */
+export const insertFrameRangeIntoList = (
+  keyframes: PoseKeyframe[],
+  atFrame: number,
+  span: number
+): PoseKeyframe[] => {
+  if (span <= 0) return keyframes
+  return keyframes.map((keyframe) =>
+    keyframe.frame >= atFrame ? { ...keyframe, frame: keyframe.frame + span } : keyframe
+  )
+}

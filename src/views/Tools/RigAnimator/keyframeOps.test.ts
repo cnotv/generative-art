@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import type { PoseKeyframe } from '@webgamekit/rig'
-import { moveKeyframesInList } from './keyframeOps'
+import {
+  moveKeyframesInList,
+  removeFrameRangeFromList,
+  insertFrameRangeIntoList
+} from './keyframeOps'
 
 const pose = (marker: string): PoseKeyframe['pose'] => ({
   [marker]: { x: 0, y: 0, z: 0, w: 1 }
@@ -59,5 +63,66 @@ describe('moveKeyframesInList', () => {
     const keyframes: PoseKeyframe[] = [{ frame: 5, pose: pose('rest') }]
 
     expect(moveKeyframesInList(keyframes, [99], 3)).toBe(keyframes)
+  })
+})
+
+describe('removeFrameRangeFromList', () => {
+  it('drops every keyframe inside the range and shifts everything after it left by the span', () => {
+    const keyframes: PoseKeyframe[] = [
+      { frame: 0, pose: pose('before') },
+      { frame: 5, pose: pose('inside') },
+      { frame: 8, pose: pose('inside2') },
+      { frame: 20, pose: pose('after') }
+    ]
+
+    const result = removeFrameRangeFromList(keyframes, 4, 10)
+
+    expect(result).toEqual([
+      { frame: 0, pose: pose('before') },
+      { frame: 13, pose: pose('after') }
+    ])
+  })
+
+  it('leaves keyframes before the range untouched', () => {
+    const keyframes: PoseKeyframe[] = [{ frame: 2, pose: pose('before') }]
+
+    expect(removeFrameRangeFromList(keyframes, 4, 10)).toEqual(keyframes)
+  })
+
+  it('returns the same list unchanged for an empty or inverted range', () => {
+    const keyframes: PoseKeyframe[] = [{ frame: 5, pose: pose('rest') }]
+
+    expect(removeFrameRangeFromList(keyframes, 5, 4)).toBe(keyframes)
+  })
+})
+
+describe('insertFrameRangeIntoList', () => {
+  it('shifts every keyframe at or after the insertion point later by the span', () => {
+    const keyframes: PoseKeyframe[] = [
+      { frame: 0, pose: pose('before') },
+      { frame: 5, pose: pose('at') },
+      { frame: 8, pose: pose('after') }
+    ]
+
+    const result = insertFrameRangeIntoList(keyframes, 5, 4)
+
+    expect(result).toEqual([
+      { frame: 0, pose: pose('before') },
+      { frame: 9, pose: pose('at') },
+      { frame: 12, pose: pose('after') }
+    ])
+  })
+
+  it('leaves keyframes before the insertion point untouched', () => {
+    const keyframes: PoseKeyframe[] = [{ frame: 2, pose: pose('before') }]
+
+    expect(insertFrameRangeIntoList(keyframes, 5, 4)).toEqual(keyframes)
+  })
+
+  it('returns the same list unchanged for a zero or negative span', () => {
+    const keyframes: PoseKeyframe[] = [{ frame: 5, pose: pose('rest') }]
+
+    expect(insertFrameRangeIntoList(keyframes, 5, 0)).toBe(keyframes)
+    expect(insertFrameRangeIntoList(keyframes, 5, -1)).toBe(keyframes)
   })
 })

@@ -64,12 +64,13 @@ exist, so two poses are already a movement.
   single uploaded photo instead of the live feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
   and applying a detected pose onto the rig
-- `src/views/Tools/RigAnimator/useRigMotionRecording.ts`: turning the live camera-driven pose
-  stream into keyframes automatically while Record Motion is on
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
 - `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting one keyframe's
   pose or a whole selected block of them, offset-relative so paste can drop it anywhere
+- `src/views/Tools/RigAnimator/useRigFrameRipple.ts`: ripple removing or inserting a selected
+  frame range, shifting everything after it and changing the timeline's own length, unlike a
+  plain keyframe delete
 - `src/views/Tools/RigAnimator/useRigBoneMarkerVisibility.ts`: whether the rig's bone markers
   render, re-applied whenever the markers are recreated
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
@@ -179,8 +180,9 @@ bone or any keyframe already captured.
 
 Frame scheduling, keyframes and every way an animation enters or leaves the tool live on one
 dedicated bar docked along the bottom of the view, not in the Config panel and not on the
-app's shared Timeline panel (built for generic scheduled actions, not pose keyframes): a single
-row, split into parts left to right.
+app's shared Timeline panel (built for generic scheduled actions, not pose keyframes). The main
+row holds transport and editing; a second row, collapsed by default, holds **Hand Pose** and
+**Presets** — see **A second row for Hand Pose and Presets** below.
 
 ![The rig timeline: Play/Add/Delete/Copy/Paste, the ruler and draggable/resizable track with its keyframe markers, a bundled preset picker, and icon-only import/export/reset](/img/animation/rig-timeline.webp)
 
@@ -190,6 +192,12 @@ row, split into parts left to right.
   keyframe(s) starting at the current frame, replacing any keyframe already there, and applies
   the pose landing on the current frame to the live rig immediately, the same as scrubbing onto
   an existing keyframe would.
+- **Remove Frames** and **Insert Frames** act on the current selection only (both disabled with
+  none active) and change the timeline's own length, unlike Delete: **Remove Frames** cuts the
+  selected range out entirely and shifts everything after it back to close the gap, shrinking
+  the timeline; **Insert Frames** opens up blank room the size of the selection at its own
+  start and shifts everything after it forward, growing the timeline by that much. Either way
+  the selection is gone afterward, since the frames it covered no longer mean the same thing.
 - **The ruler**, above the track, marks frames at whatever round interval keeps roughly fifteen
   ticks readable across the current range (every 10 frames at the default 150-frame range,
   further apart for a longer one). Clicking or dragging the ruler behaves exactly like the track
@@ -203,8 +211,15 @@ row, split into parts left to right.
   current selection instead moves the whole selected block together, preserving its spacing. A
   handle at the track's right edge extends or shrinks the visible frame range; it never shrinks
   past the current frame or the furthest keyframe.
-- **Presets**, **Import**, **Export JSON**, **Export GLB** and **Reset** sit at the right, the
-  first as a labelled dropdown and the rest as plain icons: see the next two sections.
+- **Import**, **Export JSON**, **Export GLB** and **Reset** sit at the right as plain icons,
+  followed by the chevron that opens the second row.
+
+### A second row for Hand Pose and Presets
+
+**Hand Pose** and **Presets** are reached far less often than the transport and editing actions
+above them, so they live in a second row, collapsed by default: the chevron at the right end of
+the main row opens and closes it, keeping the always-visible row from crowding out the track
+itself.
 
 ### Selecting a range of frames
 
@@ -229,7 +244,8 @@ Delete or a block drag will actually touch.
 
 ## Hand pose presets
 
-**Hand Pose**, next to Copy/Paste, offers a handful of canned finger poses (**Open**, **Fist**,
+**Hand Pose**, in the rig timeline's second row (see **A second row for Hand Pose and Presets**
+above), offers a handful of canned finger poses (**Open**, **Fist**,
 **Point**, **Thumbs Up**) for whichever hand the currently selected bone belongs to: select the
 hand itself or any of its fingers, and the dropdown enables once every finger bone that hand
 needs is present on the rig. Applying a preset curls each finger joint by the preset's angle
