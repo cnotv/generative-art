@@ -15,19 +15,13 @@ export interface CameraHandLandmark {
 }
 
 /**
- * Each finger's landmark indices in MediaPipe's 21-point hand topology: the point
- * `applyHandPose`'s three joints (from the palm outward) are measured between. The four straight
- * fingers lead with the wrist (0), since on a relaxed hand a finger's own base segment continues
- * roughly the same direction the wrist-to-knuckle line already points, making the wrist a good
- * zero-bend reference for their own first joint. The thumb leads with the index finger's own
- * knuckle (5) instead: its metacarpal sits at a real anatomical angle off the wrist even when
- * fully relaxed (thumb opposition), so measuring its first joint's bend the same wrist-relative
- * way reads a large, curl-unrelated angle on every frame, curled or not. The index knuckle sits
- * roughly where a relaxed thumb's own metacarpal already points across the palm, closer to
- * collinear with it at rest than the wrist ever is.
+ * Each finger's landmark indices in MediaPipe's 21-point hand topology, wrist first: the point
+ * `applyHandPose`'s three joints (from the palm outward) are measured between. The thumb's own
+ * first entry (the wrist) is unused; see `cameraHandLandmarksToPose`'s own doc comment for why
+ * that joint is not driven from these landmarks at all.
  */
 const FINGER_LANDMARK_INDEX = {
-  thumb: [5, 1, 2, 3, 4],
+  thumb: [0, 1, 2, 3, 4],
   index: [0, 5, 6, 7, 8],
   middle: [0, 9, 10, 11, 12],
   ring: [0, 13, 14, 15, 16],
@@ -59,7 +53,15 @@ const jointBendAngle = (
 
 /**
  * Read one detected hand's 21 landmarks into the same per-joint curl angles a hand pose preset
- * carries.
+ * carries. The thumb's own first joint (its CMC) is always read as straight, never driven by the
+ * detected geometry: unlike every other finger joint, the CMC's real motion is opposition, not a
+ * simple hinge, so `jointBendAngle`'s unsigned magnitude, composed around a single fixed axis on
+ * top of that joint's own already heavily tilted rest pose (see `THUMB_CMC_JOINT_INDEX`'s own
+ * doc comment in `handPose.ts`), swings it to wherever that fixed axis happens to point rather
+ * than toward the palm. Confirmed against a live feed with two different reference landmarks for
+ * the "before" point that measures it, both sending the thumb to the wrong side of the hand
+ * rather than merely curling it the wrong way; the joint's other two bones behave like the four
+ * straight fingers (their own rest carries no comparable tilt) and are driven normally.
  * @param landmarks The 21 landmarks for one detected hand, in MediaPipe's own point order
  * @returns The per-finger joint curl angles, ready for `applyHandPose`
  */
@@ -68,9 +70,10 @@ export const cameraHandLandmarksToPose = (landmarks: CameraHandLandmark[]): Hand
     const [a, b, c, d, e] = indices.map((index) => landmarks[index])
     return [jointBendAngle(a, b, c), jointBendAngle(b, c, d), jointBendAngle(c, d, e)]
   }
+  const [, thumbSecondJointAngle, thumbThirdJointAngle] = fingerAngles(FINGER_LANDMARK_INDEX.thumb)
 
   return {
-    thumb: fingerAngles(FINGER_LANDMARK_INDEX.thumb),
+    thumb: [0, thumbSecondJointAngle, thumbThirdJointAngle],
     index: fingerAngles(FINGER_LANDMARK_INDEX.index),
     middle: fingerAngles(FINGER_LANDMARK_INDEX.middle),
     ring: fingerAngles(FINGER_LANDMARK_INDEX.ring),
