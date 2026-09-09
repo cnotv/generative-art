@@ -47,6 +47,23 @@ if (currentActions['move-forward']) {
 destroyControls()
 ```
 
+### Giving a modified key its own action
+
+A `keyboard` mapping key is normally just `event.key` (`'ArrowLeft'`, `'w'`, `' '`). Prefixing
+one with `Shift+` (`'Shift+ArrowLeft'`) binds that key held with Shift to its own action,
+without disturbing the bare key's own binding:
+
+```typescript
+keyboard: {
+  ArrowLeft: 'next-frame',
+  'Shift+ArrowLeft': 'extend-selection'
+}
+```
+
+Only Shift is supported this way, and only when the mapping actually defines the `Shift+`
+variant — a bare-key mapping with no such entry still fires its own action when the key is
+pressed with Shift held, exactly as before.
+
 ## FauxPad (Virtual Joystick)
 
 A virtual touch controller that interprets touch/mouse input into directional actions.

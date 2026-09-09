@@ -94,7 +94,9 @@ export const RIG_TIMELINE_KEYBOARD_MAPPING: ControlMapping = {
   keyboard: {
     ' ': 'addKeyframe',
     ArrowLeft: 'nextFrame',
-    ArrowRight: 'previousFrame'
+    ArrowRight: 'previousFrame',
+    'Shift+ArrowLeft': 'extendSelectionNext',
+    'Shift+ArrowRight': 'extendSelectionPrevious'
   },
   gamepad: {
     button2: 'addKeyframe',

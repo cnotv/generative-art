@@ -46,8 +46,8 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   /** Rebuild the preview clip and persist once, after a burst of `captureKeyframeSilently` calls. */
   const commitRecordedKeyframes = (): void => rigKeyframes.commitKeyframes()
 
-  /** Paste the copied pose onto the current frame and apply it to the live rig. */
-  const pasteKeyframe = (): void => rigKeyframes.pasteKeyframe(rigModel.bones.value)
+  /** Paste the copied pose(s) onto the current frame and apply the landing one to the live rig. */
+  const pasteKeyframes = (): void => rigKeyframes.pasteKeyframes(rigModel.bones.value)
 
   /** Load a session recording back onto the timeline, the same as picking a bundled preset. */
   const applyRecordedPreset = (index: number): void => {
@@ -73,7 +73,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     addKeyframe,
     captureKeyframeSilently,
     commitRecordedKeyframes,
-    pasteKeyframe,
+    pasteKeyframes,
     resetAutosave,
     applyRecordedPreset
   }

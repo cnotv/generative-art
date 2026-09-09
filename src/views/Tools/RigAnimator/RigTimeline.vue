@@ -18,6 +18,7 @@ import { Select } from '@/components/ui/select'
 import { POSES_FILE_ACCEPT } from './config'
 import { RIG_PRESETS } from './presets'
 import { computeTimelineTicks } from './timelineTicks'
+import { computeSelectionRange, keyframesInRange } from './frameSelection'
 import { HAND_POSE_PRESETS } from '@webgamekit/rig'
 import type { RecordedPreset } from './useRigRecordedPresets'
 
@@ -37,11 +38,11 @@ const emit = defineEmits<{
   'update:frame': [frame: number]
   'update:frameMax': [frameMax: number]
   addKeyframe: []
-  deleteKeyframe: []
-  copyKeyframe: []
-  pasteKeyframe: []
+  deleteKeyframes: [frames: number[]]
+  copyKeyframes: [frames: number[]]
+  pasteKeyframes: []
   selectHandPose: [presetName: string]
-  moveKeyframe: [oldFrame: number, newFrame: number]
+  moveKeyframes: [frames: number[], deltaFrames: number]
   togglePlayback: []
   importPoses: [url: string]
   exportGlb: []
@@ -79,22 +80,70 @@ const frameFromClientX = (clientX: number): number => {
   return Math.round(ratio * props.frameMax)
 }
 
-type DragKind = 'scrub' | 'keyframe' | 'resize'
+/** The two ends of a drag-select, shift-click or shift-arrow range selection; either being
+ * `null` means nothing is selected. `anchor` is whichever end stays put while `active` moves. */
+const selectionAnchorFrame = ref<number | null>(null)
+const selectionActiveFrame = ref<number | null>(null)
+const selectionRange = computed(() =>
+  computeSelectionRange(selectionAnchorFrame.value, selectionActiveFrame.value)
+)
+const selectedKeyframeFrames = computed(() =>
+  keyframesInRange(selectionRange.value, props.keyframeFrames)
+)
+/** What Copy and Delete act on: the current multi-select when it covers any real keyframes,
+ * otherwise just the one at the current frame, if there is one. */
+const targetFrames = computed(() =>
+  selectedKeyframeFrames.value.length > 0
+    ? selectedKeyframeFrames.value
+    : hasKeyframeAtCurrentFrame.value
+      ? [props.frame]
+      : []
+)
+
+const clearSelection = (): void => {
+  selectionAnchorFrame.value = null
+  selectionActiveFrame.value = null
+}
+
+/** Extend the selection by one frame via Shift+Arrow, starting a new one-frame selection from
+ * the current playhead if nothing is selected yet. */
+const extendSelectionByFrames = (deltaFrames: number): void => {
+  selectionAnchorFrame.value ??= props.frame
+  const next = (selectionActiveFrame.value ?? props.frame) + deltaFrames
+  selectionActiveFrame.value = Math.min(Math.max(next, 0), props.frameMax)
+}
+
+defineExpose({ extendSelectionByFrames })
+
+type DragKind = 'select' | 'keyframe' | 'resize'
 let dragKind: DragKind | null = null
+/** Whether the current 'select' drag actually moved the pointer: a plain click never does, and
+ * releases as a seek-and-clear instead of freezing a (zero-width) selection. */
+let selectDragMoved = false
 let draggingKeyframeFrame = 0
+/** Every frame being dragged along with the marker the pointer actually grabbed: just that one
+ * marker normally, or the whole active selection when the drag started on a selected marker. */
+let draggingSelectionFrames: number[] = []
 let resizeStartClientX = 0
 let resizeStartFrameMax = 0
 
 const onWindowPointerMove = (event: PointerEvent): void => {
-  if (dragKind === 'scrub') {
-    emit('update:frame', frameFromClientX(event.clientX))
+  if (dragKind === 'select') {
+    const frame = frameFromClientX(event.clientX)
+    if (frame !== selectionActiveFrame.value) selectDragMoved = true
+    selectionActiveFrame.value = frame
     return
   }
   if (dragKind === 'keyframe') {
-    const newFrame = frameFromClientX(event.clientX)
-    if (newFrame !== draggingKeyframeFrame) {
-      emit('moveKeyframe', draggingKeyframeFrame, newFrame)
-      draggingKeyframeFrame = newFrame
+    const rawNewFrame = frameFromClientX(event.clientX)
+    // Clamp so the block's own earliest member never drags past 0, even if the marker the
+    // pointer actually grabbed still has room to move further left.
+    const minMemberFrame = Math.min(...draggingSelectionFrames)
+    const deltaFrames = Math.max(rawNewFrame - draggingKeyframeFrame, -minMemberFrame)
+    if (deltaFrames !== 0) {
+      emit('moveKeyframes', draggingSelectionFrames, deltaFrames)
+      draggingSelectionFrames = draggingSelectionFrames.map((frame) => frame + deltaFrames)
+      draggingKeyframeFrame += deltaFrames
     }
     return
   }
@@ -108,7 +157,14 @@ const onWindowPointerMove = (event: PointerEvent): void => {
 }
 
 const stopDrag = (): void => {
+  // A 'select' drag that never actually moved was just a plain click: seek there, the same as
+  // every click always has, and drop the zero-width selection it would otherwise leave behind.
+  if (dragKind === 'select' && !selectDragMoved) {
+    if (selectionActiveFrame.value !== null) emit('update:frame', selectionActiveFrame.value)
+    clearSelection()
+  }
   dragKind = null
+  selectDragMoved = false
   window.removeEventListener('pointermove', onWindowPointerMove)
   window.removeEventListener('pointerup', stopDrag)
 }
@@ -119,15 +175,36 @@ const startDrag = (kind: DragKind): void => {
   window.addEventListener('pointerup', stopDrag)
 }
 
-/** Click or drag anywhere on the track to scrub the playhead to that frame. */
+/**
+ * Press and drag anywhere on the ruler or track to grow a range selection live from here to
+ * wherever the pointer ends up; releasing without ever moving is a plain click instead, which
+ * seeks the playhead there and clears any existing selection — see `stopDrag`. Holding Shift
+ * extends the existing selection (or, if none is active yet, one anchored at the current
+ * playhead frame) to the clicked frame instead, never seeking and never clearing.
+ */
 const onTrackPointerDown = (event: PointerEvent): void => {
-  emit('update:frame', frameFromClientX(event.clientX))
-  startDrag('scrub')
+  const frame = frameFromClientX(event.clientX)
+  if (event.shiftKey) {
+    selectionAnchorFrame.value ??= props.frame
+    selectionActiveFrame.value = frame
+    selectDragMoved = true
+    startDrag('select')
+    return
+  }
+  selectionAnchorFrame.value = frame
+  selectionActiveFrame.value = frame
+  selectDragMoved = false
+  startDrag('select')
 }
 
-/** Click a keyframe marker to jump there; drag it to reposition it. */
+/** Click a keyframe marker to jump there; drag it to reposition it, taking the rest of the
+ * active selection along when the grabbed marker is part of it. Grabbing one outside the
+ * current selection drops that selection first, the same as it always dragged alone. */
 const onKeyframePointerDown = (frame: number, event: PointerEvent): void => {
+  const isPartOfSelection = selectedKeyframeFrames.value.includes(frame)
+  if (!isPartOfSelection) clearSelection()
   draggingKeyframeFrame = frame
+  draggingSelectionFrames = isPartOfSelection ? selectedKeyframeFrames.value : [frame]
   emit('update:frame', frame)
   startDrag('keyframe')
   event.stopPropagation()
@@ -161,25 +238,25 @@ onUnmounted(stopDrag)
     </IconButton>
     <IconButton
       size="sm"
-      title="Delete the keyframe at the current frame"
-      :disabled="!hasKeyframeAtCurrentFrame"
-      @click="emit('deleteKeyframe')"
+      title="Delete the selected keyframes, or the one at the current frame"
+      :disabled="targetFrames.length === 0"
+      @click="emit('deleteKeyframes', targetFrames)"
     >
       <Trash2 />
     </IconButton>
     <IconButton
       size="sm"
-      title="Copy the pose at the current frame"
-      :disabled="!hasKeyframeAtCurrentFrame"
-      @click="emit('copyKeyframe')"
+      title="Copy the selected keyframes, or the one at the current frame"
+      :disabled="targetFrames.length === 0"
+      @click="emit('copyKeyframes', targetFrames)"
     >
       <Copy />
     </IconButton>
     <IconButton
       size="sm"
-      title="Paste the copied pose at the current frame"
+      title="Paste the copied keyframe(s) starting at the current frame"
       :disabled="!hasClipboard"
-      @click="emit('pasteKeyframe')"
+      @click="emit('pasteKeyframes')"
     >
       <ClipboardPaste />
     </IconButton>
@@ -204,12 +281,23 @@ onUnmounted(stopDrag)
         </span>
       </div>
       <div ref="trackElement" class="rig-timeline__track" @pointerdown="onTrackPointerDown">
+        <div
+          v-if="selectionRange"
+          class="rig-timeline__selection"
+          :style="{
+            left: `${percentFor(selectionRange.start)}%`,
+            width: `${percentFor(selectionRange.end) - percentFor(selectionRange.start)}%`
+          }"
+        />
         <button
           v-for="keyframeFrame in keyframeFrames"
           :key="keyframeFrame"
           type="button"
           class="rig-timeline__keyframe"
-          :class="{ 'rig-timeline__keyframe--current': keyframeFrame === frame }"
+          :class="{
+            'rig-timeline__keyframe--current': keyframeFrame === frame,
+            'rig-timeline__keyframe--selected': selectedKeyframeFrames.includes(keyframeFrame)
+          }"
           :style="{ left: `${percentFor(keyframeFrame)}%` }"
           :title="`Pose @ frame ${keyframeFrame}`"
           @pointerdown="onKeyframePointerDown(keyframeFrame, $event)"
@@ -320,6 +408,17 @@ onUnmounted(stopDrag)
   cursor: pointer;
 }
 
+/* Painted first in the track, so every keyframe marker, the playhead and the resize handle —
+   all later siblings in the same stacking context — sit visibly on top of it. */
+.rig-timeline__selection {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--color-perf-bad);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
 .rig-timeline__keyframe {
   position: absolute;
   top: 50%;
@@ -339,6 +438,10 @@ onUnmounted(stopDrag)
 
 .rig-timeline__keyframe--current {
   background: var(--color-perf-bad);
+}
+
+.rig-timeline__keyframe--selected {
+  box-shadow: 0 0 0 2px var(--color-perf-bad);
 }
 
 .rig-timeline__playhead {

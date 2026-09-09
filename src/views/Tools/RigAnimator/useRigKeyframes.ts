@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { poseCapture, poseBuildClip, type PoseKeyframe } from '@webgamekit/rig'
 import { DEFAULT_FRAME_MAX } from './config'
 import { clampFrameMax } from './frameRange'
-import { moveKeyframeInList } from './keyframeOps'
+import { moveKeyframesInList } from './keyframeOps'
 import { saveRigAutosave } from './autosave'
 import { useRigKeyframeIO } from './useRigKeyframeIO'
 import { useRigKeyframeClipboard } from './useRigKeyframeClipboard'
@@ -92,16 +92,21 @@ export const useRigKeyframes = (
     commitKeyframes()
   }
 
-  /** Remove the keyframe at the panel's current frame, if one exists there. */
-  const deleteKeyframe = (): void => {
-    keyframes.value = keyframes.value.filter((keyframe) => keyframe.frame !== config.value.frame)
+  /** Remove every keyframe in `frames` at once — a single current-frame delete is just a
+   * one-frame list, and a multi-select delete is every frame the selection covered. One
+   * rebuild and persist for the whole batch rather than one per frame. */
+  const deleteKeyframesAt = (frames: number[]): void => {
+    if (frames.length === 0) return
+    const framesToDelete = new Set(frames)
+    keyframes.value = keyframes.value.filter((keyframe) => !framesToDelete.has(keyframe.frame))
     rebuildPreviewClip()
     persistAutosave()
   }
 
-  /** Reposition a keyframe dragged on the rig timeline, see `moveKeyframeInList`. */
-  const moveKeyframe = (oldFrame: number, newFrame: number): void => {
-    const next = moveKeyframeInList(keyframes.value, oldFrame, newFrame)
+  /** Drag every keyframe in `frames` by the same delta, see `moveKeyframesInList`. A plain
+   * single-keyframe drag is just a one-frame list. */
+  const moveKeyframesBy = (frames: number[], deltaFrames: number): void => {
+    const next = moveKeyframesInList(keyframes.value, frames, deltaFrames)
     if (next === keyframes.value) return
     keyframes.value = next
     rebuildPreviewClip()
@@ -137,8 +142,8 @@ export const useRigKeyframes = (
     addKeyframe,
     captureKeyframeSilently,
     commitKeyframes,
-    deleteKeyframe,
-    moveKeyframe,
+    deleteKeyframesAt,
+    moveKeyframesBy,
     ...playback,
     ...io,
     ...clipboard

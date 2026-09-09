@@ -1,23 +1,28 @@
 import type { PoseKeyframe } from '@webgamekit/rig'
 
 /**
- * Reposition a keyframe from one frame to another within a list, replacing whatever keyframe
- * already sat at the target frame, same as dropping a new one there would.
+ * Shift every keyframe in `frames` by the same `deltaFrames`, preserving their spacing — a
+ * single dragged keyframe is just a one-frame list, and a multi-select drag moves the whole
+ * block together the same way. Replaces whatever keyframe already sat at a landing frame, the
+ * same as dropping a new one there would.
  * @param keyframes The current keyframe list
- * @param oldFrame The frame the dragged keyframe currently sits at
- * @param newFrame Where the drag wants it to land
+ * @param frames The frames of every keyframe being dragged
+ * @param deltaFrames How far the block is moving, positive or negative
  * @returns The updated list, or the same list unchanged when there was nothing to move
  */
-export const moveKeyframeInList = (
+export const moveKeyframesInList = (
   keyframes: PoseKeyframe[],
-  oldFrame: number,
-  newFrame: number
+  frames: number[],
+  deltaFrames: number
 ): PoseKeyframe[] => {
-  if (oldFrame === newFrame) return keyframes
-  const moving = keyframes.find((keyframe) => keyframe.frame === oldFrame)
-  if (!moving) return keyframes
-  const withoutMovedOrTarget = keyframes.filter(
-    (keyframe) => keyframe.frame !== oldFrame && keyframe.frame !== newFrame
+  if (deltaFrames === 0 || frames.length === 0) return keyframes
+  const movingFrames = new Set(frames)
+  const moving = keyframes.filter((keyframe) => movingFrames.has(keyframe.frame))
+  if (moving.length === 0) return keyframes
+  const moved = moving.map((keyframe) => ({ ...keyframe, frame: keyframe.frame + deltaFrames }))
+  const movedFrames = new Set(moved.map((keyframe) => keyframe.frame))
+  const untouched = keyframes.filter(
+    (keyframe) => !movingFrames.has(keyframe.frame) && !movedFrames.has(keyframe.frame)
   )
-  return [...withoutMovedOrTarget, { frame: newFrame, pose: moving.pose }]
+  return [...untouched, ...moved]
 }

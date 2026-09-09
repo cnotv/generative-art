@@ -95,6 +95,7 @@ const cameraPoseMappingOptions = computed(() => ({
 const rig = useRigAnimator(reactiveConfig)
 const showCameraCapture = ref(false)
 const modelFileInput = ref<HTMLInputElement | null>(null)
+const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
 const motionRecording = useRigMotionRecording({
   fps: () => reactiveConfig.value.fps,
   currentFrame: () => reactiveConfig.value.frame,
@@ -430,6 +431,11 @@ onMounted(async () => {
       if (action === 'addKeyframe') rig.addKeyframe()
       else if (action === 'nextFrame') stepFrame(1)
       else if (action === 'previousFrame') stepFrame(-1)
+      else if (action === 'extendSelectionNext')
+        rigTimelineReference.value?.extendSelectionByFrames(1)
+      else if (action === 'extendSelectionPrevious') {
+        rigTimelineReference.value?.extendSelectionByFrames(-1)
+      }
     }
   })
 })
@@ -470,6 +476,7 @@ onUnmounted(() => {
     </IconButton>
   </div>
   <RigTimeline
+    ref="rigTimelineReference"
     :frame="reactiveConfig.frame"
     :frame-max="rig.frameMax.value"
     :keyframe-frames="rig.keyframeFrames.value"
@@ -480,11 +487,11 @@ onUnmounted(() => {
     @update:frame="(value) => (reactiveConfig.frame = value)"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
-    @delete-keyframe="rig.deleteKeyframe"
-    @copy-keyframe="rig.copyKeyframe"
-    @paste-keyframe="rig.pasteKeyframe"
+    @delete-keyframes="rig.deleteKeyframesAt"
+    @copy-keyframes="rig.copyKeyframes"
+    @paste-keyframes="rig.pasteKeyframes"
     @select-hand-pose="rig.applyHandPosePreset"
-    @move-keyframe="rig.moveKeyframe"
+    @move-keyframes="rig.moveKeyframesBy"
     @toggle-playback="handleTogglePlayback"
     @import-poses="(url) => (reactiveConfig.poses = url)"
     @export-glb="rig.exportGlb"

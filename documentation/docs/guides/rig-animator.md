@@ -33,7 +33,9 @@ exist, so two poses are already a movement.
   into a two-bone IK solve, a one-bone aim, a pole-hint re-aim, or (for the skeleton root only)
   a plain translate, and resets whichever bones a drag rotated back to rest
 - `src/views/Tools/RigAnimator/frameRange.ts`, `keyframeOps.ts`: pure helpers for resizing the
-  timeline's frame range and repositioning a dragged keyframe
+  timeline's frame range and repositioning one or many dragged keyframes together
+- `src/views/Tools/RigAnimator/frameSelection.ts`: the drag-select / Shift+click / Shift+arrow
+  range selection's pure logic — normalizing the two endpoints and which keyframes fall inside
 - `src/views/Tools/RigAnimator/autosave.ts`: reading and writing the autosaved edit in
   `localStorage`
 - `src/views/Tools/RigAnimator/presets.ts`: the bundled example animations, and sampling one
@@ -66,7 +68,8 @@ exist, so two poses are already a movement.
   stream into keyframes automatically while Record Motion is on
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
-- `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting a keyframe's pose
+- `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting one keyframe's
+  pose or a whole selected block of them, offset-relative so paste can drop it anywhere
 - `src/views/Tools/RigAnimator/useRigBoneMarkerVisibility.ts`: whether the rig's bone markers
   render, re-applied whenever the markers are recreated
 - `src/views/Tools/RigAnimator/CameraPoseCapture.vue`: the capture dialog (mirrored camera
@@ -181,22 +184,48 @@ row, split into parts left to right.
 
 ![The rig timeline: Play/Add/Delete/Copy/Paste, the ruler and draggable/resizable track with its keyframe markers, a bundled preset picker, and icon-only import/export/reset](/img/animation/rig-timeline.webp)
 
-- **Play/Pause**, **Add keyframe** and **Delete keyframe** act on the current frame.
-- **Copy** and **Paste** copy the pose at the current frame onto a clipboard and paste it onto
-  whatever frame you scrub to afterward, replacing any keyframe already there. Paste applies the
-  pose to the live rig immediately, the same as scrubbing onto an existing keyframe would.
+- **Play/Pause** and **Add keyframe** act on the current frame.
+- **Delete** and **Copy** act on the current selection when one covers any keyframes (see
+  below), or on the keyframe at the current frame otherwise. **Paste** drops the copied
+  keyframe(s) starting at the current frame, replacing any keyframe already there, and applies
+  the pose landing on the current frame to the live rig immediately, the same as scrubbing onto
+  an existing keyframe would.
 - **The ruler**, above the track, marks frames at whatever round interval keeps roughly fifteen
   ticks readable across the current range (every 10 frames at the default 150-frame range,
-  further apart for a longer one). Clicking or dragging the ruler scrubs the playhead exactly
-  like the track below it does.
-- **The track** is the frame axis. Click or drag anywhere on it to scrub the playhead;
-  interpolation between whichever keyframes bracket that instant is what makes two poses ten
-  frames apart already read as a movement. Each keyframe shows as a small diamond you can drag
-  to reposition it, dropping onto an already-occupied frame replaces whatever sat there, same
-  as **Add Keyframe** does. A handle at the track's right edge extends or shrinks the visible
-  frame range; it never shrinks past the current frame or the furthest keyframe.
+  further apart for a longer one). Clicking or dragging the ruler behaves exactly like the track
+  below it does — see the next two bullets.
+- **The track** is the frame axis. A plain click scrubs the playhead there, same as it always
+  has; click-and-drag instead grows a range selection live from where the drag started to
+  wherever it ends, released, shaded across the track behind the keyframe markers so they stay
+  visible on top of it — see **Selecting a range of frames** below. Each keyframe still shows as
+  a small diamond you can drag to reposition it, dropping onto an already-occupied frame
+  replaces whatever sat there, same as **Add Keyframe** does; dragging one that is part of the
+  current selection instead moves the whole selected block together, preserving its spacing. A
+  handle at the track's right edge extends or shrinks the visible frame range; it never shrinks
+  past the current frame or the furthest keyframe.
 - **Presets**, **Import**, **Export JSON**, **Export GLB** and **Reset** sit at the right, the
   first as a labelled dropdown and the rest as plain icons: see the next two sections.
+
+### Selecting a range of frames
+
+Copy, Delete and dragging a keyframe all act on more than one frame at once once a selection is
+active, shown as a translucent red band across the track — the same red as the playhead —
+sitting behind the keyframe markers rather than covering them. Three ways to set or extend it:
+
+- **Click and drag** on the ruler or the track: the band grows live from the frame the drag
+  started on to wherever the pointer currently is, and freezes there on release. Releasing
+  without ever having moved the pointer is just a plain click instead — it seeks the playhead
+  there and drops any existing selection, exactly like a click always did before selection
+  existed.
+- **Shift+click** a frame to extend the existing selection to it (or, with nothing selected yet,
+  to start one running from the current playhead frame to the clicked one). This never seeks the
+  playhead and never clears the selection, even without a drag.
+- **Shift+Left Arrow / Shift+Right Arrow** extends the selection by one frame at a time in either
+  direction, starting from the current playhead frame if nothing is selected yet — see **Frame
+  shortcuts** below.
+
+A keyframe inside the active selection gets a highlighted ring so it is clear which ones Copy,
+Delete or a block drag will actually touch.
 
 ## Hand pose presets
 
@@ -455,7 +484,9 @@ detected hand.
 
 **Space** (keyboard) or the gamepad's left face button adds a keyframe at the current frame, the
 same as the timeline's own **Add Keyframe** button. **Left Arrow** or the gamepad's D-pad left
-steps to the next frame; **Right Arrow** or D-pad right steps to the previous one. These are
+steps to the next frame; **Right Arrow** or D-pad right steps to the previous one. **Shift+Left
+Arrow** and **Shift+Right Arrow** extend the frame selection by one frame in that same direction
+instead of stepping the playhead — see **Selecting a range of frames** above. These are
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
 

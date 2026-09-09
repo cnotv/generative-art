@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import type { PoseKeyframe } from '@webgamekit/rig'
-import { moveKeyframeInList } from './keyframeOps'
+import { moveKeyframesInList } from './keyframeOps'
 
 const pose = (marker: string): PoseKeyframe['pose'] => ({
   [marker]: { x: 0, y: 0, z: 0, w: 1 }
 })
 
-describe('moveKeyframeInList', () => {
-  it('repositions the keyframe at oldFrame to newFrame, keeping its pose', () => {
+describe('moveKeyframesInList', () => {
+  it('repositions a single dragged keyframe by the given delta, keeping its pose', () => {
     const keyframes: PoseKeyframe[] = [
       { frame: 0, pose: pose('rest') },
       { frame: 10, pose: pose('reach') }
     ]
 
-    const result = moveKeyframeInList(keyframes, 10, 20)
+    const result = moveKeyframesInList(keyframes, [10], 10)
 
     expect(result).toEqual([
       { frame: 0, pose: pose('rest') },
@@ -21,30 +21,43 @@ describe('moveKeyframeInList', () => {
     ])
   })
 
-  it('overwrites whatever keyframe already sat at the target frame', () => {
+  it('shifts every selected frame by the same delta, preserving their spacing', () => {
     const keyframes: PoseKeyframe[] = [
       { frame: 0, pose: pose('rest') },
-      { frame: 10, pose: pose('reach') },
-      { frame: 20, pose: pose('stale') }
+      { frame: 5, pose: pose('mid') },
+      { frame: 10, pose: pose('reach') }
     ]
 
-    const result = moveKeyframeInList(keyframes, 10, 20)
+    const result = moveKeyframesInList(keyframes, [5, 10], 3)
 
     expect(result).toEqual([
       { frame: 0, pose: pose('rest') },
-      { frame: 20, pose: pose('reach') }
+      { frame: 8, pose: pose('mid') },
+      { frame: 13, pose: pose('reach') }
     ])
   })
 
-  it('returns the same list unchanged when oldFrame equals newFrame', () => {
-    const keyframes: PoseKeyframe[] = [{ frame: 5, pose: pose('rest') }]
+  it('overwrites whatever keyframe already sat at a landing frame', () => {
+    const keyframes: PoseKeyframe[] = [
+      { frame: 5, pose: pose('mid') },
+      { frame: 8, pose: pose('stale') }
+    ]
 
-    expect(moveKeyframeInList(keyframes, 5, 5)).toBe(keyframes)
+    const result = moveKeyframesInList(keyframes, [5], 3)
+
+    expect(result).toEqual([{ frame: 8, pose: pose('mid') }])
   })
 
-  it('returns the same list unchanged when there is nothing at oldFrame', () => {
+  it('returns the same list unchanged for a zero delta or an empty selection', () => {
     const keyframes: PoseKeyframe[] = [{ frame: 5, pose: pose('rest') }]
 
-    expect(moveKeyframeInList(keyframes, 99, 10)).toBe(keyframes)
+    expect(moveKeyframesInList(keyframes, [5], 0)).toBe(keyframes)
+    expect(moveKeyframesInList(keyframes, [], 3)).toBe(keyframes)
+  })
+
+  it('returns the same list unchanged when none of the frames exist', () => {
+    const keyframes: PoseKeyframe[] = [{ frame: 5, pose: pose('rest') }]
+
+    expect(moveKeyframesInList(keyframes, [99], 3)).toBe(keyframes)
   })
 })
