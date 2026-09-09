@@ -6,7 +6,8 @@ import {
   CAMERA_REACH_MULTIPLIER_RANGE,
   CAMERA_MAX_JUMP_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
-  ENCLOSURE_OPACITY_RANGE
+  ENCLOSURE_OPACITY_RANGE,
+  ENCLOSURE_SIZE_RANGE
 } from './config'
 
 /** Rebuilt whenever the bone list or the auto-rig availability changes, since those decide
@@ -77,6 +78,7 @@ export const buildRigAnimatorSchema = (
         marbleTextures: { checkbox: true, label: 'Physics: Marble Textures' },
         respawnMarbles: { callback: 'respawnMarbles', label: 'Physics: Reset Marbles' },
         showEnclosure: { checkbox: true, label: 'Physics: Enclosing Walls' },
+        enclosureSize: { ...ENCLOSURE_SIZE_RANGE, label: 'Physics: Wall Size' },
         enclosureOpacity: { ...ENCLOSURE_OPACITY_RANGE, label: 'Physics: Wall Opacity' }
       }
     : {}),

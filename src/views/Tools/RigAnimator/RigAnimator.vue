@@ -14,7 +14,7 @@ import {
   type HandSide,
   type HandPoseDefinition
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -35,6 +35,7 @@ import {
   CAMERA_LANDMARK_MAX_JUMP_METERS,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
+  DEFAULT_ENCLOSURE_SIZE_FRACTION,
   DEFAULT_ENCLOSURE_OPACITY
 } from './config'
 import { buildRigAnimatorSchema } from './panelSchema'
@@ -88,6 +89,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   marbleSpawnInterval: DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   marbleTextures: true,
   showEnclosure: true,
+  enclosureSize: DEFAULT_ENCLOSURE_SIZE_FRACTION,
   enclosureOpacity: DEFAULT_ENCLOSURE_OPACITY
 })
 
@@ -381,7 +383,11 @@ watch(
   () => rig.updateMarbleFlow()
 )
 watch(
-  () => [reactiveConfig.value.showEnclosure, reactiveConfig.value.enclosureOpacity],
+  () => [
+    reactiveConfig.value.showEnclosure,
+    reactiveConfig.value.enclosureSize,
+    reactiveConfig.value.enclosureOpacity
+  ],
   () => rig.rebuildEnclosure()
 )
 
@@ -528,6 +534,15 @@ onUnmounted(() => {
       @click="togglePhysics"
     >
       <Lightbulb />
+    </IconButton>
+    <IconButton
+      v-if="reactiveConfig.physicsEnabled"
+      size="sm"
+      variant="outline"
+      title="Spawn Marble"
+      @click="rig.spawnMarble"
+    >
+      <Circle />
     </IconButton>
   </div>
   <RigTimeline

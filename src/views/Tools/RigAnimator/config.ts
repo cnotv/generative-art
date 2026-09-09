@@ -6,7 +6,7 @@ import type { ControlMapping } from '@webgamekit/controls'
 export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xf5f0e8 },
   camera: { position: [0, 1.6, 4] as CoordinateTuple, fov: 50 },
-  ground: { size: 40, color: 0xcfe8d8 },
+  ground: false,
   sky: false,
   lights: {
     ambient: { color: 0xffffff, intensity: 2.2 },
@@ -67,7 +67,7 @@ export const BONE_COLLIDER_FRICTION = 0.6
 
 /** Frames between one marble dropping and the next, same pattern as the Timeline view's
  * ball-spawn action, so the flow can be walked into rather than landing as one dump. */
-export const DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES = 30
+export const DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES = 1
 export const MARBLE_SPAWN_INTERVAL_RANGE = { min: 1, max: 200, step: 1 }
 /** Marble radius range, as fractions of the rig's spread, so marbles scale with any model. */
 export const MARBLE_RADIUS_FRACTION_RANGE: [number, number] = [0.014, 0.028]
@@ -98,7 +98,8 @@ export const MARBLE_GRAVITY_REFERENCE_SPREAD = 2
 
 /** Inner width of the enclosure, as a fraction of the rig's spread. Sized to the narrow drop
  * column rather than the rig's full spread, since marbles now flow through one point. */
-export const ENCLOSURE_SIZE_FRACTION = 0.55
+export const DEFAULT_ENCLOSURE_SIZE_FRACTION = 0.55
+export const ENCLOSURE_SIZE_RANGE = { min: 0.55, max: 3, step: 0.05 }
 export const ENCLOSURE_HEIGHT_FRACTION = 1.1
 export const ENCLOSURE_THICKNESS_FRACTION = 0.04
 export const ENCLOSURE_COLOR = 0xc9d4e4
@@ -107,8 +108,9 @@ export const DEFAULT_ENCLOSURE_OPACITY = 0.25
 
 /** How far above the rig's feet the lamp's pivot sits, as a fraction of the rig's spread. */
 export const LAMP_ANCHOR_HEIGHT_FRACTION = 0.9
-/** How far to the side of the rig the pivot sits, clear of a resting T-pose hand. */
-export const LAMP_ANCHOR_SIDE_OFFSET_FRACTION = 0.6
+/** How far to the side of the rig the pivot sits: inside the enclosure, between the rig and the
+ * wall (the wall's inner face is ENCLOSURE_SIZE_FRACTION / 2 out), not past it. */
+export const LAMP_ANCHOR_SIDE_OFFSET_FRACTION = 0.15
 /** Length of the rigid arm between the pivot and the lamp, as a fraction of the rig's spread. */
 export const LAMP_ARM_LENGTH_FRACTION = 0.4
 export const LAMP_RADIUS_FRACTION = 0.09

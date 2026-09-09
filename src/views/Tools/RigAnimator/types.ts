@@ -22,5 +22,6 @@ export interface RigAnimatorConfig {
   marbleSpawnInterval: number
   marbleTextures: boolean
   showEnclosure: boolean
+  enclosureSize: number
   enclosureOpacity: number
 }

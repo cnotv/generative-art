@@ -106,7 +106,8 @@ a rigged glTF character), the bone list appears immediately. The camera re-frame
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
 typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
 
-A third docked button, Physics, sits beside these two; it is covered in its own section below.
+A third docked button, Physics, sits beside these two, and a fourth, Spawn Marble, joins it once
+physics is on; both are covered in their own section below.
 
 ![Upload Model and Capture Pose from Camera docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
@@ -573,8 +574,10 @@ own **Physics: Simulate** checkbox, the same toggle either way.
 ![Marbles falling around the rig, several caught on its head, chest and arm, inside the pale enclosing walls](/img/animation/rig-physics-marbles.webp)
 
 Turning physics on does not by itself drop anything: it builds the bone capsules, the enclosure
-and a lamp hung beside the rig on a rigid pivot arm, so there is something to swing a limb into
-immediately. Marbles are a separate choice, below.
+and a lamp hung between the rig and the wall on a rigid pivot arm, so there is something to
+swing a limb into immediately. Marbles are a separate choice, below. A second docked button,
+Spawn Marble, appears next to Physics once it is on, for dropping one marble on demand without
+waiting on the flow.
 
 Every bone segment, meaning a bone and one of its bone children, gets a capsule sized to that
 segment's own length and to a radius scaled off the rig's spread, so the same settings hold for
@@ -605,13 +608,13 @@ The rest of the settings appear once the toggle is on:
   Turning it off leaves the marble a flat pastel colour instead, which is cheaper to draw and
   keeps a dense flow usable.
 - **Enclosing Walls**, on by default, puts four walls around the drop point so the marbles stay
-  in shot instead of rolling off. They are sized to the narrow column the flow falls through
-  rather than the rig's full spread, so they frame the stream without dwarfing the rig. Each
-  run is a wall thickness longer than the space it encloses, so perpendicular walls overlap
-  inside each corner rather than leaving a gap to squeeze through. A floor collider spans the
-  enclosure whether or not the walls are drawn: the scene's own ground is a fixed forty units
-  across, which a rig authored in centimetres overruns, and marbles landing past it would fall
-  through the world.
+  in shot instead of rolling off. Each run is a wall thickness longer than the space it
+  encloses, so perpendicular walls overlap inside each corner rather than leaving a gap to
+  squeeze through. A floor collider spans the enclosure whether or not the walls are drawn: the
+  view has no ground plane of its own, so without it a marble would fall through the world.
+- **Wall Size** starts at the narrow column the flow falls through rather than the rig's full
+  spread, so the walls frame the stream without dwarfing the rig; raise it for more room to
+  reach a hand or the lamp through the gap.
 - **Wall Opacity** goes from fully invisible to solid. Zero keeps the collision without drawing
   anything, useful for looking at the rig unobstructed; solid is the useful one for a recording
   where the walls are the frame.

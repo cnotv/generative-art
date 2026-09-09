@@ -96,13 +96,14 @@ const createEnclosureState = ({ scene, world, config, rigDiagonal }: PhysicsRefe
 
     // The floor is not part of the walls toggle: without it marbles fall through the world
     // wherever the scene's own smaller ground does not reach.
-    floor = createEnclosureFloor(currentWorld, rigDiagonal())
+    floor = createEnclosureFloor(currentWorld, rigDiagonal(), config.value.enclosureSize)
     if (!config.value.showEnclosure) return
 
     walls = createEnclosure(
       currentScene,
       currentWorld,
       rigDiagonal(),
+      config.value.enclosureSize,
       config.value.enclosureOpacity
     )
   }
@@ -204,7 +205,7 @@ const createMarbleFlowState = (
 
   const tick = (): void => syncMeshesWithBodies(marbles)
 
-  return { clear, stop, start, rebuild, tick }
+  return { clear, stop, start, rebuild, tick, spawnOne: spawn }
 }
 
 /** Owns everything physical in the rig animator, built from the three states above. Nothing
@@ -264,6 +265,7 @@ export const useRigPhysics = (
     rebuildPhysics: rebuild,
     rebuildMarbles: marbleFlow.rebuild,
     updateMarbleFlow: marbleFlow.start,
+    spawnMarble: marbleFlow.spawnOne,
     rebuildEnclosure: enclosure.rebuild,
     clearPhysics: clear,
     tickPhysics

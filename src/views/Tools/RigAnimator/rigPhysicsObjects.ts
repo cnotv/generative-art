@@ -7,7 +7,6 @@ import {
   BONE_COLLIDER_RESTITUTION,
   ENCLOSURE_COLOR,
   ENCLOSURE_HEIGHT_FRACTION,
-  ENCLOSURE_SIZE_FRACTION,
   ENCLOSURE_THICKNESS_FRACTION,
   LAMP_ANGULAR_DAMPING,
   LAMP_ARM_LENGTH_FRACTION,
@@ -96,9 +95,10 @@ export const createMarble = (
  * in centimetres; this has no mesh of its own so the visible floor stays the scene's ground. */
 export const createEnclosureFloor = (
   world: RAPIER.World,
-  rigDiagonal: number
+  rigDiagonal: number,
+  sizeFraction: number
 ): RAPIER.RigidBody => {
-  const size = rigDiagonal * ENCLOSURE_SIZE_FRACTION
+  const size = rigDiagonal * sizeFraction
   const thickness = rigDiagonal * ENCLOSURE_THICKNESS_FRACTION
 
   const { rigidBody } = getPhysic(world, {
@@ -119,9 +119,10 @@ export const createEnclosure = (
   scene: THREE.Scene,
   world: RAPIER.World,
   rigDiagonal: number,
+  sizeFraction: number,
   opacity: number
 ): PhysicsMesh[] => {
-  const size = rigDiagonal * ENCLOSURE_SIZE_FRACTION
+  const size = rigDiagonal * sizeFraction
   const height = rigDiagonal * ENCLOSURE_HEIGHT_FRACTION
   const thickness = rigDiagonal * ENCLOSURE_THICKNESS_FRACTION
   const half = size / 2
