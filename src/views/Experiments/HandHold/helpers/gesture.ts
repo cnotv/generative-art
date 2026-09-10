@@ -28,19 +28,19 @@ export const handOpenness = (landmarks: HandLandmarkPoint[]): number => {
   return ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length
 }
 
-/** Midpoint between the wrist and the middle finger's knuckle, used as the flame anchor and
- * fireball spawn point: steadier than any single landmark as the hand turns. */
+/** Midpoint between the wrist and the middle finger's knuckle, used as the grip point an item
+ * anchors to: steadier than any single landmark as the hand turns. */
 export const handPalmCenter = (landmarks: HandLandmarkPoint[]): HandLandmarkPoint => ({
   x: (landmarks[WRIST_INDEX].x + landmarks[MIDDLE_MCP_INDEX].x) / 2,
   y: (landmarks[WRIST_INDEX].y + landmarks[MIDDLE_MCP_INDEX].y) / 2
 })
 
 /** A point further along the wrist-to-knuckle axis than the palm centre, so the vector between
- * the two reads as the direction the hand is pointing. */
-export const handPointingTarget = (landmarks: HandLandmarkPoint[]): HandLandmarkPoint =>
+ * the two gives the direction a gripped item should point. */
+export const handForwardTarget = (landmarks: HandLandmarkPoint[]): HandLandmarkPoint =>
   landmarks[MIDDLE_MCP_INDEX]
 
-export type GestureGrip = 'fist' | 'open' | 'neutral'
+export type GestureGrip = 'fist' | 'open'
 
 const classifyGrip = (openness: number, previousGrip: GestureGrip): GestureGrip => {
   if (openness < FIST_OPENNESS_THRESHOLD) return 'fist'
@@ -48,22 +48,17 @@ const classifyGrip = (openness: number, previousGrip: GestureGrip): GestureGrip 
   return previousGrip
 }
 
-export interface GestureTracker {
-  /** Feed one frame's openness reading; returns true exactly on the frame a fist finishes
-   * opening, provided `cooldownMs` has elapsed since the last throw. Cooldown is read fresh
-   * on every call so a live Config panel slider takes effect immediately. */
-  update: (openness: number, nowMs: number, cooldownMs: number) => boolean
+export interface GripTracker {
+  /** Feed one frame's openness reading; returns the hand's current grip, with hysteresis
+   * between the two thresholds so noise near either edge does not flicker the state. */
+  update: (openness: number) => GestureGrip
 }
 
-export const createGestureTracker = (): GestureTracker => {
-  let grip: GestureGrip = 'neutral'
-  let cooldownUntil = 0
-  const update = (openness: number, nowMs: number, cooldownMs: number): boolean => {
-    const previousGrip = grip
-    grip = classifyGrip(openness, previousGrip)
-    const threw = previousGrip === 'fist' && grip === 'open' && nowMs >= cooldownUntil
-    if (threw) cooldownUntil = nowMs + cooldownMs
-    return threw
+export const createGripTracker = (): GripTracker => {
+  let grip: GestureGrip = 'open'
+  const update = (openness: number): GestureGrip => {
+    grip = classifyGrip(openness, grip)
+    return grip
   }
   return { update }
 }

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   handOpenness,
   handPalmCenter,
-  handPointingTarget,
-  createGestureTracker,
+  handForwardTarget,
+  createGripTracker,
   resolveHandSide,
   type HandLandmarkPoint
 } from './gesture'
@@ -52,31 +52,40 @@ describe('handOpenness', () => {
   })
 })
 
-describe('handPalmCenter and handPointingTarget', () => {
-  it('sits between the wrist and the middle knuckle, distinct from the pointing target', () => {
+describe('handPalmCenter and handForwardTarget', () => {
+  it('sits between the wrist and the middle knuckle, distinct from the forward target', () => {
     const palm = handPalmCenter(fistLandmarks)
-    const target = handPointingTarget(fistLandmarks)
+    const target = handForwardTarget(fistLandmarks)
     expect(palm.y).toBeCloseTo((WRIST.y + fistLandmarks[9].y) / 2)
     expect(target).toEqual(fistLandmarks[9])
   })
 })
 
-describe('createGestureTracker', () => {
-  it('fires once when a fist opens, not again inside the cooldown, then again once it elapses', () => {
-    const tracker = createGestureTracker()
+describe('createGripTracker', () => {
+  it('starts open and switches to fist once openness drops below the threshold', () => {
+    const tracker = createGripTracker()
 
-    expect(tracker.update(handOpenness(fistLandmarks), 0, 500)).toBe(false)
-    expect(tracker.update(handOpenness(openLandmarks), 10, 500)).toBe(true)
-    expect(tracker.update(handOpenness(fistLandmarks), 20, 500)).toBe(false)
-    expect(tracker.update(handOpenness(openLandmarks), 30, 500)).toBe(false)
-    expect(tracker.update(handOpenness(fistLandmarks), 400, 500)).toBe(false)
-    expect(tracker.update(handOpenness(openLandmarks), 600, 500)).toBe(true)
+    expect(tracker.update(handOpenness(openLandmarks))).toBe('open')
+    expect(tracker.update(handOpenness(fistLandmarks))).toBe('fist')
   })
 
-  it('does not fire without first closing into a fist', () => {
-    const tracker = createGestureTracker()
+  it('holds the previous grip while openness sits between the two thresholds', () => {
+    const tracker = createGripTracker()
+    const betweenThresholds = (FIST_OPENNESS_THRESHOLD + OPEN_OPENNESS_THRESHOLD) / 2
 
-    expect(tracker.update(handOpenness(openLandmarks), 0, 500)).toBe(false)
+    tracker.update(handOpenness(fistLandmarks))
+    expect(tracker.update(betweenThresholds)).toBe('fist')
+
+    const otherTracker = createGripTracker()
+    otherTracker.update(handOpenness(openLandmarks))
+    expect(otherTracker.update(betweenThresholds)).toBe('open')
+  })
+
+  it('switches back to open once openness rises above the threshold', () => {
+    const tracker = createGripTracker()
+
+    tracker.update(handOpenness(fistLandmarks))
+    expect(tracker.update(handOpenness(openLandmarks))).toBe('open')
   })
 })
 

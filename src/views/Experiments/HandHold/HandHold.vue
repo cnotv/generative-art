@@ -12,39 +12,20 @@ import { stats } from '@/utils/stats'
 import { Button } from '@/components/ui/button'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
-  HAND_FIRE_SETUP_CONFIG,
+  HAND_HOLD_SETUP_CONFIG,
   MEDIAPIPE_WASM_BASE_PATH,
   MEDIAPIPE_HAND_MODEL_URL,
   CAMERA_DISTANCE,
   CAMERA_FOV,
-  FLAME_PARTICLES_PER_HAND,
-  MAX_FIREBALLS,
-  FIREBALL_PARTICLES_PER_BALL,
-  FIREBALL_LIFETIME_MS,
-  AMBIENT_EMBER_COUNT,
-  AMBIENT_EMBER_BOUNDS,
-  SPARK_POOL_SIZE,
-  SPARK_BURST_COUNT,
-  SPARK_LIFETIME_MS,
-  FLAME_BURST_DURATION_MS,
-  FLAME_BURST_FLARE_BOOST,
-  FIST_OPENNESS_THRESHOLD,
-  OPEN_OPENNESS_THRESHOLD,
   defaultConfigValues,
   configControls
 } from './config'
-import {
-  createHandFlameSystem,
-  createFireballSystem,
-  createSparkSystem,
-  createEmberField,
-  mirroredImagePointToWorld
-} from './helpers/flames'
+import { createHeldItemsSystem, mirroredImagePointToWorld, ITEM_BUILDERS } from './helpers/items'
 import {
   handOpenness,
   handPalmCenter,
-  handPointingTarget,
-  createGestureTracker,
+  handForwardTarget,
+  createGripTracker,
   resolveHandSide
 } from './helpers/gesture'
 
@@ -68,27 +49,22 @@ const reactiveConfig = createReactiveConfig(defaultConfigValues)
 let handLandmarker: HandLandmarker | null = null
 let mediaStream: MediaStream | null = null
 let toolsCleanup: (() => void) | null = null
-let handFlames: ReturnType<typeof createHandFlameSystem> | null = null
-let fireballs: ReturnType<typeof createFireballSystem> | null = null
-let sparks: ReturnType<typeof createSparkSystem> | null = null
-let embers: ReturnType<typeof createEmberField> | null = null
+let heldItems: ReturnType<typeof createHeldItemsSystem> | null = null
 
 const handWorldPositions: (THREE.Vector3 | null)[] = HAND_SIDES.map(() => null)
 const handPositionScratch = HAND_SIDES.map(() => new THREE.Vector3())
-/** How lit each hand's flame is right now: near 0 reads as smoke, 1 as a steady open-hand
- * flame. Purely a function of the current grip, so it never needs a burst added on top. */
-const handWarmth: number[] = HAND_SIDES.map(() => 0)
-/** Extra size/brightness on top of the steady flame, decaying to 0 over the burst window
- * right after a throw: this, not warmth, is what makes the burst actually visible. */
-const handFlareBoost: number[] = HAND_SIDES.map(() => 0)
-const handBurstUntilMs: number[] = HAND_SIDES.map(() => 0)
-const originScratch = new THREE.Vector3()
-const aimTargetScratch = new THREE.Vector3()
-const aimDirectionScratch = new THREE.Vector3()
+const handForwardScratch = HAND_SIDES.map(() => new THREE.Vector3(0, 1, 0))
+const forwardTargetScratch = new THREE.Vector3()
+/** True while that hand is currently a closed fist: the moment this turns true is also the
+ * moment the held item advances to the next one in the list. */
+const handIsGripping: boolean[] = HAND_SIDES.map(() => false)
+/** Index into ITEM_BUILDERS for whatever that hand is currently holding, or would hold on its
+ * next fist. Starts at -1 so the very first fist lands on item 0. */
+const handItemIndex: number[] = HAND_SIDES.map(() => -1)
 
-const gestureTrackers: Record<HandSide, ReturnType<typeof createGestureTracker>> = {
-  Left: createGestureTracker(),
-  Right: createGestureTracker()
+const gripTrackers: Record<HandSide, ReturnType<typeof createGripTracker>> = {
+  Left: createGripTracker(),
+  Right: createGripTracker()
 }
 
 const detectHands = (nowMs: number, aspect: number): void => {
@@ -116,31 +92,23 @@ const detectHands = (nowMs: number, aspect: number): void => {
     )
     handWorldPositions[slotIndex] = handPositionScratch[slotIndex]
 
-    const openness = handOpenness(landmarks)
-    handWarmth[slotIndex] = THREE.MathUtils.smoothstep(
-      openness,
-      FIST_OPENNESS_THRESHOLD,
-      OPEN_OPENNESS_THRESHOLD
+    mirroredImagePointToWorld(
+      handForwardTarget(landmarks),
+      CAMERA_DISTANCE,
+      CAMERA_FOV,
+      aspect,
+      forwardTargetScratch
     )
-    const burstFraction = Math.max(handBurstUntilMs[slotIndex] - nowMs, 0) / FLAME_BURST_DURATION_MS
-    handFlareBoost[slotIndex] = FLAME_BURST_FLARE_BOOST * burstFraction
+    handForwardScratch[slotIndex]
+      .subVectors(forwardTargetScratch, handPositionScratch[slotIndex])
+      .normalize()
 
-    const cooldownMs = reactiveConfig.value.fireballCooldownSeconds * 1000
-    const threw = gestureTrackers[side].update(openness, nowMs, cooldownMs)
-    if (threw && fireballs) {
-      handBurstUntilMs[slotIndex] = nowMs + FLAME_BURST_DURATION_MS
-      mirroredImagePointToWorld(palm, CAMERA_DISTANCE, CAMERA_FOV, aspect, originScratch)
-      mirroredImagePointToWorld(
-        handPointingTarget(landmarks),
-        CAMERA_DISTANCE,
-        CAMERA_FOV,
-        aspect,
-        aimTargetScratch
-      )
-      aimDirectionScratch.subVectors(aimTargetScratch, originScratch)
-      fireballs.spawn(originScratch, aimDirectionScratch, reactiveConfig.value.fireballSpeed, nowMs)
-      sparks?.burst(handPositionScratch[slotIndex], SPARK_BURST_COUNT, nowMs)
+    const grip = gripTrackers[side].update(handOpenness(landmarks))
+    const justClosed = grip === 'fist' && !handIsGripping[slotIndex]
+    if (justClosed) {
+      handItemIndex[slotIndex] = (handItemIndex[slotIndex] + 1) % ITEM_BUILDERS.length
     }
+    handIsGripping[slotIndex] = grip === 'fist'
   })
 }
 
@@ -152,29 +120,23 @@ const initScene = async (): Promise<void> => {
     canvas: canvas.value
   })
   toolsCleanup = cleanup
-  const { elements } = await setup({ config: HAND_FIRE_SETUP_CONFIG })
+  const { elements } = await setup({ config: HAND_HOLD_SETUP_CONFIG })
   registerSceneElements(camera, elements)
 
-  handFlames = createHandFlameSystem(scene, HAND_SIDES.length, FLAME_PARTICLES_PER_HAND)
-  fireballs = createFireballSystem(scene, MAX_FIREBALLS, FIREBALL_PARTICLES_PER_BALL)
-  sparks = createSparkSystem(scene, SPARK_POOL_SIZE)
-  embers = createEmberField(scene, AMBIENT_EMBER_COUNT, AMBIENT_EMBER_BOUNDS)
+  heldItems = createHeldItemsSystem(scene, HAND_SIDES.length)
 
   animate({
     timeline: createTimelineManager(),
     beforeTimeline: () => {
       const nowMs = performance.now()
       if (isActive.value) detectHands(nowMs, (camera as THREE.PerspectiveCamera).aspect)
-      handFlames?.update(
-        nowMs / 1000,
+      heldItems?.update(
         handWorldPositions,
-        reactiveConfig.value.flameIntensity,
-        handWarmth,
-        handFlareBoost
+        handForwardScratch,
+        handIsGripping,
+        handItemIndex,
+        reactiveConfig.value.itemScale
       )
-      fireballs?.update(nowMs, FIREBALL_LIFETIME_MS)
-      sparks?.update(nowMs, SPARK_LIFETIME_MS)
-      embers?.update(nowMs / 1000)
     }
   })
 }
@@ -227,10 +189,7 @@ onMounted(async () => {
 onUnmounted(() => {
   stopCamera()
   toolsCleanup?.()
-  handFlames?.dispose()
-  fireballs?.dispose()
-  sparks?.dispose()
-  embers?.dispose()
+  heldItems?.dispose()
   clearSceneElements()
   unregisterViewConfig(route.name as string)
   clearViewPanels()
@@ -238,23 +197,23 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="hand-fire">
-    <video ref="video" class="hand-fire__video" autoplay playsinline muted></video>
-    <canvas ref="canvas" class="hand-fire__canvas"></canvas>
-    <div ref="statsElement" class="hand-fire__stats"></div>
-    <p v-if="isActive" class="hand-fire__hint">Make a fist, then open it to throw fire.</p>
-    <div v-if="!isActive" class="hand-fire__gate">
+  <div class="hand-hold">
+    <video ref="video" class="hand-hold__video" autoplay playsinline muted></video>
+    <canvas ref="canvas" class="hand-hold__canvas"></canvas>
+    <div ref="statsElement" class="hand-hold__stats"></div>
+    <p v-if="isActive" class="hand-hold__hint">Make a fist to grab the next item.</p>
+    <div v-if="!isActive" class="hand-hold__gate">
       <Button :disabled="isLoadingModel" @click="startCamera">
         {{ isLoadingModel ? 'Starting…' : 'Start camera' }}
       </Button>
-      <p v-if="cameraError" class="hand-fire__error">{{ cameraError }}</p>
+      <p v-if="cameraError" class="hand-hold__error">{{ cameraError }}</p>
     </div>
     <LoadingOverlay :visible="isLoadingModel" stage="Loading hand tracking…" />
   </div>
 </template>
 
 <style scoped>
-.hand-fire {
+.hand-hold {
   position: relative;
   width: 100%;
   height: 100vh;
@@ -262,7 +221,7 @@ onUnmounted(() => {
   background: var(--color-background);
 }
 
-.hand-fire__video {
+.hand-hold__video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -271,7 +230,7 @@ onUnmounted(() => {
   transform: scaleX(-1);
 }
 
-.hand-fire__canvas {
+.hand-hold__canvas {
   position: absolute;
   inset: 0;
   display: block;
@@ -279,14 +238,14 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.hand-fire__stats {
+.hand-hold__stats {
   position: absolute;
   top: var(--spacing-2);
   left: var(--spacing-2);
   z-index: var(--z-overlay);
 }
 
-.hand-fire__hint {
+.hand-hold__hint {
   position: absolute;
   bottom: var(--spacing-6);
   left: 50%;
@@ -297,7 +256,7 @@ onUnmounted(() => {
   font-size: var(--font-size-sm);
 }
 
-.hand-fire__gate {
+.hand-hold__gate {
   position: absolute;
   inset: 0;
   z-index: var(--z-overlay);
@@ -310,7 +269,7 @@ onUnmounted(() => {
   backdrop-filter: blur(4px);
 }
 
-.hand-fire__error {
+.hand-hold__error {
   margin: 0;
   color: var(--color-destructive);
   font-size: var(--font-size-sm);
