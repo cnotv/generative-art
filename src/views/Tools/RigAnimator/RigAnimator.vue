@@ -17,7 +17,7 @@ import {
   type HandPoseDefinition,
   type HandOrientation
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle, Bone } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -323,6 +323,11 @@ const toggleMarbleFlow = (): void => {
   reactiveConfig.value.marbleFlowEnabled = !reactiveConfig.value.marbleFlowEnabled
 }
 
+/** The docked bone icon shows or hides the per-bone markers, same toggle shape as physics. */
+const toggleBoneMarkers = (): void => {
+  reactiveConfig.value.showBoneMarkers = !reactiveConfig.value.showBoneMarkers
+}
+
 /**
  * Applies a detected body pose and, riding along on the same emit, any detected hand poses and
  * orientations. Also turns the torso to roughly the angle the photo shows the subject from, the
@@ -598,6 +603,16 @@ onUnmounted(() => {
       @click="toggleCameraCapture"
     >
       <CameraIcon />
+    </IconButton>
+    <IconButton
+      v-if="rig.bones.value.length > 0"
+      size="sm"
+      variant="outline"
+      :active="reactiveConfig.showBoneMarkers"
+      :title="reactiveConfig.showBoneMarkers ? 'Hide Bone Markers' : 'Show Bone Markers'"
+      @click="toggleBoneMarkers"
+    >
+      <Bone />
     </IconButton>
     <IconButton
       size="sm"

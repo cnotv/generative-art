@@ -118,11 +118,12 @@ a rigged glTF character), the bone list appears immediately. The camera re-frame
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
 typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
 
-A third docked button, Physics, sits beside these two. Once it is on, a fourth joins it, Marble
-Flow, which starts and stops the drip; dropping one on demand is a touch, not a button, covered
-in its own section below along with Physics.
+A third docked button, the bone icon, toggles every bone marker on and off, once the model has a
+skeleton; see "Picking and posing a bone" below. A fourth, Physics, sits beside it, and once
+that is on, a fifth joins it, Marble Flow, which starts and stops the drip; dropping one on
+demand is a touch, not a button, covered in its own section below along with Physics.
 
-![Upload Model, Capture Pose from Camera and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
+![Upload Model, Capture Pose from Camera, Bone Markers and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
@@ -130,9 +131,9 @@ Every bone gets a small marker, sized as a fraction of the whole rig's spread so
 model scale, and shrinking with hierarchy depth so a hip or shoulder joint reads larger than a
 fingertip further down the chain. Clicking a marker, or picking a name from the Config panel's
 **Bone** dropdown, selects it: the marker turns rose, every other one stays the default
-periwinkle. **Show Bone Markers**, in the same panel, hides them all for a clean view of the
-model itself; picking a bone by clicking its marker is unavailable while they are hidden, but
-the **Bone** dropdown still selects one. That dropdown lists the core skeleton first, in a
+periwinkle. The docked bone icon on the canvas hides them all for a clean view of the model
+itself; picking a bone by clicking its marker is unavailable while they are hidden, but the
+**Bone** dropdown still selects one. That dropdown lists the core skeleton first, in a
 posing-relevant order (hips, spine, neck, head, then each limb root), before anything else the
 rig happens to carry (fingers, toes, a custom rig's own extra bones), rather than whatever
 arbitrary order the model's own source file listed its skeleton in: an uploaded model's own
