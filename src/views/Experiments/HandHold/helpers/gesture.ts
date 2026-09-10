@@ -40,6 +40,12 @@ export const handPalmCenter = (landmarks: HandLandmarkPoint[]): HandLandmarkPoin
 export const handForwardTarget = (landmarks: HandLandmarkPoint[]): HandLandmarkPoint =>
   landmarks[MIDDLE_MCP_INDEX]
 
+/** Wrist-to-middle-knuckle distance in the same normalized image space `handOpenness` reads
+ * from: shrinks as the hand moves away from the camera, grows as it comes closer, so a held
+ * item's world scale can track how big the hand currently looks rather than staying fixed. */
+export const handSpan = (landmarks: HandLandmarkPoint[]): number =>
+  distance(landmarks[WRIST_INDEX], landmarks[MIDDLE_MCP_INDEX])
+
 export type GestureGrip = 'fist' | 'open'
 
 const classifyGrip = (openness: number, previousGrip: GestureGrip): GestureGrip => {

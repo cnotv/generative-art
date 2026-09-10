@@ -17,6 +17,9 @@ import {
   MEDIAPIPE_HAND_MODEL_URL,
   CAMERA_DISTANCE,
   CAMERA_FOV,
+  ITEM_BASE_SCALE,
+  REFERENCE_HAND_SPAN,
+  HAND_DISTANCE_SCALE_RANGE,
   defaultConfigValues,
   configControls
 } from './config'
@@ -25,6 +28,7 @@ import {
   handOpenness,
   handPalmCenter,
   handForwardTarget,
+  handSpan,
   createGripTracker,
   resolveHandSide
 } from './helpers/gesture'
@@ -61,6 +65,10 @@ const handIsGripping: boolean[] = HAND_SIDES.map(() => false)
 /** Index into ITEM_BUILDERS for whatever that hand is currently holding, or would hold on its
  * next fist. Starts at -1 so the very first fist lands on item 0. */
 const handItemIndex: number[] = HAND_SIDES.map(() => -1)
+/** Combined size multiplier for that hand's item: the Config panel's scale times the base
+ * size times how close the hand currently looks, so the item tracks the hand's own apparent
+ * size instead of staying a fixed world size regardless of how near the camera it is. */
+const handScale: number[] = HAND_SIDES.map(() => ITEM_BASE_SCALE)
 
 const gripTrackers: Record<HandSide, ReturnType<typeof createGripTracker>> = {
   Left: createGripTracker(),
@@ -109,6 +117,13 @@ const detectHands = (nowMs: number, aspect: number): void => {
       handItemIndex[slotIndex] = (handItemIndex[slotIndex] + 1) % ITEM_BUILDERS.length
     }
     handIsGripping[slotIndex] = grip === 'fist'
+
+    const distanceScale = THREE.MathUtils.clamp(
+      handSpan(landmarks) / REFERENCE_HAND_SPAN,
+      HAND_DISTANCE_SCALE_RANGE.min,
+      HAND_DISTANCE_SCALE_RANGE.max
+    )
+    handScale[slotIndex] = ITEM_BASE_SCALE * distanceScale * reactiveConfig.value.itemScale
   })
 }
 
@@ -135,7 +150,7 @@ const initScene = async (): Promise<void> => {
         handForwardScratch,
         handIsGripping,
         handItemIndex,
-        reactiveConfig.value.itemScale
+        handScale
       )
     }
   })

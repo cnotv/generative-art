@@ -34,6 +34,16 @@ export const FIST_OPENNESS_THRESHOLD = 1.15
  * keeps whatever grip it last had, so noise near either edge does not flicker the state. */
 export const OPEN_OPENNESS_THRESHOLD = 1.45
 
+/** Overall size multiplier applied to every held item, on top of the distance-based and
+ * Config panel scaling below. */
+export const ITEM_BASE_SCALE = 3
+/** A hand's own wrist-to-knuckle span, in the same normalized units as `handSpan`, that reads
+ * as "neutral" distance from the camera: an item's distance-based scale is 1 at this span. */
+export const REFERENCE_HAND_SPAN = 0.12
+/** How far the distance-based scale factor may move an item's size, so a bad detection frame
+ * cannot shrink or balloon it without bound. */
+export const HAND_DISTANCE_SCALE_RANGE = { min: 0.4, max: 2.5 }
+
 export const defaultConfigValues = {
   itemScale: 1
 }
