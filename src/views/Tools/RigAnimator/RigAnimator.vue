@@ -394,6 +394,12 @@ const handleModelFileChange = (event: Event): void => {
 watch(
   () => reactiveConfig.value.model,
   async (url) => {
+    // `getTools`'s own onProgress (handleProgress above) only covers the scene/renderer setup
+    // in `init`, not this watcher's own model fetch and parse: without this, uploading a new
+    // model left the overlay off entirely while it loaded, reading as a stuck or broken view.
+    loadingVisible.value = true
+    loadingStage.value = 'Loading Model…'
+    loadingDetail.value = undefined
     await rig.loadModel(url)
     if (rig.model.value && cameraReference) {
       frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
@@ -404,6 +410,7 @@ watch(
       if (saved) rig.restoreAutosave(saved)
     }
     refreshSchema()
+    loadingVisible.value = false
   }
 )
 watch(
