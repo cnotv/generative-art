@@ -31,21 +31,22 @@ const createSword = (): THREE.Group => {
     new THREE.BoxGeometry(0.06, 0.9, 0.02),
     new THREE.MeshStandardMaterial({ color: 0xd8dee8, metalness: 0.6, roughness: 0.3 })
   )
-  blade.position.y = 0.55
+  blade.position.y = 0.6
   group.add(blade)
 
   const guard = new THREE.Mesh(
     new THREE.BoxGeometry(0.26, 0.05, 0.05),
     new THREE.MeshStandardMaterial({ color: 0xb08d57, metalness: 0.4, roughness: 0.5 })
   )
-  guard.position.y = 0.08
+  guard.position.y = 0.13
   group.add(guard)
 
+  // The handle is centred on the group's own origin, which the hand system places exactly at
+  // the hand's grip point, so the fist wraps around the handle rather than its lower edge.
   const handle = new THREE.Mesh(
     new THREE.CylinderGeometry(0.035, 0.035, 0.22, 12),
     new THREE.MeshStandardMaterial({ color: 0x6b4a33, roughness: 0.8 })
   )
-  handle.position.y = -0.05
   group.add(handle)
 
   return group
@@ -54,19 +55,20 @@ const createSword = (): THREE.Group => {
 const createShield = (): THREE.Group => {
   const group = new THREE.Group()
 
+  // No separate handle mesh: the fist grips the shield's own back-centre, which sits at the
+  // group's origin, exactly at the hand's grip point.
   const face = new THREE.Mesh(
     new THREE.CylinderGeometry(0.32, 0.32, 0.04, 24),
     new THREE.MeshStandardMaterial({ color: 0x8fa3c2, metalness: 0.3, roughness: 0.6 })
   )
   face.rotation.x = Math.PI / 2
-  face.position.y = 0.3
   group.add(face)
 
   const boss = new THREE.Mesh(
     new THREE.SphereGeometry(0.08, 16, 16),
     new THREE.MeshStandardMaterial({ color: 0xc79fc2, metalness: 0.4, roughness: 0.4 })
   )
-  boss.position.set(0, 0.3, 0.05)
+  boss.position.set(0, 0, 0.05)
   group.add(boss)
 
   return group
@@ -79,14 +81,14 @@ const createHammer = (): THREE.Group => {
     new THREE.BoxGeometry(0.28, 0.16, 0.16),
     new THREE.MeshStandardMaterial({ color: 0xa8a8a0, metalness: 0.5, roughness: 0.5 })
   )
-  head.position.y = 0.7
+  head.position.y = 0.4
   group.add(head)
 
+  // Centred on the group's own origin, the hand's grip point.
   const handle = new THREE.Mesh(
     new THREE.CylinderGeometry(0.03, 0.03, 0.7, 12),
     new THREE.MeshStandardMaterial({ color: 0x7a5230, roughness: 0.8 })
   )
-  handle.position.y = 0.3
   group.add(handle)
 
   return group
@@ -95,18 +97,18 @@ const createHammer = (): THREE.Group => {
 const createWand = (): THREE.Group => {
   const group = new THREE.Group()
 
+  // Centred on the group's own origin, the hand's grip point.
   const shaft = new THREE.Mesh(
     new THREE.CylinderGeometry(0.02, 0.03, 0.7, 10),
     new THREE.MeshStandardMaterial({ color: 0xd8c9f0, roughness: 0.6 })
   )
-  shaft.position.y = 0.35
   group.add(shaft)
 
   const gem = new THREE.Mesh(
     new THREE.OctahedronGeometry(0.09),
     new THREE.MeshStandardMaterial({ color: 0x9fd9c2, metalness: 0.2, roughness: 0.2 })
   )
-  gem.position.y = 0.75
+  gem.position.y = 0.4
   group.add(gem)
 
   return group
@@ -125,7 +127,7 @@ export interface HeldItemsSystem {
     handForwardDirections: readonly THREE.Vector3[],
     handIsGripping: readonly boolean[],
     handItemIndex: readonly number[],
-    scale: number
+    handScale: readonly number[]
   ) => void
   dispose: () => void
 }
@@ -150,7 +152,7 @@ export const createHeldItemsSystem = (scene: THREE.Scene, handSlots: number): He
     handForwardDirections: readonly THREE.Vector3[],
     handIsGripping: readonly boolean[],
     handItemIndex: readonly number[],
-    scale: number
+    handScale: readonly number[]
   ): void => {
     hands.forEach(({ handGroup, itemGroups }, handIndex) => {
       const position = handWorldPositions[handIndex]
@@ -159,7 +161,7 @@ export const createHeldItemsSystem = (scene: THREE.Scene, handSlots: number): He
       if (!visible || !position) return
       handGroup.position.copy(position)
       handGroup.quaternion.setFromUnitVectors(UP, handForwardDirections[handIndex])
-      handGroup.scale.setScalar(scale)
+      handGroup.scale.setScalar(handScale[handIndex])
       itemGroups.forEach((itemGroup, itemIndex) => {
         itemGroup.visible = itemIndex === handItemIndex[handIndex]
       })

@@ -3,6 +3,7 @@ import {
   handOpenness,
   handPalmCenter,
   handForwardTarget,
+  handSpan,
   createGripTracker,
   resolveHandSide,
   type HandLandmarkPoint
@@ -58,6 +59,15 @@ describe('handPalmCenter and handForwardTarget', () => {
     const target = handForwardTarget(fistLandmarks)
     expect(palm.y).toBeCloseTo((WRIST.y + fistLandmarks[9].y) / 2)
     expect(target).toEqual(fistLandmarks[9])
+  })
+})
+
+describe('handSpan', () => {
+  it('grows as the hand fills more of the frame, for the same grip', () => {
+    const nearLandmarks = buildLandmarks({ 0: WRIST, 9: mcpPoint(0.28) })
+    const farLandmarks = buildLandmarks({ 0: WRIST, 9: mcpPoint(0.07) })
+
+    expect(handSpan(nearLandmarks)).toBeGreaterThan(handSpan(farLandmarks))
   })
 })
 
