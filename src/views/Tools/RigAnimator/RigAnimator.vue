@@ -14,7 +14,7 @@ import {
   type HandSide,
   type HandPoseDefinition
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle, Bone, Eye } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -551,6 +551,16 @@ onUnmounted(() => {
       <Upload />
     </IconButton>
     <IconButton
+      v-if="rig.boneNames.value.length > 0"
+      size="sm"
+      variant="outline"
+      :active="reactiveConfig.showBoneMarkers"
+      :title="reactiveConfig.showBoneMarkers ? 'Hide Bone Markers' : 'Show Bone Markers'"
+      @click="reactiveConfig.showBoneMarkers = !reactiveConfig.showBoneMarkers"
+    >
+      <Bone />
+    </IconButton>
+    <IconButton
       v-if="rig.canCaptureFromCamera.value"
       size="sm"
       variant="outline"
@@ -558,6 +568,16 @@ onUnmounted(() => {
       @click="toggleCameraCapture"
     >
       <CameraIcon />
+    </IconButton>
+    <IconButton
+      v-if="showCameraCapture"
+      size="sm"
+      variant="outline"
+      :active="reactiveConfig.cameraShowPreview"
+      :title="reactiveConfig.cameraShowPreview ? 'Hide Camera Preview' : 'Show Camera Preview'"
+      @click="reactiveConfig.cameraShowPreview = !reactiveConfig.cameraShowPreview"
+    >
+      <Eye />
     </IconButton>
     <IconButton
       size="sm"
