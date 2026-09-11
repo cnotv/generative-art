@@ -1,219 +1,293 @@
-import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
-import { ikFindTwoBoneChain } from '@webgamekit/rig'
 import {
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
-  estimateCameraYaw,
-  computeCameraRigAnchor,
-  type CameraLandmark,
-  type CameraRigAnchor
+  LANDMARK_INDEX,
+  type CameraLandmark
 } from './cameraPoseMapping'
 import type { CameraHandLandmark } from './cameraHandPoseMapping'
-import type { RigGroupRootBoneNames } from './bodyPartGroups'
+import type {
+  CalibratedRootMotionOptions,
+  CalibrationFrame,
+  CameraCalibration,
+  FrontCalibration,
+  ImageLandmark,
+  RootMotion,
+  SideCalibration
+} from './types'
 
-/** Which step of the calibration flow is active, or `null` while it isn't running. */
-export type CameraCalibrationStep = 'assignParts' | 'front' | 'side' | null
+/** Below this, a span is too degenerate to divide by. */
+const MINIMUM_EXTENT = 1e-6
+/** Wrists closer in depth than this, in metres, show a side pose no depth to measure. */
+const MINIMUM_DEPTH_EXTENT_METERS = 1e-3
+const MIDDLE_KNUCKLE = 9
 
-/** A landmark carrying only what body-center tracking needs: MediaPipe's raw (unmirrored)
- * image-space output, the same shape `previewLandmarks` already exposes. */
-export interface ImageLandmark {
+interface PlanePoint {
   x: number
   y: number
-  visibility?: number
 }
 
-/** Everything a calibration session has captured so far. Every field starts empty; each one is
- * usable as soon as its own step captures it, independent of whether the others have run. */
-export interface CameraCalibrationBaseline {
-  /** Shoulder-line yaw at the calibrated neutral stance, radians; live yaw reads relative to
-   * this instead of true zero, so "facing the camera" while calibrated needn't mean square-on. */
-  originYaw: number | null
-  /** Wrist-to-middle-knuckle angle per hand at the calibrated neutral stance, radians. */
-  handRotationOrigin: Partial<Record<HandSide, number>>
-  /** Body center in MediaPipe's raw image space (0..1) at the calibrated neutral stance; a
-   * later frame's drift from this is what drives the hip bone's world position. */
-  originBodyCenterImage: { x: number; y: number } | null
-  /** Reach multiplier derived from the side-view stretch capture, see `captureSideCalibration`. */
-  autoReachMultiplier: number | null
-  rootBoneNames: RigGroupRootBoneNames
+interface HorizontalVector {
+  x: number
+  z: number
 }
 
-export const createEmptyCalibrationBaseline = (): CameraCalibrationBaseline => ({
-  originYaw: null,
-  handRotationOrigin: {},
-  originBodyCenterImage: null,
-  autoReachMultiplier: null,
+const isVisible = (landmark: ImageLandmark | undefined): landmark is ImageLandmark =>
+  landmark !== undefined && (landmark.visibility ?? 1) >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD
+
+/** A visible image landmark in image-height units, so x and y share one scale. */
+const visiblePoint = (frame: CalibrationFrame, index: number): PlanePoint | null => {
+  const landmark = frame.image[index]
+  return isVisible(landmark) ? { x: landmark.x * frame.aspect, y: landmark.y } : null
+}
+
+const planeDistance = (a: PlanePoint, b: PlanePoint): number => Math.hypot(a.x - b.x, a.y - b.y)
+
+const worldDistance = (a: CameraLandmark, b: CameraLandmark): number =>
+  Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
+
+const shoulderMidpoint = (frame: CalibrationFrame): PlanePoint | null => {
+  const left = visiblePoint(frame, LANDMARK_INDEX.leftShoulder)
+  const right = visiblePoint(frame, LANDMARK_INDEX.rightShoulder)
+  return left && right ? { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 } : null
+}
+
+/** Turning in place leaves the shoulder-to-hip height unchanged, so only distance scales it. */
+const torsoHeight = (frame: CalibrationFrame): number | null => {
+  const shoulders = shoulderMidpoint(frame)
+  const leftHip = visiblePoint(frame, LANDMARK_INDEX.leftHip)
+  const rightHip = visiblePoint(frame, LANDMARK_INDEX.rightHip)
+  if (!shoulders || !leftHip || !rightHip) return null
+  return Math.abs((leftHip.y + rightHip.y) / 2 - shoulders.y)
+}
+
+const headHeight = (frame: CalibrationFrame): number | null => {
+  const shoulders = shoulderMidpoint(frame)
+  const nose = visiblePoint(frame, LANDMARK_INDEX.nose)
+  return shoulders && nose ? Math.abs(shoulders.y - nose.y) : null
+}
+
+/** The shoulder line through the same axis flips the rig mapping applies to every landmark, so a
+ * turn read from it always agrees with where the mapping puts the hands. */
+const sceneShoulderVector = (
+  world: CameraLandmark[],
+  depthScale: number
+): HorizontalVector | null => {
+  const left = world[LANDMARK_INDEX.leftShoulder]
+  const right = world[LANDMARK_INDEX.rightShoulder]
+  return left && right ? { x: left.x - right.x, z: -(left.z - right.z) * depthScale } : null
+}
+
+const focalLengthHeightUnits = (aspect: number, fieldOfViewDegrees: number): number =>
+  (aspect * 0.5) / Math.tan((fieldOfViewDegrees * Math.PI) / 360)
+
+/**
+ * An empty calibration: nothing captured and no bone overrides.
+ * @returns The empty calibration
+ */
+export const createEmptyCameraCalibration = (): CameraCalibration => ({
+  front: null,
+  side: null,
   rootBoneNames: {}
 })
 
-const isVisible = (landmark: CameraLandmark | undefined): landmark is CameraLandmark =>
-  landmark !== undefined && landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD
-
-const LEFT_SHOULDER = 11
-const RIGHT_SHOULDER = 12
-const LEFT_WRIST = 15
-const RIGHT_WRIST = 16
+/**
+ * Read the reference sizes of a held front T-pose.
+ * @param frame The averaged frame the countdown captured
+ * @param handAngles Each detected hand's scene-space angle at the same instant
+ * @returns The front calibration, or null when the shoulders, wrists or nose are not detected
+ */
+export const measureFrontCalibration = (
+  frame: CalibrationFrame,
+  handAngles: Partial<Record<HandSide, number>>
+): FrontCalibration | null => {
+  const leftShoulder = visiblePoint(frame, LANDMARK_INDEX.leftShoulder)
+  const rightShoulder = visiblePoint(frame, LANDMARK_INDEX.rightShoulder)
+  const leftWrist = visiblePoint(frame, LANDMARK_INDEX.leftWrist)
+  const rightWrist = visiblePoint(frame, LANDMARK_INDEX.rightWrist)
+  const head = headHeight(frame)
+  const direction = sceneShoulderVector(frame.world, 1)
+  if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist || head === null || !direction) {
+    return null
+  }
+  const shoulderSpanImage = planeDistance(leftShoulder, rightShoulder)
+  const shoulderWidthMeters = worldDistance(
+    frame.world[LANDMARK_INDEX.leftShoulder],
+    frame.world[LANDMARK_INDEX.rightShoulder]
+  )
+  const directionLength = Math.hypot(direction.x, direction.z)
+  if (
+    shoulderSpanImage < MINIMUM_EXTENT ||
+    shoulderWidthMeters < MINIMUM_EXTENT ||
+    directionLength < MINIMUM_EXTENT
+  ) {
+    return null
+  }
+  return {
+    shoulderSpanImage,
+    armSpanImage: planeDistance(leftWrist, rightWrist),
+    torsoHeightImage: torsoHeight(frame),
+    headHeightImage: head,
+    bodyCenterImage: {
+      x: (leftShoulder.x + rightShoulder.x) / 2 / frame.aspect,
+      y: (leftShoulder.y + rightShoulder.y) / 2
+    },
+    shoulderWidthMeters,
+    armSpanMeters: worldDistance(
+      frame.world[LANDMARK_INDEX.leftWrist],
+      frame.world[LANDMARK_INDEX.rightWrist]
+    ),
+    shoulderDirectionScene: { x: direction.x / directionLength, z: direction.z / directionLength },
+    handAngles: { ...handAngles }
+  }
+}
 
 /**
- * The wrist-to-middle-knuckle angle in the landmark's own screen plane (x/y), the same way a
- * clock hand's angle is read: 0 along +x, growing counterclockwise. Depth (z) is left out since
- * a wrist's own twist around its forearm is not something MediaPipe's hand landmarks resolve
- * reliably along that axis.
- * @param landmarks One detected hand's 21 landmarks, wrist first
- * @returns The angle in radians
+ * Read how much MediaPipe compresses depth, from a held side T-pose: the arms now span the depth
+ * axis, and the front pose already measured how long that span really is.
+ * @param frame The averaged frame the countdown captured
+ * @param front The front calibration
+ * @returns The side calibration, or null when the wrists show no depth extent
  */
-export const computeHandRotationAngle = (landmarks: CameraHandLandmark[]): number => {
+export const measureSideCalibration = (
+  frame: CalibrationFrame,
+  front: FrontCalibration
+): SideCalibration | null => {
+  const leftWrist = frame.world[LANDMARK_INDEX.leftWrist]
+  const rightWrist = frame.world[LANDMARK_INDEX.rightWrist]
+  if (!leftWrist || !rightWrist) return null
+  const depthExtent = Math.abs(leftWrist.z - rightWrist.z)
+  return depthExtent < MINIMUM_DEPTH_EXTENT_METERS
+    ? null
+    : { depthScale: front.armSpanMeters / depthExtent }
+}
+
+/**
+ * The reach multiplier that makes a real full T-pose reach the rig's own full T-pose.
+ * @param front The front calibration
+ * @param rigArmSpanWorld Wrist-to-wrist distance of the rig at rest, in world units
+ * @param rigShoulderWidthWorld Arm-to-arm distance of the rig, in world units
+ * @returns The multiplier for the mapping's `reachMultiplier`
+ */
+export const computeCalibratedReachMultiplier = (
+  front: FrontCalibration,
+  rigArmSpanWorld: number,
+  rigShoulderWidthWorld: number
+): number =>
+  (rigArmSpanWorld * front.shoulderWidthMeters) / (front.armSpanMeters * rigShoulderWidthWorld)
+
+/**
+ * Scale every landmark's depth, leaving x, y and visibility as they are.
+ * @param landmarks World landmarks
+ * @param depthScale The side calibration's depth scale
+ * @returns The rescaled landmarks
+ */
+export const scaleLandmarkDepth = (
+  landmarks: CameraLandmark[],
+  depthScale: number
+): CameraLandmark[] => landmarks.map((landmark) => ({ ...landmark, z: landmark.z * depthScale }))
+
+/** Calibrated apparent size over current apparent size, which is current distance over calibrated
+ * distance; torso height when both frames show the hips, head height otherwise. */
+const distanceRatio = (frame: CalibrationFrame, front: FrontCalibration): number | null => {
+  const torso = torsoHeight(frame)
+  if (torso !== null && front.torsoHeightImage !== null && torso > MINIMUM_EXTENT) {
+    return front.torsoHeightImage / torso
+  }
+  const head = headHeight(frame)
+  return head !== null && head > MINIMUM_EXTENT ? front.headHeightImage / head : null
+}
+
+/** The shoulder span shrinks with the cosine of the turn once distance is corrected for; the
+ * direction comes from the depth-scaled shoulder line against the calibrated one. */
+const calibratedYaw = (
+  shoulderSpan: number,
+  ratio: number,
+  frame: CalibrationFrame,
+  front: FrontCalibration,
+  side: SideCalibration | null
+): number => {
+  const cosine = Math.min(1, Math.max(0, (shoulderSpan * ratio) / front.shoulderSpanImage))
+  const magnitude = Math.acos(cosine)
+  const current = sceneShoulderVector(frame.world, side?.depthScale ?? 1)
+  if (!current) return magnitude
+  const reference = front.shoulderDirectionScene
+  const turn = reference.z * current.x - reference.x * current.z
+  return turn < 0 ? -magnitude : magnitude
+}
+
+/**
+ * How far the skeleton root should move and turn, read from a live frame against the calibration.
+ * @param frame The live frame
+ * @param calibration The captured calibration
+ * @param rigShoulderWidthWorld Arm-to-arm distance of the rig, to convert metres to rig units
+ * @param options Which components to follow, the webcam field of view, scale and mirroring
+ * @returns The root motion, or null without a front calibration or detected shoulders
+ */
+export const computeCalibratedRootMotion = (
+  frame: CalibrationFrame,
+  calibration: CameraCalibration,
+  rigShoulderWidthWorld: number,
+  options: CalibratedRootMotionOptions
+): RootMotion | null => {
+  const { front, side } = calibration
+  const leftShoulder = visiblePoint(frame, LANDMARK_INDEX.leftShoulder)
+  const rightShoulder = visiblePoint(frame, LANDMARK_INDEX.rightShoulder)
+  if (!front || !leftShoulder || !rightShoulder) return null
+  const ratio = distanceRatio(frame, front)
+  if (ratio === null) return null
+
+  const focal = focalLengthHeightUnits(frame.aspect, options.fieldOfViewDegrees)
+  const calibratedDistance = (focal * front.shoulderWidthMeters) / front.shoulderSpanImage
+  const currentDistance = calibratedDistance * ratio
+  const rigUnitsPerMeter =
+    (rigShoulderWidthWorld / front.shoulderWidthMeters) * options.movementScale
+  const lateralMeters = (heightUnitsX: number, distance: number): number =>
+    ((heightUnitsX - frame.aspect / 2) * distance) / focal
+  const currentCenterX = (leftShoulder.x + rightShoulder.x) / 2
+  const calibratedCenterX = front.bodyCenterImage.x * frame.aspect
+  const sideways =
+    lateralMeters(currentCenterX, currentDistance) -
+    lateralMeters(calibratedCenterX, calibratedDistance)
+
+  return {
+    offset: {
+      x: options.followSideToSide ? (options.mirror ? -1 : 1) * sideways * rigUnitsPerMeter : 0,
+      y: 0,
+      z: options.followDistance ? (calibratedDistance - currentDistance) * rigUnitsPerMeter : 0
+    },
+    yaw: options.followRotation
+      ? calibratedYaw(planeDistance(leftShoulder, rightShoulder), ratio, frame, front, side)
+      : 0
+  }
+}
+
+/**
+ * A hand's wrist-to-middle-knuckle angle on the scene's viewing plane, through the same mirroring
+ * the body gets, so a hand turned one way on screen turns the rig's hand the same way.
+ * @param landmarks One detected hand's 21 world landmarks, wrist first
+ * @param mirror Whether the source is a mirrored live camera
+ * @returns The angle in radians, 0 pointing right and growing counterclockwise
+ */
+export const computeSceneHandAngle = (landmarks: CameraHandLandmark[], mirror: boolean): number => {
   const wrist = landmarks[0]
-  const middleKnuckle = landmarks[9]
-  return Math.atan2(middleKnuckle.y - wrist.y, middleKnuckle.x - wrist.x)
+  const knuckle = landmarks[MIDDLE_KNUCKLE]
+  return Math.atan2(-(knuckle.y - wrist.y), (mirror ? -1 : 1) * (knuckle.x - wrist.x))
 }
 
 /**
- * The body's center in raw image space, from the shoulder midpoint: stable across most poses
- * and already required for the rest of camera pose capture to work at all.
- * @param landmarks MediaPipe's raw (unmirrored) image-space landmarks for one frame
- * @returns The center, or null when the shoulders aren't both confidently detected
- */
-export const computeBodyCenterImage = (
-  landmarks: ImageLandmark[] | null
-): { x: number; y: number } | null => {
-  const left = landmarks?.[LEFT_SHOULDER]
-  const right = landmarks?.[RIGHT_SHOULDER]
-  if (!left || !right) return null
-  if ((left.visibility ?? 1) < CAMERA_LANDMARK_VISIBILITY_THRESHOLD) return null
-  if ((right.visibility ?? 1) < CAMERA_LANDMARK_VISIBILITY_THRESHOLD) return null
-  return { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 }
-}
-
-/** What the front-facing calibration step reads off one settled frame. `handRotations` and
- * `bodyCenterImage` are already computed per frame upstream (`useVideoLandmarkDetection`'s
- * `handRotations`, and `computeBodyCenterImage` applied to `previewLandmarks`), so this just
- * adopts them as the origin rather than recomputing anything from raw landmarks. */
-export const captureFrontCalibration = (
-  landmarks: CameraLandmark[],
-  bodyCenterImage: { x: number; y: number } | null,
-  handRotations: Partial<Record<HandSide, number>>
-): Pick<
-  CameraCalibrationBaseline,
-  'originYaw' | 'handRotationOrigin' | 'originBodyCenterImage'
-> => ({
-  originYaw: estimateCameraYaw(landmarks),
-  handRotationOrigin: { ...handRotations },
-  originBodyCenterImage: bodyCenterImage
-})
-
-/** The straight-line reach of a two-bone limb chain at its current (assumed near-rest) pose:
- * the sum of each segment's own bind-pose length, unaffected by how the chain is currently
- * rotated. `position` is a bone's local offset from its parent, so its length is that segment's
- * length regardless of pose.
- * ponytail: assumes the chain hasn't had its local `position` hand-edited away from bind pose
- * (Bone Position panel field) before calibrating; a chain that has reports a stale length. */
-const chainReachMeters = (endBone: THREE.Bone): number | null => {
-  const chain = ikFindTwoBoneChain(endBone)
-  if (!chain) return null
-  return chain.mid.position.length() + chain.end.position.length()
-}
-
-/**
- * Reach calibration: measure how far this side's wrist actually is from the shoulder line right
- * now (meant to be captured with the arm stretched to its fullest, turned to the side so depth
- * reads as the camera's more reliable x/y instead of its noisy z), then compare that to the
- * rig's own arm chain's straight-line reach to derive a reach multiplier that lets a real full
- * stretch drive the rig to its own full stretch, the same knob `cameraReachMultiplier` already
- * exposes as a manual slider, set from a measurement instead of by eye.
- * @param landmarks The detected person's world landmarks, arm extended
- * @param bones The rig's current bones
- * @returns The measured side and multiplier, or null when neither side is confidently detected
- *   or the rig has no matching arm chain
- */
-export const captureSideCalibration = (
-  landmarks: CameraLandmark[],
-  bones: THREE.Bone[]
-): { side: HandSide; autoReachMultiplier: number } | null => {
-  const anchor = computeCameraRigAnchor(bones)
-  if (!anchor) return null
-
-  const candidates: { side: HandSide; shoulder: CameraLandmark; wrist: CameraLandmark }[] = [
-    { side: 'Left', shoulder: landmarks[LEFT_SHOULDER], wrist: landmarks[LEFT_WRIST] },
-    { side: 'Right', shoulder: landmarks[RIGHT_SHOULDER], wrist: landmarks[RIGHT_WRIST] }
-  ].filter(
-    (candidate): candidate is { side: HandSide; shoulder: CameraLandmark; wrist: CameraLandmark } =>
-      isVisible(candidate.shoulder) && isVisible(candidate.wrist)
-  )
-  if (candidates.length === 0) return null
-
-  const reachOf = (candidate: (typeof candidates)[number]): number =>
-    Math.hypot(
-      candidate.wrist.x - candidate.shoulder.x,
-      candidate.wrist.y - candidate.shoulder.y,
-      candidate.wrist.z - candidate.shoulder.z
-    )
-  const best = candidates.reduce((a, b) => (reachOf(a) > reachOf(b) ? a : b))
-
-  const shoulderSpanLandmark = Math.hypot(
-    landmarks[LEFT_SHOULDER].x - landmarks[RIGHT_SHOULDER].x,
-    landmarks[LEFT_SHOULDER].y - landmarks[RIGHT_SHOULDER].y,
-    landmarks[LEFT_SHOULDER].z - landmarks[RIGHT_SHOULDER].z
-  )
-  if (shoulderSpanLandmark <= 0) return null
-  const scale = anchor.shoulderWidthWorld / shoulderSpanLandmark
-  const mappedReachAtMultiplier1 = reachOf(best) * scale
-
-  const handBoneName = best.side === 'Left' ? 'mixamorigLeftHand' : 'mixamorigRightHand'
-  const handBone = bones.find((bone) => bone.name === handBoneName)
-  const rigReach = handBone ? chainReachMeters(handBone) : null
-  if (!rigReach || mappedReachAtMultiplier1 <= 0) return null
-
-  return { side: best.side, autoReachMultiplier: rigReach / mappedReachAtMultiplier1 }
-}
-
-/**
- * How far the calibrated origin's body center has drifted, converted from raw image-space units
- * into the rig's own world units via the current frame's shoulder-width scale. Screen-plane only
- * (x/y): a step toward or away from the camera changes the very scale used to convert the other
- * two axes, so depth drift is left at zero rather than reported wrong.
- * ponytail: a real step-forward still reads as zero-depth movement; add a z term once the reach
- * calibration above needs to share its depth-from-stretch signal with this axis too.
- * @param currentBodyCenterImage This frame's body center, from `computeBodyCenterImage`
- * @param baseline The calibrated origin to measure drift from
- * @param landmarks This frame's world landmarks, for the current shoulder-width scale
- * @param anchor The rig's own shoulder anchor, from `computeCameraRigAnchor`
- * @returns The world-space offset to add to the hips bone's rest position, or null when there is
- *   nothing to offset from (uncalibrated, or the shoulders aren't detected this frame)
- */
-export const computeBodyOffsetWorld = (
-  currentBodyCenterImage: { x: number; y: number } | null,
-  baseline: CameraCalibrationBaseline,
-  landmarks: CameraLandmark[],
-  anchor: CameraRigAnchor
-): THREE.Vector3 | null => {
-  if (!currentBodyCenterImage || !baseline.originBodyCenterImage) return null
-  const leftShoulder = landmarks[LEFT_SHOULDER]
-  const rightShoulder = landmarks[RIGHT_SHOULDER]
-  if (!isVisible(leftShoulder) || !isVisible(rightShoulder)) return null
-  const shoulderSpanLandmark = Math.hypot(
-    leftShoulder.x - rightShoulder.x,
-    leftShoulder.y - rightShoulder.y
-  )
-  if (shoulderSpanLandmark <= 0) return null
-  const scale = anchor.shoulderWidthWorld / shoulderSpanLandmark
-  const dx = currentBodyCenterImage.x - baseline.originBodyCenterImage.x
-  const dy = currentBodyCenterImage.y - baseline.originBodyCenterImage.y
-  // Image space grows right/down; scene space grows right/up, matching the same y flip
-  // `cameraLandmarksToBoneTargets` applies to every other mapped position.
-  return new THREE.Vector3(dx * scale, -dy * scale, 0)
-}
-
-/**
- * How far a hand has rotated since calibration, in the same angle `computeHandRotationAngle`
- * reads live. Zero when this side was never calibrated, so an uncalibrated hand's rotation is
- * simply never applied rather than snapping to an arbitrary angle.
+ * How far a hand has turned since the front T-pose, wrapped to the shorter way round.
+ * @param currentAngle The hand's live scene-space angle
+ * @param side Which hand
+ * @param front The front calibration, or null when uncalibrated
+ * @returns The turn in radians, or 0 when this hand was never calibrated
  */
 export const computeHandRotationDelta = (
   currentAngle: number,
   side: HandSide,
-  baseline: CameraCalibrationBaseline
+  front: FrontCalibration | null
 ): number => {
-  const origin = baseline.handRotationOrigin[side]
-  return origin === undefined ? 0 : currentAngle - origin
+  const origin = front?.handAngles[side]
+  if (origin === undefined) return 0
+  const delta = currentAngle - origin
+  return Math.atan2(Math.sin(delta), Math.cos(delta))
 }

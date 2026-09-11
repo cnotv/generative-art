@@ -28,10 +28,24 @@ const restPose = poseCapture(skinnedMesh.skeleton.bones)
 poseApply(skinnedMesh.skeleton.bones, restPose) // back to rest
 ```
 
+## poseCaptureRootPosition / poseApplyPositions
+
+Snapshot the skeleton root's local position, keyed by its name, and apply positions back. The
+root is the bone with no `Bone` parent, found by structure rather than name. It is the only bone
+captured: every other bone's position is part of the rig's proportions, not of the animation.
+
+```typescript
+import { poseCaptureRootPosition, poseApplyPositions } from '@webgamekit/rig'
+
+const positions = poseCaptureRootPosition(skinnedMesh.skeleton.bones) // { mixamorigHips: { x, y, z } }
+poseApplyPositions(skinnedMesh.skeleton.bones, positions)
+```
+
 ## poseBuildClip
 
 Build a playable `AnimationClip` from an ordered set of pose keyframes. Three.js interpolates
-between consecutive poses on its own; this only builds the tracks.
+between consecutive poses on its own; this only builds the tracks. Every rotation track comes
+first, then a position track for each bone whose keyframes carry `positions`.
 
 ```typescript
 import { poseBuildClip } from '@webgamekit/rig'
@@ -188,11 +202,18 @@ interface QuaternionData {
   w: number
 }
 
+interface Vector3Data {
+  x: number
+  y: number
+  z: number
+}
+
 type Pose = Record<string, QuaternionData> // keyed by bone name
 
 interface PoseKeyframe {
   frame: number
   pose: Pose
+  positions?: Record<string, Vector3Data> // animated bone positions, in practice the root
 }
 
 interface HumanoidBoneDefinition {

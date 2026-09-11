@@ -1,32 +1,26 @@
 <script setup lang="ts">
 import Button from '@/components/ui/button/Button.vue'
 import { RIG_BODY_PART_GROUP_LABELS } from './bodyPartGroups'
-import type { RigBodyPartGroup } from './bodyPartGroups'
-import type { CameraCalibrationStep } from './cameraCalibration'
+import type { RigBodyPartGroup, RigGroupRootBoneNames } from './bodyPartGroups'
+import type { CameraCalibrationStep } from './types'
 
-const ASSIGNABLE_GROUPS: Exclude<RigBodyPartGroup, 'spineHead'>[] = [
-  'leftArm',
-  'rightArm',
-  'leftLeg',
-  'rightLeg'
-]
+type AssignableGroup = Exclude<RigBodyPartGroup, 'spineHead'>
+
+const ASSIGNABLE_GROUPS: AssignableGroup[] = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg']
 
 defineProps<{
   step: CameraCalibrationStep
-  armedGroup: Exclude<RigBodyPartGroup, 'spineHead'> | null
-  rootBoneNames: Partial<Record<Exclude<RigBodyPartGroup, 'spineHead'>, string>>
-  /** Whether a settled frame is available for the current step's Capture button to read;
-   * disabled otherwise rather than capturing an empty baseline. */
-  canCapture: boolean
+  armedGroup: AssignableGroup | null
+  rootBoneNames: RigGroupRootBoneNames
+  /** Whether a front T-pose has already been captured, so there is something to reset. */
+  isCalibrated: boolean
 }>()
 
 const emit = defineEmits<{
-  armGroup: [group: Exclude<RigBodyPartGroup, 'spineHead'>]
-  captureFront: []
-  captureSide: []
+  armGroup: [group: AssignableGroup]
   goToStep: [step: CameraCalibrationStep]
-  finish: []
   cancel: []
+  reset: []
 }>()
 </script>
 
@@ -37,7 +31,7 @@ const emit = defineEmits<{
         {{
           armedGroup
             ? `Click the ${RIG_BODY_PART_GROUP_LABELS[armedGroup]} bone on the model.`
-            : 'Optional: click a limb to assign its bone on this rig, or skip to use the default.'
+            : 'Optional: click a limb to assign its bone on this rig, or go on to use the default.'
         }}
       </p>
       <div class="camera-calibration-panel__groups">
@@ -46,34 +40,28 @@ const emit = defineEmits<{
           :key="group"
           size="sm"
           :variant="armedGroup === group ? 'default' : 'secondary'"
+          :aria-pressed="rootBoneNames[group] !== undefined"
           @click="emit('armGroup', group)"
         >
           {{ RIG_BODY_PART_GROUP_LABELS[group] }}
-          <template v-if="rootBoneNames[group]"> ✓</template>
-        </Button>
-      </div>
-      <div class="camera-calibration-panel__actions">
-        <Button size="sm" variant="secondary" @click="emit('cancel')">Cancel</Button>
-        <Button size="sm" @click="emit('goToStep', 'front')">Next: Face Camera</Button>
-      </div>
-    </template>
-    <template v-else-if="step === 'front'">
-      <div class="camera-calibration-panel__actions">
-        <Button size="sm" variant="secondary" @click="emit('cancel')">Cancel</Button>
-        <Button size="sm" :disabled="!canCapture" @click="emit('captureFront')">
-          Capture Front
         </Button>
       </div>
     </template>
-    <template v-else-if="step === 'side'">
-      <div class="camera-calibration-panel__actions">
-        <Button size="sm" variant="secondary" @click="emit('cancel')">Cancel</Button>
-        <Button size="sm" :disabled="!canCapture" @click="emit('captureSide')">
-          Capture Side
-        </Button>
-        <Button size="sm" @click="emit('finish')">Done</Button>
-      </div>
-    </template>
+    <p v-else-if="step === 'front'" class="camera-calibration-panel__hint">
+      Face the camera and hold a T-pose, arms level. The countdown starts once it matches.
+    </p>
+    <p v-else-if="step === 'side'" class="camera-calibration-panel__hint">
+      Turn sideways, arms still out, and hold it for the countdown.
+    </p>
+    <div class="camera-calibration-panel__actions">
+      <Button size="sm" variant="secondary" @click="emit('cancel')">Cancel</Button>
+      <Button v-if="isCalibrated" size="sm" variant="secondary" @click="emit('reset')">
+        Reset Calibration
+      </Button>
+      <Button v-if="step === 'assignParts'" size="sm" @click="emit('goToStep', 'front')">
+        Next: T-Pose
+      </Button>
+    </div>
   </div>
 </template>
 

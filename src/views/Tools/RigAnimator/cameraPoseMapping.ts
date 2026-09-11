@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { ikFindTwoBoneChain } from '@webgamekit/rig'
 import { CAMERA_LANDMARK_SMOOTHING_FACTOR, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 
 /** One BlazePose landmark: metres in world mode, normalized [0,1] in image mode either way. */
@@ -132,7 +133,7 @@ export const mirrorCameraLandmarks = (landmarks: CameraLandmark[]): CameraLandma
   return mirrored
 }
 
-const LANDMARK_INDEX = {
+export const LANDMARK_INDEX = {
   nose: 0,
   leftEar: 7,
   rightEar: 8,
@@ -179,9 +180,6 @@ export const CAMERA_POSE_BONE_LANDMARKS: Record<string, number> = {
   ...CAMERA_POSE_LOWER_BONE_LANDMARKS
 }
 
-/** The rig's root bone, optionally driven to the detected hip midpoint. */
-export const CAMERA_POSE_HIPS_BONE = 'mixamorigHips'
-
 /** Which landmark bends the elbow's chain toward it, when that detail is turned on. */
 export const CAMERA_POSE_ELBOW_POLE_LANDMARKS: Record<string, number> = {
   mixamorigLeftHand: LANDMARK_INDEX.leftElbow,
@@ -203,9 +201,9 @@ export const CAMERA_POSE_REQUIRED_BONES = [
 
 /**
  * Which extra details a captured pose drives, all opt-in on top of the base head/hands/feet
- * mapping: a bone with no pole hint keeps whichever bend direction its rest pose had, and the
- * rig's root stays at rest unless hips are turned on. Depth defaults on since it is the base
- * mapping's existing behaviour; the other three default off since they are new to try.
+ * mapping: a bone with no pole hint keeps whichever bend direction its rest pose had. The rig's
+ * root is never a mapped bone; only calibrated root motion moves it. Depth defaults on since it
+ * is the base mapping's existing behaviour; the bends default off since they are new to try.
  */
 export interface CameraPoseMappingOptions {
   /** Bend the elbow chains toward the detected elbow, instead of the chain's rest bend. */
@@ -220,8 +218,6 @@ export interface CameraPoseMappingOptions {
    * which read as the head tending to point down with the neck folded implausibly.
    */
   includeNeck: boolean
-  /** Move the rig's root to the detected hip midpoint, instead of leaving it at rest. */
-  includeHips: boolean
   /**
    * Use the landmark's depth (z) at all. A single photo gives MediaPipe far less to estimate
    * depth from than two eyes or a video's motion do, making z the least reliable axis it
@@ -244,7 +240,6 @@ export const CAMERA_POSE_MAPPING_OPTIONS_DEFAULT: CameraPoseMappingOptions = {
   includeElbows: false,
   includeKnees: false,
   includeNeck: false,
-  includeHips: false,
   includeDepth: true,
   reachMultiplier: 1
 }
@@ -356,6 +351,27 @@ export const computeCameraRigAnchor = (bones: THREE.Bone[]): CameraRigAnchor | n
   }
 }
 
+/**
+ * The rig's T-pose arm span in world units: shoulder width plus both arms' segment lengths.
+ * Segment lengths come from world positions, which rotating a joint never changes, so this holds
+ * in whatever pose the IK currently has the arms in.
+ * @param bones The rig's bones
+ * @returns The span, or null when the rig is missing either arm chain
+ */
+export const measureRigArmSpanWorld = (bones: THREE.Bone[]): number | null => {
+  const anchor = computeCameraRigAnchor(bones)
+  const armLength = (handBoneName: string): number | null => {
+    const hand = bones.find((bone) => bone.name === handBoneName)
+    const chain = hand ? ikFindTwoBoneChain(hand) : null
+    if (!chain) return null
+    const at = (bone: THREE.Bone): THREE.Vector3 => bone.getWorldPosition(new THREE.Vector3())
+    return at(chain.root).distanceTo(at(chain.mid)) + at(chain.mid).distanceTo(at(chain.end))
+  }
+  const left = armLength('mixamorigLeftHand')
+  const right = armLength('mixamorigRightHand')
+  return anchor && left !== null && right !== null ? anchor.shoulderWidthWorld + left + right : null
+}
+
 const landmarkMidpoint = (a: CameraLandmark, b: CameraLandmark): CameraLandmark => ({
   x: (a.x + b.x) / 2,
   y: (a.y + b.y) / 2,
@@ -373,9 +389,9 @@ interface LegAnchor {
 }
 
 /**
- * Work out what to scale and anchor leg-related targets (feet, knees, hips) against: the rig's
- * own hip center and hip-width scale when both the rig and the detected landmarks have one, or
- * the shoulder anchor and scale as a fallback otherwise. A webcam framed for arms and head, the
+ * Work out what to scale and anchor leg-related targets (feet, knees) against: the rig's own
+ * hip center and hip-width scale when both the rig and the detected landmarks have one, or the
+ * shoulder anchor and scale as a fallback otherwise. A webcam framed for arms and head, the
  * normal way to use this feature, usually leaves the hips out of frame, so the fallback is the
  * common case, not an edge case.
  * @param landmarks The detected person's world landmarks
@@ -426,7 +442,7 @@ const computeLegAnchor = (
  * `poseApply` already has.
  * @param landmarks The 33 BlazePose world landmarks for one detected person
  * @param anchor The rig's own shoulder center and shoulder width, from `computeCameraRigAnchor`
- * @param options Which extra details (elbow/knee bend, hips, depth) to derive from this frame
+ * @param options Which extra details (elbow, knee and neck bend, depth) to derive from this frame
  * @returns Bone targets for `applyBoneDragTarget` and pole targets for `applyPoleDrag`
  */
 export const cameraLandmarksToBoneTargets = (
@@ -499,21 +515,6 @@ export const cameraLandmarksToBoneTargets = (
         .filter((entry): entry is [string, THREE.Vector3] => entry[1] !== null)
     )
 
-  const hipsTarget = (): Record<string, THREE.Vector3> => {
-    if (!options.includeHips) return {}
-    const leftHip = landmarks[LANDMARK_INDEX.leftHip]
-    const rightHip = landmarks[LANDMARK_INDEX.rightHip]
-    if (
-      !leftHip ||
-      !rightHip ||
-      leftHip.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD ||
-      rightHip.visibility < CAMERA_LANDMARK_VISIBILITY_THRESHOLD
-    ) {
-      return {}
-    }
-    return { [CAMERA_POSE_HIPS_BONE]: legTarget(landmarkMidpoint(leftHip, rightHip)) }
-  }
-
   const neckPoleTarget = (): Record<string, THREE.Vector3> => {
     if (!options.includeNeck) return {}
     const leftEar = landmarks[LANDMARK_INDEX.leftEar]
@@ -532,8 +533,7 @@ export const cameraLandmarksToBoneTargets = (
   return {
     boneTargets: {
       ...entriesFor(CAMERA_POSE_UPPER_BONE_LANDMARKS, boneTarget),
-      ...entriesFor(CAMERA_POSE_LOWER_BONE_LANDMARKS, legTarget),
-      ...hipsTarget()
+      ...entriesFor(CAMERA_POSE_LOWER_BONE_LANDMARKS, legTarget)
     },
     poleTargets: {
       ...(options.includeElbows ? entriesFor(CAMERA_POSE_ELBOW_POLE_LANDMARKS, boneTarget) : {}),

@@ -1,6 +1,11 @@
 import { computed, shallowRef, ref, type Ref, type ShallowRef } from 'vue'
 import * as THREE from 'three'
-import { poseCapture, poseBuildClip, type PoseKeyframe } from '@webgamekit/rig'
+import {
+  poseCapture,
+  poseCaptureRootPosition,
+  poseBuildClip,
+  type PoseKeyframe
+} from '@webgamekit/rig'
 import { DEFAULT_FRAME_MAX } from './config'
 import { clampFrameMax } from './frameRange'
 import { moveKeyframesInList } from './keyframeOps'
@@ -70,14 +75,16 @@ export const useRigKeyframes = (
    * list, so it costs more the longer the list already is; calling it on every single one of
    * a fast burst of captures (motion recording sampling several times a second) makes each
    * capture slower than the last. Callers batch the rebuild and persist via `commitKeyframes`
-   * once the burst ends instead of paying that cost per frame. */
+   * once the burst ends instead of paying that cost per frame. The root's position rides along
+   * so calibrated root motion (walking toward the camera, stepping aside) plays back. */
   const captureKeyframeSilently = (bones: THREE.Bone[]): void => {
     if (bones.length === 0) return
     const pose = poseCapture(bones)
+    const positions = poseCaptureRootPosition(bones)
     const withoutSameFrame = keyframes.value.filter(
       (keyframe) => keyframe.frame !== config.value.frame
     )
-    keyframes.value = [...withoutSameFrame, { frame: config.value.frame, pose }]
+    keyframes.value = [...withoutSameFrame, { frame: config.value.frame, pose, positions }]
   }
 
   /** Rebuild the preview clip and persist the autosave; the shared tail end of any change to
@@ -93,7 +100,7 @@ export const useRigKeyframes = (
     commitKeyframes()
   }
 
-  /** Remove every keyframe in `frames` at once — a single current-frame delete is just a
+  /** Remove every keyframe in `frames` at once. A single current-frame delete is just a
    * one-frame list, and a multi-select delete is every frame the selection covered. One
    * rebuild and persist for the whole batch rather than one per frame. */
   const deleteKeyframesAt = (frames: number[]): void => {

@@ -162,10 +162,10 @@ export const mirrorCameraHandPoses = (
 
 /**
  * Swap which side each detected hand's wrist-rotation angle is keyed under, the same key swap
- * `mirrorCameraHandPoses` applies to curl angles; see its own doc comment. The angle values
- * themselves are left untouched: unlike a body landmark's x, a wrist-rotation angle is never
- * negated anywhere in this pipeline (see `computeHandRotationAngle`), so mirroring it here is
- * only ever a rename, never a reflection.
+ * `mirrorCameraHandPoses` applies to curl angles; see its own doc comment. The angles themselves
+ * are already reflected where they are computed (see `computeSceneHandAngle`), so this is only
+ * the rename half of mirroring, the same pairing `mirrorCameraLandmarks` does for the body by
+ * negating x and swapping each left/right pair.
  */
 export const mirrorCameraHandRotations = (
   handRotations: Partial<Record<HandSide, number>>

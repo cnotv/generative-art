@@ -16,6 +16,17 @@ describe('rig autosave', () => {
     expect(loadRigAutosave()).toEqual(sample)
   })
 
+  it('round-trips keyframes that carry root positions', () => {
+    const withPositions: RigAutosave = {
+      ...sample,
+      keyframes: [{ ...sample.keyframes[0], positions: { hips: { x: 0, y: 1, z: 2 } } }]
+    }
+
+    saveRigAutosave(withPositions)
+
+    expect(loadRigAutosave()).toEqual(withPositions)
+  })
+
   it('returns null when nothing has been saved', () => {
     expect(loadRigAutosave()).toBeNull()
   })

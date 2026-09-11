@@ -71,8 +71,33 @@ export const insertFrameRangeIntoList = (
   )
 }
 
-const posePickingBones = (pose: Pose, isInScope: (boneName: string) => boolean): Pose =>
-  Object.fromEntries(Object.entries(pose).filter(([boneName]) => isInScope(boneName)))
+const pickByBone = <T>(
+  entries: Record<string, T> | undefined,
+  isInScope: (boneName: string) => boolean
+): Record<string, T> =>
+  Object.fromEntries(Object.entries(entries ?? {}).filter(([boneName]) => isInScope(boneName)))
+
+/** A keyframe's `positions` key is omitted rather than left empty, so a keyframe that never
+ * carried positions compares equal to itself after a merge. */
+const withPositions = (
+  frame: number,
+  pose: Pose,
+  positions: PoseKeyframe['positions']
+): PoseKeyframe =>
+  positions && Object.keys(positions).length > 0 ? { frame, pose, positions } : { frame, pose }
+
+const scopeKeyframe = (
+  keyframe: PoseKeyframe,
+  isInScope: (boneName: string) => boolean
+): PoseKeyframe =>
+  withPositions(
+    keyframe.frame,
+    pickByBone(keyframe.pose, isInScope),
+    pickByBone(keyframe.positions, isInScope)
+  )
+
+const hasContent = (keyframe: PoseKeyframe): boolean =>
+  Object.keys(keyframe.pose).length > 0 || Object.keys(keyframe.positions ?? {}).length > 0
 
 /**
  * Merge a source's sampled keyframes into the existing timeline, touching only the bones in
@@ -97,25 +122,23 @@ export const mergeSampledKeyframesIntoScope = (
   const isOutOfScope = (boneName: string): boolean => !isInScope(boneName)
 
   const withoutScope = existingKeyframes
-    .map((keyframe) => ({
-      frame: keyframe.frame,
-      pose: posePickingBones(keyframe.pose, isOutOfScope)
-    }))
-    .filter((keyframe) => Object.keys(keyframe.pose).length > 0)
+    .map((keyframe) => scopeKeyframe(keyframe, isOutOfScope))
+    .filter(hasContent)
 
   const scopedSampled = sampledKeyframes
-    .map((keyframe) => ({
-      frame: keyframe.frame,
-      pose: posePickingBones(keyframe.pose, isInScope)
-    }))
-    .filter((keyframe) => Object.keys(keyframe.pose).length > 0)
+    .map((keyframe) => scopeKeyframe(keyframe, isInScope))
+    .filter(hasContent)
 
   return scopedSampled.reduce<PoseKeyframe[]>((merged, scopedKeyframe) => {
     const existingAtFrame = merged.find((keyframe) => keyframe.frame === scopedKeyframe.frame)
     if (!existingAtFrame) return [...merged, scopedKeyframe]
     return merged.map((keyframe) =>
       keyframe.frame === scopedKeyframe.frame
-        ? { frame: keyframe.frame, pose: { ...keyframe.pose, ...scopedKeyframe.pose } }
+        ? withPositions(
+            keyframe.frame,
+            { ...keyframe.pose, ...scopedKeyframe.pose },
+            { ...keyframe.positions, ...scopedKeyframe.positions }
+          )
         : keyframe
     )
   }, withoutScope)
