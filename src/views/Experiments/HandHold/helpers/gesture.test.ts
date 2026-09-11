@@ -4,6 +4,7 @@ import {
   handPalmCenter,
   handForwardTarget,
   handSpan,
+  countExtendedFingers,
   createGripTracker,
   resolveHandSide,
   type HandLandmarkPoint
@@ -68,6 +69,29 @@ describe('handSpan', () => {
     const farLandmarks = buildLandmarks({ 0: WRIST, 9: mcpPoint(0.07) })
 
     expect(handSpan(nearLandmarks)).toBeGreaterThan(handSpan(farLandmarks))
+  })
+})
+
+describe('countExtendedFingers', () => {
+  it('counts 0 for a fist and 4 for a fully open hand', () => {
+    expect(countExtendedFingers(fistLandmarks)).toBe(0)
+    expect(countExtendedFingers(openLandmarks)).toBe(4)
+  })
+
+  it('counts only the fingers held out, like counting to two', () => {
+    const twoFingersLandmarks = buildLandmarks({
+      0: WRIST,
+      5: mcpPoint(0.12),
+      9: mcpPoint(0.14),
+      13: mcpPoint(0.12),
+      17: mcpPoint(0.1),
+      8: tipPoint(0.4),
+      12: tipPoint(0.45),
+      16: tipPoint(0.08),
+      20: tipPoint(0.07)
+    })
+
+    expect(countExtendedFingers(twoFingersLandmarks)).toBe(2)
   })
 })
 
