@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
 const BLADE_SEGMENTS = 4
-const BLADE_HEIGHT = 0.5
-const BLADE_BASE_WIDTH = 0.05
+const BLADE_HEIGHT = 1.1
+const BLADE_BASE_WIDTH = 0.06
 
 /**
  * A single blade, standing along local +Y with its base pinned at the origin: a strip of

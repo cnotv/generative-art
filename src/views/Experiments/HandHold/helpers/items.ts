@@ -91,72 +91,11 @@ const createSword = (): THREE.Group => {
   return group
 }
 
-const createShield = (): THREE.Group => {
-  const group = new THREE.Group()
-
-  // No separate handle mesh: the fist grips the shield's own back-centre, which sits at the
-  // group's origin, exactly at the hand's grip point.
-  const face = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.32, 0.32, 0.04, 24),
-    new THREE.MeshStandardMaterial({ color: 0x8fa3c2, metalness: 0.3, roughness: 0.6 })
-  )
-  face.rotation.x = Math.PI / 2
-  group.add(face)
-
-  const boss = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 16, 16),
-    new THREE.MeshStandardMaterial({ color: 0xc79fc2, metalness: 0.4, roughness: 0.4 })
-  )
-  boss.position.set(0, 0, 0.05)
-  group.add(boss)
-
-  return group
-}
-
-const createHammer = (): THREE.Group => {
-  const group = new THREE.Group()
-
-  const head = new THREE.Mesh(
-    new THREE.BoxGeometry(0.28, 0.16, 0.16),
-    new THREE.MeshStandardMaterial({ color: 0xa8a8a0, metalness: 0.5, roughness: 0.5 })
-  )
-  head.position.y = 0.4
-  group.add(head)
-
-  // Centred on the group's own origin, the hand's grip point.
-  const handle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.03, 0.03, 0.7, 12),
-    new THREE.MeshStandardMaterial({ color: 0x7a5230, roughness: 0.8 })
-  )
-  group.add(handle)
-
-  return group
-}
-
-const createWand = (): THREE.Group => {
-  const group = new THREE.Group()
-
-  // Centred on the group's own origin, the hand's grip point.
-  const shaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.02, 0.03, 0.7, 10),
-    new THREE.MeshStandardMaterial({ color: 0xd8c9f0, roughness: 0.6 })
-  )
-  group.add(shaft)
-
-  const gem = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.09),
-    new THREE.MeshStandardMaterial({ color: 0x9fd9c2, metalness: 0.2, roughness: 0.2 })
-  )
-  gem.position.y = 0.4
-  group.add(gem)
-
-  return group
-}
-
 /** Each builder returns a group whose local +Y points from the grip toward the item's tip, so
- * a hand's own forward direction can be applied as a single rotation. */
-export const ITEM_BUILDERS = [createSword, createShield, createHammer, createWand] as const
-export const ITEM_NAMES = ['Sword', 'Shield', 'Hammer', 'Wand'] as const
+ * a hand's own forward direction can be applied as a single rotation. Only the sword for now;
+ * add more builders here to bring back finger-count selection between several items. */
+export const ITEM_BUILDERS = [createSword] as const
+export const ITEM_NAMES = ['Sword'] as const
 export const SWORD_ITEM_INDEX = 0
 
 const UP = new THREE.Vector3(0, 1, 0)
@@ -172,8 +111,8 @@ export interface HeldItemsSystem {
   dispose: () => void
 }
 
-/** One group of all four items per hand slot, only one shown at a time: cheaper and simpler
- * than swapping meshes in and out of the scene every time the held item changes. */
+/** One group of every item in ITEM_BUILDERS per hand slot, only one shown at a time: cheaper
+ * and simpler than swapping meshes in and out of the scene every time the held item changes. */
 export const createHeldItemsSystem = (scene: THREE.Scene, handSlots: number): HeldItemsSystem => {
   const hands = Array.from({ length: handSlots }, () => {
     const handGroup = new THREE.Group()
