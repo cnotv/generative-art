@@ -5,8 +5,33 @@ import {
   applyGizmoDragToChain,
   applyPoleDrag,
   captureRestPoses,
-  resetBoneChainToRest
+  resetBoneChainToRest,
+  rotateBoneAboutWorldAxis
 } from './boneDragTarget'
+
+describe('rotateBoneAboutWorldAxis', () => {
+  const worldUp = new THREE.Vector3(0, 1, 0)
+
+  it.each([
+    ['an unrotated parent', 0],
+    ['a parent tipped a quarter turn about x', -Math.PI / 2]
+  ])('turns a bone about the world axis under %s', (_, parentTilt) => {
+    const parent = new THREE.Group()
+    parent.rotation.x = parentTilt
+    const bone = new THREE.Bone()
+    bone.quaternion.setFromEuler(new THREE.Euler(0.3, 0, 0.2))
+    parent.add(bone)
+    parent.updateMatrixWorld(true)
+    const worldBefore = bone.getWorldQuaternion(new THREE.Quaternion())
+
+    rotateBoneAboutWorldAxis(bone, worldUp, Math.PI / 3)
+
+    const expected = new THREE.Quaternion()
+      .setFromAxisAngle(worldUp, Math.PI / 3)
+      .multiply(worldBefore)
+    expect(bone.getWorldQuaternion(new THREE.Quaternion()).angleTo(expected)).toBeCloseTo(0)
+  })
+})
 
 describe('applyGizmoDragToChain', () => {
   it('translates a root bone straight to the target when it has no Bone parent at all', () => {

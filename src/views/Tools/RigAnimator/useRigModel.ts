@@ -19,6 +19,13 @@ import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
 import { useRigBoneMarkerVisibility } from './useRigBoneMarkerVisibility'
 import type { RigAnimatorConfig } from './types'
 
+/** One part of every bone's rest transform, keyed by name: rest rotations feed `applyHandPose`'s
+ * rest-relative curl, rest positions let root motion be measured from where the root rests. */
+const pickRestPoses = <T>(
+  restPoses: Map<string, BoneRestPose>,
+  pick: (rest: BoneRestPose) => T
+): Map<string, T> => new Map([...restPoses.entries()].map(([name, rest]) => [name, pick(rest)]))
+
 /** Owns the loaded model, its rig and its bone markers for the rig animator tool. */
 export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   const scene = shallowRef<THREE.Scene | null>(null)
@@ -144,9 +151,8 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   /** Snap every bone back to its loaded rest transform, see `resetAllBonesToRest`'s own doc. */
   const resetAllBonesToRest = (excludeBoneNames?: Set<string>): void =>
     resetAllBoneTransformsToRest(bones.value, restPoses, excludeBoneNames)
-  /** Every bone's rest quaternion, keyed by name, for `applyHandPose`'s rest-relative curl. */
-  const getRestQuaternions = (): Map<string, THREE.Quaternion> =>
-    new Map([...restPoses.entries()].map(([name, rest]) => [name, rest.quaternion]))
+  const getRestQuaternions = () => pickRestPoses(restPoses, (rest) => rest.quaternion)
+  const getRestPositions = () => pickRestPoses(restPoses, (rest) => rest.position)
   return {
     model,
     skinnedMesh,
@@ -167,6 +173,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     applyBoneDragTarget,
     resetSelectedBone,
     resetAllBonesToRest,
-    getRestQuaternions
+    getRestQuaternions,
+    getRestPositions
   }
 }

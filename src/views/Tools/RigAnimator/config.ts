@@ -195,3 +195,24 @@ export const RIG_TIMELINE_KEYBOARD_MAPPING: ControlMapping = {
     button15: 'previousFrame'
   }
 }
+
+/** How long a T-pose has to be held before calibration captures it. */
+export const DEFAULT_CALIBRATION_COUNTDOWN_SECONDS = 3
+export const CALIBRATION_COUNTDOWN_RANGE = { min: 1, max: 10, step: 1 }
+/** How far an arm may tilt off level, or bend at the elbow, and still read as a T-pose. */
+export const DEFAULT_CALIBRATION_TOLERANCE_DEGREES = 20
+export const CALIBRATION_TOLERANCE_RANGE = { min: 5, max: 45, step: 1 }
+/** Horizontal field of view assumed for the webcam; most laptop and USB webcams sit near 60. */
+export const DEFAULT_CALIBRATION_FIELD_OF_VIEW_DEGREES = 60
+export const CALIBRATION_FIELD_OF_VIEW_RANGE = { min: 30, max: 120, step: 1 }
+export const DEFAULT_CALIBRATED_MOVEMENT_SCALE = 1
+export const CALIBRATED_MOVEMENT_SCALE_RANGE = { min: 0.1, max: 3, step: 0.05 }
+/** A side T-pose's shoulder span must shrink below this fraction of the front one. */
+export const CALIBRATION_SIDE_SHOULDER_SPAN_RATIO = 0.35
+/** How much of the held pose, just before the countdown ends, is averaged into the capture. */
+export const CALIBRATION_AVERAGING_WINDOW_MS = 500
+/** The bone each detected hand's calibrated rotation turns. */
+export const CALIBRATED_HAND_BONE_NAMES = {
+  Left: 'mixamorigLeftHand',
+  Right: 'mixamorigRightHand'
+} as const

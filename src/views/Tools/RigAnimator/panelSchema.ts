@@ -5,6 +5,10 @@ import {
   CAMERA_SMOOTHING_FACTOR_RANGE,
   CAMERA_REACH_MULTIPLIER_RANGE,
   CAMERA_MAX_JUMP_RANGE,
+  CALIBRATION_COUNTDOWN_RANGE,
+  CALIBRATION_TOLERANCE_RANGE,
+  CALIBRATION_FIELD_OF_VIEW_RANGE,
+  CALIBRATED_MOVEMENT_SCALE_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
   ENCLOSURE_OPACITY_RANGE,
   ENCLOSURE_SIZE_RANGE
@@ -49,7 +53,6 @@ export const buildRigAnimatorSchema = (
         },
         cameraUseKnees: { checkbox: true, label: 'Camera Pose: Bend Knees to Photo' },
         cameraUseNeck: { checkbox: true, label: 'Camera Pose: Bend Neck to Photo' },
-        cameraUseHips: { checkbox: true, label: 'Camera Pose: Move Hips to Photo' },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
         cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
         cameraReachMultiplier: {
@@ -64,7 +67,31 @@ export const buildRigAnimatorSchema = (
           ...CAMERA_MAX_JUMP_RANGE,
           label: 'Camera Pose: Max Jump (Live Feed)'
         },
-        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
+        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
+        calibrationCountdownSeconds: {
+          ...CALIBRATION_COUNTDOWN_RANGE,
+          label: 'Calibration: Countdown (s)',
+          sectionStart: true
+        },
+        calibrationToleranceDegrees: {
+          ...CALIBRATION_TOLERANCE_RANGE,
+          label: 'Calibration: T-Pose Tolerance (°)'
+        },
+        calibrationFieldOfViewDegrees: {
+          ...CALIBRATION_FIELD_OF_VIEW_RANGE,
+          label: 'Calibration: Webcam Field of View (°)'
+        },
+        calibratedFollowRotation: { checkbox: true, label: 'Calibrated: Follow Rotation' },
+        calibratedFollowSideToSide: { checkbox: true, label: 'Calibrated: Follow Side-to-Side' },
+        calibratedFollowDistance: { checkbox: true, label: 'Calibrated: Follow Distance' },
+        calibratedFollowHandRotation: {
+          checkbox: true,
+          label: 'Calibrated: Follow Hand Rotation'
+        },
+        calibratedMovementScale: {
+          ...CALIBRATED_MOVEMENT_SCALE_RANGE,
+          label: 'Calibrated: Movement Scale'
+        }
       }
     : {}),
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },

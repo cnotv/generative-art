@@ -214,4 +214,55 @@ describe('mergeSampledKeyframesIntoScope', () => {
 
     expect(reshoot).toEqual([{ frame: 3, pose: { leftArm: { x: 1, y: 0, z: 0, w: 0 } } }])
   })
+
+  it('carries a sampled keyframe position only for bones in scope', () => {
+    const sampled: PoseKeyframe[] = [
+      {
+        frame: 0,
+        pose: bothBonesPose(),
+        positions: { leftArm: { x: 1, y: 0, z: 0 }, leftLeg: { x: 2, y: 0, z: 0 } }
+      }
+    ]
+
+    const result = mergeSampledKeyframesIntoScope([], sampled, new Set(['leftArm']))
+
+    expect(result).toEqual([
+      { frame: 0, pose: pose('leftArm'), positions: { leftArm: { x: 1, y: 0, z: 0 } } }
+    ])
+  })
+
+  it('strips in-scope positions from existing keyframes and keeps the out-of-scope ones', () => {
+    const existing: PoseKeyframe[] = [
+      {
+        frame: 5,
+        pose: bothBonesPose(),
+        positions: { leftArm: { x: 1, y: 0, z: 0 }, leftLeg: { x: 2, y: 0, z: 0 } }
+      }
+    ]
+
+    const result = mergeSampledKeyframesIntoScope(existing, [], new Set(['leftArm']))
+
+    expect(result).toEqual([
+      { frame: 5, pose: pose('leftLeg'), positions: { leftLeg: { x: 2, y: 0, z: 0 } } }
+    ])
+  })
+
+  it('merges positions at a frame an existing out-of-scope bone already covers', () => {
+    const existing: PoseKeyframe[] = [
+      { frame: 5, pose: pose('leftLeg'), positions: { leftLeg: { x: 2, y: 0, z: 0 } } }
+    ]
+    const sampled: PoseKeyframe[] = [
+      { frame: 5, pose: pose('leftArm'), positions: { leftArm: { x: 1, y: 0, z: 0 } } }
+    ]
+
+    const result = mergeSampledKeyframesIntoScope(existing, sampled, new Set(['leftArm']))
+
+    expect(result).toEqual([
+      {
+        frame: 5,
+        pose: bothBonesPose(),
+        positions: { leftLeg: { x: 2, y: 0, z: 0 }, leftArm: { x: 1, y: 0, z: 0 } }
+      }
+    ])
+  })
 })

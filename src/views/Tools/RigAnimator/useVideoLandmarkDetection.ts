@@ -19,10 +19,12 @@ import {
 import {
   cameraDetectedHandsToPoses,
   mirrorCameraHandPoses,
+  mirrorCameraHandRotations,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
   type CameraHandLandmark
 } from './cameraHandPoseMapping'
+import { computeSceneHandAngle } from './cameraCalibration'
 
 interface Dependencies {
   videoElement: ShallowRef<HTMLVideoElement | null>
@@ -30,7 +32,7 @@ interface Dependencies {
   maxJump: Ref<number>
   /** Whether the source reads as a mirror (a live self-view, matching how the subject sees
    * themselves) or should be taken as shown (an uploaded clip is not a self-view, the same as
-   * an uploaded photo isn't) — see `mirrorCameraLandmarks`'s own doc comment for why this has
+   * an uploaded photo isn't); see `mirrorCameraLandmarks`'s own doc comment for why this has
    * to flip both the landmarks and the derived hand poses together. */
   mirror: boolean
 }
@@ -51,6 +53,9 @@ export const useVideoLandmarkDetection = ({
   const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
   const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
   const handPoses = shallowRef<Partial<Record<HandSide, HandPoseDefinition>>>({})
+  /** Each detected hand's scene-space wrist angle, keyed the same way as `handPoses`; see
+   * `computeSceneHandAngle` and the calibration that reads its T-pose baseline off it. */
+  const handRotations = shallowRef<Partial<Record<HandSide, number>>>({})
 
   let landmarker: PoseLandmarker | null = null
   let handLandmarker: HandLandmarker | null = null
@@ -99,6 +104,18 @@ export const useVideoLandmarkDetection = ({
     const detectedHandPoses = cameraDetectedHandsToPoses(smoothedHands)
     handPoses.value = mirror ? mirrorCameraHandPoses(detectedHandPoses) : detectedHandPoses
 
+    const detectedHandRotations = Object.fromEntries(
+      smoothedHands
+        .map((hand): [HandSide | null, number] => [
+          resolveCameraHandSide(hand.categoryName),
+          computeSceneHandAngle(hand.worldLandmarks, mirror)
+        ])
+        .filter((entry): entry is [HandSide, number] => entry[0] !== null)
+    )
+    handRotations.value = mirror
+      ? mirrorCameraHandRotations(detectedHandRotations)
+      : detectedHandRotations
+
     animationFrame = requestAnimationFrame(detectFrame)
   }
 
@@ -141,6 +158,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
+    handRotations.value = {}
     previousWorldLandmarks = null
     previousHandLandmarksBySide = {}
   }
@@ -150,6 +168,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks,
     worldLandmarks,
     handPoses,
+    handRotations,
     startDetectionLoop,
     stopDetectionLoop
   }

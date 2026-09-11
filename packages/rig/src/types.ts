@@ -8,6 +8,13 @@ export interface QuaternionData {
   w: number
 }
 
+/** A position snapshot, plain data so it survives JSON export/import */
+export interface Vector3Data {
+  x: number
+  y: number
+  z: number
+}
+
 /** One captured rig pose: every posed bone's local rotation, keyed by bone name */
 export type Pose = Record<string, QuaternionData>
 
@@ -15,6 +22,8 @@ export type Pose = Record<string, QuaternionData>
 export interface PoseKeyframe {
   frame: number
   pose: Pose
+  /** Local positions of the bones whose translation is animated, keyed by bone name */
+  positions?: Record<string, Vector3Data>
 }
 
 /** Where a humanoid template bone sits, as fractions of the model's bounding box */

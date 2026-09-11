@@ -5,12 +5,23 @@ import { useRigCameraPose } from './useRigCameraPose'
 import { useRigHandPose } from './useRigHandPose'
 import { useRigRecordedPresets } from './useRigRecordedPresets'
 import { useRigPhysics } from './useRigPhysics'
-import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
+import {
+  boneNamesInGroups,
+  type RigBodyPartGroup,
+  type RigGroupRootBoneNames
+} from './bodyPartGroups'
 import type { RigAnimatorConfig } from './types'
 
 /** Composes the rig/model, keyframe, camera-pose-capture, hand-pose and physics state for the
- * rig animator tool, each split into its own focused composable. */
-export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
+ * rig animator tool, each split into its own focused composable.
+ * @param config The rig animator's reactive config
+ * @param getRootBoneNames Reads which bone name marks each limb group's root on this rig, from
+ *   a calibration's "assign parts" step; defaults to the fixed mixamorig convention when omitted
+ */
+export const useRigAnimator = (
+  config: Ref<RigAnimatorConfig>,
+  getRootBoneNames?: () => RigGroupRootBoneNames | undefined
+) => {
   const rigModel = useRigModel(config)
   const rigKeyframes = useRigKeyframes(
     config,
@@ -21,7 +32,9 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   const rigCameraPose = useRigCameraPose(
     rigModel.bones,
     rigModel.applyBoneDragTarget,
-    rigModel.resetAllBonesToRest
+    rigModel.resetAllBonesToRest,
+    rigModel.getRestPositions,
+    rigModel.getRestQuaternions
   )
   const rigHandPose = useRigHandPose(rigModel.bones, config, rigModel.getRestQuaternions)
   const recordedPresets = useRigRecordedPresets()
@@ -58,7 +71,10 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
 
   /** Load a bundled example animation, merged into `targetGroups` (see `mergeKeyframes`). */
   const loadPreset = (url: string, targetGroups: Set<RigBodyPartGroup>): Promise<void> =>
-    rigKeyframes.loadPreset(url, boneNamesInGroups(rigModel.bones.value, targetGroups))
+    rigKeyframes.loadPreset(
+      url,
+      boneNamesInGroups(rigModel.bones.value, targetGroups, getRootBoneNames?.())
+    )
 
   /** Load a session recording back onto the timeline, merged into `targetGroups` the same way
    * a bundled preset is. */
@@ -67,7 +83,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     if (preset) {
       rigKeyframes.mergeKeyframes(
         preset.keyframes,
-        boneNamesInGroups(rigModel.bones.value, targetGroups)
+        boneNamesInGroups(rigModel.bones.value, targetGroups, getRootBoneNames?.())
       )
     }
   }

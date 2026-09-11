@@ -110,4 +110,38 @@ describe('useRigKeyframeClipboard', () => {
 
     expect(bone.quaternion.x).toBe(1)
   })
+
+  it('keeps each copied keyframe root positions through paste', () => {
+    const { config, keyframesReference, copyKeyframes, pasteKeyframes } = buildClipboard([
+      { frame: 4, pose: pose('a'), positions: { a: { x: 1, y: 2, z: 3 } } }
+    ])
+
+    copyKeyframes([4])
+    config.value.frame = 9
+    pasteKeyframes([])
+
+    expect(keyframesReference.value).toContainEqual({
+      frame: 9,
+      pose: pose('a'),
+      positions: { a: { x: 1, y: 2, z: 3 } }
+    })
+  })
+
+  it('applies the pasted positions landing on the current frame to the live rig bones', () => {
+    const bone = new THREE.Bone()
+    bone.name = 'root'
+    const { config, copyKeyframes, pasteKeyframes } = buildClipboard([
+      {
+        frame: 0,
+        pose: { root: { x: 0, y: 0, z: 0, w: 1 } },
+        positions: { root: { x: 1, y: 2, z: 3 } }
+      }
+    ])
+
+    copyKeyframes([0])
+    config.value.frame = 10
+    pasteKeyframes([bone])
+
+    expect(bone.position.toArray()).toEqual([1, 2, 3])
+  })
 })

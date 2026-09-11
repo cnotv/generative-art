@@ -14,7 +14,7 @@ import {
   type HandSide,
   type HandPoseDefinition
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle, ScanFace } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -33,6 +33,12 @@ import {
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
+  CAMERA_REACH_MULTIPLIER_RANGE,
+  CALIBRATED_HAND_BONE_NAMES,
+  DEFAULT_CALIBRATION_COUNTDOWN_SECONDS,
+  DEFAULT_CALIBRATION_TOLERANCE_DEGREES,
+  DEFAULT_CALIBRATION_FIELD_OF_VIEW_DEGREES,
+  DEFAULT_CALIBRATED_MOVEMENT_SCALE,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
@@ -42,7 +48,11 @@ import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { frameCameraOnModel } from './cameraFraming'
-import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
+import {
+  estimateCameraYaw,
+  computeCameraRigAnchor,
+  measureRigArmSpanWorld
+} from './cameraPoseMapping'
 import {
   selectedBodyPartGroups,
   toggleBodyPartGroupTarget,
@@ -51,11 +61,19 @@ import {
 } from './bodyPartGroups'
 import MergeTargetDiagram from './MergeTargetDiagram.vue'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
-import { applyPoleDrag } from './boneDragTarget'
+import { applyPoleDrag, rotateBoneAboutWorldAxis } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
 import CameraPoseCapture from './CameraPoseCapture.vue'
-import type { RigAnimatorConfig } from './types'
+import CameraCalibrationPanel from './CameraCalibrationPanel.vue'
+import { useCameraCalibration } from './useCameraCalibration'
+import {
+  computeCalibratedReachMultiplier,
+  computeCalibratedRootMotion,
+  computeHandRotationDelta,
+  scaleLandmarkDepth
+} from './cameraCalibration'
+import type { CalibrationFrame, RigAnimatorConfig, RootMotion } from './types'
 
 const route = useRoute()
 const routeName = route.name as string
@@ -84,13 +102,20 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseElbows: true,
   cameraUseKnees: true,
   cameraUseNeck: true,
-  cameraUseHips: false,
   cameraUseDepth: true,
   cameraUseViewpoint: false,
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
   cameraShowPreview: false,
+  calibrationCountdownSeconds: DEFAULT_CALIBRATION_COUNTDOWN_SECONDS,
+  calibrationToleranceDegrees: DEFAULT_CALIBRATION_TOLERANCE_DEGREES,
+  calibrationFieldOfViewDegrees: DEFAULT_CALIBRATION_FIELD_OF_VIEW_DEGREES,
+  calibratedFollowRotation: true,
+  calibratedFollowSideToSide: true,
+  calibratedFollowDistance: true,
+  calibratedFollowHandRotation: true,
+  calibratedMovementScale: DEFAULT_CALIBRATED_MOVEMENT_SCALE,
   targetLeftArm: true,
   targetRightArm: true,
   targetLeftLeg: true,
@@ -108,7 +133,6 @@ const cameraPoseMappingOptions = computed(() => ({
   includeElbows: reactiveConfig.value.cameraUseElbows,
   includeKnees: reactiveConfig.value.cameraUseKnees,
   includeNeck: reactiveConfig.value.cameraUseNeck,
-  includeHips: reactiveConfig.value.cameraUseHips,
   includeDepth: reactiveConfig.value.cameraUseDepth,
   reachMultiplier: reactiveConfig.value.cameraReachMultiplier
 }))
@@ -120,7 +144,13 @@ const targetBodyPartGroupLabels = computed(() =>
   [...targetBodyPartGroups.value].map((group) => RIG_BODY_PART_GROUP_LABELS[group])
 )
 
-const rig = useRigAnimator(reactiveConfig)
+const calibration = useCameraCalibration()
+const rig = useRigAnimator(reactiveConfig, () => calibration.calibration.value.rootBoneNames)
+/** While calibrated rotation turns the model itself, also turning the viewing camera to match
+ * would rotate the view twice over. */
+const followsCalibratedRotation = computed(
+  () => calibration.isCalibrated.value && reactiveConfig.value.calibratedFollowRotation
+)
 const showCameraCapture = ref(false)
 const modelFileInput = ref<HTMLInputElement | null>(null)
 const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
@@ -188,6 +218,13 @@ const onCanvasPointerDown = (event: PointerEvent): void => {
   raycaster.setFromCamera(pointer, cameraReference)
   const hitBone = rig.identifyBoneFromRay(raycaster)
   if (!hitBone) return
+
+  // The "assign parts" calibration step arms a group and steals the very next bone click to
+  // name that group's root, instead of the normal select-and-drag a click otherwise starts.
+  if (calibration.armedGroup.value) {
+    calibration.assignRootBone(calibration.armedGroup.value, hitBone.name)
+    return
+  }
 
   const selectedChain = rig.selectedBone.value ? ikFindTwoBoneChain(rig.selectedBone.value) : null
   if (selectedChain && hitBone === selectedChain.mid) {
@@ -268,6 +305,7 @@ const refreshSchema = (): void => {
  */
 const handleCloseCamera = (): void => {
   showCameraCapture.value = false
+  calibration.finish()
   if (motionRecording.isRecording.value) stopRecordingAndCommit()
   if (rig.model.value && cameraReference) {
     frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
@@ -296,6 +334,13 @@ const toggleCameraCapture = (): void => {
   else showCameraCapture.value = true
 }
 
+/** The docked calibrate icon opens the capture dialog (if it isn't already) and starts the
+ * calibration flow on top of it. */
+const startCalibration = (): void => {
+  if (!showCameraCapture.value) showCameraCapture.value = true
+  calibration.start()
+}
+
 /** A region of the Merge Target diagram was clicked or activated by keyboard. */
 const handleToggleBodyPartGroup = (group: RigBodyPartGroup): void => {
   reactiveConfig.value = toggleBodyPartGroupTarget(reactiveConfig.value, group)
@@ -311,26 +356,94 @@ const toggleMarbleFlow = (): void => {
   reactiveConfig.value.marbleFlowEnabled = !reactiveConfig.value.marbleFlowEnabled
 }
 
+/** Set Reach Multiplier so a real full T-pose reaches the rig's own. Reach Multiplier is not
+ * persisted, so this also runs whenever a model loads with a saved calibration. */
+const applyCalibratedReach = (): void => {
+  const front = calibration.calibration.value.front
+  const anchor = computeCameraRigAnchor(rig.bones.value)
+  const rigArmSpan = measureRigArmSpanWorld(rig.bones.value)
+  if (!front || !anchor || rigArmSpan === null) return
+  const multiplier = computeCalibratedReachMultiplier(front, rigArmSpan, anchor.shoulderWidthWorld)
+  reactiveConfig.value.cameraReachMultiplier = Math.min(
+    Math.max(multiplier, CAMERA_REACH_MULTIPLIER_RANGE.min),
+    CAMERA_REACH_MULTIPLIER_RANGE.max
+  )
+}
+
+/** Held while calibrating: the person is standing still in a T-pose to line up against the
+ * guide, and moving the rig underneath them would only get in the way. */
+const computeRootMotion = (frame: CalibrationFrame, mirror: boolean): RootMotion | null => {
+  const anchor = computeCameraRigAnchor(rig.bones.value)
+  if (!anchor || calibration.isActive.value) return null
+  const settings = reactiveConfig.value
+  return computeCalibratedRootMotion(
+    frame,
+    calibration.calibration.value,
+    anchor.shoulderWidthWorld,
+    {
+      fieldOfViewDegrees: settings.calibrationFieldOfViewDegrees,
+      followRotation: settings.calibratedFollowRotation,
+      followSideToSide: settings.calibratedFollowSideToSide,
+      followDistance: settings.calibratedFollowDistance,
+      movementScale: settings.calibratedMovementScale,
+      mirror
+    }
+  )
+}
+
+/** Hand angles are read on the screen plane and the scene camera looks down world z, so a turn
+ * on screen is a turn about world z. */
+const HAND_SPIN_AXIS = new THREE.Vector3(0, 0, 1)
+
+const rotateCalibratedHand = (side: HandSide, angle: number | undefined): void => {
+  if (!reactiveConfig.value.calibratedFollowHandRotation || angle === undefined) return
+  const delta = computeHandRotationDelta(angle, side, calibration.calibration.value.front)
+  const hand = rig.bones.value.find((bone) => bone.name === CALIBRATED_HAND_BONE_NAMES[side])
+  if (hand && delta !== 0) rotateBoneAboutWorldAxis(hand, HAND_SPIN_AXIS, delta)
+}
+
 /**
  * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
- * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
- * from, the one camera-relative detail a single photo's body landmarks can actually support
- * (see `estimateCameraYaw`'s own doc comment for why not more than that).
+ * Every frame also feeds the calibration flow, and once calibrated drives the rig's root and
+ * hands from it. Without calibration it can still turn the viewing camera to roughly the angle
+ * the photo shows the subject from (see `estimateCameraYaw`'s own doc comment for why not more).
  */
 const handleCameraApply = (
-  landmarks: CameraLandmark[],
-  handPoses: Partial<Record<HandSide, HandPoseDefinition>>
+  frame: CalibrationFrame,
+  handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
+  handRotations: Partial<Record<HandSide, number>>,
+  mirror: boolean
 ): void => {
-  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
+  const completed = calibration.feedFrame(frame, handRotations, performance.now(), {
+    countdownSeconds: reactiveConfig.value.calibrationCountdownSeconds,
+    toleranceDegrees: reactiveConfig.value.calibrationToleranceDegrees
+  })
+  if (completed === 'front') applyCalibratedReach()
+
+  const side = calibration.calibration.value.side
+  const landmarks = side ? scaleLandmarkDepth(frame.world, side.depthScale) : frame.world
+  rig.applyCameraPose(
+    landmarks,
+    cameraPoseMappingOptions.value,
+    targetBodyPartGroups.value,
+    calibration.calibration.value.rootBoneNames,
+    computeRootMotion(frame, mirror)
+  )
   const restQuaternions = rig.getRestQuaternions()
-  Object.entries(handPoses).forEach(([side, pose]) => {
+  Object.entries(handPoses).forEach(([handSide, pose]) => {
     // A hand's fingers belong to that side's arm group (see `boneBodyPartGroup`), so a capture
     // scoped away from that arm must not curl its fingers either.
-    const armGroup = side === 'Left' ? 'leftArm' : 'rightArm'
-    if (!targetBodyPartGroups.value.has(armGroup)) return
-    applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
+    const hand = handSide as HandSide
+    if (!targetBodyPartGroups.value.has(hand === 'Left' ? 'leftArm' : 'rightArm')) return
+    applyHandPose(rig.bones.value, hand, pose, restQuaternions)
+    rotateCalibratedHand(hand, handRotations[hand])
   })
-  if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
+  if (
+    reactiveConfig.value.cameraUseViewpoint &&
+    !followsCalibratedRotation.value &&
+    rig.model.value &&
+    cameraReference
+  ) {
     const yaw = estimateCameraYaw(landmarks)
     if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
   }
@@ -358,6 +471,7 @@ watch(
       const saved = loadRigAutosave()
       if (saved) rig.restoreAutosave(saved)
     }
+    applyCalibratedReach()
     refreshSchema()
   }
 )
@@ -560,6 +674,16 @@ onUnmounted(() => {
       <CameraIcon />
     </IconButton>
     <IconButton
+      v-if="rig.canCaptureFromCamera.value && !calibration.isActive.value"
+      size="sm"
+      variant="outline"
+      :active="calibration.isCalibrated.value"
+      :title="calibration.isCalibrated.value ? 'Recalibrate Camera' : 'Calibrate Camera'"
+      @click="startCalibration"
+    >
+      <ScanFace />
+    </IconButton>
+    <IconButton
       size="sm"
       variant="outline"
       :active="reactiveConfig.physicsEnabled"
@@ -580,10 +704,22 @@ onUnmounted(() => {
     </IconButton>
   </div>
   <MergeTargetDiagram
-    v-if="showCameraCapture"
-    class="rig-merge-target-diagram"
+    v-if="showCameraCapture && !calibration.isActive.value"
+    class="rig-camera-side-panel"
     :active-groups="targetBodyPartGroups"
     @toggle-group="handleToggleBodyPartGroup"
+  />
+  <CameraCalibrationPanel
+    v-if="showCameraCapture && calibration.isActive.value"
+    class="rig-camera-side-panel"
+    :step="calibration.step.value"
+    :armed-group="calibration.armedGroup.value"
+    :root-bone-names="calibration.calibration.value.rootBoneNames"
+    :is-calibrated="calibration.isCalibrated.value"
+    @arm-group="calibration.armGroupAssignment"
+    @go-to-step="calibration.goToStep"
+    @cancel="calibration.finish"
+    @reset="calibration.reset"
   />
   <RigTimeline
     ref="rigTimelineReference"
@@ -620,6 +756,9 @@ onUnmounted(() => {
     :frame="reactiveConfig.frame"
     :fps="reactiveConfig.fps"
     :target-group-labels="targetBodyPartGroupLabels"
+    :calibration-step="calibration.step.value"
+    :calibration-matched="calibration.isMatched.value"
+    :calibration-remaining-ms="calibration.remainingMs.value"
     @apply="handleCameraApply"
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"
@@ -644,7 +783,7 @@ canvas {
   gap: var(--spacing-2);
 }
 
-.rig-merge-target-diagram {
+.rig-camera-side-panel {
   position: fixed;
   top: calc(var(--nav-height) + var(--spacing-3) + var(--btn-sm-height) + var(--spacing-3));
   left: var(--spacing-3);

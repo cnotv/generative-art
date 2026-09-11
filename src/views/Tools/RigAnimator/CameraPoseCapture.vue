@@ -14,8 +14,12 @@ import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { useVideoPoseCapture } from './useVideoPoseCapture'
 import { useVideoTimelineSync } from './useVideoTimelineSync'
-import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
+import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './cameraPoseMapping'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
+import type { CalibrationFrame, CalibrationPoseKind, CameraCalibrationStep } from './types'
+import CalibrationSilhouette from './CalibrationSilhouette.vue'
+
+const MILLISECONDS_PER_SECOND = 1000
 
 const props = defineProps<{
   /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
@@ -38,10 +42,21 @@ const props = defineProps<{
    * "Merge Target" checkboxes currently scope this capture to; shown so it's clear before
    * applying rather than only inferable from the panel. */
   targetGroupLabels: string[]
+  /** Which step of the camera calibration flow is active, or null while it isn't running. */
+  calibrationStep: CameraCalibrationStep
+  /** Whether the live pose matches the T-pose the current step waits for. */
+  calibrationMatched: boolean
+  /** Time left on the calibration countdown, or null while it isn't counting. */
+  calibrationRemainingMs: number | null
 }>()
 
 const emit = defineEmits<{
-  apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
+  apply: [
+    frame: CalibrationFrame,
+    handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
+    handRotations: Partial<Record<HandSide, number>>,
+    mirror: boolean
+  ]
   close: []
   toggleRecord: []
   enablePreview: []
@@ -99,6 +114,43 @@ const worldLandmarks = computed(() =>
 const handPoses = computed(() =>
   pickByMode(camera.handPoses.value, uploadedVideo.handPoses.value, photo.handPoses.value)
 )
+// A still photo reads no hand rotation: there is no continuous feed to calibrate or follow.
+const handRotations = computed(() =>
+  pickByMode(camera.handRotations.value, uploadedVideo.handRotations.value, {})
+)
+/** Only while the stream is actually up: the silhouette guide and countdown only mean anything
+ * when a camera is genuinely available right now, not just requested. */
+const cameraAvailable = computed(
+  () => mode.value === 'camera' && camera.isActive.value && !camera.error.value
+)
+const calibrationPoseKind = computed<CalibrationPoseKind | null>(() =>
+  props.calibrationStep === 'front' || props.calibrationStep === 'side'
+    ? props.calibrationStep
+    : null
+)
+const countdownSeconds = computed(() =>
+  props.calibrationRemainingMs === null
+    ? null
+    : Math.ceil(props.calibrationRemainingMs / MILLISECONDS_PER_SECOND)
+)
+const calibrationStatus = computed(() => {
+  if (props.calibrationStep === 'assignParts') {
+    return 'Assigning body parts. Click a limb, then its bone on the model.'
+  }
+  if (!cameraAvailable.value) return 'Calibration needs the live camera.'
+  if (props.calibrationMatched) return 'Hold still…'
+  return props.calibrationStep === 'front'
+    ? 'Face the camera and hold a T-pose.'
+    : 'Turn sideways and hold the T-pose.'
+})
+
+/** Width over height of whatever is being detected, so image x and y share one unit. */
+const sourceAspect = (): number => {
+  const image = photo.photoImage.value
+  if (mode.value === 'photo' && image) return image.width / image.height
+  const video = videoReference.value
+  return video && video.videoHeight > 0 ? video.videoWidth / video.videoHeight : 1
+}
 
 let drawingUtilities: DrawingUtils | null = null
 
@@ -166,7 +218,19 @@ watch([previewLandmarks, previewHandLandmarks, () => photo.photoImage.value], dr
 // mapping matches, rather than only a snapshot of it. Hand poses ride along on the same emit,
 // since both detections finish within the same detectFrame/detectPhoto call.
 watch(worldLandmarks, (landmarks) => {
-  if (landmarks) emit('apply', landmarks, handPoses.value)
+  if (!landmarks) return
+  const frame: CalibrationFrame = {
+    image: previewLandmarks.value ?? [],
+    world: landmarks,
+    aspect: sourceAspect()
+  }
+  emit('apply', frame, handPoses.value, handRotations.value, mode.value === 'camera')
+})
+
+// Holding a T-pose against a guide you cannot see is guesswork, so a calibration step always
+// turns the preview on, the same as an upload does.
+watch(calibrationPoseKind, (kind) => {
+  if (kind) emit('enablePreview')
 })
 
 /** An uploaded photo or video is the whole reason to look at this panel right then, so its
@@ -225,6 +289,7 @@ const handleVideoSeeked = (): void => {
 onMounted(async () => {
   camera.videoElement.value = videoReference.value
   uploadedVideo.videoElement.value = videoReference.value
+  if (calibrationPoseKind.value) emit('enablePreview')
   await camera.start()
 })
 
@@ -257,7 +322,28 @@ onUnmounted(() => {
         @seeked="handleVideoSeeked"
       ></video>
       <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
+      <CalibrationSilhouette
+        v-if="calibrationPoseKind && cameraAvailable"
+        class="camera-pose-capture__silhouette"
+        :step="calibrationPoseKind"
+        :matched="calibrationMatched"
+      />
+      <p
+        v-if="countdownSeconds !== null && cameraAvailable"
+        class="camera-pose-capture__countdown"
+        :class="{ 'camera-pose-capture__countdown--mirrored': mode === 'camera' }"
+        aria-live="assertive"
+      >
+        {{ countdownSeconds }}
+      </p>
     </div>
+    <p
+      v-if="calibrationStep"
+      class="camera-pose-capture__status camera-pose-capture__status--calibration"
+      aria-live="polite"
+    >
+      {{ calibrationStatus }}
+    </p>
     <p class="camera-pose-capture__status camera-pose-capture__status--scope">
       {{
         targetGroupLabels.length > 0
@@ -400,6 +486,33 @@ onUnmounted(() => {
   object-fit: contain;
 }
 
+.camera-pose-capture__silhouette {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.camera-pose-capture__countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: 700;
+  color: var(--color-canvas-overlay-foreground);
+  text-shadow: var(--shadow-text-canvas-overlay);
+  pointer-events: none;
+}
+
+/* The preview is mirrored as a whole; the number inside it must still read the right way round. */
+.camera-pose-capture__countdown--mirrored {
+  transform: scaleX(-1);
+}
+
 .camera-pose-capture__status {
   margin: 0;
   font-size: var(--font-size-sm);
@@ -413,6 +526,11 @@ onUnmounted(() => {
 
 .camera-pose-capture__status--scope {
   font-style: italic;
+}
+
+.camera-pose-capture__status--calibration {
+  color: var(--color-foreground);
+  font-weight: 600;
 }
 
 .camera-pose-capture__actions {

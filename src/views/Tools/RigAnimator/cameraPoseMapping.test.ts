@@ -8,6 +8,7 @@ import {
   clampLandmarkJump,
   mirrorCameraLandmarks,
   estimateCameraYaw,
+  measureRigArmSpanWorld,
   CAMERA_POSE_BONE_LANDMARKS,
   CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
   type CameraLandmark
@@ -27,6 +28,47 @@ const buildTestRig = (): THREE.Bone[] => [
   buildBone('mixamorigLeftArm', [-0.4, 1, 0]),
   buildBone('mixamorigRightArm', [0.4, 1, 0])
 ]
+
+describe('measureRigArmSpanWorld', () => {
+  /** Arms 0.4 apart at the shoulders, each with a 0.3 upper arm and a 0.3 forearm. */
+  const buildArmRig = (): THREE.Bone[] => {
+    const chest = new THREE.Bone()
+    chest.name = 'chest'
+    const armBones = (['Left', 'Right'] as const).flatMap((side) => {
+      const direction = side === 'Left' ? -1 : 1
+      const named = (name: string, x: number): THREE.Bone => {
+        const bone = new THREE.Bone()
+        bone.name = `mixamorig${side}${name}`
+        bone.position.set(x * direction, 0, 0)
+        return bone
+      }
+      const arm = named('Arm', 0.2)
+      const foreArm = named('ForeArm', 0.3)
+      const hand = named('Hand', 0.3)
+      chest.add(arm)
+      arm.add(foreArm)
+      foreArm.add(hand)
+      return [arm, foreArm, hand]
+    })
+    chest.updateMatrixWorld(true)
+    return [chest, ...armBones]
+  }
+
+  it('adds both arms segment lengths to the shoulder width', () => {
+    expect(measureRigArmSpanWorld(buildArmRig())).toBeCloseTo(1.6)
+  })
+
+  it('reads the same span while an elbow is bent', () => {
+    const bones = buildArmRig()
+    bones.find((bone) => bone.name === 'mixamorigLeftForeArm')!.rotation.z = Math.PI / 2
+
+    expect(measureRigArmSpanWorld(bones)).toBeCloseTo(1.6)
+  })
+
+  it('returns null when the rig has no arm chains', () => {
+    expect(measureRigArmSpanWorld(buildTestRig())).toBeNull()
+  })
+})
 
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
   x,
@@ -238,18 +280,14 @@ describe('cameraLandmarksToBoneTargets', () => {
     expect(poleTargets.mixamorigHead).toBeUndefined()
   })
 
-  it('maps the hip midpoint to the rig root when hips are turned on', () => {
+  it('never drives the rig root, which only calibrated root motion moves', () => {
     const landmarks = buildTestLandmarks()
     landmarks[23] = landmark(-0.1, 0.5, 0) // left hip
     landmarks[24] = landmark(0.1, 0.5, 0) // right hip
 
-    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, {
-      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
-      includeHips: true
-    })
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
 
-    expect(boneTargets.mixamorigHips).toBeDefined()
-    expect(boneTargets.mixamorigHips.y).toBeLessThan(anchor.shoulderCenterWorldPosition.y)
+    expect(boneTargets.mixamorigHips).toBeUndefined()
   })
 
   it('scales every target further from its anchor when the reach multiplier is above 1', () => {

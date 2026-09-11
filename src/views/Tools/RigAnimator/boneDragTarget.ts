@@ -80,6 +80,29 @@ export const applyPoleDrag = (chain: TwoBoneIkChain, poleWorldPosition: THREE.Ve
 }
 
 /**
+ * Turn a bone about an axis given in world space, through its parent's world rotation. Three's
+ * own `rotateOnWorldAxis` assumes an unrotated parent, which no limb has and an FBX armature's
+ * root often lacks too; under a rotated parent it tips the bone instead of turning it.
+ * @param bone The bone to turn
+ * @param worldAxis The axis in world space, normalized
+ * @param angle The turn in radians
+ * @returns Nothing; mutates the bone's local quaternion
+ */
+export const rotateBoneAboutWorldAxis = (
+  bone: THREE.Object3D,
+  worldAxis: THREE.Vector3,
+  angle: number
+): void => {
+  const parentWorldQuaternion = bone.parent
+    ? bone.parent.getWorldQuaternion(new THREE.Quaternion())
+    : new THREE.Quaternion()
+  const worldTurn = new THREE.Quaternion().setFromAxisAngle(worldAxis, angle)
+  bone.quaternion.premultiply(
+    parentWorldQuaternion.clone().invert().multiply(worldTurn).multiply(parentWorldQuaternion)
+  )
+}
+
+/**
  * Reset a bone back to rest, and whichever ancestor(s) solved its last drag along with it: a
  * length-preserving drag leaves the dragged bone's own transform at rest already, so undoing
  * just that bone would do nothing, the ancestor(s) that actually rotated need resetting too.
