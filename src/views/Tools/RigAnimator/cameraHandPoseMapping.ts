@@ -1,7 +1,7 @@
 import * as THREE from 'three'
-import type { HandPoseDefinition, HandSide } from '@webgamekit/rig'
+import type { HandOrientation, HandPoseDefinition, HandSide } from '@webgamekit/rig'
 import { clampLandmarkJump } from './cameraPoseMapping'
-import { CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
+import { CAMERA_LANDMARK_MAX_JUMP_METERS, CAMERA_HAND_SENSITIVITY_DEFAULT } from './config'
 
 /**
  * One hand landmark from MediaPipe's Hand Landmarker. Unlike a body pose landmark, a hand
@@ -51,14 +51,30 @@ const jointBendAngle = (
 
 /**
  * Read one detected hand's 21 landmarks into the same per-joint curl angles a hand pose preset
- * carries.
+ * carries, the thumb included: `applyHandPose` already composes its own first joint (the CMC)
+ * on top of that bone's own heavily tilted rest pose rather than overwriting it, which is what
+ * makes a shared per-joint bend angle work here at all (see `THUMB_CMC_JOINT_INDEX`'s own doc
+ * comment in `handPose.ts`). Verified end to end against a real recorded gesture sequence, not
+ * just synthetic landmarks: see `rig-animator-pose-capture-fixes.md` for the two dead ends ruled
+ * out along the way.
  * @param landmarks The 21 landmarks for one detected hand, in MediaPipe's own point order
+ * @param sensitivity Each joint's own measured bend angle is scaled by this before being
+ *   returned: a real hand rarely folds a joint as far as the canned presets' hand-picked
+ *   extremes do, so a value above 1 (`CAMERA_HAND_SENSITIVITY_DEFAULT`) reads closer to that
+ *   same visual range without changing what was actually detected.
  * @returns The per-finger joint curl angles, ready for `applyHandPose`
  */
-export const cameraHandLandmarksToPose = (landmarks: CameraHandLandmark[]): HandPoseDefinition => {
+export const cameraHandLandmarksToPose = (
+  landmarks: CameraHandLandmark[],
+  sensitivity: number = CAMERA_HAND_SENSITIVITY_DEFAULT
+): HandPoseDefinition => {
   const fingerAngles = (indices: readonly number[]): [number, number, number] => {
     const [a, b, c, d, e] = indices.map((index) => landmarks[index])
-    return [jointBendAngle(a, b, c), jointBendAngle(b, c, d), jointBendAngle(c, d, e)]
+    return [
+      jointBendAngle(a, b, c) * sensitivity,
+      jointBendAngle(b, c, d) * sensitivity,
+      jointBendAngle(c, d, e) * sensitivity
+    ]
   }
 
   return {
@@ -67,6 +83,30 @@ export const cameraHandLandmarksToPose = (landmarks: CameraHandLandmark[]): Hand
     middle: fingerAngles(FINGER_LANDMARK_INDEX.middle),
     ring: fingerAngles(FINGER_LANDMARK_INDEX.ring),
     pinky: fingerAngles(FINGER_LANDMARK_INDEX.pinky)
+  }
+}
+
+/**
+ * Read a detected hand's own orientation from its landmarks: which way its fingers point and
+ * which way its knuckle row runs, both converted into scene world-space (the same y/z flip the
+ * body mapping uses, MediaPipe's image-space convention extended to 3D). Only ever the direction
+ * between two landmarks, never an absolute position, so this needs no anchor or scale the way
+ * the body and finger-curl mappings do.
+ * @param landmarks The 21 landmarks for one detected hand, in MediaPipe's own point order
+ * @param mirror Negate x to match a mirrored live preview; false for a photo, shown as captured.
+ * @returns The hand's own along/across directions, ready for `applyHandOrientation`
+ */
+export const cameraHandLandmarksToOrientation = (
+  landmarks: CameraHandLandmark[],
+  mirror: boolean
+): HandOrientation => {
+  const mirrorSign = mirror ? -1 : 1
+  const sceneDirection = (from: CameraHandLandmark, to: CameraHandLandmark): THREE.Vector3 =>
+    new THREE.Vector3((to.x - from.x) * mirrorSign, -(to.y - from.y), -(to.z - from.z)).normalize()
+
+  return {
+    along: sceneDirection(landmarks[0], landmarks[9]),
+    across: sceneDirection(landmarks[5], landmarks[17])
   }
 }
 
@@ -130,16 +170,19 @@ export interface CameraDetectedHand {
  * Map every hand MediaPipe found in one frame or photo onto per-side finger poses, resolving
  * each hand's actual side and reading its curl angles in one pass.
  * @param detectedHands Every hand MediaPipe reported for this detection
+ * @param sensitivity Threaded straight through to `cameraHandLandmarksToPose`; see its own doc
+ *   comment for what it scales and why.
  * @returns The detected pose for whichever side(s) were found, keyed by side
  */
 export const cameraDetectedHandsToPoses = (
-  detectedHands: CameraDetectedHand[]
+  detectedHands: CameraDetectedHand[],
+  sensitivity: number = CAMERA_HAND_SENSITIVITY_DEFAULT
 ): Partial<Record<HandSide, HandPoseDefinition>> =>
   Object.fromEntries(
     detectedHands
       .map((hand): [HandSide | null, HandPoseDefinition] => [
         resolveCameraHandSide(hand.categoryName),
-        cameraHandLandmarksToPose(hand.worldLandmarks)
+        cameraHandLandmarksToPose(hand.worldLandmarks, sensitivity)
       ])
       .filter((entry): entry is [HandSide, HandPoseDefinition] => entry[0] !== null)
   )
@@ -158,4 +201,39 @@ export const mirrorCameraHandPoses = (
 ): Partial<Record<HandSide, HandPoseDefinition>> => ({
   ...(handPoses.Left ? { Right: handPoses.Left } : {}),
   ...(handPoses.Right ? { Left: handPoses.Right } : {})
+})
+
+/**
+ * Map every hand MediaPipe found in one frame or photo onto per-side orientations, resolving
+ * each hand's actual side and reading its along/across directions in one pass. `mirror` is
+ * threaded straight through to `cameraHandLandmarksToOrientation`; it is a separate concern from
+ * `mirrorCameraHandOrientations` below, which swaps sides rather than coordinates.
+ * @param detectedHands Every hand MediaPipe reported for this detection
+ * @param mirror Negate x to match a mirrored live preview; false for a photo, shown as captured.
+ * @returns The detected orientation for whichever side(s) were found, keyed by side
+ */
+export const cameraDetectedHandsToOrientations = (
+  detectedHands: CameraDetectedHand[],
+  mirror: boolean
+): Partial<Record<HandSide, HandOrientation>> =>
+  Object.fromEntries(
+    detectedHands
+      .map((hand): [HandSide | null, HandOrientation] => [
+        resolveCameraHandSide(hand.categoryName),
+        cameraHandLandmarksToOrientation(hand.worldLandmarks, mirror)
+      ])
+      .filter((entry): entry is [HandSide, HandOrientation] => entry[0] !== null)
+  )
+
+/**
+ * Swap which side each detected hand's orientation is keyed under, the same side-swap
+ * `mirrorCameraHandPoses` does for finger curl; see that function's own doc comment for why.
+ * @param handOrientations Orientations keyed by each hand's own detected (unmirrored) side
+ * @returns The same orientations, keyed by the opposite side
+ */
+export const mirrorCameraHandOrientations = (
+  handOrientations: Partial<Record<HandSide, HandOrientation>>
+): Partial<Record<HandSide, HandOrientation>> => ({
+  ...(handOrientations.Left ? { Right: handOrientations.Left } : {}),
+  ...(handOrientations.Right ? { Left: handOrientations.Right } : {})
 })

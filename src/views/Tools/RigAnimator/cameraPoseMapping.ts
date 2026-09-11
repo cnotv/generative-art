@@ -182,6 +182,14 @@ export const CAMERA_POSE_BONE_LANDMARKS: Record<string, number> = {
 /** The rig's root bone, optionally driven to the detected hip midpoint. */
 export const CAMERA_POSE_HIPS_BONE = 'mixamorigHips'
 
+/**
+ * The bone a detected photo's viewing angle turns to face it: the upper spine, an ancestor of
+ * both arms and the head but not the hips or legs, so turning it reads as the torso and head
+ * twisting toward the camera while the hips and feet stay planted, the way a real body turns
+ * rather than the whole rig spinning on the spot like a rigid turntable.
+ */
+export const CAMERA_POSE_TORQUE_BONE = 'mixamorigSpine2'
+
 /** Which landmark bends the elbow's chain toward it, when that detail is turned on. */
 export const CAMERA_POSE_ELBOW_POLE_LANDMARKS: Record<string, number> = {
   mixamorigLeftHand: LANDMARK_INDEX.leftElbow,
@@ -259,8 +267,18 @@ export interface CameraPoseTargets {
 /** A landmark below this visibility is treated as not detected, leaving its bone untouched. */
 export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
 
-/** Below this landmark-space shoulder span, the detected pose is too degenerate to scale from. */
-const MINIMUM_LANDMARK_SHOULDER_SPAN = 1e-6
+/**
+ * Below this landmark-space span, a shoulder or hip pair is too degenerate to scale a target
+ * from: real-world landmarks are metre-scale, so a real shoulder or hip span is on the order of
+ * 0.2-0.5, and this stays a small fraction of that. A detector fed something other than a body
+ * (a hand filling the frame, most often) can report a confident but near-coincident pair, both
+ * landmarks collapsed to almost the same point; dividing a rig's own real span by that tiny a
+ * number produces a scale in the hundreds, flinging whatever it scales (an ankle target, most
+ * visibly) to some absurd position far from the rig entirely. A literal near-zero guard (this
+ * threshold was previously `1e-6`, only large enough to avoid a division by zero) still let a
+ * merely tiny, still-nonsensical span straight through.
+ */
+const MINIMUM_LANDMARK_SHOULDER_SPAN = 0.05
 
 /**
  * The rig's own shoulder center and width, plus its hip center and width when it has hip bones
@@ -278,10 +296,21 @@ const MINIMUM_LANDMARK_SHOULDER_SPAN = 1e-6
 export interface CameraRigAnchor {
   shoulderCenterWorldPosition: THREE.Vector3
   shoulderWidthWorld: number
-  /** Null when the rig has no hip bones to measure; legs then fall back to the shoulder scale. */
+  /** Null when the rig has no hip bones to measure; leg-related bones are then left untouched,
+   * see `computeLegAnchor`. */
   hipCenterWorldPosition: THREE.Vector3 | null
   hipWidthWorld: number | null
 }
+
+/**
+ * Past a full profile turn, a shoulder-line reading alone is no longer enough evidence on its
+ * own: a hand filling the frame can be confidently misread as a torso at some arbitrary, often
+ * near-180-degree angle, and applying that read the torso snapping to an extreme, unrelated
+ * angle that then held there rather than a body actually turning. Beyond this point,
+ * `estimateCameraYaw` additionally requires the hips to be confidently detected too, which a
+ * hand-filling-the-frame misread has no reason to also produce, before trusting the angle.
+ */
+const MAXIMUM_PLAUSIBLE_YAW = (5 * Math.PI) / 9 // 100 degrees
 
 /**
  * Estimate how far the subject is turned from square-to-camera, from the shoulder line's own
@@ -294,7 +323,8 @@ export interface CameraRigAnchor {
  * or how zoomed in the original camera was), just which way the subject is facing.
  * @param landmarks The detected person's world landmarks
  * @returns The estimated yaw in radians, matching `frameCameraOnModel`'s own convention (0 is
- *   square-on), or null when the shoulders aren't both confidently detected
+ *   square-on), or null when the shoulders aren't both confidently detected, or the estimate
+ *   passes `MAXIMUM_PLAUSIBLE_YAW` without the hips also being confidently detected to back it up
  */
 export const estimateCameraYaw = (landmarks: CameraLandmark[]): number | null => {
   const leftShoulder = landmarks[LANDMARK_INDEX.leftShoulder]
@@ -314,7 +344,22 @@ export const estimateCameraYaw = (landmarks: CameraLandmark[]): number | null =>
   // Scene z grows toward the viewer where landmark z grows away from it, the same flip
   // `cameraLandmarksToBoneTargets` applies to every mapped position.
   const dz = -(rightShoulder.z - leftShoulder.z)
-  return Math.atan2(dz, dx)
+  const yaw = Math.atan2(dz, dx)
+  if (Math.abs(yaw) <= MAXIMUM_PLAUSIBLE_YAW) return yaw
+  // Past that angle, only trust the reading when the hips are also confidently detected: a
+  // detector fed something other than a body (a hand filling the frame, most often) can still
+  // report a confident shoulder line at some arbitrary, often near-180-degree angle, but has
+  // no reason to also confidently place a pair of hips. A real subject turning their back on
+  // the camera has both, so this is what actually distinguishes a genuine full turn from that
+  // false read, rather than a flat cap that rejects both alike.
+  const leftHip = landmarks[LANDMARK_INDEX.leftHip]
+  const rightHip = landmarks[LANDMARK_INDEX.rightHip]
+  const hipsConfidentlyVisible =
+    leftHip !== undefined &&
+    rightHip !== undefined &&
+    leftHip.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD &&
+    rightHip.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD
+  return hipsConfidentlyVisible ? yaw : null
 }
 
 /**
@@ -374,22 +419,25 @@ interface LegAnchor {
 
 /**
  * Work out what to scale and anchor leg-related targets (feet, knees, hips) against: the rig's
- * own hip center and hip-width scale when both the rig and the detected landmarks have one, or
- * the shoulder anchor and scale as a fallback otherwise. A webcam framed for arms and head, the
- * normal way to use this feature, usually leaves the hips out of frame, so the fallback is the
- * common case, not an edge case.
+ * own hip center and hip-width scale, whenever both the rig and the detected landmarks have
+ * one. Anchoring feet against the shoulders instead, whenever the hips specifically drop out,
+ * used to read as the legs jumping to a target unrelated to what the camera actually showed:
+ * the ankle landmark itself stays visible and tracked the whole time, only the anchor it was
+ * being measured against was swapped out from under it. Returning null here instead leaves
+ * every leg-related bone at wherever it was last driven to, the same as any other bone the
+ * mapping doesn't touch this frame.
  * @param landmarks The detected person's world landmarks
  * @param anchor The rig's own anchor, from `computeCameraRigAnchor`
- * @param shoulderCenter The already-validated shoulder landmark midpoint, the fallback center
- * @param shoulderScale The already-computed shoulder-based scale, the fallback scale
- * @returns Where and how large to map a leg-related landmark
+ * @param shoulderCenter The already-validated shoulder landmark midpoint, to sanity-check the
+ *   hips actually sit below it
+ * @returns Where and how large to map a leg-related landmark, or null when the hips aren't
+ *   confidently and plausibly placed this frame
  */
 const computeLegAnchor = (
   landmarks: CameraLandmark[],
   anchor: CameraRigAnchor,
-  shoulderCenter: CameraLandmark,
-  shoulderScale: number
-): LegAnchor => {
+  shoulderCenter: CameraLandmark
+): LegAnchor | null => {
   const leftHip = landmarks[LANDMARK_INDEX.leftHip]
   const rightHip = landmarks[LANDMARK_INDEX.rightHip]
   const hipLandmarksVisible =
@@ -398,19 +446,19 @@ const computeLegAnchor = (
     leftHip.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD &&
     rightHip.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD
   const hipWidthLandmark = hipLandmarksVisible ? landmarkDistance(leftHip, rightHip) : 0
+  // A real hip sits below the shoulders in any pose this feature supports; a detector fed
+  // something other than a body (a hand filling the frame, most often) can still report a
+  // confident hip landmark, just not one a real body ever puts there, which reads as the legs
+  // and hips bone flying somewhere absurd rather than simply holding still.
+  const hipsBelowShoulders =
+    hipLandmarksVisible && landmarkMidpoint(leftHip, rightHip).y > shoulderCenter.y
   const hasLegAnchor =
-    hipLandmarksVisible &&
+    hipsBelowShoulders &&
     anchor.hipCenterWorldPosition !== null &&
     anchor.hipWidthWorld !== null &&
     hipWidthLandmark >= MINIMUM_LANDMARK_SHOULDER_SPAN
 
-  if (!hasLegAnchor) {
-    return {
-      legCenter: shoulderCenter,
-      legScale: shoulderScale,
-      legAnchorWorldPosition: anchor.shoulderCenterWorldPosition
-    }
-  }
+  if (!hasLegAnchor) return null
   return {
     legCenter: landmarkMidpoint(leftHip, rightHip),
     legScale: anchor.hipWidthWorld! / hipWidthLandmark,
@@ -450,13 +498,8 @@ export const cameraLandmarksToBoneTargets = (
   if (shoulderWidthLandmark < MINIMUM_LANDMARK_SHOULDER_SPAN)
     return { boneTargets: {}, poleTargets: {} }
   const rawScale = anchor.shoulderWidthWorld / shoulderWidthLandmark
-  const {
-    legCenter,
-    legScale: rawLegScale,
-    legAnchorWorldPosition
-  } = computeLegAnchor(landmarks, anchor, shoulderCenter, rawScale)
+  const legAnchor = computeLegAnchor(landmarks, anchor, shoulderCenter)
   const scale = rawScale * options.reachMultiplier
-  const legScale = rawLegScale * options.reachMultiplier
 
   // Landmark y grows downward and z grows away from the camera (MediaPipe's image-space
   // convention extended to 3D); the scene's y grows upward and, since the rig faces the scene
@@ -480,12 +523,25 @@ export const cameraLandmarksToBoneTargets = (
 
   const boneTarget = (landmark: CameraLandmark): THREE.Vector3 =>
     targetRelativeTo(anchor.shoulderCenterWorldPosition, shoulderCenter, scale, landmark)
-  const legTarget = (landmark: CameraLandmark): THREE.Vector3 =>
-    targetRelativeTo(legAnchorWorldPosition, legCenter, legScale, landmark)
+  const legTarget = legAnchor
+    ? (landmark: CameraLandmark): THREE.Vector3 | null => {
+        const target = targetRelativeTo(
+          legAnchor.legAnchorWorldPosition,
+          legAnchor.legCenter,
+          legAnchor.legScale * options.reachMultiplier,
+          landmark
+        )
+        // A real foot, knee or hip never sits above the shoulders in any pose this feature
+        // supports; a target that maps there is the detector confidently misreading something
+        // other than a body (a hand filling the frame, most often), not a leg actually reaching
+        // that high, and applying it reads as the legs flung to some absurd position.
+        return target.y <= anchor.shoulderCenterWorldPosition.y ? target : null
+      }
+    : null
 
   const entriesFor = (
     landmarksByBone: Record<string, number>,
-    targetFunction: (landmark: CameraLandmark) => THREE.Vector3
+    targetFunction: (landmark: CameraLandmark) => THREE.Vector3 | null
   ): Record<string, THREE.Vector3> =>
     Object.fromEntries(
       Object.entries(landmarksByBone)
@@ -499,8 +555,22 @@ export const cameraLandmarksToBoneTargets = (
         .filter((entry): entry is [string, THREE.Vector3] => entry[1] !== null)
     )
 
+  // A human head sits above their own shoulders in every pose this feature supports; a target
+  // that maps below them is the detector giving a confident but nonsensical result (most often
+  // something other than a body filling the frame, a hand held up close, misread as a torso)
+  // rather than a real head position, and reads as the head snapping down to the hips or feet
+  // if applied. Dropped the same way a low-visibility landmark already is, rather than posing
+  // the rig from it.
+  const rawUpperBoneTargets = entriesFor(CAMERA_POSE_UPPER_BONE_LANDMARKS, boneTarget)
+  const headTarget = rawUpperBoneTargets.mixamorigHead
+  const { mixamorigHead: _droppedHead, ...upperBoneTargetsWithoutHead } = rawUpperBoneTargets
+  const upperBoneTargets =
+    headTarget && headTarget.y <= anchor.shoulderCenterWorldPosition.y
+      ? upperBoneTargetsWithoutHead
+      : rawUpperBoneTargets
+
   const hipsTarget = (): Record<string, THREE.Vector3> => {
-    if (!options.includeHips) return {}
+    if (!options.includeHips || !legTarget) return {}
     const leftHip = landmarks[LANDMARK_INDEX.leftHip]
     const rightHip = landmarks[LANDMARK_INDEX.rightHip]
     if (
@@ -511,7 +581,8 @@ export const cameraLandmarksToBoneTargets = (
     ) {
       return {}
     }
-    return { [CAMERA_POSE_HIPS_BONE]: legTarget(landmarkMidpoint(leftHip, rightHip)) }
+    const target = legTarget(landmarkMidpoint(leftHip, rightHip))
+    return target ? { [CAMERA_POSE_HIPS_BONE]: target } : {}
   }
 
   const neckPoleTarget = (): Record<string, THREE.Vector3> => {
@@ -531,13 +602,15 @@ export const cameraLandmarksToBoneTargets = (
 
   return {
     boneTargets: {
-      ...entriesFor(CAMERA_POSE_UPPER_BONE_LANDMARKS, boneTarget),
-      ...entriesFor(CAMERA_POSE_LOWER_BONE_LANDMARKS, legTarget),
+      ...upperBoneTargets,
+      ...(legTarget ? entriesFor(CAMERA_POSE_LOWER_BONE_LANDMARKS, legTarget) : {}),
       ...hipsTarget()
     },
     poleTargets: {
       ...(options.includeElbows ? entriesFor(CAMERA_POSE_ELBOW_POLE_LANDMARKS, boneTarget) : {}),
-      ...(options.includeKnees ? entriesFor(CAMERA_POSE_KNEE_POLE_LANDMARKS, legTarget) : {}),
+      ...(options.includeKnees && legTarget
+        ? entriesFor(CAMERA_POSE_KNEE_POLE_LANDMARKS, legTarget)
+        : {}),
       ...neckPoleTarget()
     }
   }

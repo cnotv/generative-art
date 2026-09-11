@@ -12,10 +12,10 @@ export interface RigAnimatorConfig {
   cameraUseNeck: boolean
   cameraUseHips: boolean
   cameraUseDepth: boolean
-  cameraUseViewpoint: boolean
   cameraReachMultiplier: number
   cameraSmoothingFactor: number
   cameraMaxJump: number
+  cameraHandSensitivity: number
   cameraShowPreview: boolean
   targetLeftArm: boolean
   targetRightArm: boolean

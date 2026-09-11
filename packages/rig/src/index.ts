@@ -5,9 +5,16 @@ export { rigFindSkinnedMesh, rigFindUnskinnedMeshes } from './rig'
 export { rigGenerateHumanoidSkeleton, rigAutoSkinMesh } from './humanoidRig'
 export {
   ikFindTwoBoneChain,
+  ikFindSkeletonRoot,
   ikSolveTwoBoneChain,
   ikSolveOneBoneAim,
-  ikApplyWorldDirectionToBone
+  ikApplyWorldDirectionToBone,
+  ikTwistAroundWorldAxis
 } from './ik'
 export { HUMANOID_BONE_HIERARCHY, HAND_POSE_PRESETS } from './config'
-export { applyHandPose, resolveHandSide, handPoseRequiredBoneNames } from './handPose'
+export {
+  applyHandPose,
+  applyHandOrientation,
+  resolveHandSide,
+  handPoseRequiredBoneNames
+} from './handPose'

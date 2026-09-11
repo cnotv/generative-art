@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { HandPoseDefinition, HandSide } from './types'
+import type { HandOrientation, HandPoseDefinition, HandSide } from './types'
 
 const FINGERS: { key: keyof HandPoseDefinition; boneName: string }[] = [
   { key: 'thumb', boneName: 'Thumb' },
@@ -79,4 +79,70 @@ export const applyHandPose = (
         .multiply(new THREE.Quaternion().setFromAxisAngle(FLEXION_AXIS, signedAngle))
     })
   })
+}
+
+/**
+ * The rotation that carries the standard basis onto the three given orthonormal axes (its own
+ * columns), as a quaternion: applying it to (1,0,0) gives `xAxis`, to (0,1,0) gives `yAxis`, to
+ * (0,0,1) gives `zAxis`.
+ */
+const basisQuaternion = (
+  xAxis: THREE.Vector3,
+  yAxis: THREE.Vector3,
+  zAxis: THREE.Vector3
+): THREE.Quaternion =>
+  new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis))
+
+/**
+ * Turn a hand bone to face the way a detected hand does. Builds the bone's full target world
+ * orientation directly from two independent detected directions (along the fingers, across the
+ * knuckle row, plus their cross product for the third axis) and the same two directions read
+ * from the rig's own rest pose, rather than a minimal rotation from wherever the bone currently
+ * points: the arm's own position solve leaves the hand pointing almost anywhere depending on
+ * where its target happens to be, occasionally close enough to the opposite of the detected
+ * orientation to make a from-current alignment flip unpredictably between two possible rotation
+ * axes, a known degenerate case for that construction. Building the target directly has no such
+ * case, since it never depends on where the bone was already pointing.
+ *
+ * Requires the middle, index and pinky first finger bones, direct children of the hand bone, to
+ * read the rig's own rest-local along/across directions from; a rig with no finger bones (the
+ * auto-rig heuristic's own generated skeleton never has any) is left untouched.
+ * @param bones The rig's bones, with up-to-date world matrices
+ * @param side Which hand to orient
+ * @param orientation The detected hand's own along/across directions, in world space
+ */
+export const applyHandOrientation = (
+  bones: THREE.Bone[],
+  side: HandSide,
+  orientation: HandOrientation
+): void => {
+  const findBone = (name: string): THREE.Bone | undefined =>
+    bones.find((candidate) => candidate.name === name)
+  const hand = findBone(`mixamorig${side}Hand`)
+  const middle1 = findBone(`mixamorig${side}HandMiddle1`)
+  const index1 = findBone(`mixamorig${side}HandIndex1`)
+  const pinky1 = findBone(`mixamorig${side}HandPinky1`)
+  if (!hand || !middle1 || !index1 || !pinky1) return
+
+  // middle1, index1 and pinky1 are direct children of the hand bone, so their own rest-pose
+  // local positions already give these directions in the hand's own local space, with no world
+  // transform (and so no dependency on the hand's current orientation) involved at all.
+  const localAlong = middle1.position.clone().normalize()
+  const localAcross = pinky1.position.clone().sub(index1.position).normalize()
+  // along × across, not along/normal/across: that order keeps (x, y, z) right-handed, which
+  // `setFromRotationMatrix` requires — the other order is a reflection, not a rotation, and
+  // decomposing one to a quaternion silently produces a meaningless result.
+  const localNormal = new THREE.Vector3().crossVectors(localAlong, localAcross).normalize()
+  const localBasisQuaternion = basisQuaternion(localAlong, localAcross, localNormal)
+
+  const worldAlong = orientation.along.clone().normalize()
+  const worldAcross = orientation.across.clone().normalize()
+  const worldNormal = new THREE.Vector3().crossVectors(worldAlong, worldAcross).normalize()
+  const worldBasisQuaternion = basisQuaternion(worldAlong, worldAcross, worldNormal)
+
+  const parentWorldQuaternion = hand.parent
+    ? hand.parent.getWorldQuaternion(new THREE.Quaternion())
+    : new THREE.Quaternion()
+  const desiredWorldQuaternion = worldBasisQuaternion.multiply(localBasisQuaternion.invert())
+  hand.quaternion.copy(parentWorldQuaternion.invert().multiply(desiredWorldQuaternion))
 }

@@ -28,6 +28,14 @@ const buildTestRig = (): THREE.Bone[] => [
   buildBone('mixamorigRightArm', [0.4, 1, 0])
 ]
 
+/** The same rig, plus hip bones: legs only ever map with a hip anchor available, see
+ * `computeLegAnchor`'s own doc comment. */
+const buildTestRigWithHips = (): THREE.Bone[] => [
+  ...buildTestRig(),
+  buildBone('mixamorigLeftUpLeg', [-0.2, 0, 0]),
+  buildBone('mixamorigRightUpLeg', [0.2, 0, 0])
+]
+
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
   x,
   y,
@@ -43,6 +51,8 @@ const buildTestLandmarks = (): CameraLandmark[] => {
   landmarks[12] = landmark(0.2, -0.5, 0) // right shoulder
   landmarks[15] = landmark(-0.5, -0.5, 0) // left wrist
   landmarks[16] = landmark(0.5, -0.5, 0) // right wrist
+  landmarks[23] = landmark(-0.1, 0, 0) // left hip
+  landmarks[24] = landmark(0.1, 0, 0) // right hip
   landmarks[27] = landmark(-0.1, 0.5, 0) // left ankle, below shoulder height
   landmarks[28] = landmark(0.1, 0.5, 0) // right ankle
   return landmarks
@@ -79,6 +89,34 @@ describe('estimateCameraYaw', () => {
   it('returns null when a shoulder is below the visibility threshold', () => {
     const landmarks = landmarksWithShoulders([0.2, -0.5, 0], [-0.2, -0.5, 0])
     landmarks[12] = { ...landmarks[12], visibility: 0.1 }
+    expect(estimateCameraYaw(landmarks)).toBeNull()
+  })
+
+  it('returns null for a turn beyond what a real capture session plausibly shows, with no hips to back it up', () => {
+    // Shoulders read in reverse order (left where a square-on right shoulder would be), the
+    // shape a hand filling the frame with no real body in it can produce: a confident but
+    // physically implausible near-180-degree turn, not a real subject facing away entirely.
+    // No hip landmarks are set, the same as a hand filling the frame would leave them.
+    const yaw = estimateCameraYaw(landmarksWithShoulders([-0.2, -0.5, 0], [0.2, -0.5, 0]))
+    expect(yaw).toBeNull()
+  })
+
+  it('returns the yaw past that same angle once the hips are also confidently detected', () => {
+    // Same reversed shoulder reading as above, a subject who has turned to show their back to
+    // the camera, but this time with hip landmarks a hand filling the frame has no reason to
+    // also confidently produce, distinguishing a real full turn from that false read.
+    const landmarks = landmarksWithShoulders([-0.2, -0.5, 0], [0.2, -0.5, 0])
+    landmarks[23] = landmark(-0.1, 0, 0) // left hip
+    landmarks[24] = landmark(0.1, 0, 0) // right hip
+    const yaw = estimateCameraYaw(landmarks)
+    expect(yaw).not.toBeNull()
+    expect(Math.abs(yaw!)).toBeCloseTo(Math.PI)
+  })
+
+  it('still returns null past that angle when the hips are present but not confidently visible', () => {
+    const landmarks = landmarksWithShoulders([-0.2, -0.5, 0], [0.2, -0.5, 0])
+    landmarks[23] = landmark(-0.1, 0, 0, 0.1)
+    landmarks[24] = landmark(0.1, 0, 0, 0.1)
     expect(estimateCameraYaw(landmarks)).toBeNull()
   })
 })
@@ -127,7 +165,7 @@ describe('computeCameraRigAnchor', () => {
 })
 
 describe('cameraLandmarksToBoneTargets', () => {
-  const anchor = computeCameraRigAnchor(buildTestRig())!
+  const anchor = computeCameraRigAnchor(buildTestRigWithHips())!
 
   it('maps every bone with a visible landmark', () => {
     const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
@@ -157,6 +195,18 @@ describe('cameraLandmarksToBoneTargets', () => {
     landmarks[15] = { ...landmarks[15], visibility: 0.1 }
     const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
     expect(boneTargets.mixamorigLeftHand).toBeUndefined()
+    expect(boneTargets.mixamorigRightHand).toBeDefined()
+  })
+
+  it('drops the head target when the nose lands below the shoulders, a confident but nonsensical detection', () => {
+    const landmarks = buildTestLandmarks()
+    // A hand filling the frame with no real body in it is exactly the kind of input a pose
+    // detector can misread with real confidence: the "nose" it reports lands well below the
+    // shoulder line, a placement no real standing or seated person's head ever actually takes.
+    landmarks[0] = landmark(0, 2, 0)
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+    expect(boneTargets.mixamorigHead).toBeUndefined()
+    expect(boneTargets.mixamorigLeftHand).toBeDefined()
     expect(boneTargets.mixamorigRightHand).toBeDefined()
   })
 
@@ -265,58 +315,110 @@ describe('cameraLandmarksToBoneTargets', () => {
   })
 })
 
-describe('legs scale off the hip anchor, not the shoulder one', () => {
+describe('legs scale off the hip anchor, never the shoulder one', () => {
   // A rig whose legs are proportioned very differently from its shoulders: hips only 0.2
   // apart against an 0.8 shoulder width, a 4:1 ratio well past a real body's. This is exactly
   // the shape a real detected pose surfaced: scaling the ankle reach off the shoulders left it
   // barely a third of the rig's own leg length, folding the knee into an unnatural crouch.
-  const buildRigWithHips = (): THREE.Bone[] => [
+  const buildRigWithNarrowHips = (): THREE.Bone[] => [
     ...buildTestRig(),
     buildBone('mixamorigLeftUpLeg', [-0.1, 0, 0]),
     buildBone('mixamorigRightUpLeg', [0.1, 0, 0])
   ]
 
-  const landmarksWithHips = (): CameraLandmark[] => {
-    const landmarks = buildTestLandmarks()
-    landmarks[23] = landmark(-0.1, 0, 0) // left hip, 0.2 apart from the right, same as the rig
-    landmarks[24] = landmark(0.1, 0, 0) // right hip
-    return landmarks
-  }
-
-  it('reaches a different target for the foot than the shoulder scale would, once a hip anchor is available', () => {
-    const withHipAnchor = cameraLandmarksToBoneTargets(
-      landmarksWithHips(),
-      computeCameraRigAnchor(buildRigWithHips())!
+  it('reaches a different target for the foot than a wider hip anchor would', () => {
+    const narrowHips = cameraLandmarksToBoneTargets(
+      buildTestLandmarks(),
+      computeCameraRigAnchor(buildRigWithNarrowHips())!
     )
-    const shoulderScaleOnly = cameraLandmarksToBoneTargets(
-      landmarksWithHips(),
-      computeCameraRigAnchor(buildTestRig())!
+    const widerHips = cameraLandmarksToBoneTargets(
+      buildTestLandmarks(),
+      computeCameraRigAnchor(buildTestRigWithHips())!
     )
-    expect(withHipAnchor.boneTargets.mixamorigLeftFoot.y).not.toBeCloseTo(
-      shoulderScaleOnly.boneTargets.mixamorigLeftFoot.y
+    expect(narrowHips.boneTargets.mixamorigLeftFoot.y).not.toBeCloseTo(
+      widerHips.boneTargets.mixamorigLeftFoot.y
     )
   })
 
-  it('falls back to the shoulder anchor and scale when the hip landmarks are not visible', () => {
-    const anchor = computeCameraRigAnchor(buildRigWithHips())!
-    const withoutHipLandmarks = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
-    const shoulderScaleOnly = cameraLandmarksToBoneTargets(
-      buildTestLandmarks(),
-      computeCameraRigAnchor(buildTestRig())!
-    )
-    expect(withoutHipLandmarks.boneTargets.mixamorigLeftFoot.y).toBeCloseTo(
-      shoulderScaleOnly.boneTargets.mixamorigLeftFoot.y
-    )
+  it('leaves the foot bone untouched when the hip landmarks are not visible, instead of falling back to a different anchor', () => {
+    const anchor = computeCameraRigAnchor(buildRigWithNarrowHips())!
+    const landmarks = buildTestLandmarks()
+    landmarks[23] = { ...landmarks[23], visibility: 0.1 } // left hip, below the threshold
+    landmarks[24] = { ...landmarks[24], visibility: 0.1 } // right hip
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+
+    expect(boneTargets.mixamorigLeftFoot).toBeUndefined()
+    expect(boneTargets.mixamorigRightFoot).toBeUndefined()
+  })
+
+  it('leaves the foot bone untouched when a confidently detected hip lands above the shoulders, a real body never doing that', () => {
+    const anchor = computeCameraRigAnchor(buildRigWithNarrowHips())!
+    const landmarks = buildTestLandmarks()
+    // Hips reported well above the shoulder line: the shape a hand filling the frame with no
+    // real body in it can produce, still confidently, just not anywhere a real hip ever is.
+    landmarks[23] = landmark(-0.1, -2, 0)
+    landmarks[24] = landmark(0.1, -2, 0)
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+
+    expect(boneTargets.mixamorigLeftFoot).toBeUndefined()
+    expect(boneTargets.mixamorigRightFoot).toBeUndefined()
+  })
+
+  it('leaves the foot bone untouched when the hip landmarks are nearly coincident, not just literally identical', () => {
+    const anchor = computeCameraRigAnchor(buildRigWithNarrowHips())!
+    const landmarks = buildTestLandmarks()
+    // Both hips collapsed to almost the same point, below the shoulders and each other's own
+    // sight so neither the visibility nor the above-the-shoulders check catches it: exactly the
+    // shape a hand filling the frame with no real body in it produced against a real recording.
+    // Dividing the rig's own real hip width by a span this tiny would scale the foot target out
+    // to some absurd position far from the rig, not merely a slightly wrong one.
+    landmarks[23] = landmark(-0.0005, 0.5, 0)
+    landmarks[24] = landmark(0.0005, 0.5, 0)
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+
+    expect(boneTargets.mixamorigLeftFoot).toBeUndefined()
+    expect(boneTargets.mixamorigRightFoot).toBeUndefined()
+  })
+
+  it('drops a foot target that maps above the shoulders even off a plausible, confidently detected hip anchor', () => {
+    const anchor = computeCameraRigAnchor(buildRigWithNarrowHips())!
+    const landmarks = buildTestLandmarks()
+    // The hip anchor itself is entirely ordinary here; it's the ankle's own detected offset
+    // from it that is not, the shape a hand filling the frame with no real leg in it produced
+    // against a real recording. A real ankle never maps above the shoulders in any pose this
+    // feature supports, regardless of how plausible the hip anchor driving it looked.
+    landmarks[27] = landmark(-0.1, -2, 0)
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
+
+    expect(boneTargets.mixamorigLeftFoot).toBeUndefined()
+    expect(boneTargets.mixamorigRightFoot).toBeDefined()
+  })
+
+  it('leaves every leg-related bone untouched when the rig itself has no hip bones to anchor against', () => {
+    const anchor = computeCameraRigAnchor(buildTestRig())!
+
+    const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor, {
+      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      includeHips: true
+    })
+
+    expect(boneTargets.mixamorigLeftFoot).toBeUndefined()
+    expect(boneTargets.mixamorigRightFoot).toBeUndefined()
+    expect(boneTargets.mixamorigHips).toBeUndefined()
   })
 
   it('also scales a knee pole target off the hip anchor', () => {
-    const landmarks = landmarksWithHips()
+    const landmarks = buildTestLandmarks()
     landmarks[25] = landmark(-0.15, 0.2, 0) // left knee
     landmarks[26] = landmark(0.15, 0.2, 0) // right knee
 
     const { poleTargets } = cameraLandmarksToBoneTargets(
       landmarks,
-      computeCameraRigAnchor(buildRigWithHips())!,
+      computeCameraRigAnchor(buildRigWithNarrowHips())!,
       { ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, includeKnees: true }
     )
     expect(poleTargets.mixamorigLeftFoot).toBeDefined()
@@ -344,7 +446,10 @@ describe('CAMERA_POSE_BONE_LANDMARKS application order', () => {
       .filter((boneName) => boneName in targetsByBoneName)
       .forEach((boneName) => {
         const bone = bones.find((candidate) => candidate.name === boneName)!
-        applyGizmoDragToChain(bone, targetsByBoneName[boneName], restPoses)
+        // Applying several mapped bones' targets in one pass, like a real camera pose capture
+        // does: root-follow is off, or the head target below would carry the root along and
+        // throw off the hand target already applied.
+        applyGizmoDragToChain(bone, targetsByBoneName[boneName], restPoses, false)
       })
 
     const finalLeftHandPosition = leftHand.getWorldPosition(new THREE.Vector3())
@@ -475,6 +580,8 @@ describe('full pipeline: a T-pose maps onto the rig sensibly', () => {
     landmarks[12] = landmark(0.2, 0, 0) // right shoulder
     landmarks[15] = landmark(-0.7, 0, 0) // left wrist, extended out level with the shoulder
     landmarks[16] = landmark(0.7, 0, 0) // right wrist, extended out level with the shoulder
+    landmarks[23] = landmark(-0.15, 0.9, 0) // left hip
+    landmarks[24] = landmark(0.15, 0.9, 0) // right hip
     landmarks[27] = landmark(-0.15, 1.4, 0) // left ankle, near the floor
     landmarks[28] = landmark(0.15, 1.4, 0) // right ankle
     return landmarks
@@ -491,7 +598,10 @@ describe('full pipeline: a T-pose maps onto the rig sensibly', () => {
     const { boneTargets } = cameraLandmarksToBoneTargets(buildTPoseLandmarks(), anchor)
 
     Object.keys(CAMERA_POSE_BONE_LANDMARKS).forEach((boneName) => {
-      applyGizmoDragToChain(findBone(boneName), boneTargets[boneName], restPoses)
+      // Applying every mapped bone's target in one pass, like a real camera pose capture does:
+      // root-follow is off, or the foot targets below would carry the root along and throw off
+      // the hand/head targets already applied.
+      applyGizmoDragToChain(findBone(boneName), boneTargets[boneName], restPoses, false)
     })
 
     const leftShoulderPosition = findBone('mixamorigLeftShoulder').getWorldPosition(

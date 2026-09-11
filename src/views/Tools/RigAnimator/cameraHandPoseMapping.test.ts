@@ -1,12 +1,17 @@
 import { describe, it, expect } from 'vitest'
+import * as THREE from 'three'
 import {
   cameraHandLandmarksToPose,
+  cameraHandLandmarksToOrientation,
   cameraDetectedHandsToPoses,
+  cameraDetectedHandsToOrientations,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
   mirrorCameraHandPoses,
+  mirrorCameraHandOrientations,
   type CameraHandLandmark
 } from './cameraHandPoseMapping'
+import { CAMERA_HAND_SENSITIVITY_DEFAULT } from './config'
 
 const point = (x: number, y: number, z: number): CameraHandLandmark => ({ x, y, z })
 
@@ -42,7 +47,9 @@ describe('cameraHandLandmarksToPose', () => {
     landmarks[7] = point(0, 2, -1) // DIP folds back
     landmarks[8] = point(0, 2, -2) // TIP follows
 
-    const pose = cameraHandLandmarksToPose(landmarks)
+    // sensitivity: 1 to read the raw detected geometry, isolated from the tunable scaling
+    // `CAMERA_HAND_SENSITIVITY_DEFAULT` applies by default.
+    const pose = cameraHandLandmarksToPose(landmarks, 1)
 
     expect(pose.index[0]).toBeCloseTo(0) // MCP: still straight
     expect(pose.index[1]).toBeCloseTo(Math.PI / 2) // PIP: bent a quarter turn
@@ -55,6 +62,98 @@ describe('cameraHandLandmarksToPose', () => {
     const pose = cameraHandLandmarksToPose(buildOpenHandLandmarks())
     expect(Object.keys(pose).sort()).toEqual(['index', 'middle', 'pinky', 'ring', 'thumb'])
     Object.values(pose).forEach((angles) => expect(angles).toHaveLength(3))
+  })
+
+  it('reads a bent thumb CMC joint as a nonzero curl, the same as any other joint', () => {
+    const landmarks = buildOpenHandLandmarks()
+    // Fold the thumb's wrist->CMC->MCP angle the same way the index finger's bent-joint test
+    // folds its own PIP: still in line up to the joint, then a clean fold past it.
+    landmarks[2] = point(landmarks[1].x, landmarks[1].y, landmarks[1].z - 1)
+
+    const pose = cameraHandLandmarksToPose(landmarks)
+
+    expect(pose.thumb[0]).toBeGreaterThan(0.3)
+  })
+
+  it('scales every joint angle by the given sensitivity, defaulting to CAMERA_HAND_SENSITIVITY_DEFAULT', () => {
+    const landmarks = buildOpenHandLandmarks()
+    landmarks[6] = point(0, 2, 0)
+    landmarks[7] = point(0, 2, -1)
+    landmarks[8] = point(0, 2, -2)
+
+    const raw = cameraHandLandmarksToPose(landmarks, 1)
+    const doubled = cameraHandLandmarksToPose(landmarks, 2)
+    const defaulted = cameraHandLandmarksToPose(landmarks)
+
+    expect(doubled.index[1]).toBeCloseTo(raw.index[1] * 2)
+    expect(defaulted.index[1]).toBeCloseTo(raw.index[1] * CAMERA_HAND_SENSITIVITY_DEFAULT)
+  })
+})
+
+describe('cameraHandLandmarksToOrientation', () => {
+  it('reads along as wrist-to-middle-knuckle and across as index-to-pinky-knuckle, y/z flipped', () => {
+    const landmarks = buildOpenHandLandmarks()
+    // From buildOpenHandLandmarks: wrist (0,0,0), middle MCP (0.2,1,0), index MCP (0,1,0),
+    // pinky MCP (0.6,1,0).
+
+    const orientation = cameraHandLandmarksToOrientation(landmarks, false)
+
+    const expectedAlong = new THREE.Vector3(0.2, -1, 0).normalize()
+    const expectedAcross = new THREE.Vector3(0.6, 0, 0).normalize()
+    expect(orientation.along.distanceTo(expectedAlong)).toBeLessThan(1e-6)
+    expect(orientation.across.distanceTo(expectedAcross)).toBeLessThan(1e-6)
+  })
+
+  it('negates x when mirrored, matching the mirrored live preview', () => {
+    const landmarks = buildOpenHandLandmarks()
+
+    const orientation = cameraHandLandmarksToOrientation(landmarks, true)
+
+    const expectedAlong = new THREE.Vector3(-0.2, -1, 0).normalize()
+    const expectedAcross = new THREE.Vector3(-0.6, 0, 0).normalize()
+    expect(orientation.along.distanceTo(expectedAlong)).toBeLessThan(1e-6)
+    expect(orientation.across.distanceTo(expectedAcross)).toBeLessThan(1e-6)
+  })
+
+  it('always returns unit-length directions', () => {
+    const orientation = cameraHandLandmarksToOrientation(buildOpenHandLandmarks(), false)
+    expect(orientation.along.length()).toBeCloseTo(1)
+    expect(orientation.across.length()).toBeCloseTo(1)
+  })
+})
+
+describe('cameraDetectedHandsToOrientations', () => {
+  it('keys each detected hand orientation by its resolved side', () => {
+    const openHand = buildOpenHandLandmarks()
+    const orientations = cameraDetectedHandsToOrientations(
+      [
+        { worldLandmarks: openHand, categoryName: 'Left' },
+        { worldLandmarks: openHand, categoryName: 'Right' }
+      ],
+      false
+    )
+    expect(Object.keys(orientations).sort()).toEqual(['Left', 'Right'])
+  })
+
+  it('drops a hand MediaPipe could not classify', () => {
+    const orientations = cameraDetectedHandsToOrientations(
+      [{ worldLandmarks: buildOpenHandLandmarks(), categoryName: 'unknown' }],
+      false
+    )
+    expect(orientations).toEqual({})
+  })
+})
+
+describe('mirrorCameraHandOrientations', () => {
+  it('swaps a left orientation onto the right side and vice versa', () => {
+    const leftOrientation = cameraHandLandmarksToOrientation(buildOpenHandLandmarks(), true)
+    const rightOrientation = cameraHandLandmarksToOrientation(buildOpenHandLandmarks(), true)
+    const mirrored = mirrorCameraHandOrientations({
+      Left: leftOrientation,
+      Right: rightOrientation
+    })
+    expect(mirrored.Right).toBe(leftOrientation)
+    expect(mirrored.Left).toBe(rightOrientation)
   })
 })
 

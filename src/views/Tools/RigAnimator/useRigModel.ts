@@ -8,7 +8,6 @@ import {
   pickBoneMarker
 } from './boneMarkers'
 import {
-  applyGizmoDragToChain,
   captureRestPoses,
   resetBoneChainToRest,
   resetAllBonesToRest as resetAllBoneTransformsToRest,
@@ -17,6 +16,7 @@ import {
 import { loadModelFile, disposeModel, generateAutoRig, sortBoneNamesForDisplay } from './rigModel'
 import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
 import { useRigBoneMarkerVisibility } from './useRigBoneMarkerVisibility'
+import { useRigBoneDragTarget } from './useRigBoneDragTarget'
 import type { RigAnimatorConfig } from './types'
 
 /** Owns the loaded model, its rig and its bone markers for the rig animator tool. */
@@ -123,11 +123,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     if (bone) bone.position.set(position.x, position.y, position.z)
   }
 
-  /** Handle a drag toward a world target: an IK solve or a plain translate, see `applyGizmoDragToChain`. */
-  const applyBoneDragTarget = (bone: THREE.Bone, targetWorldPosition: THREE.Vector3): void => {
-    applyGizmoDragToChain(bone, targetWorldPosition, restPoses)
-    config.value.bonePosition = { x: bone.position.x, y: bone.position.y, z: bone.position.z }
-  }
+  const { applyBoneDragTarget } = useRigBoneDragTarget(config, () => restPoses)
 
   /** The currently selected bone, if any, for the view to attach a transform gizmo to. */
   const selectedBone = computed(() =>

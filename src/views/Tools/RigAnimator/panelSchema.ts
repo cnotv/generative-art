@@ -5,6 +5,7 @@ import {
   CAMERA_SMOOTHING_FACTOR_RANGE,
   CAMERA_REACH_MULTIPLIER_RANGE,
   CAMERA_MAX_JUMP_RANGE,
+  CAMERA_HAND_SENSITIVITY_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
   ENCLOSURE_OPACITY_RANGE,
   ENCLOSURE_SIZE_RANGE
@@ -36,8 +37,7 @@ export const buildRigAnimatorSchema = (
             z: positionRange * POSITION_STEP_FRACTION
           }
         },
-        resetBone: { callback: 'resetBone', label: 'Reset Bone to Rest Pose' },
-        showBoneMarkers: { checkbox: true, label: 'Show Bone Markers' }
+        resetBone: { callback: 'resetBone', label: 'Reset Bone to Rest Pose' }
       }
     : {}),
   ...(canCaptureFromCamera
@@ -51,7 +51,6 @@ export const buildRigAnimatorSchema = (
         cameraUseNeck: { checkbox: true, label: 'Camera Pose: Bend Neck to Photo' },
         cameraUseHips: { checkbox: true, label: 'Camera Pose: Move Hips to Photo' },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
-        cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
         cameraReachMultiplier: {
           ...CAMERA_REACH_MULTIPLIER_RANGE,
           label: 'Camera Pose: Reach Multiplier'
@@ -64,7 +63,10 @@ export const buildRigAnimatorSchema = (
           ...CAMERA_MAX_JUMP_RANGE,
           label: 'Camera Pose: Max Jump (Live Feed)'
         },
-        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
+        cameraHandSensitivity: {
+          ...CAMERA_HAND_SENSITIVITY_RANGE,
+          label: 'Camera Pose: Hand Sensitivity'
+        }
       }
     : {}),
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },

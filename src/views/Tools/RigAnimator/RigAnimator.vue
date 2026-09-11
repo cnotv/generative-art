@@ -9,12 +9,15 @@ import { createTimelineManager } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import {
   ikFindTwoBoneChain,
+  ikTwistAroundWorldAxis,
   applyHandPose,
+  applyHandOrientation,
   type TwoBoneIkChain,
   type HandSide,
-  type HandPoseDefinition
+  type HandPoseDefinition,
+  type HandOrientation
 } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle } from 'lucide-vue-next'
+import { Upload, Camera as CameraIcon, Lightbulb, Circle, Bone } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
 import {
@@ -33,6 +36,7 @@ import {
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_LANDMARK_SMOOTHING_FACTOR,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
+  CAMERA_HAND_SENSITIVITY_DEFAULT,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
@@ -42,7 +46,11 @@ import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { frameCameraOnModel } from './cameraFraming'
-import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
+import {
+  estimateCameraYaw,
+  CAMERA_POSE_TORQUE_BONE,
+  type CameraLandmark
+} from './cameraPoseMapping'
 import {
   selectedBodyPartGroups,
   toggleBodyPartGroupTarget,
@@ -56,6 +64,10 @@ import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
 import CameraPoseCapture from './CameraPoseCapture.vue'
 import type { RigAnimatorConfig } from './types'
+
+/** The torso torque's own twist axis: straight up, regardless of whatever the model's own
+ * current orientation happens to be. */
+const WORLD_UP_AXIS = new THREE.Vector3(0, 1, 0)
 
 const route = useRoute()
 const routeName = route.name as string
@@ -86,10 +98,10 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseNeck: true,
   cameraUseHips: false,
   cameraUseDepth: true,
-  cameraUseViewpoint: false,
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
+  cameraHandSensitivity: CAMERA_HAND_SENSITIVITY_DEFAULT,
   cameraShowPreview: false,
   targetLeftArm: true,
   targetRightArm: true,
@@ -311,18 +323,49 @@ const toggleMarbleFlow = (): void => {
   reactiveConfig.value.marbleFlowEnabled = !reactiveConfig.value.marbleFlowEnabled
 }
 
+/** The docked bone icon shows or hides the per-bone markers, same toggle shape as physics. */
+const toggleBoneMarkers = (): void => {
+  reactiveConfig.value.showBoneMarkers = !reactiveConfig.value.showBoneMarkers
+}
+
 /**
- * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
- * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
- * from, the one camera-relative detail a single photo's body landmarks can actually support
- * (see `estimateCameraYaw`'s own doc comment for why not more than that).
+ * Applies a detected body pose and, riding along on the same emit, any detected hand poses and
+ * orientations. Also turns the torso to roughly the angle the photo shows the subject from, the
+ * one camera-relative detail a single photo's body landmarks can actually support (see
+ * `estimateCameraYaw`'s own doc comment for why not more than that): the upper body twists to
+ * follow the subject, hips and feet planted the way a real turn reads, instead of the whole rig
+ * spinning like a rigid turntable, and instead of the viewing camera swinging around it, which
+ * stays entirely under the user's own orbit control throughout capture.
+ *
+ * Hand orientation applies last, after the torso twist: `applyHandOrientation` aligns a hand
+ * bone to an absolute world direction regardless of whatever rotation it inherited from its
+ * now-twisted ancestors, so applying it any earlier would have the twist carry the hand away
+ * from the very orientation just set for it.
+ *
+ * `ikTwistAroundWorldAxis` composes its twist on top of the bone's current orientation rather
+ * than setting an absolute one (see its own doc comment), which only stays correct applied
+ * fresh every frame because the torso bone is reset to rest first, right below, before
+ * `applyCameraPose` gets anywhere near it. The head-aim solve inside that call also resets this
+ * same bone (see `applyGizmoDragToChain`'s own doc comment), but only when the head is actually
+ * driven that frame; a frame where it isn't (a low-confidence or implausible detection) would
+ * otherwise leave the bone exactly where the previous frame's twist left it, and composing
+ * another full twist on top of that wound the torso up further every such frame instead of
+ * ever settling. Resetting unconditionally here, before either solve runs, means both start
+ * from the same fixed baseline regardless of which one actually drove the bone that frame.
  */
 const handleCameraApply = (
   landmarks: CameraLandmark[],
-  handPoses: Partial<Record<HandSide, HandPoseDefinition>>
+  handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
+  handOrientations: Partial<Record<HandSide, HandOrientation>>
 ): void => {
-  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   const restQuaternions = rig.getRestQuaternions()
+  const yaw = estimateCameraYaw(landmarks)
+  const torsoBone = rig.bones.value.find((bone) => bone.name === CAMERA_POSE_TORQUE_BONE)
+  const torsoRestQuaternion = torsoBone && restQuaternions.get(torsoBone.name)
+  if (yaw !== null && torsoBone && torsoRestQuaternion) {
+    torsoBone.quaternion.copy(torsoRestQuaternion)
+  }
+  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   Object.entries(handPoses).forEach(([side, pose]) => {
     // A hand's fingers belong to that side's arm group (see `boneBodyPartGroup`), so a capture
     // scoped away from that arm must not curl its fingers either.
@@ -330,10 +373,12 @@ const handleCameraApply = (
     if (!targetBodyPartGroups.value.has(armGroup)) return
     applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
   })
-  if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
-    const yaw = estimateCameraYaw(landmarks)
-    if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
+  if (yaw !== null && torsoBone) {
+    ikTwistAroundWorldAxis(torsoBone, yaw, WORLD_UP_AXIS)
   }
+  Object.entries(handOrientations).forEach(([side, orientation]) => {
+    applyHandOrientation(rig.bones.value, side as HandSide, orientation)
+  })
   motionRecording.recordFrameIfActive()
 }
 
@@ -349,6 +394,12 @@ const handleModelFileChange = (event: Event): void => {
 watch(
   () => reactiveConfig.value.model,
   async (url) => {
+    // `getTools`'s own onProgress (handleProgress above) only covers the scene/renderer setup
+    // in `init`, not this watcher's own model fetch and parse: without this, uploading a new
+    // model left the overlay off entirely while it loaded, reading as a stuck or broken view.
+    loadingVisible.value = true
+    loadingStage.value = 'Loading Model…'
+    loadingDetail.value = undefined
     await rig.loadModel(url)
     if (rig.model.value && cameraReference) {
       frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
@@ -359,6 +410,7 @@ watch(
       if (saved) rig.restoreAutosave(saved)
     }
     refreshSchema()
+    loadingVisible.value = false
   }
 )
 watch(
@@ -560,6 +612,16 @@ onUnmounted(() => {
       <CameraIcon />
     </IconButton>
     <IconButton
+      v-if="rig.bones.value.length > 0"
+      size="sm"
+      variant="outline"
+      :active="reactiveConfig.showBoneMarkers"
+      :title="reactiveConfig.showBoneMarkers ? 'Hide Bone Markers' : 'Show Bone Markers'"
+      @click="toggleBoneMarkers"
+    >
+      <Bone />
+    </IconButton>
+    <IconButton
       size="sm"
       variant="outline"
       :active="reactiveConfig.physicsEnabled"
@@ -615,6 +677,7 @@ onUnmounted(() => {
     v-if="showCameraCapture"
     :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
     :max-jump="reactiveConfig.cameraMaxJump"
+    :hand-sensitivity="reactiveConfig.cameraHandSensitivity"
     :show-preview="reactiveConfig.cameraShowPreview"
     :is-recording="motionRecording.isRecording.value"
     :frame="reactiveConfig.frame"
@@ -624,6 +687,7 @@ onUnmounted(() => {
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"
+    @toggle-preview="reactiveConfig.cameraShowPreview = !reactiveConfig.cameraShowPreview"
     @seek-frame="(frame) => (reactiveConfig.frame = frame)"
   />
 </template>

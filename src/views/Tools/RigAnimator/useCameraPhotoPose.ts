@@ -1,5 +1,5 @@
-import { ref, shallowRef } from 'vue'
-import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
+import { ref, shallowRef, type Ref } from 'vue'
+import type { HandSide, HandPoseDefinition, HandOrientation } from '@webgamekit/rig'
 import {
   FilesetResolver,
   PoseLandmarker,
@@ -9,17 +9,25 @@ import {
 import {
   MEDIAPIPE_WASM_BASE_PATH,
   MEDIAPIPE_POSE_MODEL_URL,
-  MEDIAPIPE_HAND_MODEL_URL
+  MEDIAPIPE_HAND_MODEL_URL,
+  CAMERA_HAND_SENSITIVITY_DEFAULT
 } from './config'
 import type { CameraLandmark } from './cameraPoseMapping'
-import { cameraDetectedHandsToPoses } from './cameraHandPoseMapping'
+import {
+  cameraDetectedHandsToPoses,
+  cameraDetectedHandsToOrientations
+} from './cameraHandPoseMapping'
 
 /**
  * Owns detecting a pose from a single uploaded photo, the static-image counterpart to
  * `useCameraPoseCapture`: useful for posing from a reference photo, and for anyone without a
  * working webcam.
+ * @param handSensitivity Scales every detected finger joint's curl angle, read fresh on every
+ *   `detectPhoto` call the same way `useCameraPoseCapture`'s own is read fresh every frame
  */
-export const useCameraPhotoPose = () => {
+export const useCameraPhotoPose = (
+  handSensitivity: Ref<number> = ref(CAMERA_HAND_SENSITIVITY_DEFAULT)
+) => {
   const photoImage = shallowRef<ImageBitmap | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -31,6 +39,8 @@ export const useCameraPhotoPose = () => {
   const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
   /** Detected finger curl per side, for whichever hand(s) the photo shows. */
   const handPoses = shallowRef<Partial<Record<HandSide, HandPoseDefinition>>>({})
+  /** Detected along/across orientation per side, for whichever hand(s) the photo shows. */
+  const handOrientations = shallowRef<Partial<Record<HandSide, HandOrientation>>>({})
 
   /** Read a person's pose out of an uploaded photo file, replacing whatever was detected before. */
   const detectPhoto = async (file: File): Promise<void> => {
@@ -40,6 +50,7 @@ export const useCameraPhotoPose = () => {
     previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
+    handOrientations.value = {}
     let landmarker: PoseLandmarker | null = null
     let handLandmarker: HandLandmarker | null = null
     try {
@@ -61,12 +72,12 @@ export const useCameraPhotoPose = () => {
 
       const handResult = handLandmarker.detect(photoImage.value)
       previewHandLandmarks.value = handResult.landmarks.length > 0 ? handResult.landmarks : null
-      handPoses.value = cameraDetectedHandsToPoses(
-        handResult.worldLandmarks.map((landmarksForHand, index) => ({
-          worldLandmarks: landmarksForHand,
-          categoryName: handResult.handedness[index]?.[0]?.categoryName ?? ''
-        }))
-      )
+      const detectedHands = handResult.worldLandmarks.map((landmarksForHand, index) => ({
+        worldLandmarks: landmarksForHand,
+        categoryName: handResult.handedness[index]?.[0]?.categoryName ?? ''
+      }))
+      handPoses.value = cameraDetectedHandsToPoses(detectedHands, handSensitivity.value)
+      handOrientations.value = cameraDetectedHandsToOrientations(detectedHands, false)
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Could not read that photo'
     } finally {
@@ -94,6 +105,7 @@ export const useCameraPhotoPose = () => {
     previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
+    handOrientations.value = {}
     error.value = null
   }
 
@@ -105,6 +117,7 @@ export const useCameraPhotoPose = () => {
     previewHandLandmarks,
     worldLandmarks,
     handPoses,
+    handOrientations,
     detectPhoto,
     reset
   }

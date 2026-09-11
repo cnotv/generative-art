@@ -43,56 +43,42 @@ const withHipsOccluded = (landmarks: CameraLandmark[]): CameraLandmark[] => {
 /** The same wiring `useRigModel` gives `useRigCameraPose`, built directly for a focused test. */
 const buildRigWiring = (bones: THREE.Bone[]) => {
   const restPoses: Map<string, BoneRestPose> = captureRestPoses(bones)
-  const applyBoneDragTarget = (bone: THREE.Bone, target: THREE.Vector3): void =>
-    applyGizmoDragToChain(bone, target, restPoses)
-  const resetAllBonesToRest = (excludeBoneNames?: Set<string>): void => {
-    bones.forEach((bone) => {
-      if (excludeBoneNames?.has(bone.name)) return
-      const rest = restPoses.get(bone.name)
-      if (rest) {
-        bone.position.copy(rest.position)
-        bone.quaternion.copy(rest.quaternion)
-      }
-    })
-  }
-  return { applyBoneDragTarget, resetAllBonesToRest }
+  const applyBoneDragTarget = (
+    bone: THREE.Bone,
+    target: THREE.Vector3,
+    allowRootFollow?: boolean
+  ): void => applyGizmoDragToChain(bone, target, restPoses, allowRootFollow)
+  return { applyBoneDragTarget }
 }
 
 describe('useRigCameraPose', () => {
-  it('resets a bone camera capture never drives back to rest, instead of leaving it mixed in from an earlier edit', () => {
+  it('leaves a bone camera capture never drives exactly where it already was', () => {
     const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
     const { root, bones } = rigGenerateHumanoidSkeleton(box)
     root.updateMatrixWorld(true)
-    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const { applyBoneDragTarget } = buildRigWiring(bones)
     const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
 
-    // Simulate a stale pose: the shoulder is rotated by a manual edit or an earlier capture,
-    // and neither the head's aim nor the hand's two-bone chain has any reach back up to it.
+    // A pose from an earlier capture, or a manual edit, on a bone neither the head's aim nor
+    // the hand's two-bone chain has any reach back up to.
     const shoulder = findBone('mixamorigLeftShoulder')
     shoulder.quaternion.setFromEuler(new THREE.Euler(0, 0, Math.PI / 2))
+    const quaternionBefore = shoulder.quaternion.clone()
 
-    const { applyCameraPose } = useRigCameraPose(
-      ref(bones),
-      applyBoneDragTarget,
-      resetAllBonesToRest
-    )
+    const { applyCameraPose } = useRigCameraPose(ref(bones), applyBoneDragTarget)
     applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, ALL_GROUPS)
 
-    expect(shoulder.quaternion.angleTo(new THREE.Quaternion())).toBeCloseTo(0)
+    expect(shoulder.quaternion.angleTo(quaternionBefore)).toBeCloseTo(0)
   })
 
-  it('still applies the detected pose to the mapped bones after resetting the rig', () => {
+  it('still applies the detected pose to the mapped bones', () => {
     const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
     const { root, bones } = rigGenerateHumanoidSkeleton(box)
     root.updateMatrixWorld(true)
-    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const { applyBoneDragTarget } = buildRigWiring(bones)
     const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
 
-    const { applyCameraPose } = useRigCameraPose(
-      ref(bones),
-      applyBoneDragTarget,
-      resetAllBonesToRest
-    )
+    const { applyCameraPose } = useRigCameraPose(ref(bones), applyBoneDragTarget)
     applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, ALL_GROUPS)
 
     const leftShoulderPosition = findBone('mixamorigLeftShoulder').getWorldPosition(
@@ -113,15 +99,11 @@ describe('useRigCameraPose', () => {
     const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
     const { root, bones } = rigGenerateHumanoidSkeleton(box)
     root.updateMatrixWorld(true)
-    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const { applyBoneDragTarget } = buildRigWiring(bones)
     const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
     const options = { ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, includeHips: true }
 
-    const { applyCameraPose } = useRigCameraPose(
-      ref(bones),
-      applyBoneDragTarget,
-      resetAllBonesToRest
-    )
+    const { applyCameraPose } = useRigCameraPose(ref(bones), applyBoneDragTarget)
     applyCameraPose(buildTPoseLandmarks(), options, ALL_GROUPS)
     const hips = findBone('mixamorigHips')
     const drivenPosition = hips.position.clone()
@@ -136,7 +118,7 @@ describe('useRigCameraPose', () => {
     const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
     const { root, bones } = rigGenerateHumanoidSkeleton(box)
     root.updateMatrixWorld(true)
-    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const { applyBoneDragTarget } = buildRigWiring(bones)
     const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
 
     // A stale pose on the right shoulder, from an earlier source, that a left-arm-only capture
@@ -145,11 +127,7 @@ describe('useRigCameraPose', () => {
     rightShoulder.quaternion.setFromEuler(new THREE.Euler(0, 0, Math.PI / 4))
     const staleRightShoulder = rightShoulder.quaternion.clone()
 
-    const { applyCameraPose } = useRigCameraPose(
-      ref(bones),
-      applyBoneDragTarget,
-      resetAllBonesToRest
-    )
+    const { applyCameraPose } = useRigCameraPose(ref(bones), applyBoneDragTarget)
     applyCameraPose(
       buildTPoseLandmarks(),
       CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
@@ -166,16 +144,12 @@ describe('useRigCameraPose', () => {
     const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
     const { root, bones } = rigGenerateHumanoidSkeleton(box)
     root.updateMatrixWorld(true)
-    const { applyBoneDragTarget, resetAllBonesToRest } = buildRigWiring(bones)
+    const { applyBoneDragTarget } = buildRigWiring(bones)
     const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
     const leftArmOnly = new Set<RigBodyPartGroup>(['leftArm'])
     const rightArmOnly = new Set<RigBodyPartGroup>(['rightArm'])
 
-    const { applyCameraPose } = useRigCameraPose(
-      ref(bones),
-      applyBoneDragTarget,
-      resetAllBonesToRest
-    )
+    const { applyCameraPose } = useRigCameraPose(ref(bones), applyBoneDragTarget)
     applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, leftArmOnly)
     const leftHandAfterFirstShoot = findBone('mixamorigLeftHand')
       .getWorldPosition(new THREE.Vector3())

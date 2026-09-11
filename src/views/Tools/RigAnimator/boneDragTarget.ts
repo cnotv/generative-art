@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import {
   ikFindTwoBoneChain,
+  ikFindSkeletonRoot,
   ikSolveTwoBoneChain,
   ikSolveOneBoneAim,
   type TwoBoneIkChain
@@ -10,6 +11,38 @@ import {
 export interface BoneRestPose {
   position: THREE.Vector3
   quaternion: THREE.Quaternion
+}
+
+/**
+ * End effectors whose drag carries the whole skeleton along with it, rather than only bending
+ * their own two-bone chain: a leg or the head moves the body the way planting a foot or lifting
+ * your chin does in life, so dragging one keeps reading as posing the body through that limb
+ * instead of stretching the limb away from a body that stays planted. A hand is deliberately
+ * left off this list: reaching for something normally bends the elbow while the torso stays put.
+ */
+const ROOT_FOLLOW_BONE_NAMES = new Set(['mixamorigHead', 'mixamorigLeftFoot', 'mixamorigRightFoot'])
+
+/**
+ * Translate the skeleton's own root bone by however far a dragged end effector still has to
+ * travel to reach its target, so the two-bone solve run right after this only has to close
+ * whatever small gap is left instead of bending the limb to cover the whole distance itself.
+ * @param endBone The dragged end effector, with up-to-date world matrices
+ * @param targetWorldPosition Where the drag wants `endBone` to end up, in world space
+ */
+const followSkeletonRootToTarget = (
+  endBone: THREE.Bone,
+  targetWorldPosition: THREE.Vector3
+): void => {
+  const root = ikFindSkeletonRoot(endBone)
+  const currentWorldPosition = endBone.getWorldPosition(new THREE.Vector3())
+  const parent = root.parent
+  const previousLocal = parent
+    ? parent.worldToLocal(currentWorldPosition.clone())
+    : currentWorldPosition
+  const targetLocal = parent
+    ? parent.worldToLocal(targetWorldPosition.clone())
+    : targetWorldPosition.clone()
+  root.position.add(targetLocal.sub(previousLocal))
 }
 
 /**
@@ -37,24 +70,44 @@ export const captureRestPoses = (bones: THREE.Bone[]): Map<string, BoneRestPose>
  * @param bone The bone being dragged
  * @param targetWorldPosition Where the drag wants this bone to end up, in world space
  * @param restPoses Every rigged bone's transform as loaded, keyed by name
+ * @param allowRootFollow Whether a foot or head target may also carry the skeleton root along
+ *   with it (see `ROOT_FOLLOW_BONE_NAMES`), on by default for an interactive single-bone drag.
+ *   A caller applying several independent limb targets in the same pass, like a detected
+ *   whole-body camera pose, turns this off: translating the root for one limb would throw off
+ *   every other limb's own already-correct target in that same pass.
  * @returns Nothing; mutates whichever ancestor bone(s) solve for this bone, or the bone's own
  *   local position directly when it has no Bone parent at all
  */
 export const applyGizmoDragToChain = (
   bone: THREE.Bone,
   targetWorldPosition: THREE.Vector3,
-  restPoses: Map<string, BoneRestPose>
+  restPoses: Map<string, BoneRestPose>,
+  allowRootFollow = true
 ): void => {
   const rest = restPoses.get(bone.name)
   const chain = ikFindTwoBoneChain(bone)
   if (chain) {
     if (rest) bone.position.copy(rest.position)
+    if (allowRootFollow && ROOT_FOLLOW_BONE_NAMES.has(bone.name)) {
+      followSkeletonRootToTarget(bone, targetWorldPosition)
+    }
     const poleWorldPosition = chain.mid.getWorldPosition(new THREE.Vector3())
     ikSolveTwoBoneChain(chain, targetWorldPosition, poleWorldPosition)
     return
   }
   if (bone.parent instanceof THREE.Bone) {
     if (rest) bone.position.copy(rest.position)
+    // The parent is the bone the aim solve actually rotates, and it aims by the shortest turn
+    // from whatever direction it currently faces: resetting its rotation to rest first, the
+    // same way the dragged bone's own position is reset above, gives every aim a fixed,
+    // history-independent starting point. Without this, a rig left mid-capture (rather than
+    // reset between drags the way a mouse drag always is) carries forward whatever an earlier
+    // frame's aim, or something else applied to this same bone (a body-turn twist, say), left
+    // it at, and the shortest-turn solve can pick a wildly different axis than the same target
+    // would from rest, reading as the bone flipping into a bent or twisted pose that has
+    // nothing to do with the target actually driving it that frame.
+    const parentRest = restPoses.get(bone.parent.name)
+    if (parentRest) bone.parent.quaternion.copy(parentRest.quaternion)
     ikSolveOneBoneAim(bone.parent, bone, targetWorldPosition)
     return
   }

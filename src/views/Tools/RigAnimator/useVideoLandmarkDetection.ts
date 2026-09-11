@@ -1,5 +1,5 @@
 import { shallowRef, type Ref, type ShallowRef } from 'vue'
-import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
+import type { HandSide, HandPoseDefinition, HandOrientation } from '@webgamekit/rig'
 import {
   FilesetResolver,
   PoseLandmarker,
@@ -18,7 +18,9 @@ import {
 } from './cameraPoseMapping'
 import {
   cameraDetectedHandsToPoses,
+  cameraDetectedHandsToOrientations,
   mirrorCameraHandPoses,
+  mirrorCameraHandOrientations,
   resolveCameraHandSide,
   smoothCameraHandLandmarks,
   type CameraHandLandmark
@@ -28,6 +30,9 @@ interface Dependencies {
   videoElement: ShallowRef<HTMLVideoElement | null>
   smoothingFactor: Ref<number>
   maxJump: Ref<number>
+  /** Scales every detected finger joint's curl angle; see `cameraHandLandmarksToPose`'s own doc
+   * comment for why the default reads above the raw geometry. */
+  handSensitivity: Ref<number>
   /** Whether the source reads as a mirror (a live self-view, matching how the subject sees
    * themselves) or should be taken as shown (an uploaded clip is not a self-view, the same as
    * an uploaded photo isn't) — see `mirrorCameraLandmarks`'s own doc comment for why this has
@@ -45,12 +50,14 @@ export const useVideoLandmarkDetection = ({
   videoElement,
   smoothingFactor,
   maxJump,
+  handSensitivity,
   mirror
 }: Dependencies) => {
   const previewLandmarks = shallowRef<NormalizedLandmark[] | null>(null)
   const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
   const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
   const handPoses = shallowRef<Partial<Record<HandSide, HandPoseDefinition>>>({})
+  const handOrientations = shallowRef<Partial<Record<HandSide, HandOrientation>>>({})
 
   let landmarker: PoseLandmarker | null = null
   let handLandmarker: HandLandmarker | null = null
@@ -96,8 +103,12 @@ export const useVideoLandmarkDetection = ({
       if (side) previousHandLandmarksBySide = { ...previousHandLandmarksBySide, [side]: smoothed }
       return { worldLandmarks: smoothed, categoryName }
     })
-    const detectedHandPoses = cameraDetectedHandsToPoses(smoothedHands)
+    const detectedHandPoses = cameraDetectedHandsToPoses(smoothedHands, handSensitivity.value)
     handPoses.value = mirror ? mirrorCameraHandPoses(detectedHandPoses) : detectedHandPoses
+    const detectedHandOrientations = cameraDetectedHandsToOrientations(smoothedHands, mirror)
+    handOrientations.value = mirror
+      ? mirrorCameraHandOrientations(detectedHandOrientations)
+      : detectedHandOrientations
 
     animationFrame = requestAnimationFrame(detectFrame)
   }
@@ -141,6 +152,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value = null
     worldLandmarks.value = null
     handPoses.value = {}
+    handOrientations.value = {}
     previousWorldLandmarks = null
     previousHandLandmarksBySide = {}
   }
@@ -150,6 +162,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks,
     worldLandmarks,
     handPoses,
+    handOrientations,
     startDetectionLoop,
     stopDetectionLoop
   }

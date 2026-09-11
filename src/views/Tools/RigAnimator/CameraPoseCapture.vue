@@ -7,7 +7,7 @@ import {
   type NormalizedLandmark
 } from '@mediapipe/tasks-vision'
 import { Circle, Square } from 'lucide-vue-next'
-import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
+import type { HandSide, HandPoseDefinition, HandOrientation } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
 import Switch from '@/components/ui/switch/Switch.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
@@ -17,12 +17,29 @@ import { useVideoTimelineSync } from './useVideoTimelineSync'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
 
+/** Body pose's own rough hand landmark indices (pinky/index/thumb knuckles, both sides), in
+ * BlazePose's own point order. */
+const BODY_POSE_HAND_LANDMARK_INDEX = {
+  leftPinky: 17,
+  rightPinky: 18,
+  leftIndex: 19,
+  rightIndex: 20,
+  leftThumb: 21,
+  rightThumb: 22
+}
+
+/** Dropped from the body skeleton overlay whenever the dedicated Hand Landmarker also found
+ * that hand, so its far more detailed finger skeleton is the only one drawn there. */
+const BODY_POSE_HAND_LANDMARK_INDICES = new Set(Object.values(BODY_POSE_HAND_LANDMARK_INDEX))
+
 const props = defineProps<{
   /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
   smoothingFactor: number
   /** Furthest a landmark may move in one frame before the excess is clamped off as a sudden
    * jump; tuned from the Config panel. */
   maxJump: number
+  /** Scales every detected finger joint's curl angle; tuned from the Config panel. */
+  handSensitivity: number
   /** Whether the mirrored camera preview is actually visible, versus detecting headlessly. */
   showPreview: boolean
   /** Whether the parent is currently sampling the live feed onto the rig timeline as
@@ -41,10 +58,15 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
+  apply: [
+    landmarks: CameraLandmark[],
+    handPoses: Partial<Record<HandSide, HandPoseDefinition>>,
+    handOrientations: Partial<Record<HandSide, HandOrientation>>
+  ]
   close: []
   toggleRecord: []
   enablePreview: []
+  togglePreview: []
   /** The uploaded video was scrubbed via its own native controls; move the rig timeline's
    * playhead to match. */
   seekFrame: [frame: number]
@@ -53,9 +75,17 @@ const emit = defineEmits<{
 const videoReference = ref<HTMLVideoElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
-const camera = useCameraPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
-const photo = useCameraPhotoPose()
-const uploadedVideo = useVideoPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
+const camera = useCameraPoseCapture(
+  toRef(props, 'smoothingFactor'),
+  toRef(props, 'maxJump'),
+  toRef(props, 'handSensitivity')
+)
+const photo = useCameraPhotoPose(toRef(props, 'handSensitivity'))
+const uploadedVideo = useVideoPoseCapture(
+  toRef(props, 'smoothingFactor'),
+  toRef(props, 'maxJump'),
+  toRef(props, 'handSensitivity')
+)
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 /** Whether the current mode drives the rig from a continuously updating source, the same as a
  * live webcam feed does, versus a single still photo. Both camera and an uploaded video can
@@ -99,6 +129,13 @@ const worldLandmarks = computed(() =>
 const handPoses = computed(() =>
   pickByMode(camera.handPoses.value, uploadedVideo.handPoses.value, photo.handPoses.value)
 )
+const handOrientations = computed(() =>
+  pickByMode(
+    camera.handOrientations.value,
+    uploadedVideo.handOrientations.value,
+    photo.handOrientations.value
+  )
+)
 
 let drawingUtilities: DrawingUtils | null = null
 
@@ -134,9 +171,11 @@ const drawOverlay = (): void => {
     // connection's two endpoints by their original array index and already skips a missing one,
     // so a hole is safe there; drawLandmarks just iterates whatever it is given with no such
     // guard, so it needs the holes actually removed rather than left as `undefined` entries.
-    const landmarksByIndex = previewLandmarks.value.map((landmark) =>
-      landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
-    ) as NormalizedLandmark[]
+    const handsDetectedSeparately = !!previewHandLandmarks.value?.length
+    const landmarksByIndex = previewLandmarks.value.map((landmark, index) => {
+      if (handsDetectedSeparately && BODY_POSE_HAND_LANDMARK_INDICES.has(index)) return undefined
+      return landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD ? landmark : undefined
+    }) as NormalizedLandmark[]
     const visibleLandmarksOnly = landmarksByIndex.filter(
       (landmark): landmark is NormalizedLandmark => landmark !== undefined
     )
@@ -163,10 +202,10 @@ watch([previewLandmarks, previewHandLandmarks, () => photo.photoImage.value], dr
 // Applies live: every newly detected frame (continuous for the camera, once for a photo) goes
 // straight to the rig, so the model mirrors the source in real time instead of waiting for a
 // separate capture click. This is what makes the side-by-side comparison actually prove the
-// mapping matches, rather than only a snapshot of it. Hand poses ride along on the same emit,
-// since both detections finish within the same detectFrame/detectPhoto call.
+// mapping matches, rather than only a snapshot of it. Hand poses and orientations ride along on
+// the same emit, since both detections finish within the same detectFrame/detectPhoto call.
 watch(worldLandmarks, (landmarks) => {
-  if (landmarks) emit('apply', landmarks, handPoses.value)
+  if (landmarks) emit('apply', landmarks, handPoses.value, handOrientations.value)
 })
 
 /** An uploaded photo or video is the whole reason to look at this panel right then, so its
@@ -176,13 +215,17 @@ watch(worldLandmarks, (landmarks) => {
  * useful for testing against a known performance; a photo applies once. Uploading a video
  * also starts Record Motion automatically, since scrubbing back through the timeline to redo
  * a manual start is exactly the friction this dialog exists to avoid. */
+const handleUploadClick = (): void => {
+  camera.stop()
+  fileInputReference.value?.click()
+}
+
 const handleMediaChange = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
   if (props.isRecording) emit('toggleRecord')
-  camera.stop()
   if (file.type.startsWith('video/')) {
     mode.value = 'video'
     await uploadedVideo.loadVideo(file)
@@ -305,13 +348,11 @@ onUnmounted(() => {
         v-if="error"
         size="sm"
         variant="secondary"
-        @click="mode === 'camera' ? camera.start() : fileInputReference?.click()"
+        @click="mode === 'camera' ? camera.start() : handleUploadClick()"
       >
         Try Again
       </Button>
-      <Button size="sm" variant="secondary" @click="fileInputReference?.click()">
-        Upload Photo/Video
-      </Button>
+      <Button size="sm" variant="secondary" @click="handleUploadClick"> Upload Photo/Video </Button>
       <Button
         v-if="mode === 'photo' || mode === 'video'"
         size="sm"
@@ -320,7 +361,11 @@ onUnmounted(() => {
       >
         Use Camera
       </Button>
-      <label v-if="mode === 'video'" class="camera-pose-capture__sync-toggle">
+      <label class="camera-pose-capture__toggle">
+        <Switch :model-value="showPreview" @update:model-value="emit('togglePreview')" />
+        Show Camera Preview
+      </label>
+      <label v-if="mode === 'video'" class="camera-pose-capture__toggle">
         <Switch v-model="syncEnabled" />
         Sync timeline to video
       </label>
@@ -438,7 +483,7 @@ onUnmounted(() => {
   margin-right: var(--spacing-2);
 }
 
-.camera-pose-capture__sync-toggle {
+.camera-pose-capture__toggle {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);

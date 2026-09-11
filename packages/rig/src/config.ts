@@ -143,7 +143,7 @@ export const HUMANOID_BONE_HIERARCHY: HumanoidBoneDefinition[] = [
 ]
 
 const FLAT_FINGER: [number, number, number] = [0, 0, 0]
-const CURLED_THUMB: [number, number, number] = [0.7, 0.6, 0.5]
+const CURLED_THUMB: [number, number, number] = [0.35, 0.6, 0.5]
 const CURLED_FINGER: [number, number, number] = [1.2, 1.1, 0.9]
 const CURLED_PINKY: [number, number, number] = [1.1, 1.0, 0.8]
 
