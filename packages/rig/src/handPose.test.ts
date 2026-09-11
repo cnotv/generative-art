@@ -134,19 +134,24 @@ describe('applyHandPose', () => {
   })
 
   it('curls the thumb toward the palm, not away from it, the failure this fixes', () => {
-    // A minimal three-joint thumb chain off a hand root, using the bundled model's own real
-    // rest orientations, plus a reference point standing in for the rest of the palm. Confirms
+    // A three-joint thumb chain off a hand root, using the bundled model's own real rest
+    // positions and orientations (read live off `character2.fbx`, not a straight-line
+    // approximation), plus a reference point standing in for the rest of the palm. Confirms
     // the actual, physical direction of the fix (tip distance to the palm shrinks), not just
-    // that some rotation composed correctly.
+    // that some rotation composed correctly. This only catches the wrong-direction failure, not
+    // a too-large magnitude: distance to this single reference point keeps shrinking well past
+    // the angle that visually overshoots a natural wrap (see `CURLED_THUMB`'s own doc comment),
+    // so the magnitude itself is a separate, visually-verified constant, not something this
+    // geometric check can validate on its own.
     const hand = buildBone('mixamorigLeftHand')
     const thumb1 = buildBone('mixamorigLeftHandThumb1')
     const thumb2 = buildBone('mixamorigLeftHandThumb2')
     const thumb3 = buildBone('mixamorigLeftHandThumb3')
     const palmReference = buildBone('mixamorigLeftHandMiddle1')
-    thumb1.position.set(0, 1, 0)
-    thumb2.position.set(0, 1, 0)
-    thumb3.position.set(0, 1, 0)
-    palmReference.position.set(1, 0, 0)
+    thumb1.position.set(-2.15, 2.1, 1.11)
+    thumb2.position.set(-0.44, 2.52, 0)
+    thumb3.position.set(0.05, 3.11, 0)
+    palmReference.position.set(-0.82, 7.38, -0.1)
     thumb1.rotation.set(0.3, 0.2, 0.58)
     thumb2.rotation.set(-0.06, 0, 0)
     thumb3.rotation.set(-0.04, 0, 0)
@@ -166,6 +171,15 @@ describe('applyHandPose', () => {
 
     const distanceAfter = thumb3.getWorldPosition(new THREE.Vector3()).distanceTo(palmPosition)
     expect(distanceAfter).toBeLessThan(distanceBefore)
+  })
+
+  it('keeps the thumb CMC curl within the range verified to look natural on a real rig', () => {
+    // No geometric check catches "looks like an overshot, unnaturally splayed thumb" (see the
+    // test above), so this pins the value itself: confirmed by screenshotting the Fist preset
+    // on the bundled default model, this joint's own curl starts to visibly overshoot a natural
+    // wrap somewhere between 0.4 and 0.7 radians. If this fails, re-verify against a screenshot
+    // before raising it back up, not just adjust the bound.
+    expect(HAND_POSE_PRESETS.Fist.thumb[0]).toBeLessThanOrEqual(0.4)
   })
 })
 

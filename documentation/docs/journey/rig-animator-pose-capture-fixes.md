@@ -293,3 +293,39 @@ while letting a real full turn read all the way around (hips detected, same as t
 The general shape carries beyond this one case: a flat threshold on a single signal is often a
 proxy for "this reading is probably not real," and reaching for a second, independent signal that
 the false case lacks but the real case has is usually a tighter fix than moving the threshold.
+
+## A reference value nobody had actually looked at
+
+A live-detected thumb still curled to an unnatural, splayed-out position even after the earlier
+sensitivity fix scaled its raw angle up to reach the canned Fist preset's own reference. The
+first useful step was ruling out the camera pipeline entirely: applying the bundled Fist preset
+directly, with no camera, no detection, no `applyHandOrientation`, produced the exact same wrong
+thumb. Whatever was wrong lived in the preset's own reference value, `CURLED_THUMB`, not in
+anything reading a real hand.
+
+That value had one thing going for it that felt like proof: a unit test asserting the thumb's tip
+lands closer to a palm reference point after applying it, passing cleanly. The test's geometry was
+a straight-line approximation, though, every thumb joint's local position set to `(0, 1, 0)`, the
+same simplification an earlier fixture used for the finger-curl reference point and was
+explicitly flagged as a trap back then. Reading the bundled model's own real thumb joint
+positions and plugging them into the same test did not change the outcome: distance to the palm
+reference shrank whether the CMC curled 0.35 radians or 1.0, monotonically, with no minimum in
+between. A single point-distance metric cannot distinguish "wraps naturally" from "swings past
+it and keeps getting numerically closer from the other side" — realistic geometry fixed one blind
+spot in the fixture but not the one that actually mattered here.
+
+What settled it was the same tool this whole investigation kept returning to: screenshots of the
+real model. Sweeping the CMC angle downward from the original 0.7 (0.4, then 0.35, then 0.3) and
+capturing the Fist preset at each value showed the thumb visibly overshooting into the splayed
+position somewhere above 0.4, and sitting naturally alongside the curled fingers at 0.35 and
+below. Re-running the same real recorded clip that first surfaced the bug, unmodified, against
+the corrected value confirmed it: the live-detected thumb, still scaled by the same sensitivity
+multiplier as before, now tucks in rather than splaying out, no further changes needed to the
+detection or scaling logic at all.
+
+The lesson is not "write a better geometric test," because no single-point distance check was
+ever going to capture "looks like a natural fist" — that is fundamentally a visual property, not
+a distance. It is instead that a passing test proves the code did what the test measured, never
+that the test measured the thing that actually matters, and a magnitude tuned by eye against the
+real asset belongs in the code as a value someone looked at, not as a number a geometric proxy
+happened to also accept.

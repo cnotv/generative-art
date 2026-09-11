@@ -339,15 +339,14 @@ disagrees with it.
 
 The measured angle is scaled by **Hand Sensitivity** (1.5 by default) before it drives the rig,
 the same idea as **Reach Multiplier** above but for finger curl instead of limb reach. A real
-hand rarely folds a joint, the thumb's own base joint especially, as far as the canned presets'
-hand-picked extremes do: reading a recorded clip's raw angles directly against those presets, the
-thumb's outer two joints reached or passed the preset's own reference values, but its base joint
-topped out well short of it, even during a gesture the video showed clearly closing toward a
-fist. Applying it exactly as measured is a real, defensible choice (see "Extra details to try"
-below for that trade-off), but it reads as barely moving next to a preset's own confident range,
-so the default asks for something closer to that range instead. See
-[the journey doc](/docs/journey/rig-animator-pose-capture-fixes) for the two earlier findings
-(what the raw geometry can and cannot reach on its own) this scaling builds on.
+hand rarely folds a joint as far as the canned presets' hand-picked extremes do, so this reads
+the detected curl closer to that same confident range instead of applying it exactly as measured
+(a real, defensible choice on its own, see "Extra details to try" below for that trade-off). The
+thumb's own base joint (its CMC) is the one exception worth knowing about: its own reference
+value, unlike every other joint's, turned out to be tuned too aggressively in the first place, so
+raw detection already lands in a natural range there without needing the scaling at all. See
+[the journey doc](/docs/journey/rig-animator-pose-capture-fixes) for how that surfaced and what
+finally caught it.
 
 MediaPipe's own handedness label, and its own left/right landmark indices, are read straight
 through with no swap: an earlier version swapped the Hand Landmarker's label specifically,
