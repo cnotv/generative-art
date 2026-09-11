@@ -82,8 +82,20 @@ export const GRASS_PATCH_BOUNDS = {
   y: { min: -2.9, max: -0.7 },
   depthRange: [-3, -0.6] as [number, number]
 }
-/** How far a sword's tip has to come from a grass blade's base to cut it. */
-export const GRASS_CUT_RADIUS = 0.35
+/**
+ * How far a point along the sword has to come from a grass blade to cut it. Hands (and so the
+ * whole sword) only ever track at z=0, but the patch sits behind that plane, its nearest edge
+ * at depthRange[1] (-0.6): the radius has to clear that gap on its own before it can reach any
+ * blade at all, so it is well past the sword's own visual thickness.
+ */
+export const GRASS_CUT_RADIUS = 1.2
+/**
+ * Fractions of the scaled blade's length (from just past the guard to the tip) sampled every
+ * frame against the grass, rather than testing only the very tip. A sword held upright points
+ * mostly upward, well above the grass, so only its lower reaches ever pass through the patch;
+ * testing the tip alone missed the grass almost entirely.
+ */
+export const SWORD_CUT_SAMPLE_FRACTIONS = [0.15, 0.35, 0.55, 0.75, 1] as const
 
 export const defaultConfigValues = {
   itemScale: 1
