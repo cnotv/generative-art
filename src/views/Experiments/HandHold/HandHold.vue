@@ -24,6 +24,7 @@ import {
   GRASS_BLADE_COUNT,
   GRASS_PATCH_BOUNDS,
   GRASS_CUT_RADIUS,
+  HAND_LOST_GRACE_MS,
   defaultConfigValues,
   configControls
 } from './config'
@@ -84,6 +85,10 @@ const handScale: number[] = HAND_SIDES.map(() => ITEM_BASE_SCALE)
 /** How many fingers that hand is currently holding out, read from the hand that is not the
  * one closing into a fist: the other hand counts, this hand grabs. */
 const handFingerCount: number[] = HAND_SIDES.map(() => 0)
+/** Last timestamp this hand was actually detected: a momentary dropped frame (common mid
+ * swing, when motion blur confuses the detector) keeps the hand's last known pose for
+ * `HAND_LOST_GRACE_MS` instead of hiding the item on the very first missed frame. */
+const handLastSeenMs: number[] = HAND_SIDES.map(() => -Infinity)
 const swordTipScratch = new THREE.Vector3()
 
 const gripTrackers: Record<HandSide, ReturnType<typeof createGripTracker>> = {
@@ -103,9 +108,13 @@ const detectHands = (nowMs: number, aspect: number): void => {
   HAND_SIDES.forEach((side, slotIndex) => {
     const landmarks = detectedBySide.get(side)
     if (!landmarks) {
-      handWorldPositions[slotIndex] = null
+      if (nowMs - handLastSeenMs[slotIndex] > HAND_LOST_GRACE_MS) {
+        handWorldPositions[slotIndex] = null
+        handIsGripping[slotIndex] = false
+      }
       return
     }
+    handLastSeenMs[slotIndex] = nowMs
     const palm = handPalmCenter(landmarks)
     mirroredImagePointToWorld(
       palm,
@@ -129,7 +138,7 @@ const detectHands = (nowMs: number, aspect: number): void => {
 
     handFingerCount[slotIndex] = countExtendedFingers(landmarks)
 
-    const grip = gripTrackers[side].update(handOpenness(landmarks))
+    const grip = gripTrackers[side].update(handOpenness(landmarks), nowMs)
     const justClosed = grip === 'fist' && !handIsGripping[slotIndex]
     if (justClosed) {
       const otherCount = handFingerCount[1 - slotIndex]

@@ -1,7 +1,8 @@
 import {
   FIST_OPENNESS_THRESHOLD,
   OPEN_OPENNESS_THRESHOLD,
-  FINGER_EXTENDED_THRESHOLD
+  FINGER_EXTENDED_THRESHOLD,
+  OPEN_GRIP_DELAY_MS
 } from '../config'
 
 export interface HandLandmarkPoint {
@@ -72,15 +73,33 @@ const classifyGrip = (openness: number, previousGrip: GestureGrip): GestureGrip 
 }
 
 export interface GripTracker {
-  /** Feed one frame's openness reading; returns the hand's current grip, with hysteresis
-   * between the two thresholds so noise near either edge does not flicker the state. */
-  update: (openness: number) => GestureGrip
+  /** Feed one frame's openness reading and timestamp; returns the hand's current grip, with
+   * hysteresis between the two thresholds so noise near either edge does not flicker the
+   * state, and a further delay before a fist commits to opening (see `createGripTracker`). */
+  update: (openness: number, nowMs: number) => GestureGrip
 }
 
+/**
+ * A closed fist only actually opens once the raw reading has held "open" continuously for
+ * `OPEN_GRIP_DELAY_MS`: a fast swing that blurs a fingertip past the open threshold for a
+ * single frame recovers before the item drops, rather than reading as letting go. Grabbing
+ * (open to fist) has no such delay, since a late grab feels unresponsive in a way a
+ * momentarily-late drop does not.
+ */
 export const createGripTracker = (): GripTracker => {
   let grip: GestureGrip = 'open'
-  const update = (openness: number): GestureGrip => {
-    grip = classifyGrip(openness, grip)
+  let openSinceMs: number | null = null
+  const update = (openness: number, nowMs: number): GestureGrip => {
+    const rawGrip = classifyGrip(openness, grip)
+    if (grip === 'fist' && rawGrip === 'open') {
+      if (openSinceMs === null) openSinceMs = nowMs
+      if (nowMs - openSinceMs < OPEN_GRIP_DELAY_MS) return grip
+      grip = 'open'
+      openSinceMs = null
+      return grip
+    }
+    openSinceMs = null
+    grip = rawGrip
     return grip
   }
   return { update }

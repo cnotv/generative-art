@@ -1,6 +1,11 @@
 import * as THREE from 'three'
 import { disposeObject } from '@webgamekit/threejs'
-import { SWORD_BLADE_LENGTH } from '../config'
+import {
+  SWORD_BLADE_LENGTH,
+  ITEM_POSITION_SMOOTHING,
+  ITEM_ROTATION_SMOOTHING,
+  ITEM_SCALE_SMOOTHING
+} from '../config'
 
 export interface Point2D {
   x: number
@@ -123,8 +128,9 @@ export const createHeldItemsSystem = (scene: THREE.Scene, handSlots: number): He
       return itemGroup
     })
     scene.add(handGroup)
-    return { handGroup, itemGroups }
+    return { handGroup, itemGroups, wasVisible: false }
   })
+  const targetQuaternion = new THREE.Quaternion()
 
   const update = (
     handWorldPositions: readonly (THREE.Vector3 | null)[],
@@ -133,14 +139,32 @@ export const createHeldItemsSystem = (scene: THREE.Scene, handSlots: number): He
     handItemIndex: readonly number[],
     handScale: readonly number[]
   ): void => {
-    hands.forEach(({ handGroup, itemGroups }, handIndex) => {
+    hands.forEach((hand, handIndex) => {
+      const { handGroup, itemGroups } = hand
       const position = handWorldPositions[handIndex]
       const visible = handIsGripping[handIndex] && position !== null
       handGroup.visible = visible
-      if (!visible || !position) return
-      handGroup.position.copy(position)
-      handGroup.quaternion.setFromUnitVectors(UP, handForwardDirections[handIndex])
-      handGroup.scale.setScalar(handScale[handIndex])
+      if (!visible || !position) {
+        hand.wasVisible = false
+        return
+      }
+      targetQuaternion.setFromUnitVectors(UP, handForwardDirections[handIndex])
+      if (hand.wasVisible) {
+        // Ease toward the new pose each frame rather than snapping to it, so webcam jitter
+        // and a fast swing both read as smooth motion instead of a shaky, teleporting item.
+        handGroup.position.lerp(position, ITEM_POSITION_SMOOTHING)
+        handGroup.quaternion.slerp(targetQuaternion, ITEM_ROTATION_SMOOTHING)
+        handGroup.scale.setScalar(
+          THREE.MathUtils.lerp(handGroup.scale.x, handScale[handIndex], ITEM_SCALE_SMOOTHING)
+        )
+      } else {
+        // The hand just started gripping (or came back from being lost): snap straight to
+        // its current pose instead of easing in from wherever the item last was.
+        handGroup.position.copy(position)
+        handGroup.quaternion.copy(targetQuaternion)
+        handGroup.scale.setScalar(handScale[handIndex])
+      }
+      hand.wasVisible = true
       itemGroups.forEach((itemGroup, itemIndex) => {
         itemGroup.visible = itemIndex === handItemIndex[handIndex]
       })
