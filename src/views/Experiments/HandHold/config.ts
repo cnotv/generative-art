@@ -57,12 +57,15 @@ export const HAND_DISTANCE_SCALE_RANGE = { min: 0.4, max: 2.5 }
  * and the world-space reach used to test whether it is touching a grass blade. */
 export const SWORD_BLADE_LENGTH = 0.85
 
-export const GRASS_BLADE_COUNT = 260
-/** The grass patch is a band across the bottom of the frame, behind the held items. */
+/** Denser than a thin strip would need, since the patch now covers most of the lower half of
+ * the frame rather than a sliver along the very bottom edge. */
+export const GRASS_BLADE_COUNT = 450
+/** A full patch filling the foreground across the bottom half of the frame, close enough to
+ * the camera to dominate the view rather than sitting as a distant band behind the action. */
 export const GRASS_PATCH_BOUNDS = {
-  halfWidth: 7,
-  y: { min: -2.7, max: -1.7 },
-  depthRange: [-3.5, -1.5] as [number, number]
+  halfWidth: 8,
+  y: { min: -2.9, max: -0.7 },
+  depthRange: [-3, -0.6] as [number, number]
 }
 /** How far a sword's tip has to come from a grass blade's base to cut it. */
 export const GRASS_CUT_RADIUS = 0.35

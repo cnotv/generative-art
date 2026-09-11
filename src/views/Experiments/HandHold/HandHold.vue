@@ -250,10 +250,7 @@ onUnmounted(() => {
     <video ref="video" class="hand-hold__video" autoplay playsinline muted></video>
     <canvas ref="canvas" class="hand-hold__canvas"></canvas>
     <div ref="statsElement" class="hand-hold__stats"></div>
-    <p v-if="isActive" class="hand-hold__hint">
-      Count fingers on one hand, then make a fist with the other to grab that item. A sword cuts the
-      grass.
-    </p>
+    <p v-if="isActive" class="hand-hold__hint">Make a fist to grab the sword. It cuts the grass.</p>
     <div v-if="!isActive" class="hand-hold__gate">
       <Button :disabled="isLoadingModel" @click="startCamera">
         {{ isLoadingModel ? 'Starting…' : 'Start camera' }}
