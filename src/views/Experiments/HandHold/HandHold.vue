@@ -24,6 +24,7 @@ import {
   GRASS_BLADE_COUNT,
   GRASS_PATCH_BOUNDS,
   GRASS_CUT_RADIUS,
+  SWORD_CUT_SAMPLE_FRACTIONS,
   HAND_LOST_GRACE_MS,
   defaultConfigValues,
   configControls
@@ -89,7 +90,7 @@ const handFingerCount: number[] = HAND_SIDES.map(() => 0)
  * swing, when motion blur confuses the detector) keeps the hand's last known pose for
  * `HAND_LOST_GRACE_MS` instead of hiding the item on the very first missed frame. */
 const handLastSeenMs: number[] = HAND_SIDES.map(() => -Infinity)
-const swordTipScratch = new THREE.Vector3()
+const swordSampleScratch = new THREE.Vector3()
 
 const gripTrackers: Record<HandSide, ReturnType<typeof createGripTracker>> = {
   Left: createGripTracker(),
@@ -158,11 +159,14 @@ const detectHands = (nowMs: number, aspect: number): void => {
     handScale[slotIndex] = ITEM_BASE_SCALE * distanceScale * reactiveConfig.value.itemScale
 
     if (handIsGripping[slotIndex] && handItemIndex[slotIndex] === SWORD_ITEM_INDEX) {
-      swordTipScratch
-        .copy(handForwardScratch[slotIndex])
-        .multiplyScalar(SWORD_BLADE_LENGTH * handScale[slotIndex])
-        .add(handPositionScratch[slotIndex])
-      grass?.cutNear(swordTipScratch, GRASS_CUT_RADIUS)
+      const reach = SWORD_BLADE_LENGTH * handScale[slotIndex]
+      SWORD_CUT_SAMPLE_FRACTIONS.forEach((fraction) => {
+        swordSampleScratch
+          .copy(handForwardScratch[slotIndex])
+          .multiplyScalar(reach * fraction)
+          .add(handPositionScratch[slotIndex])
+        grass?.cutNear(swordSampleScratch, GRASS_CUT_RADIUS)
+      })
     }
   })
 }

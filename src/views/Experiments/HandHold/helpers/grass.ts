@@ -105,6 +105,9 @@ export const createGrassField = (
     indices,
     () => bounds.depthRange[0] + Math.random() * (bounds.depthRange[1] - bounds.depthRange[0])
   )
+  /** Per-instance uniform scale, kept around so `cutNear` knows how tall each individual
+   * blade actually stands rather than assuming the shared base height. */
+  const bladeScale = Float32Array.from(indices, () => 0.7 + Math.random() * 0.6)
   const phaseAttribute = new THREE.InstancedBufferAttribute(
     Float32Array.from(indices, () => Math.random() * Math.PI * 2),
     1
@@ -122,8 +125,7 @@ export const createGrassField = (
     position.set(bladeX[index], bladeY[index], bladeZ[index])
     euler.set(0, Math.random() * Math.PI * 2, 0)
     quaternion.setFromEuler(euler)
-    const bladeScale = 0.7 + Math.random() * 0.6
-    scale.set(bladeScale, bladeScale, bladeScale)
+    scale.setScalar(bladeScale[index])
     transformMatrix.compose(position, quaternion, scale)
     mesh.setMatrixAt(index, transformMatrix)
   })
@@ -136,15 +138,24 @@ export const createGrassField = (
     if (shader) shader.uniforms.uTime.value = timeSeconds
   }
 
+  /**
+   * A blade is planted at its root but visually spans from there up to
+   * `BLADE_HEIGHT * bladeScale`, so a sword passing through its upper half (the common case,
+   * since a held sword rarely swings down at ground level) has to count as touching it. Tested
+   * as horizontal distance to the blade's own vertical line, within its rooted height range
+   * plus the same radius as slack at each end, rather than 3D distance to the root alone.
+   */
   const cutNear = (point: THREE.Vector3, radius: number): boolean => {
     const radiusSquared = radius * radius
     let changed = false
     indices.forEach((index) => {
       if (cutAttribute.getX(index) === 1) return
       const dx = bladeX[index] - point.x
-      const dy = bladeY[index] - point.y
       const dz = bladeZ[index] - point.z
-      if (dx * dx + dy * dy + dz * dz > radiusSquared) return
+      if (dx * dx + dz * dz > radiusSquared) return
+      const bladeBaseY = bladeY[index]
+      const bladeTopY = bladeBaseY + BLADE_HEIGHT * bladeScale[index]
+      if (point.y < bladeBaseY - radius || point.y > bladeTopY + radius) return
       cutAttribute.setX(index, 1)
       changed = true
     })
