@@ -185,8 +185,13 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   detected person's own body, centered near the hip, not tracked against the camera's own
   view of the room: a person who steps sideways produces the same world landmarks as one
   standing still. Whole-body translation has to come from the normalized image-space
-  landmarks instead, converted through whatever per-frame scale the mapping already computes.
-  See `documentation/docs/journey/rig-camera-calibration.md`.
+  landmarks instead, read against a reference size such as the camera calibration's front
+  T-pose. See `documentation/docs/journey/rig-camera-calibration.md`.
+- **`Object3D.rotateOnWorldAxis` assumes an unrotated parent.** Under a rotated parent, which
+  every limb bone has and an FBX armature's root often does, it turns the bone about the axis
+  as seen in the parent's frame, tipping it instead of turning it. Use
+  `rotateBoneAboutWorldAxis` in `src/views/Tools/RigAnimator/boneDragTarget.ts`, which goes
+  through the parent's world rotation.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.
