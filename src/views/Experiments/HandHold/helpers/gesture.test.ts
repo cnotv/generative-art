@@ -9,7 +9,7 @@ import {
   resolveHandSide,
   type HandLandmarkPoint
 } from './gesture'
-import { FIST_OPENNESS_THRESHOLD, OPEN_OPENNESS_THRESHOLD } from '../config'
+import { FIST_OPENNESS_THRESHOLD, OPEN_OPENNESS_THRESHOLD, OPEN_GRIP_DELAY_MS } from '../config'
 
 const WRIST: HandLandmarkPoint = { x: 0.5, y: 0.8 }
 
@@ -96,30 +96,44 @@ describe('countExtendedFingers', () => {
 })
 
 describe('createGripTracker', () => {
-  it('starts open and switches to fist once openness drops below the threshold', () => {
+  it('starts open and switches to fist immediately once openness drops below the threshold', () => {
     const tracker = createGripTracker()
 
-    expect(tracker.update(handOpenness(openLandmarks))).toBe('open')
-    expect(tracker.update(handOpenness(fistLandmarks))).toBe('fist')
+    expect(tracker.update(handOpenness(openLandmarks), 0)).toBe('open')
+    expect(tracker.update(handOpenness(fistLandmarks), 10)).toBe('fist')
   })
 
   it('holds the previous grip while openness sits between the two thresholds', () => {
     const tracker = createGripTracker()
     const betweenThresholds = (FIST_OPENNESS_THRESHOLD + OPEN_OPENNESS_THRESHOLD) / 2
 
-    tracker.update(handOpenness(fistLandmarks))
-    expect(tracker.update(betweenThresholds)).toBe('fist')
+    tracker.update(handOpenness(fistLandmarks), 0)
+    expect(tracker.update(betweenThresholds, 10)).toBe('fist')
 
     const otherTracker = createGripTracker()
-    otherTracker.update(handOpenness(openLandmarks))
-    expect(otherTracker.update(betweenThresholds)).toBe('open')
+    otherTracker.update(handOpenness(openLandmarks), 0)
+    expect(otherTracker.update(betweenThresholds, 10)).toBe('open')
   })
 
-  it('switches back to open once openness rises above the threshold', () => {
+  it('does not open a fist until the open reading has held for the full delay', () => {
     const tracker = createGripTracker()
+    tracker.update(handOpenness(fistLandmarks), 0)
 
-    tracker.update(handOpenness(fistLandmarks))
-    expect(tracker.update(handOpenness(openLandmarks))).toBe('open')
+    expect(tracker.update(handOpenness(openLandmarks), 100)).toBe('fist')
+    expect(tracker.update(handOpenness(openLandmarks), 100 + OPEN_GRIP_DELAY_MS - 1)).toBe('fist')
+    expect(tracker.update(handOpenness(openLandmarks), 100 + OPEN_GRIP_DELAY_MS)).toBe('open')
+  })
+
+  it('cancels a pending open, and restarts the delay, if the hand closes again first', () => {
+    const tracker = createGripTracker()
+    tracker.update(handOpenness(fistLandmarks), 0)
+    tracker.update(handOpenness(openLandmarks), 100)
+    expect(tracker.update(handOpenness(fistLandmarks), 150)).toBe('fist')
+
+    // The delay counts from this second open reading, not from the first attempt at 100.
+    tracker.update(handOpenness(openLandmarks), 200)
+    expect(tracker.update(handOpenness(openLandmarks), 200 + OPEN_GRIP_DELAY_MS - 1)).toBe('fist')
+    expect(tracker.update(handOpenness(openLandmarks), 200 + OPEN_GRIP_DELAY_MS)).toBe('open')
   })
 })
 
