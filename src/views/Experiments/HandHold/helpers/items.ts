@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { disposeObject } from '@webgamekit/threejs'
+import { SWORD_BLADE_LENGTH } from '../config'
 
 export interface Point2D {
   x: number
@@ -24,30 +25,68 @@ export const mirroredImagePointToWorld = (
   target.set((0.5 - point.x) * 2 * halfWidth, (0.5 - point.y) * 2 * halfHeight, 0)
 }
 
+/**
+ * A tapered blade silhouette (wide at the guard, drawn to a point at the tip) extruded to a
+ * thin diamond-ish cross-section, rather than a flat-sided box: the shape alone is what reads
+ * as an actual blade instead of a metal ruler.
+ */
+const createBladeGeometry = (length: number): THREE.BufferGeometry => {
+  const baseHalfWidth = 0.03
+  const tipHalfWidth = baseHalfWidth * 0.35
+  const tipShoulder = length * 0.94
+
+  const outline = new THREE.Shape()
+  outline.moveTo(-baseHalfWidth, 0)
+  outline.lineTo(baseHalfWidth, 0)
+  outline.lineTo(tipHalfWidth, tipShoulder)
+  outline.lineTo(0, length)
+  outline.lineTo(-tipHalfWidth, tipShoulder)
+  outline.lineTo(-baseHalfWidth, 0)
+
+  const thickness = 0.012
+  const geometry = new THREE.ExtrudeGeometry(outline, {
+    depth: thickness,
+    bevelEnabled: true,
+    bevelThickness: thickness * 0.25,
+    bevelSize: thickness * 0.25,
+    bevelSegments: 2,
+    curveSegments: 1
+  })
+  geometry.translate(0, 0, -thickness / 2)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
 const createSword = (): THREE.Group => {
   const group = new THREE.Group()
 
-  const blade = new THREE.Mesh(
-    new THREE.BoxGeometry(0.06, 0.9, 0.02),
-    new THREE.MeshStandardMaterial({ color: 0xd8dee8, metalness: 0.6, roughness: 0.3 })
-  )
-  blade.position.y = 0.6
-  group.add(blade)
+  const handleHeight = 0.22
+  const guardHeight = 0.05
 
-  const guard = new THREE.Mesh(
-    new THREE.BoxGeometry(0.26, 0.05, 0.05),
-    new THREE.MeshStandardMaterial({ color: 0xb08d57, metalness: 0.4, roughness: 0.5 })
-  )
-  guard.position.y = 0.13
-  group.add(guard)
-
-  // The handle is centred on the group's own origin, which the hand system places exactly at
-  // the hand's grip point, so the fist wraps around the handle rather than its lower edge.
+  // Centred on the group's own origin, which the hand system places exactly at the hand's
+  // grip point, so the fist wraps around the handle rather than sitting beside it.
   const handle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.035, 0.035, 0.22, 12),
+    new THREE.CylinderGeometry(0.035, 0.035, handleHeight, 12),
     new THREE.MeshStandardMaterial({ color: 0x6b4a33, roughness: 0.8 })
   )
   group.add(handle)
+
+  const guardY = handleHeight / 2
+  const guard = new THREE.Mesh(
+    new THREE.BoxGeometry(0.26, guardHeight, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0xb08d57, metalness: 0.4, roughness: 0.5 })
+  )
+  guard.position.y = guardY
+  group.add(guard)
+
+  // Polished steel: metalness this high only reads correctly with an environment light for it
+  // to reflect, which the setup config provides for the whole scene.
+  const blade = new THREE.Mesh(
+    createBladeGeometry(SWORD_BLADE_LENGTH),
+    new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.95, roughness: 0.18 })
+  )
+  blade.position.y = guardY + guardHeight / 2
+  group.add(blade)
 
   return group
 }
@@ -118,6 +157,7 @@ const createWand = (): THREE.Group => {
  * a hand's own forward direction can be applied as a single rotation. */
 export const ITEM_BUILDERS = [createSword, createShield, createHammer, createWand] as const
 export const ITEM_NAMES = ['Sword', 'Shield', 'Hammer', 'Wand'] as const
+export const SWORD_ITEM_INDEX = 0
 
 const UP = new THREE.Vector3(0, 1, 0)
 

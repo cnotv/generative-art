@@ -20,15 +20,26 @@ import {
   ITEM_BASE_SCALE,
   REFERENCE_HAND_SPAN,
   HAND_DISTANCE_SCALE_RANGE,
+  SWORD_BLADE_LENGTH,
+  GRASS_BLADE_COUNT,
+  GRASS_PATCH_BOUNDS,
+  GRASS_CUT_RADIUS,
   defaultConfigValues,
   configControls
 } from './config'
-import { createHeldItemsSystem, mirroredImagePointToWorld, ITEM_BUILDERS } from './helpers/items'
+import {
+  createHeldItemsSystem,
+  mirroredImagePointToWorld,
+  ITEM_BUILDERS,
+  SWORD_ITEM_INDEX
+} from './helpers/items'
+import { createGrassField } from './helpers/grass'
 import {
   handOpenness,
   handPalmCenter,
   handForwardTarget,
   handSpan,
+  countExtendedFingers,
   createGripTracker,
   resolveHandSide
 } from './helpers/gesture'
@@ -54,6 +65,7 @@ let handLandmarker: HandLandmarker | null = null
 let mediaStream: MediaStream | null = null
 let toolsCleanup: (() => void) | null = null
 let heldItems: ReturnType<typeof createHeldItemsSystem> | null = null
+let grass: ReturnType<typeof createGrassField> | null = null
 
 const handWorldPositions: (THREE.Vector3 | null)[] = HAND_SIDES.map(() => null)
 const handPositionScratch = HAND_SIDES.map(() => new THREE.Vector3())
@@ -62,13 +74,17 @@ const forwardTargetScratch = new THREE.Vector3()
 /** True while that hand is currently a closed fist: the moment this turns true is also the
  * moment the held item advances to the next one in the list. */
 const handIsGripping: boolean[] = HAND_SIDES.map(() => false)
-/** Index into ITEM_BUILDERS for whatever that hand is currently holding, or would hold on its
- * next fist. Starts at -1 so the very first fist lands on item 0. */
+/** Index into ITEM_BUILDERS for whatever that hand is currently holding. Starts at -1 so a
+ * hand that closes before the other hand ever counts anything still falls back to item 0. */
 const handItemIndex: number[] = HAND_SIDES.map(() => -1)
 /** Combined size multiplier for that hand's item: the Config panel's scale times the base
  * size times how close the hand currently looks, so the item tracks the hand's own apparent
  * size instead of staying a fixed world size regardless of how near the camera it is. */
 const handScale: number[] = HAND_SIDES.map(() => ITEM_BASE_SCALE)
+/** How many fingers that hand is currently holding out, read from the hand that is not the
+ * one closing into a fist: the other hand counts, this hand grabs. */
+const handFingerCount: number[] = HAND_SIDES.map(() => 0)
+const swordTipScratch = new THREE.Vector3()
 
 const gripTrackers: Record<HandSide, ReturnType<typeof createGripTracker>> = {
   Left: createGripTracker(),
@@ -111,10 +127,17 @@ const detectHands = (nowMs: number, aspect: number): void => {
       .subVectors(forwardTargetScratch, handPositionScratch[slotIndex])
       .normalize()
 
+    handFingerCount[slotIndex] = countExtendedFingers(landmarks)
+
     const grip = gripTrackers[side].update(handOpenness(landmarks))
     const justClosed = grip === 'fist' && !handIsGripping[slotIndex]
     if (justClosed) {
-      handItemIndex[slotIndex] = (handItemIndex[slotIndex] + 1) % ITEM_BUILDERS.length
+      const otherCount = handFingerCount[1 - slotIndex]
+      if (otherCount >= 1 && otherCount <= ITEM_BUILDERS.length) {
+        handItemIndex[slotIndex] = otherCount - 1
+      } else if (handItemIndex[slotIndex] === -1) {
+        handItemIndex[slotIndex] = 0
+      }
     }
     handIsGripping[slotIndex] = grip === 'fist'
 
@@ -124,6 +147,14 @@ const detectHands = (nowMs: number, aspect: number): void => {
       HAND_DISTANCE_SCALE_RANGE.max
     )
     handScale[slotIndex] = ITEM_BASE_SCALE * distanceScale * reactiveConfig.value.itemScale
+
+    if (handIsGripping[slotIndex] && handItemIndex[slotIndex] === SWORD_ITEM_INDEX) {
+      swordTipScratch
+        .copy(handForwardScratch[slotIndex])
+        .multiplyScalar(SWORD_BLADE_LENGTH * handScale[slotIndex])
+        .add(handPositionScratch[slotIndex])
+      grass?.cutNear(swordTipScratch, GRASS_CUT_RADIUS)
+    }
   })
 }
 
@@ -139,6 +170,7 @@ const initScene = async (): Promise<void> => {
   registerSceneElements(camera, elements)
 
   heldItems = createHeldItemsSystem(scene, HAND_SIDES.length)
+  grass = createGrassField(scene, GRASS_BLADE_COUNT, GRASS_PATCH_BOUNDS)
 
   animate({
     timeline: createTimelineManager(),
@@ -152,6 +184,7 @@ const initScene = async (): Promise<void> => {
         handItemIndex,
         handScale
       )
+      grass?.update(nowMs / 1000)
     }
   })
 }
@@ -205,6 +238,7 @@ onUnmounted(() => {
   stopCamera()
   toolsCleanup?.()
   heldItems?.dispose()
+  grass?.dispose()
   clearSceneElements()
   unregisterViewConfig(route.name as string)
   clearViewPanels()
@@ -216,7 +250,10 @@ onUnmounted(() => {
     <video ref="video" class="hand-hold__video" autoplay playsinline muted></video>
     <canvas ref="canvas" class="hand-hold__canvas"></canvas>
     <div ref="statsElement" class="hand-hold__stats"></div>
-    <p v-if="isActive" class="hand-hold__hint">Make a fist to grab the next item.</p>
+    <p v-if="isActive" class="hand-hold__hint">
+      Count fingers on one hand, then make a fist with the other to grab that item. A sword cuts the
+      grass.
+    </p>
     <div v-if="!isActive" class="hand-hold__gate">
       <Button :disabled="isLoadingModel" @click="startCamera">
         {{ isLoadingModel ? 'Starting…' : 'Start camera' }}
@@ -237,12 +274,17 @@ onUnmounted(() => {
 }
 
 .hand-hold__video {
+  /* Hand tracking reads frames straight from this element; nobody needs to see the feed
+     itself once the scene (grass, held items) is the visible backdrop. Kept in the DOM and
+     playing, just invisible, rather than display:none, which some browsers treat as a
+     reason to stop decoding. */
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .hand-hold__canvas {

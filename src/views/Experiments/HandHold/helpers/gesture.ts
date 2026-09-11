@@ -1,4 +1,8 @@
-import { FIST_OPENNESS_THRESHOLD, OPEN_OPENNESS_THRESHOLD } from '../config'
+import {
+  FIST_OPENNESS_THRESHOLD,
+  OPEN_OPENNESS_THRESHOLD,
+  FINGER_EXTENDED_THRESHOLD
+} from '../config'
 
 export interface HandLandmarkPoint {
   x: number
@@ -45,6 +49,19 @@ export const handForwardTarget = (landmarks: HandLandmarkPoint[]): HandLandmarkP
  * item's world scale can track how big the hand currently looks rather than staying fixed. */
 export const handSpan = (landmarks: HandLandmarkPoint[]): number =>
   distance(landmarks[WRIST_INDEX], landmarks[MIDDLE_MCP_INDEX])
+
+/** How many of the four non-thumb fingers are held out straight, the same way a person counts
+ * on their fingers: each one at or above `FINGER_EXTENDED_THRESHOLD` on its own tip-to-wrist
+ * over knuckle-to-wrist ratio, independent of the others. */
+export const countExtendedFingers = (landmarks: HandLandmarkPoint[]): number => {
+  const wrist = landmarks[WRIST_INDEX]
+  return FINGER_TIP_INDICES.filter((tipIndex, fingerIndex) => {
+    const ratio =
+      distance(landmarks[tipIndex], wrist) /
+      distance(landmarks[FINGER_MCP_INDICES[fingerIndex]], wrist)
+    return ratio > FINGER_EXTENDED_THRESHOLD
+  }).length
+}
 
 export type GestureGrip = 'fist' | 'open'
 
