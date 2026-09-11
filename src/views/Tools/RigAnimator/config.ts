@@ -25,7 +25,10 @@ export const POSES_FILE_ACCEPT = 'application/json'
 export const MEDIA_FILE_ACCEPT = 'image/*,video/*'
 export const DEFAULT_MODEL_PATH = '/character2.fbx'
 
-export const BONE_MARKER_RADIUS_FRACTION = 0.015
+export const BONE_MARKER_RADIUS_FRACTION = 0.009
+/** A pointer ray picks a marker anywhere within this many of its drawn radii, so markers can be
+ * drawn small without becoming hard to hit. */
+export const BONE_MARKER_HIT_RADIUS_MULTIPLIER = 3
 export const BONE_MARKER_COLOR_DEFAULT = 0xb8c4f0
 export const BONE_MARKER_COLOR_SELECTED = 0xf0a8a0
 /** Each hierarchy level below the root shrinks a marker by this factor, so depth reads visually. */

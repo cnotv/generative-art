@@ -115,18 +115,26 @@ typical glTF asset and a fixed camera position would put one of them somewhere b
 
 A third docked button, Physics, sits beside these two. Once it is on, a fourth joins it, Marble
 Flow, which starts and stops the drip; dropping one on demand is a touch, not a button, covered
-in its own section below along with Physics.
+in its own section below along with Physics. Two more appear only when they apply: Bone
+Markers, once the model carries a rig, shows or hides the markers described next, and Camera
+Preview, while camera capture is open, shows or hides that panel's video preview. Each flips the
+same setting as its Config panel checkbox, so the two places always agree.
 
-![Upload Model, Capture Pose from Camera and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
+![Upload Model, Bone Markers, Capture Pose from Camera, Camera Preview and Physics docked at the top left of the canvas while camera capture is open, with the smaller bone markers showing](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
 Every bone gets a small marker, sized as a fraction of the whole rig's spread so it reads at any
 model scale, and shrinking with hierarchy depth so a hip or shoulder joint reads larger than a
-fingertip further down the chain. Clicking a marker, or picking a name from the Config panel's
-**Bone** dropdown, selects it: the marker turns rose, every other one stays the default
-periwinkle. **Show Bone Markers**, in the same panel, hides them all for a clean view of the
-model itself; picking a bone by clicking its marker is unavailable while they are hidden, but
+fingertip further down the chain. A marker is drawn small so it does not hide the model, yet
+clicks wider than it looks: a pointer ray picks it anywhere within
+`BONE_MARKER_HIT_RADIUS_MULTIPLIER` drawn radii of its centre. Across a hand those enlarged areas
+overlap, so the marker whose centre the ray passes closest to wins, rather than whichever one
+sits nearer the camera. Clicking a marker, or picking a name from the Config panel's **Bone**
+dropdown, selects it: the marker turns rose, every other one stays the default periwinkle.
+**Show Bone Markers**, in the same panel or on the docked Bone Markers button, hides them all for
+a clean view of the model itself; picking a bone by clicking its marker is unavailable while they
+are hidden, but
 the **Bone** dropdown still selects one. That dropdown lists the core skeleton first, in a
 posing-relevant order (hips, spine, neck, head, then each limb root), before anything else the
 rig happens to carry (fingers, toes, a custom rig's own extra bones), rather than whatever
@@ -519,7 +527,7 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   independent of whatever the photo actually shows. This slider is the manual escape hatch for
   that, tuned by eye per rig rather than solved by a fixed formula.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
-  on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
+  on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
   same either way. Uploading a photo or video turns it on automatically even if it was off, see
   **Upload Photo/Video** above.
