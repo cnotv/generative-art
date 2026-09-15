@@ -3,6 +3,7 @@ import {
   BONE_MARKER_COLOR_DEFAULT,
   BONE_MARKER_COLOR_SELECTED,
   BONE_MARKER_DEPTH_FALLOFF,
+  BONE_MARKER_HIT_RADIUS_MULTIPLIER,
   BONE_MARKER_MIN_SCALE,
   BONE_MARKER_RADIUS_FRACTION
 } from './config'
@@ -69,16 +70,29 @@ export const highlightBoneMarker = (markers: THREE.Mesh[], selectedBoneName: str
 }
 
 /**
- * Resolve a raycast against the rig's markers to the bone it hit.
+ * Resolve a pointer ray to the bone whose marker it passes closest to, within
+ * `BONE_MARKER_HIT_RADIUS_MULTIPLIER` of that marker's drawn radius. Ranked by distance from the
+ * ray rather than from the camera: where enlarged hit areas overlap, as across a hand, the
+ * marker actually under the pointer wins instead of whichever neighbour sits nearer the lens.
  * @param markers The rig's bone markers
  * @param raycaster A raycaster already set from the pointer and camera
- * @returns The hit bone's name, or null when the ray missed every marker
+ * @returns The picked bone's name, or null when the ray passed outside every hit area
  */
 export const pickBoneMarker = (
   markers: THREE.Mesh[],
   raycaster: THREE.Raycaster
 ): string | null => {
-  const [hit] = raycaster.intersectObjects(markers, false)
-  if (!hit) return null
-  return hit.object.name.replace(MARKER_NAME_PREFIX, '')
+  const markerCentre = new THREE.Vector3()
+  const markerScale = new THREE.Vector3()
+  const closest = markers.reduce<{ name: string; distance: number } | null>((best, marker) => {
+    marker.getWorldPosition(markerCentre)
+    marker.getWorldScale(markerScale)
+    const drawnRadius =
+      (marker.geometry as THREE.SphereGeometry).parameters.radius *
+      Math.max(markerScale.x, markerScale.y, markerScale.z)
+    const distance = raycaster.ray.distanceToPoint(markerCentre)
+    if (distance > drawnRadius * BONE_MARKER_HIT_RADIUS_MULTIPLIER) return best
+    return best && best.distance <= distance ? best : { name: marker.name, distance }
+  }, null)
+  return closest ? closest.name.replace(MARKER_NAME_PREFIX, '') : null
 }

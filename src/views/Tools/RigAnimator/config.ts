@@ -25,7 +25,10 @@ export const POSES_FILE_ACCEPT = 'application/json'
 export const MEDIA_FILE_ACCEPT = 'image/*,video/*'
 export const DEFAULT_MODEL_PATH = '/character2.fbx'
 
-export const BONE_MARKER_RADIUS_FRACTION = 0.015
+export const BONE_MARKER_RADIUS_FRACTION = 0.009
+/** A pointer ray picks a marker anywhere within this many of its drawn radii, so markers can be
+ * drawn small without becoming hard to hit. */
+export const BONE_MARKER_HIT_RADIUS_MULTIPLIER = 3
 export const BONE_MARKER_COLOR_DEFAULT = 0xb8c4f0
 export const BONE_MARKER_COLOR_SELECTED = 0xf0a8a0
 /** Each hierarchy level below the root shrinks a marker by this factor, so depth reads visually. */
@@ -155,8 +158,8 @@ export const MEDIAPIPE_HAND_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
- * layout and the 3D camera's re-centering onto the remaining visible half. */
-export const CAMERA_PANEL_WIDTH_VW = 45
+ * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
+export const CAMERA_PANEL_WIDTH_VW = 30
 
 /** Fraction of each new frame's landmarks blended into the running smoothed set, for the live
  * camera feed. Lower reads smoother but laggier; 1 would turn smoothing off entirely. */

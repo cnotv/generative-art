@@ -6,10 +6,18 @@ import {
   DrawingUtils,
   type NormalizedLandmark
 } from '@mediapipe/tasks-vision'
-import { Circle, Square } from 'lucide-vue-next'
+import {
+  Camera as CameraIcon,
+  Circle,
+  Link as LinkIcon,
+  Square,
+  Unlink as UnlinkIcon,
+  Upload,
+  X as CloseIcon
+} from 'lucide-vue-next'
 import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
-import Switch from '@/components/ui/switch/Switch.vue'
+import IconButton from '@/components/IconButton.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { useVideoPoseCapture } from './useVideoPoseCapture'
@@ -239,6 +247,15 @@ onUnmounted(() => {
     class="camera-pose-capture"
     :style="{ width: showPreview ? `${CAMERA_PANEL_WIDTH_VW}vw` : 'auto' }"
   >
+    <IconButton
+      size="sm"
+      variant="ghost"
+      title="Close Camera Capture"
+      class="camera-pose-capture__close"
+      @click="emit('close')"
+    >
+      <CloseIcon />
+    </IconButton>
     <div
       class="camera-pose-capture__preview"
       :class="{
@@ -309,34 +326,46 @@ onUnmounted(() => {
       >
         Try Again
       </Button>
-      <Button size="sm" variant="secondary" @click="fileInputReference?.click()">
-        Upload Photo/Video
-      </Button>
-      <Button
+      <IconButton
+        size="sm"
+        variant="outline"
+        title="Upload Photo/Video"
+        @click="fileInputReference?.click()"
+      >
+        <Upload />
+      </IconButton>
+      <IconButton
         v-if="mode === 'photo' || mode === 'video'"
         size="sm"
-        variant="secondary"
+        variant="outline"
+        title="Use Camera"
         @click="handleUseCamera"
       >
-        Use Camera
-      </Button>
-      <label v-if="mode === 'video'" class="camera-pose-capture__sync-toggle">
-        <Switch v-model="syncEnabled" />
-        Sync timeline to video
-      </label>
-      <Button
+        <CameraIcon />
+      </IconButton>
+      <IconButton
+        v-if="mode === 'video'"
+        size="sm"
+        variant="outline"
+        :active="syncEnabled"
+        :title="syncEnabled ? 'Unsync Timeline from Video' : 'Sync Timeline to Video'"
+        @click="syncEnabled = !syncEnabled"
+      >
+        <LinkIcon v-if="syncEnabled" />
+        <UnlinkIcon v-else />
+      </IconButton>
+      <IconButton
         v-if="isContinuousMode"
-        size="lg"
-        variant="ghost"
+        size="sm"
+        variant="outline"
         class="camera-pose-capture__record-toggle"
-        :class="{ 'camera-pose-capture__record-toggle--active': isRecording }"
+        :active="isRecording"
+        :title="isRecording ? 'Stop Recording' : 'Record Motion'"
         @click="emit('toggleRecord')"
       >
-        <Square v-if="isRecording" class="camera-pose-capture__record-icon" />
-        <Circle v-else class="camera-pose-capture__record-icon" />
-        {{ isRecording ? 'Stop Recording' : 'Record Motion' }}
-      </Button>
-      <Button size="sm" variant="secondary" @click="emit('close')">Close</Button>
+        <Square v-if="isRecording" />
+        <Circle v-else />
+      </IconButton>
     </div>
   </div>
 </template>
@@ -346,25 +375,28 @@ onUnmounted(() => {
   position: fixed;
   top: 0;
   right: 0;
-
-  /* Stops above the rig timeline bar, which docks along the same bottom edge with a higher
-     z-index: without this, the timeline bar covers this panel's own action buttons. */
-  bottom: var(--rig-timeline-height);
   z-index: var(--z-overlay);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-4);
-  padding: var(--spacing-6);
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4) var(--spacing-4);
   background: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
   border-left: 1px solid var(--color-border);
+}
+
+.camera-pose-capture__close {
+  align-self: flex-end;
 }
 
 .camera-pose-capture__preview {
   position: relative;
-  flex: 1;
-  min-height: 0;
   width: 100%;
+
+  /* A typical webcam frame rather than the full height of the screen; the video and overlay
+     letterbox anything shaped differently through their own object-fit. */
+  aspect-ratio: 4 / 3;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: #000;
@@ -422,29 +454,10 @@ onUnmounted(() => {
   gap: var(--spacing-2);
 }
 
-/* Ghost variant carries no background of its own; the red colour is what makes the toggle
-   read as a record control at a glance instead of blending into the row. */
+/* The red icon is what makes the toggle read as a record control at a glance instead of
+   blending into the row of plain outline icons. */
 .camera-pose-capture__record-toggle {
   color: var(--color-destructive);
-}
-
-.camera-pose-capture__record-toggle--active {
-  font-weight: 700;
-}
-
-.camera-pose-capture__record-icon {
-  width: var(--spacing-5);
-  height: var(--spacing-5);
-  margin-right: var(--spacing-2);
-}
-
-.camera-pose-capture__sync-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
-  cursor: pointer;
 }
 
 .camera-pose-capture__hidden-input {
