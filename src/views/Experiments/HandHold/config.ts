@@ -25,8 +25,8 @@ export const HAND_HOLD_SETUP_CONFIG: SetupConfig = {
   lights: {
     ambient: { color: 0xffffff, intensity: 0.8 },
     directional: { color: 0xfff2e0, intensity: 1.6, position: [3, 4, 5] as CoordinateTuple },
-    // Image-based lighting from every direction: what makes a metal blade actually show a
-    // reflection instead of reading as flat grey under only a point/directional light.
+    // Image-based lighting from every direction, softening the flat look a plain
+    // directional/ambient rig gives a matte surface.
     environment: { intensity: 0.7 }
   },
   orbit: { target: new THREE.Vector3(0, 0, 0), disabled: true }
@@ -63,39 +63,46 @@ export const HAND_DISTANCE_SCALE_RANGE = { min: 0.4, max: 2.5 }
 
 /** Fraction of the remaining distance to the target an item's position/rotation/scale closes
  * each frame: lower reads smoother but laggier. Position and rotation are eased less than
- * scale, since a sword that lags behind a fast swing is expected, but one that visibly resizes
+ * scale, since a bat that lags behind a fast swing is expected, but one that visibly resizes
  * as it swings reads as a bug. */
 export const ITEM_POSITION_SMOOTHING = 0.35
 export const ITEM_ROTATION_SMOOTHING = 0.3
 export const ITEM_SCALE_SMOOTHING = 0.5
 
-/** Local length of the sword's blade, tip included: shared between the blade geometry itself
- * and the world-space reach used to test whether it is touching a grass blade. */
-export const SWORD_BLADE_LENGTH = 0.85
+/** Local length of the bat, knob to tip: shared between the bat geometry itself and the
+ * world-space reach used to test whether it is touching a ball. */
+export const BAT_LENGTH = 0.9
+/**
+ * Fractions of the scaled bat's length sampled every frame against the balls, concentrated
+ * over the barrel end rather than the thin handle near the grip, since that is the part a
+ * swing actually connects with.
+ */
+export const BAT_SAMPLE_FRACTIONS = [0.5, 0.65, 0.8, 0.95, 1] as const
+/** How far a sampled point along the bat has to come from a ball to count as a hit. Balls and
+ * hands both track at z=0, so this only has to cover the bat's own visual thickness (scaled
+ * by hand distance) plus the ball's radius, with a margin for the gap between sample points. */
+export const BAT_HIT_RADIUS = 0.45
 
-/** A dense, lush field rather than a scattering of individual blades. */
-export const GRASS_BLADE_COUNT = 45000
-/** A full patch filling the foreground across the bottom half of the frame, close enough to
- * the camera to dominate the view rather than sitting as a distant band behind the action. */
-export const GRASS_PATCH_BOUNDS = {
-  halfWidth: 8,
-  y: { min: -2.9, max: -0.7 },
-  depthRange: [-3, -0.6] as [number, number]
-}
-/**
- * How far a point along the sword has to come from a grass blade to cut it. Hands (and so the
- * whole sword) only ever track at z=0, but the patch sits behind that plane, its nearest edge
- * at depthRange[1] (-0.6): the radius has to clear that gap on its own before it can reach any
- * blade at all, so it is well past the sword's own visual thickness.
- */
-export const GRASS_CUT_RADIUS = 1.2
-/**
- * Fractions of the scaled blade's length (from just past the guard to the tip) sampled every
- * frame against the grass, rather than testing only the very tip. A sword held upright points
- * mostly upward, well above the grass, so only its lower reaches ever pass through the patch;
- * testing the tip alone missed the grass almost entirely.
- */
-export const SWORD_CUT_SAMPLE_FRACTIONS = [0.15, 0.35, 0.55, 0.75, 1] as const
+export const BALL_COUNT = 10
+export const BALL_RADIUS = 0.18
+/** How far either side of centre a ball may spawn: roughly the reachable width at z=0 for the
+ * configured camera distance and field of view. */
+export const BALL_SPAWN_HALF_WIDTH = 2.5
+export const BALL_SPAWN_Y = 3.2
+/** Once a ball falls this far below centre, whether from gravity alone or after a hit arcs it
+ * back down, it recycles back to a fresh spawn instead of continuing to fall forever. */
+export const BALL_RESPAWN_BELOW_Y = -3.5
+/** Slower than real gravity, so a falling ball stays reachable for a full swing instead of
+ * dropping past the hand in a couple of frames. */
+export const BALL_GRAVITY = 2.2
+export const BALL_HIT_SPEED = 4.5
+/** Added to the hit direction's own y before it is normalized, so a ball hit level with or
+ * below the hand still arcs upward and away instead of skimming flat. */
+export const BALL_HIT_UPWARD_BIAS = 0.6
+/** Once hit, a ball ignores further hits for this long: without it, a bat lingering inside the
+ * hit radius across several frames keeps resetting the ball's velocity to the same value
+ * instead of letting it fly off, which reads as the ball vibrating in place. */
+export const BALL_HIT_COOLDOWN_MS = 400
 
 export const defaultConfigValues = {
   itemScale: 1

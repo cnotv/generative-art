@@ -20,11 +20,18 @@ import {
   ITEM_BASE_SCALE,
   REFERENCE_HAND_SPAN,
   HAND_DISTANCE_SCALE_RANGE,
-  SWORD_BLADE_LENGTH,
-  GRASS_BLADE_COUNT,
-  GRASS_PATCH_BOUNDS,
-  GRASS_CUT_RADIUS,
-  SWORD_CUT_SAMPLE_FRACTIONS,
+  BAT_LENGTH,
+  BAT_SAMPLE_FRACTIONS,
+  BAT_HIT_RADIUS,
+  BALL_COUNT,
+  BALL_RADIUS,
+  BALL_SPAWN_HALF_WIDTH,
+  BALL_SPAWN_Y,
+  BALL_RESPAWN_BELOW_Y,
+  BALL_GRAVITY,
+  BALL_HIT_SPEED,
+  BALL_HIT_UPWARD_BIAS,
+  BALL_HIT_COOLDOWN_MS,
   HAND_LOST_GRACE_MS,
   defaultConfigValues,
   configControls
@@ -33,9 +40,9 @@ import {
   createHeldItemsSystem,
   mirroredImagePointToWorld,
   ITEM_BUILDERS,
-  SWORD_ITEM_INDEX
+  BAT_ITEM_INDEX
 } from './helpers/items'
-import { createGrassField } from './helpers/grass'
+import { createBallField } from './helpers/balls'
 import {
   handOpenness,
   handPalmCenter,
@@ -67,7 +74,13 @@ let handLandmarker: HandLandmarker | null = null
 let mediaStream: MediaStream | null = null
 let toolsCleanup: (() => void) | null = null
 let heldItems: ReturnType<typeof createHeldItemsSystem> | null = null
-let grass: ReturnType<typeof createGrassField> | null = null
+let balls: ReturnType<typeof createBallField> | null = null
+let lastFrameMs = 0
+/** Caps a single frame's fall step. Without it, the gap between mount and the first render
+ * (model and environment loading) or a tab losing focus mid-session both produce one huge
+ * delta that drops every ball straight through its whole fall range in one step, which resets
+ * them all to the same position and velocity and leaves them falling in lockstep forever. */
+const MAX_FRAME_DELTA_SECONDS = 0.1
 
 const handWorldPositions: (THREE.Vector3 | null)[] = HAND_SIDES.map(() => null)
 const handPositionScratch = HAND_SIDES.map(() => new THREE.Vector3())
@@ -90,7 +103,11 @@ const handFingerCount: number[] = HAND_SIDES.map(() => 0)
  * swing, when motion blur confuses the detector) keeps the hand's last known pose for
  * `HAND_LOST_GRACE_MS` instead of hiding the item on the very first missed frame. */
 const handLastSeenMs: number[] = HAND_SIDES.map(() => -Infinity)
-const swordSampleScratch = new THREE.Vector3()
+/** One scratch point per sample fraction, per hand: filled fresh each frame with the bat's
+ * world-space sample points for that hand, then handed to the ball field in one call. */
+const batSampleScratch: THREE.Vector3[][] = HAND_SIDES.map(() =>
+  BAT_SAMPLE_FRACTIONS.map(() => new THREE.Vector3())
+)
 
 const gripTrackers: Record<HandSide, ReturnType<typeof createGripTracker>> = {
   Left: createGripTracker(),
@@ -158,15 +175,20 @@ const detectHands = (nowMs: number, aspect: number): void => {
     )
     handScale[slotIndex] = ITEM_BASE_SCALE * distanceScale * reactiveConfig.value.itemScale
 
-    if (handIsGripping[slotIndex] && handItemIndex[slotIndex] === SWORD_ITEM_INDEX) {
-      const reach = SWORD_BLADE_LENGTH * handScale[slotIndex]
-      SWORD_CUT_SAMPLE_FRACTIONS.forEach((fraction) => {
-        swordSampleScratch
+    if (handIsGripping[slotIndex] && handItemIndex[slotIndex] === BAT_ITEM_INDEX) {
+      const reach = BAT_LENGTH * handScale[slotIndex]
+      BAT_SAMPLE_FRACTIONS.forEach((fraction, sampleIndex) => {
+        batSampleScratch[slotIndex][sampleIndex]
           .copy(handForwardScratch[slotIndex])
           .multiplyScalar(reach * fraction)
           .add(handPositionScratch[slotIndex])
-        grass?.cutNear(swordSampleScratch, GRASS_CUT_RADIUS)
       })
+      balls?.checkHits(
+        batSampleScratch[slotIndex],
+        BAT_HIT_RADIUS,
+        handPositionScratch[slotIndex],
+        nowMs
+      )
     }
   })
 }
@@ -183,12 +205,30 @@ const initScene = async (): Promise<void> => {
   registerSceneElements(camera, elements)
 
   heldItems = createHeldItemsSystem(scene, HAND_SIDES.length)
-  grass = createGrassField(scene, GRASS_BLADE_COUNT, GRASS_PATCH_BOUNDS)
+  balls = createBallField(
+    scene,
+    {
+      count: BALL_COUNT,
+      radius: BALL_RADIUS,
+      halfWidth: BALL_SPAWN_HALF_WIDTH,
+      spawnY: BALL_SPAWN_Y,
+      respawnBelowY: BALL_RESPAWN_BELOW_Y
+    },
+    {
+      gravity: BALL_GRAVITY,
+      hitSpeed: BALL_HIT_SPEED,
+      hitUpwardBias: BALL_HIT_UPWARD_BIAS,
+      hitCooldownMs: BALL_HIT_COOLDOWN_MS
+    }
+  )
 
+  lastFrameMs = performance.now()
   animate({
     timeline: createTimelineManager(),
     beforeTimeline: () => {
       const nowMs = performance.now()
+      const deltaSeconds = Math.min((nowMs - lastFrameMs) / 1000, MAX_FRAME_DELTA_SECONDS)
+      lastFrameMs = nowMs
       if (isActive.value) detectHands(nowMs, (camera as THREE.PerspectiveCamera).aspect)
       heldItems?.update(
         handWorldPositions,
@@ -197,7 +237,7 @@ const initScene = async (): Promise<void> => {
         handItemIndex,
         handScale
       )
-      grass?.update(nowMs / 1000)
+      balls?.update(deltaSeconds)
     }
   })
 }
@@ -251,7 +291,7 @@ onUnmounted(() => {
   stopCamera()
   toolsCleanup?.()
   heldItems?.dispose()
-  grass?.dispose()
+  balls?.dispose()
   clearSceneElements()
   unregisterViewConfig(route.name as string)
   clearViewPanels()
@@ -263,7 +303,9 @@ onUnmounted(() => {
     <video ref="video" class="hand-hold__video" autoplay playsinline muted></video>
     <canvas ref="canvas" class="hand-hold__canvas"></canvas>
     <div ref="statsElement" class="hand-hold__stats"></div>
-    <p v-if="isActive" class="hand-hold__hint">Make a fist to grab the sword. It cuts the grass.</p>
+    <p v-if="isActive" class="hand-hold__hint">
+      Make a fist to grab the bat. Swing to hit the balls.
+    </p>
     <div v-if="!isActive" class="hand-hold__gate">
       <Button :disabled="isLoadingModel" @click="startCamera">
         {{ isLoadingModel ? 'Starting…' : 'Start camera' }}
@@ -285,7 +327,7 @@ onUnmounted(() => {
 
 .hand-hold__video {
   /* Hand tracking reads frames straight from this element; nobody needs to see the feed
-     itself once the scene (grass, held items) is the visible backdrop. Kept in the DOM and
+     itself once the scene (falling balls, the held bat) is the visible backdrop. Kept in the DOM and
      playing, just invisible, rather than display:none, which some browsers treat as a
      reason to stop decoding. */
   position: absolute;

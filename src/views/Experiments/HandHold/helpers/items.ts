@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { disposeObject } from '@webgamekit/threejs'
 import {
-  SWORD_BLADE_LENGTH,
+  BAT_LENGTH,
   ITEM_POSITION_SMOOTHING,
   ITEM_ROTATION_SMOOTHING,
   ITEM_SCALE_SMOOTHING
@@ -31,77 +31,35 @@ export const mirroredImagePointToWorld = (
 }
 
 /**
- * A tapered blade silhouette (wide at the guard, drawn to a point at the tip) extruded to a
- * thin diamond-ish cross-section, rather than a flat-sided box: the shape alone is what reads
- * as an actual blade instead of a metal ruler.
+ * A tapered cylinder standing along local +Y, base at the origin: thin at the grip end,
+ * flaring out toward the barrel at the tip, the way a real bat's turned profile does.
  */
-const createBladeGeometry = (length: number): THREE.BufferGeometry => {
-  const baseHalfWidth = 0.03
-  const tipHalfWidth = baseHalfWidth * 0.35
-  const tipShoulder = length * 0.94
-
-  const outline = new THREE.Shape()
-  outline.moveTo(-baseHalfWidth, 0)
-  outline.lineTo(baseHalfWidth, 0)
-  outline.lineTo(tipHalfWidth, tipShoulder)
-  outline.lineTo(0, length)
-  outline.lineTo(-tipHalfWidth, tipShoulder)
-  outline.lineTo(-baseHalfWidth, 0)
-
-  const thickness = 0.012
-  const geometry = new THREE.ExtrudeGeometry(outline, {
-    depth: thickness,
-    bevelEnabled: true,
-    bevelThickness: thickness * 0.25,
-    bevelSize: thickness * 0.25,
-    bevelSegments: 2,
-    curveSegments: 1
-  })
-  geometry.translate(0, 0, -thickness / 2)
-  geometry.computeVertexNormals()
+const createBatGeometry = (length: number): THREE.BufferGeometry => {
+  const gripRadius = 0.018
+  const barrelRadius = 0.045
+  const geometry = new THREE.CylinderGeometry(barrelRadius, gripRadius, length, 16)
+  geometry.translate(0, length / 2, 0)
   return geometry
 }
 
-const createSword = (): THREE.Group => {
+const createBat = (): THREE.Group => {
   const group = new THREE.Group()
 
-  const handleHeight = 0.22
-  const guardHeight = 0.05
-
-  // Centred on the group's own origin, which the hand system places exactly at the hand's
-  // grip point, so the fist wraps around the handle rather than sitting beside it.
-  const handle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.035, 0.035, handleHeight, 12),
-    new THREE.MeshStandardMaterial({ color: 0x6b4a33, roughness: 0.8 })
+  const bat = new THREE.Mesh(
+    createBatGeometry(BAT_LENGTH),
+    new THREE.MeshStandardMaterial({ color: 0xd8b98c, roughness: 0.75 })
   )
-  group.add(handle)
-
-  const guardY = handleHeight / 2
-  const guard = new THREE.Mesh(
-    new THREE.BoxGeometry(0.26, guardHeight, 0.05),
-    new THREE.MeshStandardMaterial({ color: 0xb08d57, metalness: 0.4, roughness: 0.5 })
-  )
-  guard.position.y = guardY
-  group.add(guard)
-
-  // Polished steel: metalness this high only reads correctly with an environment light for it
-  // to reflect, which the setup config provides for the whole scene.
-  const blade = new THREE.Mesh(
-    createBladeGeometry(SWORD_BLADE_LENGTH),
-    new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.95, roughness: 0.18 })
-  )
-  blade.position.y = guardY + guardHeight / 2
-  group.add(blade)
+  group.add(bat)
 
   return group
 }
 
 /** Each builder returns a group whose local +Y points from the grip toward the item's tip, so
- * a hand's own forward direction can be applied as a single rotation. Only the sword for now;
+ * a hand's own forward direction can be applied as a single rotation. Only the bat for now;
  * add more builders here to bring back finger-count selection between several items. */
-export const ITEM_BUILDERS = [createSword] as const
-export const ITEM_NAMES = ['Sword'] as const
-export const SWORD_ITEM_INDEX = 0
+export const ITEM_BUILDERS = [createBat] as const
+export const ITEM_NAMES = ['Bat'] as const
+export const BAT_ITEM_INDEX = 0
 
 const UP = new THREE.Vector3(0, 1, 0)
 
