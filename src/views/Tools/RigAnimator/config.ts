@@ -158,8 +158,8 @@ export const MEDIAPIPE_HAND_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
- * layout and the 3D camera's re-centering onto the remaining visible half. */
-export const CAMERA_PANEL_WIDTH_VW = 45
+ * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
+export const CAMERA_PANEL_WIDTH_VW = 30
 
 /** Fraction of each new frame's landmarks blended into the running smoothed set, for the live
  * camera feed. Lower reads smoother but laggier; 1 would turn smoothing off entirely. */

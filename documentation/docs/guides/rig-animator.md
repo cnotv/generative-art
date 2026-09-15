@@ -336,21 +336,25 @@ out whether the fit works for that particular mesh.
 
 Once the rig has every bone the mapping needs (`mixamorigLeftShoulder`,
 `mixamorigRightShoulder`, and a `mixamorigLeftHand`/`RightHand`/`LeftFoot`/`RightFoot`/`Head` to
-drive), **Capture Pose from Camera**, docked on the canvas next to Upload Model, opens a panel
-docked to the right half of the screen: the 3D view stays fully visible and interactive in the
-left half, so you can watch the rig mirror you live instead of only seeing a preview of the
-camera feed. The panel shows a mirrored webcam feed with a live skeleton overlay from
+drive), **Capture Pose from Camera**, docked on the canvas next to Upload Model, opens a compact
+panel docked at the top right of the screen: the 3D view stays fully visible and interactive
+beside it, so you can watch the rig mirror you live instead of only seeing a preview of the
+camera feed. Its controls are icons: an X at the top closes it, and the action row under the
+feed holds upload, camera, sync and record. The panel shows a mirrored webcam feed with a live skeleton overlay from
 MediaPipe's Pose Landmarker. The overlay only draws a landmark MediaPipe is actually confident
 about: one it isn't, typically a body part out of frame, still gets a guessed position
 internally, and drawing that would show a confident-looking line to something that isn't really
 there.
 
-The model re-centers within the now-narrower visible half rather than sitting off-center against
-the panel's edge, without the 3D canvas itself ever resizing: opening the panel shifts the
-camera's own view offset, the same technique used for tiled or multi-window rendering, so the
-model appears centered in whatever is actually visible. Closing the panel clears it.
+The model re-centers within the part of the canvas the panel leaves visible rather than sitting
+off-center against the panel's edge, without the 3D canvas itself ever resizing: showing the
+preview shifts the camera's own view offset, the same technique used for tiled or multi-window
+rendering, so the model appears centered in whatever is actually visible. Hiding the preview or
+closing the panel clears it, and restores the camera's aspect ratio in the same step: setting the
+offset replaces that aspect with the wider virtual frame's own, and clearing it does not put it
+back, which left the model squashed to half its width.
 
-![The camera panel docked to the right of the still-interactive 3D view, side by side for a live comparison](/img/animation/rig-camera-split-screen.webp)
+![The compact camera panel docked at the top right beside the still-interactive 3D view: the mirrored preview, the posing scope and status lines, the upload and record icons, and the close X at its top](/img/animation/rig-camera-split-screen.webp)
 
 Every detected frame applies straight to the rig, live, the moment it arrives: there is no
 separate "capture" click. This is what makes the split screen actually prove the mapping
@@ -361,19 +365,19 @@ current pose happens to be to the animation, the same as it always has.
 ### Recording motion instead of posing one keyframe at a time
 
 Every detected frame already applies live to the rig, but committing it to the timeline
-normally still takes a manual **Add Keyframe** click per pose. **Record Motion**, next to
-Close in the camera panel, turns a live performance into an authored clip automatically
+normally still takes a manual **Add Keyframe** click per pose. **Record Motion**, the red circle
+icon in the camera panel's action row, turns a live performance into an authored clip automatically
 instead: while it is on, every applied camera frame samples the rig's current pose onto the
 timeline at whatever frame real elapsed time has reached, at the panel's own FPS setting, so
 scrubbing the timeline afterward plays back the performance the same way any hand-authored
 clip does. The visible frame range grows to keep up with a long take rather than cutting it
 off, the same way the timeline's own resize handle only ever extends to fit real content.
-**Stop Recording**, the toggle's own second click, ends the take; closing the camera panel or
-switching to an uploaded photo stops it too, since a still photo has nothing to keep sampling.
-Recording works the same way against an uploaded video, see below — only a still photo cannot
-be recorded from.
+**Stop Recording**, the same toggle's second click once its icon has turned into a square, ends
+the take; closing the camera panel or switching to an uploaded photo stops it too, since a still
+photo has nothing to keep sampling. Recording works the same way against an uploaded video, see
+below; only a still photo cannot be recorded from.
 
-![The camera panel's action row mid-recording: Record Motion toggled to a red Stop Recording button, next to Upload Photo and Close](/img/animation/rig-record-motion.webp)
+![The camera panel mid-recording: the record toggle showing its red square stop icon beside the upload icon, with the close X at the top of the panel](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
 either one stops the other first rather than letting them fight over it. While recording, the
@@ -390,7 +394,8 @@ already sat there instead, a visible twitch right at the seam. Once a take ends,
 to **Presets** — see below — so it can be played back or reloaded the same way a bundled
 mocap clip can.
 
-**Upload Photo/Video** reads a pose from an uploaded file instead of the live feed, useful for
+**Upload Photo/Video**, the upload icon in the panel's action row, reads a pose from an uploaded
+file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
@@ -402,15 +407,16 @@ playback starts, and the take ends on its own once the video reaches its natural
 as a manual **Stop Recording** click would. It plays once rather than looping specifically so
 that end has something to trigger on. Either kind stays available once something is already
 loaded, so picking a different file never needs switching back to the camera first, and **Use
-Camera** switches back from either. A photo or video is shown as it is, not mirrored, since
+Camera**, a camera icon that joins the action row once an upload is showing, switches back from
+either. A photo or video is shown as it is, not mirrored, since
 neither is a self-view the way a live webcam feed is, and the detected pose maps onto the rig
 unmirrored too, matching what the upload actually shows. Uploading either always turns **Show
 Camera Preview** on too, regardless of whatever it was last left at: the whole point of picking
 one is to look at it and its detected pose together, and running detection against an upload
 with the preview still hidden would show nothing for it.
 
-An uploaded video also gets its own native scrub bar, and a **Sync timeline to video** toggle
-next to Record Motion, on by default. With sync on, dragging the rig timeline's own playhead
+An uploaded video also gets its own native scrub bar, and a **Sync Timeline to Video** link icon
+toggle next to Record Motion, on by default; it shows a broken link while off. With sync on, dragging the rig timeline's own playhead
 seeks the video to match, and scrubbing the video's native controls moves the timeline's frame
 back the same way — the two stay locked together in both directions, so comparing a specific
 moment in the source against the rig it drove is a single scrub rather than two. Sync only
