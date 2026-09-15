@@ -181,6 +181,11 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   backward as the phase requires. Cross-fade the weight between two such actions over a
   _fraction_ of the phase's own progress, never a fixed number of seconds, or the blend either
   finishes instantly or never finishes once that phase's duration is tunable.
+- **`setViewOffset` replaces a perspective camera's `aspect`, and `clearViewOffset` never
+  restores it.** A panel docked over the canvas that re-centres the scene with a view offset
+  leaves the camera at the wider virtual frame's aspect once the offset clears, and the scene
+  renders squashed until a window resize happens to fix it. Reset `aspect` from the canvas
+  before clearing, as the Rig Animator's `centerCameraOnVisibleCanvas` does.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.
