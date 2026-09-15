@@ -1,12 +1,33 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { frameCameraOnModel } from './cameraFraming'
+import { centerCameraOnVisibleCanvas, frameCameraOnModel } from './cameraFraming'
 
 const buildTestModel = (): THREE.Object3D => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1))
   mesh.position.set(0, 1, 0)
   return mesh
 }
+
+describe('centerCameraOnVisibleCanvas', () => {
+  it('renders an offset slice of a frame twice the canvas width while the preview covers it', () => {
+    const camera = new THREE.PerspectiveCamera(50, 1.6)
+
+    centerCameraOnVisibleCanvas(camera, 1600, 1000, 0.45)
+
+    expect(camera.view?.enabled).toBe(true)
+    expect(camera.view?.fullWidth).toBe(3200)
+  })
+
+  it('restores the canvas aspect once the preview stops covering it', () => {
+    const camera = new THREE.PerspectiveCamera(50, 1.6)
+    centerCameraOnVisibleCanvas(camera, 1600, 1000, 0.45)
+
+    centerCameraOnVisibleCanvas(camera, 1600, 1000, 0)
+
+    expect(camera.view?.enabled).toBe(false)
+    expect(camera.aspect).toBeCloseTo(1.6)
+  })
+})
 
 describe('frameCameraOnModel', () => {
   it('frames the camera square-on by default, in front of the model along +z', () => {

@@ -41,7 +41,7 @@ import {
 import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
-import { frameCameraOnModel } from './cameraFraming'
+import { centerCameraOnVisibleCanvas, frameCameraOnModel } from './cameraFraming'
 import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
 import {
   selectedBodyPartGroups,
@@ -218,13 +218,7 @@ const onWindowPointerUp = (): void => {
   window.removeEventListener('pointerup', onWindowPointerUp)
 }
 
-/**
- * Shifts the camera's view offset so the model appears centered in the visible half of the
- * canvas while the camera/photo panel covers the other half, rather than sitting off-center
- * against the divider. The canvas itself never resizes for this: `setViewOffset` shifts which
- * part of a wider virtual frame the same render shows, so the shared package's window-based
- * resize handling elsewhere never needs to know about the docked panel at all.
- */
+/** Keeps the model centred beside the docked camera preview; see `centerCameraOnVisibleCanvas`. */
 const updateCameraCentering = (): void => {
   const activeCamera = cameraReference
   if (!canvas.value) return
@@ -234,17 +228,15 @@ const updateCameraCentering = (): void => {
   ) {
     return
   }
-  const width = canvas.value.clientWidth
-  const height = canvas.value.clientHeight
   // Hiding the preview shrinks the docked panel down to its action buttons, leaving the model
-  // the full canvas to sit in; only a visible preview actually covers half the screen.
-  if (showCameraCapture.value && reactiveConfig.value.cameraShowPreview) {
-    const visibleWidth = width * (1 - CAMERA_PANEL_WIDTH_VW / 100)
-    activeCamera.setViewOffset(width * 2, height, width - visibleWidth / 2, 0, width, height)
-  } else {
-    activeCamera.clearViewOffset()
-  }
-  activeCamera.updateProjectionMatrix()
+  // the full canvas to sit in; only a visible preview actually covers part of the screen.
+  const isPreviewCoveringCanvas = showCameraCapture.value && reactiveConfig.value.cameraShowPreview
+  centerCameraOnVisibleCanvas(
+    activeCamera,
+    canvas.value.clientWidth,
+    canvas.value.clientHeight,
+    isPreviewCoveringCanvas ? CAMERA_PANEL_WIDTH_VW / 100 : 0
+  )
 }
 
 /** Rebuilds the panel schema from the rig's current bones and auto-rig state. */
