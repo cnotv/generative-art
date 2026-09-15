@@ -3,13 +3,7 @@ import {
   LANDMARK_INDEX,
   type CameraLandmark
 } from './cameraPoseMapping'
-import { CALIBRATION_SIDE_SHOULDER_SPAN_RATIO } from './config'
-import type {
-  CalibrationFrame,
-  CalibrationPoseKind,
-  FrontCalibration,
-  ImageLandmark
-} from './types'
+import type { CalibrationFrame, ImageLandmark } from './types'
 
 interface PlanePoint {
   x: number
@@ -46,7 +40,18 @@ const elbowBend = ({ shoulder, elbow, wrist }: Arm): number => {
   return Math.abs(Math.atan2(cross, dot))
 }
 
-const matchesFrontTPose = (frame: CalibrationFrame, toleranceRadians: number): boolean => {
+/**
+ * Whether a frame shows the held front T-pose the calibration waits for: both arms level, straight
+ * and out to the sides.
+ * @param frame The detected frame
+ * @param toleranceDegrees How far an arm may tilt off level, or bend at the elbow
+ * @returns Whether the pose matches
+ */
+export const detectCalibrationTPose = (
+  frame: CalibrationFrame,
+  toleranceDegrees: number
+): boolean => {
+  const toleranceRadians = degreesToRadians(toleranceDegrees)
   const indices = [
     LANDMARK_INDEX.leftShoulder,
     LANDMARK_INDEX.rightShoulder,
@@ -71,51 +76,6 @@ const matchesFrontTPose = (frame: CalibrationFrame, toleranceRadians: number): b
       elbowBend(arm) <= toleranceRadians &&
       Math.abs(arm.wrist.x - centerX) > Math.abs(arm.shoulder.x - centerX)
   )
-}
-
-/** Turned sideways the near arm points at the camera, so its image direction says nothing; what
- * still holds is that the shoulders overlap and the wrists stay at shoulder height. */
-const matchesSideTPose = (
-  frame: CalibrationFrame,
-  toleranceRadians: number,
-  front: FrontCalibration
-): boolean => {
-  const leftShoulderLandmark = frame.image[LANDMARK_INDEX.leftShoulder]
-  const rightShoulderLandmark = frame.image[LANDMARK_INDEX.rightShoulder]
-  if (!isVisible(leftShoulderLandmark) || !isVisible(rightShoulderLandmark)) return false
-  const leftShoulder = toHeightUnits(leftShoulderLandmark, frame.aspect)
-  const rightShoulder = toHeightUnits(rightShoulderLandmark, frame.aspect)
-  const shoulderSpan = Math.hypot(
-    leftShoulder.x - rightShoulder.x,
-    leftShoulder.y - rightShoulder.y
-  )
-  if (shoulderSpan >= CALIBRATION_SIDE_SHOULDER_SPAN_RATIO * front.shoulderSpanImage) return false
-  const shoulderY = (leftShoulder.y + rightShoulder.y) / 2
-  const armLength = (front.armSpanImage - front.shoulderSpanImage) / 2
-  const allowedDrop = Math.sin(toleranceRadians) * armLength
-  const wrists = [frame.image[LANDMARK_INDEX.leftWrist], frame.image[LANDMARK_INDEX.rightWrist]]
-    .filter(isVisible)
-    .map((wrist) => toHeightUnits(wrist, frame.aspect))
-  return wrists.length > 0 && wrists.every((wrist) => Math.abs(wrist.y - shoulderY) <= allowedDrop)
-}
-
-/**
- * Whether a frame shows the held T-pose a calibration step waits for.
- * @param frame The detected frame
- * @param kind Which T-pose: square-on, or turned sideways
- * @param toleranceDegrees How far an arm may tilt off level, or bend at the elbow
- * @param front The front calibration, needed to recognise the collapsed shoulders of a side pose
- * @returns Whether the pose matches
- */
-export const detectCalibrationTPose = (
-  frame: CalibrationFrame,
-  kind: CalibrationPoseKind,
-  toleranceDegrees: number,
-  front: FrontCalibration | null
-): boolean => {
-  const toleranceRadians = degreesToRadians(toleranceDegrees)
-  if (kind === 'front') return matchesFrontTPose(frame, toleranceRadians)
-  return front !== null && matchesSideTPose(frame, toleranceRadians, front)
 }
 
 const mean = (values: number[]): number =>

@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
 import * as THREE from 'three'
-import { rigGenerateHumanoidSkeleton } from '@webgamekit/rig'
+import { rigGenerateHumanoidSkeleton, type Vector3Data } from '@webgamekit/rig'
 import { useRigCameraPose } from './useRigCameraPose'
 import { captureRestPoses, applyGizmoDragToChain, type BoneRestPose } from './boneDragTarget'
 import { CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, type CameraLandmark } from './cameraPoseMapping'
 import { RIG_BODY_PART_GROUPS, type RigBodyPartGroup } from './bodyPartGroups'
-import type { RootMotion } from './types'
 
 const ALL_GROUPS = new Set(RIG_BODY_PART_GROUPS)
 const WORLD_UP = new THREE.Vector3(0, 1, 0)
+const WORLD_RIGHT = new THREE.Vector3(1, 0, 0)
 
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
   x,
@@ -33,11 +33,27 @@ const buildTPoseLandmarks = (): CameraLandmark[] => {
   return landmarks
 }
 
-/** A generated humanoid rig, optionally under a parent, with the same wiring `useRigModel`
- * gives `useRigCameraPose`, built directly for a focused test. */
-const buildRig = (parent?: THREE.Object3D) => {
+interface RigOptions {
+  /** An object the skeleton root is added under, such as a rotated FBX armature. */
+  parent?: THREE.Object3D
+  /** Bones taken out of the generated skeleton, their children kept in place under the removed
+   * bone's parent, standing in for a rig that never had them. */
+  withoutBones?: string[]
+}
+
+/** A generated humanoid rig with the same wiring `useRigModel` gives `useRigCameraPose`, built
+ * directly for a focused test. */
+const buildRig = ({ parent, withoutBones = [] }: RigOptions = {}) => {
   const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
-  const { root, bones } = rigGenerateHumanoidSkeleton(box)
+  const { root, bones: generatedBones } = rigGenerateHumanoidSkeleton(box)
+  root.updateMatrixWorld(true)
+  generatedBones
+    .filter((bone) => withoutBones.includes(bone.name))
+    .forEach((removed) => {
+      ;[...removed.children].forEach((child) => removed.parent?.attach(child))
+      removed.removeFromParent()
+    })
+  const bones = generatedBones.filter((bone) => !withoutBones.includes(bone.name))
   parent?.add(root)
   const top = parent ?? root
   top.updateMatrixWorld(true)
@@ -56,27 +72,27 @@ const buildRig = (parent?: THREE.Object3D) => {
   }
   const getRestPositions = (): Map<string, THREE.Vector3> =>
     new Map([...restPoses.entries()].map(([name, rest]) => [name, rest.position]))
-  const getRestQuaternions = (): Map<string, THREE.Quaternion> =>
-    new Map([...restPoses.entries()].map(([name, rest]) => [name, rest.quaternion]))
   const findBone = (name: string): THREE.Bone => bones.find((bone) => bone.name === name)!
   const { applyCameraPose } = useRigCameraPose(
     ref(bones),
     applyBoneDragTarget,
     resetAllBonesToRest,
-    getRestPositions,
-    getRestQuaternions
+    getRestPositions
   )
   return { root, findBone, applyCameraPose }
 }
 
-const yawAboutWorldUp = (yaw: number, from: THREE.Quaternion): THREE.Quaternion =>
-  new THREE.Quaternion().setFromAxisAngle(WORLD_UP, yaw).multiply(from)
+const worldQuaternionOf = (bone: THREE.Object3D): THREE.Quaternion =>
+  bone.getWorldQuaternion(new THREE.Quaternion())
+
+const rotation = (axis: THREE.Vector3, angle: number): THREE.Quaternion =>
+  new THREE.Quaternion().setFromAxisAngle(axis, angle)
 
 describe('useRigCameraPose', () => {
   it('resets a bone camera capture never drives back to rest, instead of leaving it mixed in from an earlier edit', () => {
     const { findBone, applyCameraPose } = buildRig()
     // Simulate a stale pose: the shoulder is rotated by a manual edit or an earlier capture,
-    // and neither the head's aim nor the hand's two-bone chain has any reach back up to it.
+    // and the hand's two-bone chain has no reach back up to it.
     const shoulder = findBone('mixamorigLeftShoulder')
     shoulder.quaternion.setFromEuler(new THREE.Euler(0, 0, Math.PI / 2))
 
@@ -163,88 +179,187 @@ describe('useRigCameraPose', () => {
 
     expect(shoulder.quaternion.equals(staleShoulder)).toBe(true)
   })
+})
 
-  it('moves the skeleton root by the root motion offset and turns it about world up by its yaw', () => {
+describe('useRigCameraPose, root offset', () => {
+  it('moves the skeleton root by the root offset without turning it', () => {
     const { root, applyCameraPose } = buildRig()
     const restWorldPosition = root.getWorldPosition(new THREE.Vector3())
-    const restWorldQuaternion = root.getWorldQuaternion(new THREE.Quaternion())
-    const motion: RootMotion = { offset: { x: 0.3, y: 0, z: -0.2 }, yaw: Math.PI / 2 }
+    const restWorldQuaternion = worldQuaternionOf(root)
+    const rootOffset: Vector3Data = { x: 0.3, y: 0, z: -0.2 }
 
     applyCameraPose(
       buildTPoseLandmarks(),
       CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
       ALL_GROUPS,
       undefined,
-      motion
+      { rootOffset }
     )
 
     const movedWorldPosition = root.getWorldPosition(new THREE.Vector3())
-    const movedWorldQuaternion = root.getWorldQuaternion(new THREE.Quaternion())
     expect(movedWorldPosition.x).toBeCloseTo(restWorldPosition.x + 0.3)
     expect(movedWorldPosition.z).toBeCloseTo(restWorldPosition.z - 0.2)
-    expect(
-      movedWorldQuaternion.angleTo(yawAboutWorldUp(Math.PI / 2, restWorldQuaternion))
-    ).toBeCloseTo(0)
+    expect(worldQuaternionOf(root).angleTo(restWorldQuaternion)).toBeCloseTo(0)
   })
 
-  it('turns and moves the root in world space even under a rotated parent', () => {
+  it('moves the root in world space even under a rotated parent', () => {
     const armature = new THREE.Group()
     armature.rotation.x = -Math.PI / 2
-    const { root, applyCameraPose } = buildRig(armature)
+    const { root, applyCameraPose } = buildRig({ parent: armature })
     const restWorldPosition = root.getWorldPosition(new THREE.Vector3())
-    const restWorldQuaternion = root.getWorldQuaternion(new THREE.Quaternion())
-    const motion: RootMotion = { offset: { x: 0.3, y: 0, z: 0 }, yaw: Math.PI / 4 }
 
     applyCameraPose(
       buildTPoseLandmarks(),
       CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
       ALL_GROUPS,
       undefined,
-      motion
+      { rootOffset: { x: 0.3, y: 0, z: 0 } }
     )
 
     expect(root.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(restWorldPosition.x + 0.3)
-    expect(
-      root
-        .getWorldQuaternion(new THREE.Quaternion())
-        .angleTo(yawAboutWorldUp(Math.PI / 4, restWorldQuaternion))
-    ).toBeCloseTo(0)
   })
 
-  it('ignores root motion when Spine / Head is outside the target groups', () => {
+  it('ignores the root offset when Spine / Head is outside the target groups', () => {
     const { root, applyCameraPose } = buildRig()
     const restPosition = root.position.clone()
-    const restQuaternion = root.quaternion.clone()
-    const motion: RootMotion = { offset: { x: 0.3, y: 0, z: 0 }, yaw: Math.PI / 2 }
 
     applyCameraPose(
       buildTPoseLandmarks(),
       CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
       new Set<RigBodyPartGroup>(['leftArm']),
       undefined,
-      motion
+      { rootOffset: { x: 0.3, y: 0, z: 0 } }
     )
 
     expect(root.position.equals(restPosition)).toBe(true)
-    expect(root.quaternion.equals(restQuaternion)).toBe(true)
   })
 
-  it('holds the root where root motion last put it on a frame with no root motion', () => {
+  it('holds the root where the offset last put it on a frame with no offset', () => {
     const { root, applyCameraPose } = buildRig()
-    const motion: RootMotion = { offset: { x: 0.3, y: 0, z: 0 }, yaw: Math.PI / 2 }
     applyCameraPose(
       buildTPoseLandmarks(),
       CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
       ALL_GROUPS,
       undefined,
-      motion
+      { rootOffset: { x: 0.3, y: 0, z: 0 } }
     )
     const drivenPosition = root.position.clone()
-    const drivenQuaternion = root.quaternion.clone()
 
     applyCameraPose(buildTPoseLandmarks(), CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, ALL_GROUPS)
 
     expect(root.position.equals(drivenPosition)).toBe(true)
-    expect(root.quaternion.equals(drivenQuaternion)).toBe(true)
+  })
+})
+
+describe('useRigCameraPose, torso and neck', () => {
+  it.each([
+    ['every spine bone', [], { mixamorigSpine: 1 / 3, mixamorigSpine1: 2 / 3, mixamorigSpine2: 1 }],
+    [
+      'only the spine bones the rig has',
+      ['mixamorigSpine1'],
+      { mixamorigSpine: 1 / 2, mixamorigSpine2: 1 }
+    ]
+  ])('spreads the torso rotation evenly over %s', (_, withoutBones, shareByBone) => {
+    const { findBone, applyCameraPose } = buildRig({ withoutBones })
+    const angle = 0.6
+    const restWorldByBone = new Map(
+      Object.keys(shareByBone).map((name) => [name, worldQuaternionOf(findBone(name))])
+    )
+
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      ALL_GROUPS,
+      undefined,
+      { torso: rotation(WORLD_UP, angle) }
+    )
+
+    Object.entries(shareByBone).forEach(([name, share]) => {
+      const expected = rotation(WORLD_UP, angle * share).multiply(restWorldByBone.get(name)!)
+      expect(worldQuaternionOf(findBone(name)).angleTo(expected)).toBeCloseTo(0)
+    })
+  })
+
+  it('turns the neck alone for a neck rotation, leaving the spine and shoulders at rest', () => {
+    const { findBone, applyCameraPose } = buildRig()
+    const neck = rotation(WORLD_UP, 0.5)
+    const restNeckWorld = worldQuaternionOf(findBone('mixamorigNeck'))
+    const restSpine = findBone('mixamorigSpine2').quaternion.clone()
+    const restShoulderWorld = worldQuaternionOf(findBone('mixamorigLeftShoulder'))
+
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      ALL_GROUPS,
+      undefined,
+      { neck }
+    )
+
+    expect(
+      worldQuaternionOf(findBone('mixamorigNeck')).angleTo(neck.clone().multiply(restNeckWorld))
+    ).toBeCloseTo(0)
+    expect(findBone('mixamorigSpine2').quaternion.angleTo(restSpine)).toBeCloseTo(0)
+    expect(
+      worldQuaternionOf(findBone('mixamorigLeftShoulder')).angleTo(restShoulderWorld)
+    ).toBeCloseTo(0)
+  })
+
+  it('turns the neck in the frame of the torso it rides on', () => {
+    const { findBone, applyCameraPose } = buildRig()
+    const torso = rotation(WORLD_UP, 0.4)
+    const neck = rotation(WORLD_RIGHT, 0.3)
+    const restNeckWorld = worldQuaternionOf(findBone('mixamorigNeck'))
+
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      ALL_GROUPS,
+      undefined,
+      { torso, neck }
+    )
+
+    const expected = torso.clone().multiply(neck).multiply(restNeckWorld)
+    expect(worldQuaternionOf(findBone('mixamorigNeck')).angleTo(expected)).toBeCloseTo(0)
+  })
+
+  it.each([
+    ['a neck the capture did not detect', []],
+    ['a rig without a neck bone', ['mixamorigNeck']]
+  ])('carries the head along with the torso for %s', (_, withoutBones) => {
+    const { findBone, applyCameraPose } = buildRig({ withoutBones })
+    const torso = rotation(WORLD_UP, 0.4)
+    const restHeadWorld = worldQuaternionOf(findBone('mixamorigHead'))
+
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      ALL_GROUPS,
+      undefined,
+      { torso, neck: null }
+    )
+
+    expect(
+      worldQuaternionOf(findBone('mixamorigHead')).angleTo(torso.clone().multiply(restHeadWorld))
+    ).toBeCloseTo(0)
+  })
+
+  it('leaves the spine and neck as they were when Spine / Head is outside the target groups', () => {
+    const { findBone, applyCameraPose } = buildRig()
+    const spine = findBone('mixamorigSpine1')
+    spine.quaternion.setFromEuler(new THREE.Euler(0.2, 0, 0))
+    const staleSpine = spine.quaternion.clone()
+    const neckBone = findBone('mixamorigNeck')
+    const staleNeck = neckBone.quaternion.clone()
+
+    applyCameraPose(
+      buildTPoseLandmarks(),
+      CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
+      new Set<RigBodyPartGroup>(['leftArm']),
+      undefined,
+      { torso: rotation(WORLD_UP, 0.4), neck: rotation(WORLD_UP, 0.4) }
+    )
+
+    expect(spine.quaternion.equals(staleSpine)).toBe(true)
+    expect(neckBone.quaternion.equals(staleNeck)).toBe(true)
   })
 })

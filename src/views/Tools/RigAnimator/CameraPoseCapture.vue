@@ -16,7 +16,7 @@ import { useVideoPoseCapture } from './useVideoPoseCapture'
 import { useVideoTimelineSync } from './useVideoTimelineSync'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './cameraPoseMapping'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
-import type { CalibrationFrame, CalibrationPoseKind, CameraCalibrationStep } from './types'
+import type { CalibrationFrame, CameraCalibrationStep } from './types'
 import CalibrationSilhouette from './CalibrationSilhouette.vue'
 
 const MILLISECONDS_PER_SECOND = 1000
@@ -123,11 +123,7 @@ const handRotations = computed(() =>
 const cameraAvailable = computed(
   () => mode.value === 'camera' && camera.isActive.value && !camera.error.value
 )
-const calibrationPoseKind = computed<CalibrationPoseKind | null>(() =>
-  props.calibrationStep === 'front' || props.calibrationStep === 'side'
-    ? props.calibrationStep
-    : null
-)
+const isHoldingTPose = computed(() => props.calibrationStep === 'front')
 const countdownSeconds = computed(() =>
   props.calibrationRemainingMs === null
     ? null
@@ -139,9 +135,7 @@ const calibrationStatus = computed(() => {
   }
   if (!cameraAvailable.value) return 'Calibration needs the live camera.'
   if (props.calibrationMatched) return 'Hold still…'
-  return props.calibrationStep === 'front'
-    ? 'Face the camera and hold a T-pose.'
-    : 'Turn sideways and hold the T-pose.'
+  return 'Face the camera and hold a T-pose.'
 })
 
 /** Width over height of whatever is being detected, so image x and y share one unit. */
@@ -229,8 +223,8 @@ watch(worldLandmarks, (landmarks) => {
 
 // Holding a T-pose against a guide you cannot see is guesswork, so a calibration step always
 // turns the preview on, the same as an upload does.
-watch(calibrationPoseKind, (kind) => {
-  if (kind) emit('enablePreview')
+watch(isHoldingTPose, (holding) => {
+  if (holding) emit('enablePreview')
 })
 
 /** An uploaded photo or video is the whole reason to look at this panel right then, so its
@@ -289,7 +283,7 @@ const handleVideoSeeked = (): void => {
 onMounted(async () => {
   camera.videoElement.value = videoReference.value
   uploadedVideo.videoElement.value = videoReference.value
-  if (calibrationPoseKind.value) emit('enablePreview')
+  if (isHoldingTPose.value) emit('enablePreview')
   await camera.start()
 })
 
@@ -323,9 +317,8 @@ onUnmounted(() => {
       ></video>
       <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
       <CalibrationSilhouette
-        v-if="calibrationPoseKind && cameraAvailable"
+        v-if="isHoldingTPose && cameraAvailable"
         class="camera-pose-capture__silhouette"
-        :step="calibrationPoseKind"
         :matched="calibrationMatched"
       />
       <p

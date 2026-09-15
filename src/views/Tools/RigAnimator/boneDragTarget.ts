@@ -80,25 +80,22 @@ export const applyPoleDrag = (chain: TwoBoneIkChain, poleWorldPosition: THREE.Ve
 }
 
 /**
- * Turn a bone about an axis given in world space, through its parent's world rotation. Three's
+ * Turn a bone by a rotation given in world space, through its parent's world rotation. Three's
  * own `rotateOnWorldAxis` assumes an unrotated parent, which no limb has and an FBX armature's
  * root often lacks too; under a rotated parent it tips the bone instead of turning it.
  * @param bone The bone to turn
- * @param worldAxis The axis in world space, normalized
- * @param angle The turn in radians
+ * @param worldRotation The rotation in world space
  * @returns Nothing; mutates the bone's local quaternion
  */
-export const rotateBoneAboutWorldAxis = (
+export const rotateBoneInWorldSpace = (
   bone: THREE.Object3D,
-  worldAxis: THREE.Vector3,
-  angle: number
+  worldRotation: THREE.Quaternion
 ): void => {
   const parentWorldQuaternion = bone.parent
     ? bone.parent.getWorldQuaternion(new THREE.Quaternion())
     : new THREE.Quaternion()
-  const worldTurn = new THREE.Quaternion().setFromAxisAngle(worldAxis, angle)
   bone.quaternion.premultiply(
-    parentWorldQuaternion.clone().invert().multiply(worldTurn).multiply(parentWorldQuaternion)
+    parentWorldQuaternion.clone().invert().multiply(worldRotation).multiply(parentWorldQuaternion)
   )
 }
 

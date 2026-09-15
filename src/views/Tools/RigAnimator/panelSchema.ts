@@ -52,9 +52,10 @@ export const buildRigAnimatorSchema = (
           sectionStart: true
         },
         cameraUseKnees: { checkbox: true, label: 'Camera Pose: Bend Knees to Photo' },
-        cameraUseNeck: { checkbox: true, label: 'Camera Pose: Bend Neck to Photo' },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
         cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
+        cameraFollowTorsoRotation: { checkbox: true, label: 'Camera Pose: Follow Torso Rotation' },
+        cameraFollowNeckRotation: { checkbox: true, label: 'Camera Pose: Follow Neck Rotation' },
         cameraReachMultiplier: {
           ...CAMERA_REACH_MULTIPLIER_RANGE,
           label: 'Camera Pose: Reach Multiplier'
@@ -81,12 +82,11 @@ export const buildRigAnimatorSchema = (
           ...CALIBRATION_FIELD_OF_VIEW_RANGE,
           label: 'Calibration: Webcam Field of View (°)'
         },
-        calibratedFollowRotation: { checkbox: true, label: 'Calibrated: Follow Rotation' },
         calibratedFollowSideToSide: { checkbox: true, label: 'Calibrated: Follow Side-to-Side' },
         calibratedFollowDistance: { checkbox: true, label: 'Calibrated: Follow Distance' },
         calibratedFollowHandRotation: {
           checkbox: true,
-          label: 'Calibrated: Follow Hand Rotation'
+          label: 'Calibrated: Follow Wrist Rotation'
         },
         calibratedMovementScale: {
           ...CALIBRATED_MOVEMENT_SCALE_RANGE,

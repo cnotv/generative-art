@@ -5,23 +5,14 @@ import {
   createCalibrationCountdown,
   advanceCalibrationCountdown
 } from './cameraCalibrationCountdown'
-import {
-  createEmptyCameraCalibration,
-  measureFrontCalibration,
-  measureSideCalibration
-} from './cameraCalibration'
+import { createEmptyCameraCalibration, measureFrontCalibration } from './cameraCalibration'
 import {
   loadCameraCalibration,
   saveCameraCalibration,
   clearCameraCalibration
 } from './calibrationStorage'
 import { CALIBRATION_AVERAGING_WINDOW_MS } from './config'
-import type {
-  CalibrationFrame,
-  CalibrationPoseKind,
-  CameraCalibration,
-  CameraCalibrationStep
-} from './types'
+import type { CalibrationFrame, CameraCalibration, CameraCalibrationStep } from './types'
 import type { RigBodyPartGroup } from './bodyPartGroups'
 
 const MILLISECONDS_PER_SECOND = 1000
@@ -40,8 +31,8 @@ interface HeldFrame {
 
 /**
  * Owns the camera calibration flow for the Rig Animator: an optional bone-to-group assignment,
- * then a held front T-pose and a held side T-pose, each captured by a countdown that only runs
- * while the pose matches. The result persists until reset.
+ * then a held front T-pose, captured by a countdown that only runs while the pose matches. The
+ * result persists until reset.
  */
 export const useCameraCalibration = () => {
   const step = ref<CameraCalibrationStep>(null)
@@ -94,46 +85,22 @@ export const useCameraCalibration = () => {
     armedGroup.value = null
   }
 
-  /** A new front calibration invalidates the side one, which was measured against it. */
-  const completeCapture = (
-    kind: CalibrationPoseKind,
-    frame: CalibrationFrame,
-    handAngles: Partial<Record<HandSide, number>>
-  ): boolean => {
-    if (kind === 'front') {
-      const front = measureFrontCalibration(frame, handAngles)
-      if (front) persist({ ...calibration.value, front, side: null })
-      return front !== null
-    }
-    const side = calibration.value.front
-      ? measureSideCalibration(frame, calibration.value.front)
-      : null
-    if (side) persist({ ...calibration.value, side })
-    return side !== null
-  }
-
   /**
-   * Feed one detected frame while a T-pose step is active.
+   * Feed one detected frame while the T-pose step is active.
    * @param frame The live frame
    * @param handAngles Each detected hand's scene-space angle this frame
    * @param now This frame's timestamp, in milliseconds
    * @param settings The Config panel's countdown and tolerance
-   * @returns The step that just completed, or null
+   * @returns Whether this frame completed the capture
    */
   const feedFrame = (
     frame: CalibrationFrame,
     handAngles: Partial<Record<HandSide, number>>,
     now: number,
     settings: CalibrationSettings
-  ): CalibrationPoseKind | null => {
-    const kind = step.value
-    if (kind !== 'front' && kind !== 'side') return null
-    const matched = detectCalibrationTPose(
-      frame,
-      kind,
-      settings.toleranceDegrees,
-      calibration.value.front
-    )
+  ): boolean => {
+    if (step.value !== 'front') return false
+    const matched = detectCalibrationTPose(frame, settings.toleranceDegrees)
     isMatched.value = matched
     heldFrames = matched
       ? [...heldFrames, { frame, time: now }].filter(
@@ -148,19 +115,19 @@ export const useCameraCalibration = () => {
     )
     countdown = advance.state
     remainingMs.value = advance.remainingMs
-    if (!advance.complete) return null
+    if (!advance.complete) return false
 
-    const captured = completeCapture(
-      kind,
+    const front = measureFrontCalibration(
       averageCalibrationFrames(heldFrames.map((held) => held.frame)),
       handAngles
     )
-    if (!captured) {
+    if (!front) {
       clearProgress()
-      return null
+      return false
     }
-    goToStep(kind === 'front' ? 'side' : null)
-    return kind
+    persist({ ...calibration.value, front })
+    finish()
+    return true
   }
 
   const reset = (): void => {

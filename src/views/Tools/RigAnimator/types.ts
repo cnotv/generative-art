@@ -1,4 +1,5 @@
-import type { HandSide, Vector3Data } from '@webgamekit/rig'
+import type { Quaternion } from 'three'
+import type { HandSide, QuaternionData, Vector3Data } from '@webgamekit/rig'
 import type { CameraLandmark } from './cameraPoseMapping'
 import type { RigGroupRootBoneNames } from './bodyPartGroups'
 
@@ -13,9 +14,10 @@ export interface RigAnimatorConfig {
   showBoneMarkers: boolean
   cameraUseElbows: boolean
   cameraUseKnees: boolean
-  cameraUseNeck: boolean
   cameraUseDepth: boolean
   cameraUseViewpoint: boolean
+  cameraFollowTorsoRotation: boolean
+  cameraFollowNeckRotation: boolean
   cameraReachMultiplier: number
   cameraSmoothingFactor: number
   cameraMaxJump: number
@@ -23,7 +25,6 @@ export interface RigAnimatorConfig {
   calibrationCountdownSeconds: number
   calibrationToleranceDegrees: number
   calibrationFieldOfViewDegrees: number
-  calibratedFollowRotation: boolean
   calibratedFollowSideToSide: boolean
   calibratedFollowDistance: boolean
   calibratedFollowHandRotation: boolean
@@ -42,10 +43,7 @@ export interface RigAnimatorConfig {
 }
 
 /** Which step of the calibration flow is active, or null while it isn't running. */
-export type CameraCalibrationStep = 'assignParts' | 'front' | 'side' | null
-
-/** Which of the two held T-poses a calibration capture reads. */
-export type CalibrationPoseKind = 'front' | 'side'
+export type CameraCalibrationStep = 'assignParts' | 'front' | null
 
 /** A MediaPipe normalized image landmark: 0 to 1 across the frame's own width and height. */
 export interface ImageLandmark {
@@ -75,35 +73,40 @@ export interface FrontCalibration {
   bodyCenterImage: { x: number; y: number }
   shoulderWidthMeters: number
   armSpanMeters: number
-  /** Unit vector from the right shoulder toward the left on the scene's horizontal plane. */
-  shoulderDirectionScene: { x: number; z: number }
+  /** The torso's scene-space orientation in the T-pose, what later twists and leans are read against. */
+  torsoOrientation: QuaternionData
+  /** The head's orientation at the same moment; null when the ears or eyes were not detected. */
+  headOrientation: QuaternionData | null
   handAngles: Partial<Record<HandSide, number>>
-}
-
-export interface SideCalibration {
-  /** Restores MediaPipe's compressed world depth to the scale of its own x axis. */
-  depthScale: number
 }
 
 export interface CameraCalibration {
   front: FrontCalibration | null
-  side: SideCalibration | null
   rootBoneNames: RigGroupRootBoneNames
 }
 
-export interface CalibratedRootMotionOptions {
+export interface CalibratedRootOffsetOptions {
   fieldOfViewDegrees: number
-  followRotation: boolean
   followSideToSide: boolean
   followDistance: boolean
   movementScale: number
   mirror: boolean
 }
 
-/** How far the skeleton root moves from rest, in rig world units, and turns about world up. */
-export interface RootMotion {
-  offset: Vector3Data
-  yaw: number
+/** The orientations body rotations are read against. */
+export type OrientationBaselines = Pick<FrontCalibration, 'torsoOrientation' | 'headOrientation'>
+
+/** One frame's body rotations, in the body's own frame; each null when not detected. */
+export interface BodyRotations {
+  torso: Quaternion | null
+  /** The head's rotation relative to the torso. */
+  neck: Quaternion | null
+}
+
+/** What a capture moves besides the limb targets. */
+export interface CameraBodyMotion extends BodyRotations {
+  /** How far the skeleton root moves from rest, in rig world units. */
+  rootOffset: Vector3Data | null
 }
 
 export interface CalibrationCountdownState {

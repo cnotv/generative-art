@@ -31,8 +31,8 @@ exist, so two poses are already a movement.
   pointer against, so posing never jumps with a world axis
 - `src/views/Tools/RigAnimator/boneDragTarget.ts`: resolves a drag toward a world-space target
   into a two-bone IK solve, a one-bone aim, a pole-hint re-aim, or (for the skeleton root only)
-  a plain translate, resets whichever bones a drag rotated back to rest, and turns a bone about a
-  world axis through its parent's rotation, for the calibrated root turn and hand turn
+  a plain translate, resets whichever bones a drag rotated back to rest, and turns a bone by a
+  world-space rotation through its parent's rotation, for the torso, neck and wrist turns
 - `src/views/Tools/RigAnimator/frameRange.ts`, `keyframeOps.ts`: pure helpers for resizing the
   timeline's frame range, repositioning one or many dragged keyframes together, and merging a
   new source's sampled keyframes into a body-part scope without disturbing the rest
@@ -44,12 +44,15 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/MergeTargetDiagram.vue`: the clickable stick-figure diagram
   itself, docked on the canvas
 - `src/views/Tools/RigAnimator/cameraCalibrationPose.ts` (+ `.test.ts`): recognising a held
-  front or side T-pose, and averaging the frames it was held for
+  T-pose, and averaging the frames it was held for
 - `src/views/Tools/RigAnimator/cameraCalibrationCountdown.ts` (+ `.test.ts`): the countdown that
   only runs while the pose keeps matching
-- `src/views/Tools/RigAnimator/cameraCalibration.ts` (+ `.test.ts`): what the two T-poses
-  measure, and the root motion, depth scale, reach multiplier and hand turn read against them.
-  See **Calibrating before you capture** below
+- `src/views/Tools/RigAnimator/cameraCalibration.ts` (+ `.test.ts`): what the T-pose measures,
+  and the root offset, reach multiplier and hand turn read against it. See **Calibrating before
+  you capture** below
+- `src/views/Tools/RigAnimator/cameraBodyOrientation.ts` (+ `.test.ts`): the torso's and head's
+  orientation from the detected landmarks, and the torso and neck rotations read from them. See
+  **Torso and neck** below
 - `src/views/Tools/RigAnimator/calibrationStorage.ts` (+ `.test.ts`): saving the calibration in
   `localStorage`
 - `src/views/Tools/RigAnimator/useCameraCalibration.ts`: the calibration flow's steps, countdown
@@ -337,41 +340,38 @@ both detectors together, is described below.
 
 **Calibrate Camera**, docked on the canvas next to Capture Pose from Camera, opens the camera
 dialog with its preview on and walks through a short calibration. Once calibrated, the live
-capture moves and turns the whole rig from what the calibration measured, instead of leaving the
-root at rest. The calibration is saved in the browser and survives a reload: the button then
-reads **Recalibrate Camera**, and **Reset Calibration** inside the flow clears it.
+capture moves the whole rig and turns its wrists from what the calibration measured, and reads the
+torso and neck against the T-pose instead of against standing square-on. The calibration is saved
+in the browser and survives a reload: the button then reads **Recalibrate Camera**, and **Reset
+Calibration** inside the flow clears it.
 
 ![The front T-pose step: a dashed T-pose guide over the live preview, here Chromium's fake camera test pattern, with the step's instructions in the docked panel and the rig waiting at rest](/img/animation/rig-calibration-t-pose.webp)
 
 1. **Assign parts** (optional): click a limb, then that limb's root bone on the model, for a rig
    whose bones do not use the mixamorig names. A skipped limb keeps the default, see **Merging
    sources by body part** below.
-2. **Front T-pose**: face the webcam with both arms straight out and level. The dashed guide over
-   the preview turns green once the pose matches and a countdown starts; dropping the pose resets
-   it. At zero, the last half second of the held pose is averaged and stored.
-3. **Side T-pose**: turn sideways with the arms still out, until the shoulders overlap on screen,
-   and hold it through the same countdown.
+2. **T-pose**: face the webcam with both arms straight out and level. The dashed guide over the
+   preview turns green once the pose matches and a countdown starts; dropping the pose resets it.
+   At zero, the last half second of the held pose is averaged and stored, and the flow closes.
 
-What the two poses feed:
+What the T-pose feeds:
 
-| Measured                                                       | Drives                                                                                       |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Front: torso height, or head height with the hips out of frame | **Follow Distance**: walking toward or away from the webcam moves the rig forward or back    |
-| Front: body center                                             | **Follow Side-to-Side**: stepping sideways moves the rig sideways, mirrored like the preview |
-| Front: shoulder span and direction                             | **Follow Rotation**: turning the body turns the rig, up to a quarter turn either way         |
-| Front: each hand's angle                                       | **Follow Hand Rotation**: turning a hand on screen turns the rig's hand                      |
-| Front: arm span                                                | **Reach Multiplier**, set so a full real T-pose reaches the rig's own                        |
-| Side: arm span along depth                                     | the depth scale for the arm mapping and the rotation direction                               |
+| Measured                                                | Drives                                                                                       |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Torso height, or head height with the hips out of frame | **Follow Distance**: walking toward or away from the webcam moves the rig forward or back    |
+| Body center                                             | **Follow Side-to-Side**: stepping sideways moves the rig sideways, mirrored like the preview |
+| Torso and head orientation                              | the zero **Follow Torso Rotation** and **Follow Neck Rotation** read against                 |
+| Each hand's angle                                       | **Follow Wrist Rotation**: turning a hand on screen turns the rig's hand bone                |
+| Arm span                                                | **Reach Multiplier**, set so a full real T-pose reaches the rig's own                        |
 
 Distance and side-to-side movement need the webcam's field of view, which a browser cannot read,
 so **Calibration: Webcam Field of View** assumes 60°, typical of a laptop webcam. A wider or
 narrower camera over- or under-reads every movement by the same proportion. Why each measurement
 works the way it does is in [calibrating the camera](/docs/journey/rig-camera-calibration).
 
-The root holds still while calibrating. After that, the root's position and rotation are recorded
-by **Record Motion** and **Add Keyframe**, and play back from the timeline and the GLB export.
-While **Follow Rotation** is on, **Match Camera Angle to Photo** stops turning the viewing camera,
-since the model itself already turns.
+The root holds still while calibrating. After that, its position is recorded by **Record Motion**
+and **Add Keyframe**, and plays back from the timeline and the GLB export. The root only ever
+moves: turning comes from the torso, see **Torso and neck** below.
 
 The Config panel gains a calibration section once the rig can capture from the camera:
 
@@ -379,9 +379,9 @@ The Config panel gains a calibration section once the rig can capture from the c
 - **Calibration: T-Pose Tolerance (°)**, 20: how far an arm may tilt off level, or bend at the
   elbow, and still match.
 - **Calibration: Webcam Field of View (°)**, 60: see above.
-- **Calibrated: Follow Rotation**, **Follow Side-to-Side**, **Follow Distance** and **Follow Hand
-  Rotation**, all on: each can be switched off on its own.
-- **Calibrated: Movement Scale**, 1: scales side-to-side and distance movement, not rotation.
+- **Calibrated: Follow Side-to-Side**, **Follow Distance** and **Follow Wrist Rotation**, all on:
+  each can be switched off on its own.
+- **Calibrated: Movement Scale**, 1: scales side-to-side and distance movement.
 
 ## Auto-rig for a model with no skeleton
 
@@ -496,7 +496,7 @@ alike, needed no changes of its own: both simply read whichever pose they are ha
 pre-mirrored one comes out correctly mirrored on its own. A photo or an uploaded video gets
 neither of these, since its own preview is not mirrored either.
 
-The mapping reads the detector's 3D world landmarks for the wrist, ankle and nose, anchors them
+The mapping reads the detector's 3D world landmarks for the wrist and ankle, anchors them
 to the rig's own shoulder center, and scales them by the ratio between the rig's shoulder width
 and the detected person's, so the same pose maps sensibly regardless of the model's scale.
 Anchoring to the shoulders rather than the hips matters in practice: a webcam framed for arms
@@ -523,14 +523,28 @@ every region active, the default, that is the whole rig: a bone the mapping does
 not drive this frame never keeps a stale pose left over from an earlier manual edit or a
 previous capture.
 
-The head applies before the hands specifically, even though both are just entries in the same
-mapping table: the head's own IK chain root is the upper spine, an ancestor of both arms, so
-aiming the head bends the spine the arms hang off. Applying it after the hands would drag an
-already-placed hand out of position along with that bend.
+### Torso and neck
 
-Spine bend is not driven by the camera: the Pose Landmarker has no per-vertebra landmarks to
-drive a convincing torso curve, so this only drives the limbs and the head. Fingers are, through
-a second detector alongside it, covered in "Fingers from the camera" above.
+The torso and the neck are not IK targets. Each turns by its own rotation, and only what hangs
+off it moves along, exactly as a manual edit to that bone drags its children.
+
+- The **torso** orientation comes from the shoulder line and the line from the hip midpoint up to
+  the shoulder midpoint, giving twist, lean and side bend. With the hips out of frame, the usual
+  webcam framing, only the twist is read. The rotation is shared equally between whichever of
+  `mixamorigSpine`, `mixamorigSpine1` and `mixamorigSpine2` the rig has, the way a real back
+  bends along its length rather than at one joint.
+- The **neck** reads the head's orientation from the ears and eyes, relative to the torso, and
+  turns `mixamorigNeck` alone: a head turn, nod or tilt leaves the spine and arms where they are.
+- A part the detector does not see this frame, or a bone the rig does not have, gets no rotation
+  of its own and rides along with its parent.
+
+Without a calibration both are read against standing upright and square-on to the camera; after
+one, against the T-pose, in the body's own frame, so a lean still reads as a lean when the T-pose
+was held at an angle to the camera. The root never turns. Rotations that depend on depth (twisting,
+leaning toward the camera, nodding, turning the head) come out only as deep as MediaPipe's own
+depth estimate, which runs shallow; a side bend does not depend on it.
+
+Fingers are driven through a second detector, covered in "Fingers from the camera" above.
 
 ### Extra details to try
 
@@ -549,12 +563,9 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   like a standing pose, folding the limb into an unnatural zigzag rather than the shoulder/hip
   and elbow/knee sharing the bend the way a real arm or leg actually does. Turning them off goes
   back to that behaviour, closest to the original mapping.
-- **Bend Neck to Photo**, on by default, feeds the detected ear midpoint in as the head chain's
-  own pole hint, the same idea as the elbow and knee options above. MediaPipe has no landmark
-  for the neck itself the way it does for an elbow or knee, so the ear midpoint stands in as the
-  closest available proxy for which way the head should lean; without it the neck bends however
-  the two-bone solve happens to pick, which read as the head tending to point down with an
-  implausible fold at the neck.
+- **Follow Torso Rotation** and **Follow Neck Rotation**, on by default, turn the spine and the
+  neck by the detected rotations, see "Torso and neck" above. Turning one off holds that part at
+  rest.
 - **Use Depth (Z Axis)**, on by default, is the original behaviour: a landmark's estimated depth
   scales into the target the same as its x and y. A single photo gives MediaPipe far less to
   judge depth from than two eyes or a video's own motion parallax do, making z the least
@@ -569,18 +580,17 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   shoulder line's own tilt in the horizontal plane: facing the camera straight on, both
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
-  which fights any manual orbiting done in between. It is skipped while calibrated **Follow
-  Rotation** turns the model itself, see **Calibrating before you capture**.
+  which fights any manual orbiting done in between. It is skipped while **Follow Torso Rotation**
+  is on, since the torso already turns with the person.
 - **Reach Multiplier**, 1 by default, scales every mapped target's distance from its anchor by
   this factor on top of the rig's own proportions, above 1 reaching further than the computed
   scale predicts and below 1 reaching less far. Even with the right bone anchored to the right
   landmark, a rig can still systematically under- or over-reach in a way neither the shoulder nor
-  the hip anchor accounts for, most often the head: a stylized character's head and neck length
-  relative to its own shoulder width does not have to match a real person's, so the same detected
-  nose landmark can pull the neck into a bend that reads as the head always pointing down,
-  independent of whatever the photo actually shows. This slider is the manual escape hatch for
-  that. A front T-pose calibration sets it from a measurement instead (see **Calibrating before
-  you capture**), and it stays tunable by eye afterward.
+  the hip anchor accounts for: a stylized character's arm length relative to its own shoulder
+  width does not have to match a real person's, so the same detected wrist lands short of or past
+  where the photo shows it. This slider is the manual escape hatch for that. A T-pose calibration
+  sets it from a measurement instead (see **Calibrating before you capture**), and it stays
+  tunable by eye afterward.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the

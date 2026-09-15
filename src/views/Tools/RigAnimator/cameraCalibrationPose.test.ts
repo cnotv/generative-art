@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { detectCalibrationTPose, averageCalibrationFrames } from './cameraCalibrationPose'
-import type { CalibrationFrame, FrontCalibration, ImageLandmark } from './types'
+import type { CalibrationFrame, ImageLandmark } from './types'
 
 const INDEX = {
   nose: 0,
@@ -37,42 +37,19 @@ const frontTPose = (): Partial<Record<keyof typeof INDEX, ImageLandmark>> => ({
   rightHip: point(0.53, 0.6)
 })
 
-/** The same person turned sideways, arms still out: the far arm is barely detected. */
-const sideTPose = (): Partial<Record<keyof typeof INDEX, ImageLandmark>> => ({
-  nose: point(0.52, 0.2),
-  leftShoulder: point(0.49, 0.3),
-  rightShoulder: point(0.51, 0.3),
-  leftElbow: point(0.5, 0.3),
-  leftWrist: point(0.52, 0.31),
-  rightElbow: point(0.5, 0.3, 0.2),
-  rightWrist: point(0.48, 0.3, 0.2)
-})
-
 const frameOf = (image: ImageLandmark[], aspect = 1): CalibrationFrame => ({
   image,
   world: [],
   aspect
 })
 
-const FRONT: FrontCalibration = {
-  shoulderSpanImage: 0.1,
-  armSpanImage: 0.5,
-  torsoHeightImage: 0.3,
-  headHeightImage: 0.1,
-  bodyCenterImage: { x: 0.5, y: 0.3 },
-  shoulderWidthMeters: 0.4,
-  armSpanMeters: 1.8,
-  shoulderDirectionScene: { x: 1, z: 0 },
-  handAngles: {}
-}
-
 const TOLERANCE_DEGREES = 20
 
-describe('detectCalibrationTPose, front', () => {
+describe('detectCalibrationTPose', () => {
   it('matches a level, straight-armed T-pose', () => {
     const frame = frameOf(imageFrom(frontTPose()))
 
-    const matched = detectCalibrationTPose(frame, 'front', TOLERANCE_DEGREES, null)
+    const matched = detectCalibrationTPose(frame, TOLERANCE_DEGREES)
 
     expect(matched).toBe(true)
   })
@@ -96,7 +73,7 @@ describe('detectCalibrationTPose, front', () => {
         })
       )
 
-      const matched = detectCalibrationTPose(frame, 'front', TOLERANCE_DEGREES, null)
+      const matched = detectCalibrationTPose(frame, TOLERANCE_DEGREES)
 
       expect(matched).toBe(expected)
     }
@@ -123,7 +100,7 @@ describe('detectCalibrationTPose, front', () => {
       aspect
     )
 
-    const matched = detectCalibrationTPose(frame, 'front', TOLERANCE_DEGREES, null)
+    const matched = detectCalibrationTPose(frame, TOLERANCE_DEGREES)
 
     expect(matched).toBe(true)
   })
@@ -131,7 +108,7 @@ describe('detectCalibrationTPose, front', () => {
   it('rejects a bent elbow even when the wrist is level with the shoulder', () => {
     const frame = frameOf(imageFrom({ ...frontTPose(), leftElbow: point(0.35, 0.4) }))
 
-    const matched = detectCalibrationTPose(frame, 'front', TOLERANCE_DEGREES, null)
+    const matched = detectCalibrationTPose(frame, TOLERANCE_DEGREES)
 
     expect(matched).toBe(false)
   })
@@ -139,7 +116,7 @@ describe('detectCalibrationTPose, front', () => {
   it('rejects a frame where a wrist is not confidently detected', () => {
     const frame = frameOf(imageFrom({ ...frontTPose(), rightWrist: point(0.75, 0.3, 0.1) }))
 
-    const matched = detectCalibrationTPose(frame, 'front', TOLERANCE_DEGREES, null)
+    const matched = detectCalibrationTPose(frame, TOLERANCE_DEGREES)
 
     expect(matched).toBe(false)
   })
@@ -155,41 +132,7 @@ describe('detectCalibrationTPose, front', () => {
       })
     )
 
-    const matched = detectCalibrationTPose(frame, 'front', TOLERANCE_DEGREES, null)
-
-    expect(matched).toBe(false)
-  })
-})
-
-describe('detectCalibrationTPose, side', () => {
-  it('matches a profile T-pose: shoulder span collapsed, near wrist at shoulder height', () => {
-    const frame = frameOf(imageFrom(sideTPose()))
-
-    const matched = detectCalibrationTPose(frame, 'side', TOLERANCE_DEGREES, FRONT)
-
-    expect(matched).toBe(true)
-  })
-
-  it('needs a front calibration to compare the shoulder span against', () => {
-    const frame = frameOf(imageFrom(sideTPose()))
-
-    const matched = detectCalibrationTPose(frame, 'side', TOLERANCE_DEGREES, null)
-
-    expect(matched).toBe(false)
-  })
-
-  it('rejects a square-on stance whose shoulder span has not collapsed', () => {
-    const frame = frameOf(imageFrom(frontTPose()))
-
-    const matched = detectCalibrationTPose(frame, 'side', TOLERANCE_DEGREES, FRONT)
-
-    expect(matched).toBe(false)
-  })
-
-  it('rejects a near wrist hanging well below shoulder height', () => {
-    const frame = frameOf(imageFrom({ ...sideTPose(), leftWrist: point(0.52, 0.5) }))
-
-    const matched = detectCalibrationTPose(frame, 'side', TOLERANCE_DEGREES, FRONT)
+    const matched = detectCalibrationTPose(frame, TOLERANCE_DEGREES)
 
     expect(matched).toBe(false)
   })

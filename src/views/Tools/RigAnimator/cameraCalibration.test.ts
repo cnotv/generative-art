@@ -1,15 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import {
   measureFrontCalibration,
-  measureSideCalibration,
   computeCalibratedReachMultiplier,
-  scaleLandmarkDepth,
-  computeCalibratedRootMotion,
+  computeCalibratedRootOffset,
   computeSceneHandAngle,
   computeHandRotationDelta
 } from './cameraCalibration'
 import type {
-  CalibratedRootMotionOptions,
+  CalibratedRootOffsetOptions,
   CalibrationFrame,
   CameraCalibration,
   FrontCalibration,
@@ -41,6 +39,7 @@ const TORSO_HEIGHT = 0.5
 const HEAD_HEIGHT = 0.25
 const CALIBRATED_DISTANCE = 2
 const RIG_SHOULDER_WIDTH = SHOULDER_WIDTH
+const ELBOW_REACH = SHOULDER_WIDTH / 2 + (ARM_SPAN - SHOULDER_WIDTH) / 4
 
 interface ScenePoint {
   x: number
@@ -51,30 +50,24 @@ interface ScenePoint {
 interface Placement {
   distance: number
   lateral: number
-  yaw: number
 }
 
-const CALIBRATED: Placement = { distance: CALIBRATED_DISTANCE, lateral: 0, yaw: 0 }
+const CALIBRATED: Placement = { distance: CALIBRATED_DISTANCE, lateral: 0 }
 
-/** A T-pose in scene space (x right, y up, z toward the camera), turned by `yaw` about +Y. */
-const scenePoints = (yaw: number): Record<PointName, ScenePoint> => {
-  const at = (x: number, y: number): ScenePoint => ({
-    x: x * Math.cos(yaw),
-    y,
-    z: -x * Math.sin(yaw)
-  })
-  const elbowReach = SHOULDER_WIDTH / 2 + (ARM_SPAN - SHOULDER_WIDTH) / 4
-  return {
-    nose: at(0, HEAD_HEIGHT),
-    leftShoulder: at(-SHOULDER_WIDTH / 2, 0),
-    rightShoulder: at(SHOULDER_WIDTH / 2, 0),
-    leftElbow: at(-elbowReach, 0),
-    rightElbow: at(elbowReach, 0),
-    leftWrist: at(-ARM_SPAN / 2, 0),
-    rightWrist: at(ARM_SPAN / 2, 0),
-    leftHip: at(-0.1, -TORSO_HEIGHT),
-    rightHip: at(0.1, -TORSO_HEIGHT)
-  }
+const at = (x: number, y: number): ScenePoint => ({ x, y, z: 0 })
+
+/** A square-on T-pose in scene space (x right, y up, z toward the camera), in MediaPipe's real
+ * convention of the subject's left side at the larger x. */
+const SCENE_POINTS: Record<PointName, ScenePoint> = {
+  nose: at(0, HEAD_HEIGHT),
+  leftShoulder: at(SHOULDER_WIDTH / 2, 0),
+  rightShoulder: at(-SHOULDER_WIDTH / 2, 0),
+  leftElbow: at(ELBOW_REACH, 0),
+  rightElbow: at(-ELBOW_REACH, 0),
+  leftWrist: at(ARM_SPAN / 2, 0),
+  rightWrist: at(-ARM_SPAN / 2, 0),
+  leftHip: at(0.1, -TORSO_HEIGHT),
+  rightHip: at(-0.1, -TORSO_HEIGHT)
 }
 
 /** Projects a scene point through a pinhole camera into MediaPipe's raw normalized image space. */
@@ -89,19 +82,14 @@ const toImage = (point: ScenePoint, placement: Placement): ImageLandmark => {
 }
 
 /** A scene point as a MediaPipe world landmark: y grows down and z grows away from the camera. */
-const toWorld = (point: ScenePoint, depthCompression = 1): CameraLandmark => ({
+const toWorld = (point: ScenePoint): CameraLandmark => ({
   x: point.x,
   y: -point.y,
-  z: -point.z * depthCompression,
+  z: -point.z,
   visibility: 1
 })
 
-const frameAt = (
-  placement: Placement,
-  hidden: PointName[] = [],
-  depthCompression = 1
-): CalibrationFrame => {
-  const points = scenePoints(placement.yaw)
+const frameAt = (placement: Placement, hidden: PointName[] = []): CalibrationFrame => {
   const nameAt = (index: number): PointName | undefined =>
     (Object.keys(INDEX) as PointName[]).find((name) => INDEX[name] === index)
   const isShown = (name: PointName | undefined): name is PointName =>
@@ -109,21 +97,18 @@ const frameAt = (
   return {
     image: Array.from({ length: 33 }, (_, index) => {
       const name = nameAt(index)
-      return isShown(name) ? toImage(points[name], placement) : { x: 0, y: 0, visibility: 0 }
+      return isShown(name) ? toImage(SCENE_POINTS[name], placement) : { x: 0, y: 0, visibility: 0 }
     }),
     world: Array.from({ length: 33 }, (_, index) => {
       const name = nameAt(index)
-      return isShown(name)
-        ? toWorld(points[name], depthCompression)
-        : { x: 0, y: 0, z: 0, visibility: 0 }
+      return isShown(name) ? toWorld(SCENE_POINTS[name]) : { x: 0, y: 0, z: 0, visibility: 0 }
     }),
     aspect: ASPECT
   }
 }
 
-const OPTIONS: CalibratedRootMotionOptions = {
+const OPTIONS: CalibratedRootOffsetOptions = {
   fieldOfViewDegrees: FIELD_OF_VIEW_DEGREES,
-  followRotation: true,
   followSideToSide: true,
   followDistance: true,
   movementScale: 1,
@@ -132,7 +117,6 @@ const OPTIONS: CalibratedRootMotionOptions = {
 
 const calibrated = (): CameraCalibration => ({
   front: measureFrontCalibration(frameAt(CALIBRATED), {}),
-  side: null,
   rootBoneNames: {}
 })
 
@@ -150,11 +134,11 @@ describe('measureFrontCalibration', () => {
     expect(front?.handAngles).toEqual({ Left: 0.3 })
   })
 
-  it('records the square-on shoulder direction in scene space as a unit vector', () => {
+  it('records the T-pose torso as square-on, and no head baseline without detected ears', () => {
     const front = measureFrontCalibration(frameAt(CALIBRATED), {})
 
-    expect(front?.shoulderDirectionScene.x).toBeCloseTo(-1)
-    expect(front?.shoulderDirectionScene.z).toBeCloseTo(0)
+    expect(Math.abs(front?.torsoOrientation.w ?? 0)).toBeCloseTo(1)
+    expect(front?.headOrientation).toBeNull()
   })
 
   it('leaves torso height empty when the hips are out of frame', () => {
@@ -170,25 +154,6 @@ describe('measureFrontCalibration', () => {
   })
 })
 
-describe('measureSideCalibration', () => {
-  it('derives how much MediaPipe compresses depth from the arm span seen side-on', () => {
-    const front = measureFrontCalibration(frameAt(CALIBRATED), {})!
-    const side = frameAt({ ...CALIBRATED, yaw: Math.PI / 2 }, [], 0.5)
-
-    const result = measureSideCalibration(side, front)
-
-    expect(result?.depthScale).toBeCloseTo(2)
-  })
-
-  it('returns null when the arms show no depth extent at all', () => {
-    const front = measureFrontCalibration(frameAt(CALIBRATED), {})!
-
-    const result = measureSideCalibration(frameAt(CALIBRATED), front)
-
-    expect(result).toBeNull()
-  })
-})
-
 describe('computeCalibratedReachMultiplier', () => {
   it('scales the mapped arm span to the rig own arm span', () => {
     const front = measureFrontCalibration(frameAt(CALIBRATED), {})!
@@ -200,151 +165,112 @@ describe('computeCalibratedReachMultiplier', () => {
   })
 })
 
-describe('scaleLandmarkDepth', () => {
-  it('multiplies depth only, leaving x, y and visibility untouched', () => {
-    const scaled = scaleLandmarkDepth([{ x: 1, y: 2, z: 3, visibility: 0.5 }], 2)
-
-    expect(scaled).toEqual([{ x: 1, y: 2, z: 6, visibility: 0.5 }])
-  })
-})
-
-describe('computeCalibratedRootMotion', () => {
-  it('reports no motion at the calibrated placement', () => {
-    const motion = computeCalibratedRootMotion(
+describe('computeCalibratedRootOffset', () => {
+  it('reports no offset at the calibrated placement', () => {
+    const offset = computeCalibratedRootOffset(
       frameAt(CALIBRATED),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       OPTIONS
     )
 
-    expect(motion?.offset.x).toBeCloseTo(0)
-    expect(motion?.offset.y).toBe(0)
-    expect(motion?.offset.z).toBeCloseTo(0)
-    expect(motion?.yaw).toBeCloseTo(0)
+    expect(offset?.x).toBeCloseTo(0)
+    expect(offset?.y).toBe(0)
+    expect(offset?.z).toBeCloseTo(0)
   })
 
   it.each([1, 3])('moves toward the viewer by the change in distance, at %s metres', (distance) => {
-    const motion = computeCalibratedRootMotion(
+    const offset = computeCalibratedRootOffset(
       frameAt({ ...CALIBRATED, distance }),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       OPTIONS
     )
 
-    expect(motion?.offset.z).toBeCloseTo(CALIBRATED_DISTANCE - distance, 1)
+    expect(offset?.z).toBeCloseTo(CALIBRATED_DISTANCE - distance, 1)
   })
 
   it('falls back to head height for distance when the hips are out of frame', () => {
-    const motion = computeCalibratedRootMotion(
+    const offset = computeCalibratedRootOffset(
       frameAt({ ...CALIBRATED, distance: 1 }, ['leftHip', 'rightHip']),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       OPTIONS
     )
 
-    expect(motion?.offset.z).toBeCloseTo(CALIBRATED_DISTANCE - 1, 1)
+    expect(offset?.z).toBeCloseTo(CALIBRATED_DISTANCE - 1, 1)
   })
 
   it.each([
     [false, 0.3],
     [true, -0.3]
   ])('follows a sideways step, mirrored: %s', (mirror, expectedX) => {
-    const motion = computeCalibratedRootMotion(
+    const offset = computeCalibratedRootOffset(
       frameAt({ ...CALIBRATED, lateral: 0.3 }),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       { ...OPTIONS, mirror }
     )
 
-    expect(motion?.offset.x).toBeCloseTo(expectedX)
-  })
-
-  it.each([Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2])(
-    'turns the root by the body own yaw of %s radians',
-    (yaw) => {
-      const motion = computeCalibratedRootMotion(
-        frameAt({ ...CALIBRATED, yaw }),
-        calibrated(),
-        RIG_SHOULDER_WIDTH,
-        OPTIONS
-      )
-
-      expect(motion?.yaw).toBeCloseTo(yaw, 1)
-    }
-  )
-
-  it('keeps the turn direction under MediaPipe depth compression once the side step corrects it', () => {
-    const withSide: CameraCalibration = { ...calibrated(), side: { depthScale: 2 } }
-
-    const motion = computeCalibratedRootMotion(
-      frameAt({ ...CALIBRATED, yaw: -Math.PI / 4 }, [], 0.5),
-      withSide,
-      RIG_SHOULDER_WIDTH,
-      OPTIONS
-    )
-
-    expect(motion?.yaw).toBeCloseTo(-Math.PI / 4, 1)
+    expect(offset?.x).toBeCloseTo(expectedX)
   })
 
   it.each([
-    ['followRotation', 'yaw'],
     ['followSideToSide', 'x'],
     ['followDistance', 'z']
   ] as const)('zeroes its own component when %s is off', (toggle, component) => {
-    const motion = computeCalibratedRootMotion(
-      frameAt({ distance: 1.5, lateral: 0.3, yaw: Math.PI / 4 }),
+    const offset = computeCalibratedRootOffset(
+      frameAt({ distance: 1.5, lateral: 0.3 }),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       { ...OPTIONS, [toggle]: false }
     )
 
-    const value = component === 'yaw' ? motion?.yaw : motion?.offset[component]
-    expect(value).toBe(0)
+    expect(offset?.[component]).toBe(0)
   })
 
-  it('scales position offsets by the movement scale, leaving rotation alone', () => {
-    const placement: Placement = { distance: 1.5, lateral: 0.3, yaw: Math.PI / 4 }
-    const normal = computeCalibratedRootMotion(
+  it('scales the offset by the movement scale', () => {
+    const placement: Placement = { distance: 1.5, lateral: 0.3 }
+    const normal = computeCalibratedRootOffset(
       frameAt(placement),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       OPTIONS
     )
 
-    const doubled = computeCalibratedRootMotion(
+    const doubled = computeCalibratedRootOffset(
       frameAt(placement),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       { ...OPTIONS, movementScale: 2 }
     )
 
-    expect(doubled?.offset.x).toBeCloseTo((normal?.offset.x ?? 0) * 2)
-    expect(doubled?.offset.z).toBeCloseTo((normal?.offset.z ?? 0) * 2)
-    expect(doubled?.yaw).toBeCloseTo(normal?.yaw ?? 0)
+    expect(doubled?.x).toBeCloseTo((normal?.x ?? 0) * 2)
+    expect(doubled?.z).toBeCloseTo((normal?.z ?? 0) * 2)
   })
 
   it('returns null without a front calibration', () => {
-    const uncalibrated: CameraCalibration = { front: null, side: null, rootBoneNames: {} }
+    const uncalibrated: CameraCalibration = { front: null, rootBoneNames: {} }
 
-    const motion = computeCalibratedRootMotion(
+    const offset = computeCalibratedRootOffset(
       frameAt(CALIBRATED),
       uncalibrated,
       RIG_SHOULDER_WIDTH,
       OPTIONS
     )
 
-    expect(motion).toBeNull()
+    expect(offset).toBeNull()
   })
 
   it('returns null when the shoulders are not both detected this frame', () => {
-    const motion = computeCalibratedRootMotion(
+    const offset = computeCalibratedRootOffset(
       frameAt(CALIBRATED, ['rightShoulder']),
       calibrated(),
       RIG_SHOULDER_WIDTH,
       OPTIONS
     )
 
-    expect(motion).toBeNull()
+    expect(offset).toBeNull()
   })
 })
 

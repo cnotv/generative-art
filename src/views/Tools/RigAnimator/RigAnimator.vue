@@ -61,7 +61,7 @@ import {
 } from './bodyPartGroups'
 import MergeTargetDiagram from './MergeTargetDiagram.vue'
 import { beginBoneDragPlane, boneDragTargetFromEvent } from './boneDragPlane'
-import { applyPoleDrag, rotateBoneAboutWorldAxis } from './boneDragTarget'
+import { applyPoleDrag, rotateBoneInWorldSpace } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
 import CameraPoseCapture from './CameraPoseCapture.vue'
@@ -69,11 +69,11 @@ import CameraCalibrationPanel from './CameraCalibrationPanel.vue'
 import { useCameraCalibration } from './useCameraCalibration'
 import {
   computeCalibratedReachMultiplier,
-  computeCalibratedRootMotion,
-  computeHandRotationDelta,
-  scaleLandmarkDepth
+  computeCalibratedRootOffset,
+  computeHandRotationDelta
 } from './cameraCalibration'
-import type { CalibrationFrame, RigAnimatorConfig, RootMotion } from './types'
+import { computeBodyRotations } from './cameraBodyOrientation'
+import type { CalibrationFrame, CameraBodyMotion, RigAnimatorConfig } from './types'
 
 const route = useRoute()
 const routeName = route.name as string
@@ -101,9 +101,10 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   showBoneMarkers: false,
   cameraUseElbows: true,
   cameraUseKnees: true,
-  cameraUseNeck: true,
   cameraUseDepth: true,
   cameraUseViewpoint: false,
+  cameraFollowTorsoRotation: true,
+  cameraFollowNeckRotation: true,
   cameraReachMultiplier: 1,
   cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
@@ -111,7 +112,6 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   calibrationCountdownSeconds: DEFAULT_CALIBRATION_COUNTDOWN_SECONDS,
   calibrationToleranceDegrees: DEFAULT_CALIBRATION_TOLERANCE_DEGREES,
   calibrationFieldOfViewDegrees: DEFAULT_CALIBRATION_FIELD_OF_VIEW_DEGREES,
-  calibratedFollowRotation: true,
   calibratedFollowSideToSide: true,
   calibratedFollowDistance: true,
   calibratedFollowHandRotation: true,
@@ -132,7 +132,6 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
 const cameraPoseMappingOptions = computed(() => ({
   includeElbows: reactiveConfig.value.cameraUseElbows,
   includeKnees: reactiveConfig.value.cameraUseKnees,
-  includeNeck: reactiveConfig.value.cameraUseNeck,
   includeDepth: reactiveConfig.value.cameraUseDepth,
   reachMultiplier: reactiveConfig.value.cameraReachMultiplier
 }))
@@ -146,11 +145,6 @@ const targetBodyPartGroupLabels = computed(() =>
 
 const calibration = useCameraCalibration()
 const rig = useRigAnimator(reactiveConfig, () => calibration.calibration.value.rootBoneNames)
-/** While calibrated rotation turns the model itself, also turning the viewing camera to match
- * would rotate the view twice over. */
-const followsCalibratedRotation = computed(
-  () => calibration.isCalibrated.value && reactiveConfig.value.calibratedFollowRotation
-)
 const showCameraCapture = ref(false)
 const modelFileInput = ref<HTMLInputElement | null>(null)
 const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
@@ -372,41 +366,49 @@ const applyCalibratedReach = (): void => {
 
 /** Held while calibrating: the person is standing still in a T-pose to line up against the
  * guide, and moving the rig underneath them would only get in the way. */
-const computeRootMotion = (frame: CalibrationFrame, mirror: boolean): RootMotion | null => {
+const computeBodyMotion = (frame: CalibrationFrame, mirror: boolean): Partial<CameraBodyMotion> => {
   const anchor = computeCameraRigAnchor(rig.bones.value)
-  if (!anchor || calibration.isActive.value) return null
+  if (!anchor || calibration.isActive.value) return {}
   const settings = reactiveConfig.value
-  return computeCalibratedRootMotion(
-    frame,
-    calibration.calibration.value,
-    anchor.shoulderWidthWorld,
-    {
-      fieldOfViewDegrees: settings.calibrationFieldOfViewDegrees,
-      followRotation: settings.calibratedFollowRotation,
-      followSideToSide: settings.calibratedFollowSideToSide,
-      followDistance: settings.calibratedFollowDistance,
-      movementScale: settings.calibratedMovementScale,
-      mirror
-    }
-  )
+  const { torso, neck } = computeBodyRotations(frame.world, calibration.calibration.value.front)
+  return {
+    rootOffset: computeCalibratedRootOffset(
+      frame,
+      calibration.calibration.value,
+      anchor.shoulderWidthWorld,
+      {
+        fieldOfViewDegrees: settings.calibrationFieldOfViewDegrees,
+        followSideToSide: settings.calibratedFollowSideToSide,
+        followDistance: settings.calibratedFollowDistance,
+        movementScale: settings.calibratedMovementScale,
+        mirror
+      }
+    ),
+    torso: settings.cameraFollowTorsoRotation ? torso : null,
+    neck: settings.cameraFollowNeckRotation ? neck : null
+  }
 }
 
 /** Hand angles are read on the screen plane and the scene camera looks down world z, so a turn
  * on screen is a turn about world z. */
 const HAND_SPIN_AXIS = new THREE.Vector3(0, 0, 1)
+const handSpin = new THREE.Quaternion()
 
 const rotateCalibratedHand = (side: HandSide, angle: number | undefined): void => {
   if (!reactiveConfig.value.calibratedFollowHandRotation || angle === undefined) return
   const delta = computeHandRotationDelta(angle, side, calibration.calibration.value.front)
   const hand = rig.bones.value.find((bone) => bone.name === CALIBRATED_HAND_BONE_NAMES[side])
-  if (hand && delta !== 0) rotateBoneAboutWorldAxis(hand, HAND_SPIN_AXIS, delta)
+  if (hand && delta !== 0) {
+    rotateBoneInWorldSpace(hand, handSpin.setFromAxisAngle(HAND_SPIN_AXIS, delta))
+  }
 }
 
 /**
  * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
- * Every frame also feeds the calibration flow, and once calibrated drives the rig's root and
- * hands from it. Without calibration it can still turn the viewing camera to roughly the angle
- * the photo shows the subject from (see `estimateCameraYaw`'s own doc comment for why not more).
+ * Every frame also feeds the calibration flow and turns the torso and neck, and once calibrated
+ * moves the rig's root and turns its wrists. With torso rotation off it can instead turn the
+ * viewing camera to roughly the angle the photo shows the subject from (see
+ * `estimateCameraYaw`'s own doc comment for why not more).
  */
 const handleCameraApply = (
   frame: CalibrationFrame,
@@ -414,20 +416,18 @@ const handleCameraApply = (
   handRotations: Partial<Record<HandSide, number>>,
   mirror: boolean
 ): void => {
-  const completed = calibration.feedFrame(frame, handRotations, performance.now(), {
+  const captured = calibration.feedFrame(frame, handRotations, performance.now(), {
     countdownSeconds: reactiveConfig.value.calibrationCountdownSeconds,
     toleranceDegrees: reactiveConfig.value.calibrationToleranceDegrees
   })
-  if (completed === 'front') applyCalibratedReach()
+  if (captured) applyCalibratedReach()
 
-  const side = calibration.calibration.value.side
-  const landmarks = side ? scaleLandmarkDepth(frame.world, side.depthScale) : frame.world
   rig.applyCameraPose(
-    landmarks,
+    frame.world,
     cameraPoseMappingOptions.value,
     targetBodyPartGroups.value,
     calibration.calibration.value.rootBoneNames,
-    computeRootMotion(frame, mirror)
+    computeBodyMotion(frame, mirror)
   )
   const restQuaternions = rig.getRestQuaternions()
   Object.entries(handPoses).forEach(([handSide, pose]) => {
@@ -438,13 +438,14 @@ const handleCameraApply = (
     applyHandPose(rig.bones.value, hand, pose, restQuaternions)
     rotateCalibratedHand(hand, handRotations[hand])
   })
+  // Turning the viewing camera while the torso already turns with the person shows the turn twice.
   if (
     reactiveConfig.value.cameraUseViewpoint &&
-    !followsCalibratedRotation.value &&
+    !reactiveConfig.value.cameraFollowTorsoRotation &&
     rig.model.value &&
     cameraReference
   ) {
-    const yaw = estimateCameraYaw(landmarks)
+    const yaw = estimateCameraYaw(frame.world)
     if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
   }
   motionRecording.recordFrameIfActive()

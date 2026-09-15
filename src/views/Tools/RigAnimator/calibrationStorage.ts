@@ -10,6 +10,8 @@ const FRONT_NUMBER_FIELDS = [
   'armSpanMeters'
 ] as const
 
+const QUATERNION_FIELDS = ['x', 'y', 'z', 'w'] as const
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
@@ -24,18 +26,16 @@ const isFront = (value: unknown): boolean =>
   hasNumbers(value, FRONT_NUMBER_FIELDS) &&
   (value.torsoHeightImage === null || isFiniteNumber(value.torsoHeightImage)) &&
   hasNumbers(value.bodyCenterImage, ['x', 'y']) &&
-  hasNumbers(value.shoulderDirectionScene, ['x', 'z']) &&
+  hasNumbers(value.torsoOrientation, QUATERNION_FIELDS) &&
+  (value.headOrientation === null || hasNumbers(value.headOrientation, QUATERNION_FIELDS)) &&
   isRecord(value.handAngles)
 
 const isCameraCalibration = (value: unknown): value is CameraCalibration =>
-  isRecord(value) &&
-  (value.front === null || isFront(value.front)) &&
-  (value.side === null || hasNumbers(value.side, ['depthScale'])) &&
-  isRecord(value.rootBoneNames)
+  isRecord(value) && (value.front === null || isFront(value.front)) && isRecord(value.rootBoneNames)
 
 /**
- * Persist a calibration so a refresh does not throw away two held T-poses. Never throws: storage
- * can be full, disabled or unavailable, and the calibration still works for this session.
+ * Persist a calibration so a refresh does not throw away a held T-pose. Never throws: storage can
+ * be full, disabled or unavailable, and the calibration still works for this session.
  * @param calibration The calibration to save
  */
 export const saveCameraCalibration = (calibration: CameraCalibration): void => {
@@ -56,7 +56,10 @@ export const loadCameraCalibration = (): CameraCalibration | null => {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed: unknown = JSON.parse(raw)
-    return isCameraCalibration(parsed) ? parsed : null
+    // Picks the known fields, so one saved while calibration still had a side step loads without it.
+    return isCameraCalibration(parsed)
+      ? { front: parsed.front, rootBoneNames: parsed.rootBoneNames }
+      : null
   } catch {
     return null
   }

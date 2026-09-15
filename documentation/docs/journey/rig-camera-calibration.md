@@ -4,8 +4,9 @@ sidebar_position: 127
 
 # Rig Animator: calibrating the camera with a held T-pose
 
-Why the Rig Animator's camera calibration measures two held T-poses, and how each measurement
-turns a flat webcam feed into rotation, sideways movement and distance for the rig's root.
+Why the Rig Animator's camera calibration measures one held T-pose, how that turns a flat webcam
+feed into sideways movement and distance for the rig's root, and why the torso and neck turn
+themselves instead of the whole rig turning.
 
 ## World landmarks carry no room position
 
@@ -18,7 +19,7 @@ as one standing still; only the image landmarks shift.
 
 Everything about where the body is, rather than how it is posed, therefore has to come from the
 image landmarks, and an image landmark on its own is ambiguous: a body that looks smaller might be
-further away or just a smaller person. The front T-pose resolves that. It records how large this
+further away or just a smaller person. The T-pose resolves that. It records how large this
 particular person appears at a known moment, so every later frame is read against their own
 reference size rather than an assumed average body.
 
@@ -37,46 +38,83 @@ scales every distance and every sideways step by the same proportion, so movemen
 the right direction and in the right relative amounts.
 
 The size measured is the vertical span from the shoulders to the hips, not the shoulder width:
-turning in place narrows the shoulders but leaves that height unchanged, so distance and rotation
-never contaminate each other. With the hips out of frame, the usual framing for a webcam, the span
-from the nose to the shoulders stands in, noisier but still unaffected by a turn.
+turning in place narrows the shoulders but leaves that height unchanged, so a twist never reads as
+a step back. With the hips out of frame, the usual framing for a webcam, the span from the nose to
+the shoulders stands in, noisier but still unaffected by a turn.
 
 | Measured at calibration      | Read live against it                                       |
 | ---------------------------- | ---------------------------------------------------------- |
 | Torso height, or head height | distance ratio, then metres from the assumed field of view |
-| Shoulder span, square-on     | rotation magnitude, once distance is corrected for         |
-| Shoulder direction           | which way the rotation turns                               |
 | Body center                  | sideways movement, converted at the current distance       |
+| Torso and head orientation   | the zero for torso and neck rotation                       |
+| Each hand's on-screen angle  | the zero for wrist rotation                                |
 | Arm span in metres           | the reach multiplier, against the rig's own arm span       |
-| Side-on arm span along depth | the scale MediaPipe's depth axis is missing                |
 
-## Rotation: magnitude from projection, direction from the mapping itself
+## Turning the whole rig turned too much
 
-Turning away from the camera shortens the shoulders' apparent span by the cosine of the turn.
-Once the distance ratio has removed the part of that shrinkage caused by stepping back, the
-inverse cosine gives how far the body has turned. The cosine is flat near square-on, so small
-turns under-read, and steep near side-on, so large turns read well; a turn past a quarter turn,
-with the back to the camera, shows the same span as the mirror turn in front and is not
-distinguished.
+The first calibrated version read the body's turn from how far the shoulders' apparent span had
+shrunk, and turned the rig's root by it. That is right for a person turning on the spot and wrong
+for nearly everything else done in front of a webcam: twisting at the waist or glancing aside
+turned the entire rig, feet included. The head had the same problem in miniature. It was aimed
+through a two-bone chain rooted in the upper spine, so a nod bent the spine and swung both arms
+with it.
 
-The magnitude says nothing about direction, and direction is exactly the question this tool has
-answered wrong on paper before: hand sides and body mirroring were both reasoned out from
-MediaPipe's documented conventions, and both turned out backwards on a live camera. The rotation
-direction avoids that trap by construction. It is read from the shoulder line after the same axis
-flips the limb mapping applies to every landmark, compared against the shoulder line recorded
-square-on. Whatever convention the camera, the mirroring or the rig happens to use, the root turns
-the same way the mapped hands already land, because both come out of one transform. Hand rotation
-uses the same idea: the wrist-to-knuckle angle is read on the scene's viewing plane through the
-same mirroring as the body, and applied as a turn relative to the T-pose.
+The model that matches editing the rig by hand is local rotation. Each part turns by its own
+rotation, and whatever hangs off it follows, exactly as dragging a bone in the editor drags its
+children. A part the detector misses, or a bone the rig lacks, simply gets no rotation of its own.
 
-## MediaPipe compresses depth
+| Part  | Read from                                                    | Turns                                |
+| ----- | ------------------------------------------------------------ | ------------------------------------ |
+| Torso | the shoulder line, and hip midpoint up to shoulder midpoint  | the spine bones, an equal share each |
+| Neck  | the ear line, and ear midpoint toward eye midpoint, on torso | the neck bone alone                  |
+| Wrist | wrist to middle knuckle on the viewing plane                 | the hand bone alone                  |
+| Root  | nothing                                                      | never turns; it only moves           |
 
-World landmark depth is estimated from a single view and consistently comes out shallower than
-the matching horizontal extent. Square-on, the arms of a T-pose span the horizontal axis, which
-MediaPipe measures well; turned side-on, the same arms span the depth axis. The side T-pose reads
-that depth extent, and since the front pose already recorded the true arm span, their ratio is the
-factor depth is missing. It rescales depth for the limb mapping, so a hand reaching toward the
-camera reaches as far on the rig, and for the rotation direction, which reads depth directly.
+Sharing the torso rotation between the spine bones matters as much as reading it: put entirely on
+one joint, a lean folds the rig at that joint, where a real back bends along its whole length.
+
+## Rotations in the body's own frame
+
+Direction is a question this tool has answered wrong on paper before: hand sides and body
+mirroring were both reasoned out from MediaPipe's documented conventions, and both turned out
+backwards on a live camera. The rotations sidestep that by construction. They are read from the
+landmarks after the same axis flips the limb mapping applies, so the spine turns the same way the
+mapped hands already land, whatever the camera or mirroring convention.
+
+The zero they are read against needs the same care. A rotation measured against the camera is the
+wrong zero for a person who calibrated standing at an angle to it: a lean toward their own front
+would come out as part lean, part side bend. Each rotation is instead measured against the T-pose
+in the body's own frame, so a lean reads as a lean whichever way the person stood. The neck is
+measured against the torso the same way, so twisting the whole upper body does not also count as
+turning the head.
+
+```mermaid
+flowchart LR
+  L[World landmarks] --> T[Torso orientation]
+  L --> H[Head orientation]
+  B[T-pose baselines] --> R[Torso rotation in body frame]
+  T --> R
+  T --> N[Head on torso against T-pose]
+  H --> N
+  B --> N
+  R --> S[Spine bones, equal shares]
+  N --> K[Neck bone]
+```
+
+Two choices keep an uncalibrated capture sensible, read against standing upright and square-on.
+With the hips out of frame there is no up direction to lean or bend against, so only the twist is
+read, about world up. And the head's forward direction points toward the eyes rather than the
+nose: the eyes sit level with the ears on a head held straight, where the nose sits below them and
+would read as a permanent nod.
+
+## Depth stays shallow
+
+World landmark depth is estimated from a single view and consistently comes out shallower than the
+matching horizontal extent. An earlier version asked for a second, side-on T-pose, whose arms span
+the depth axis, to measure that shortfall against the true arm span and correct for it. It was
+dropped to keep calibration to a single pose, and the cost is known: any rotation that moves
+landmarks toward or away from the camera (twisting, leaning toward the camera, nodding, turning the
+head) reads smaller than it really is. A side bend moves them across the image and is unaffected.
 
 ## The root had nowhere to record its position
 
@@ -95,6 +133,6 @@ that center for the legs is the detected hip midpoint itself, so the hip target 
 hips measured against themselves: zero offset, every frame. Its unit test passed because the test
 rig had no upper-leg bones, which sends the leg mapping down its shoulder-anchored fallback, where
 the offset is real. Nothing about the formula looked wrong, and on a real Mixamo rig the checkbox
-simply held the root at rest, indistinguishable from not being driven yet. Calibrated root motion
-replaced it rather than repairing it, since a correct hip offset needs exactly the reference size
-and distance only a calibration can supply.
+simply held the root at rest, indistinguishable from not being driven yet. The calibrated root
+offset replaced it rather than repairing it, since a correct hip offset needs exactly the reference
+size and distance only a calibration can supply.

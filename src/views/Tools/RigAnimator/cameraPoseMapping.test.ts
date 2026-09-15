@@ -80,10 +80,9 @@ const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandma
 /** A fully visible person, shoulders at (0, -0.5, 0) and 0.4 apart, half the test rig's 0.8. */
 const buildTestLandmarks = (): CameraLandmark[] => {
   const landmarks: CameraLandmark[] = new Array(33).fill(null).map(() => landmark(0, 0, 0, 0))
-  landmarks[0] = landmark(0, -1.5, -0.3) // nose: above shoulder height, toward the camera
   landmarks[11] = landmark(-0.2, -0.5, 0) // left shoulder
   landmarks[12] = landmark(0.2, -0.5, 0) // right shoulder
-  landmarks[15] = landmark(-0.5, -0.5, 0) // left wrist
+  landmarks[15] = landmark(-0.5, -1.5, -0.3) // left wrist: raised above shoulder height, toward the camera
   landmarks[16] = landmark(0.5, -0.5, 0) // right wrist
   landmarks[27] = landmark(-0.1, 0.5, 0) // left ankle, below shoulder height
   landmarks[28] = landmark(0.1, 0.5, 0) // right ankle
@@ -179,14 +178,14 @@ describe('cameraLandmarksToBoneTargets', () => {
   it('places a landmark above shoulder height above the rig anchor, scaled to the rig', () => {
     const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
     // Landmark shoulder width is 0.4, the rig's is 0.8, so offsets double.
-    // Nose offset from shoulder center is (0, -1, -0.3); y flips and scales: +2.
-    expect(boneTargets.mixamorigHead.y).toBeCloseTo(anchor.shoulderCenterWorldPosition.y + 2)
+    // Left wrist offset from shoulder center is (-0.5, -1, -0.3); y flips and scales: +2.
+    expect(boneTargets.mixamorigLeftHand.y).toBeCloseTo(anchor.shoulderCenterWorldPosition.y + 2)
   })
 
   it('places a landmark closer to the camera toward the viewer, scaled to the rig', () => {
     const { boneTargets } = cameraLandmarksToBoneTargets(buildTestLandmarks(), anchor)
     // z offset from shoulder center is -0.3 (closer to camera); z flips and scales: +0.6.
-    expect(boneTargets.mixamorigHead.z).toBeCloseTo(anchor.shoulderCenterWorldPosition.z + 0.6)
+    expect(boneTargets.mixamorigLeftHand.z).toBeCloseTo(anchor.shoulderCenterWorldPosition.z + 0.6)
   })
 
   it('places a landmark below shoulder height below the rig anchor', () => {
@@ -226,7 +225,7 @@ describe('cameraLandmarksToBoneTargets', () => {
       ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
       includeDepth: false
     })
-    expect(boneTargets.mixamorigHead.z).toBeCloseTo(anchor.shoulderCenterWorldPosition.z)
+    expect(boneTargets.mixamorigLeftHand.z).toBeCloseTo(anchor.shoulderCenterWorldPosition.z)
   })
 
   it('reports no pole targets by default', () => {
@@ -255,28 +254,15 @@ describe('cameraLandmarksToBoneTargets', () => {
     ])
   })
 
-  it('maps the ear midpoint to a pole target for the head when neck bending is turned on', () => {
+  it('never targets the head or bends the neck, which only the neck rotation turns', () => {
     const landmarks = buildTestLandmarks()
+    landmarks[0] = landmark(0, -1.5, -0.3) // nose
     landmarks[7] = landmark(-0.1, -1.5, -0.2) // left ear
     landmarks[8] = landmark(0.1, -1.5, -0.2) // right ear
 
-    const { poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, {
-      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
-      includeNeck: true
-    })
+    const { boneTargets, poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor)
 
-    expect(poleTargets.mixamorigHead).toBeDefined()
-  })
-
-  it('reports no neck pole target when the ears are not both visible', () => {
-    const landmarks = buildTestLandmarks()
-    landmarks[7] = landmark(-0.1, -1.5, -0.2, 0.1) // left ear, below the visibility threshold
-
-    const { poleTargets } = cameraLandmarksToBoneTargets(landmarks, anchor, {
-      ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT,
-      includeNeck: true
-    })
-
+    expect(boneTargets.mixamorigHead).toBeUndefined()
     expect(poleTargets.mixamorigHead).toBeUndefined()
   })
 
@@ -297,8 +283,8 @@ describe('cameraLandmarksToBoneTargets', () => {
       reachMultiplier: 2
     })
     const anchorY = anchor.shoulderCenterWorldPosition.y
-    const normalOffset = Math.abs(normal.mixamorigHead.y - anchorY)
-    const extendedOffset = Math.abs(extended.mixamorigHead.y - anchorY)
+    const normalOffset = Math.abs(normal.mixamorigLeftHand.y - anchorY)
+    const extendedOffset = Math.abs(extended.mixamorigLeftHand.y - anchorY)
     expect(extendedOffset).toBeCloseTo(normalOffset * 2)
   })
 })
@@ -358,35 +344,6 @@ describe('legs scale off the hip anchor, not the shoulder one', () => {
       { ...CAMERA_POSE_MAPPING_OPTIONS_DEFAULT, includeKnees: true }
     )
     expect(poleTargets.mixamorigLeftFoot).toBeDefined()
-  })
-})
-
-describe('CAMERA_POSE_BONE_LANDMARKS application order', () => {
-  it('applies the head before the hands, so bending the spine for the head does not drag an already-placed hand out of position', () => {
-    const box = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(0.5, 2, 0.25))
-    const { root, bones } = rigGenerateHumanoidSkeleton(box)
-    root.updateMatrixWorld(true)
-    const restPoses = captureRestPoses(bones)
-
-    const leftHand = bones.find((bone) => bone.name === 'mixamorigLeftHand')!
-    const head = bones.find((bone) => bone.name === 'mixamorigHead')!
-    const leftHandTarget = leftHand.getWorldPosition(new THREE.Vector3())
-    // Well off to the side, so aiming the head bends the neck/spine chain hard for it.
-    const headTarget = head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0.6, 0, 0))
-    const targetsByBoneName: Record<string, THREE.Vector3> = {
-      mixamorigLeftHand: leftHandTarget,
-      mixamorigHead: headTarget
-    }
-
-    Object.keys(CAMERA_POSE_BONE_LANDMARKS)
-      .filter((boneName) => boneName in targetsByBoneName)
-      .forEach((boneName) => {
-        const bone = bones.find((candidate) => candidate.name === boneName)!
-        applyGizmoDragToChain(bone, targetsByBoneName[boneName], restPoses)
-      })
-
-    const finalLeftHandPosition = leftHand.getWorldPosition(new THREE.Vector3())
-    expect(finalLeftHandPosition.distanceTo(leftHandTarget)).toBeLessThan(0.05)
   })
 })
 

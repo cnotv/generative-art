@@ -33,8 +33,7 @@ export const useRigAnimator = (
     rigModel.bones,
     rigModel.applyBoneDragTarget,
     rigModel.resetAllBonesToRest,
-    rigModel.getRestPositions,
-    rigModel.getRestQuaternions
+    rigModel.getRestPositions
   )
   const rigHandPose = useRigHandPose(rigModel.bones, config, rigModel.getRestQuaternions)
   const recordedPresets = useRigRecordedPresets()

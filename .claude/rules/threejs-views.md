@@ -190,7 +190,7 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
 - **`Object3D.rotateOnWorldAxis` assumes an unrotated parent.** Under a rotated parent, which
   every limb bone has and an FBX armature's root often does, it turns the bone about the axis
   as seen in the parent's frame, tipping it instead of turning it. Use
-  `rotateBoneAboutWorldAxis` in `src/views/Tools/RigAnimator/boneDragTarget.ts`, which goes
+  `rotateBoneInWorldSpace` in `src/views/Tools/RigAnimator/boneDragTarget.ts`, which goes
   through the parent's world rotation.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.

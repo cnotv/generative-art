@@ -6,16 +6,16 @@ import {
   applyPoleDrag,
   captureRestPoses,
   resetBoneChainToRest,
-  rotateBoneAboutWorldAxis
+  rotateBoneInWorldSpace
 } from './boneDragTarget'
 
-describe('rotateBoneAboutWorldAxis', () => {
-  const worldUp = new THREE.Vector3(0, 1, 0)
+describe('rotateBoneInWorldSpace', () => {
+  const worldTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 3)
 
   it.each([
     ['an unrotated parent', 0],
     ['a parent tipped a quarter turn about x', -Math.PI / 2]
-  ])('turns a bone about the world axis under %s', (_, parentTilt) => {
+  ])('turns a bone by a world-space rotation under %s', (_, parentTilt) => {
     const parent = new THREE.Group()
     parent.rotation.x = parentTilt
     const bone = new THREE.Bone()
@@ -24,11 +24,9 @@ describe('rotateBoneAboutWorldAxis', () => {
     parent.updateMatrixWorld(true)
     const worldBefore = bone.getWorldQuaternion(new THREE.Quaternion())
 
-    rotateBoneAboutWorldAxis(bone, worldUp, Math.PI / 3)
+    rotateBoneInWorldSpace(bone, worldTurn)
 
-    const expected = new THREE.Quaternion()
-      .setFromAxisAngle(worldUp, Math.PI / 3)
-      .multiply(worldBefore)
+    const expected = worldTurn.clone().multiply(worldBefore)
     expect(bone.getWorldQuaternion(new THREE.Quaternion()).angleTo(expected)).toBeCloseTo(0)
   })
 })

@@ -50,9 +50,6 @@ const emit = defineEmits<{
     <p v-else-if="step === 'front'" class="camera-calibration-panel__hint">
       Face the camera and hold a T-pose, arms level. The countdown starts once it matches.
     </p>
-    <p v-else-if="step === 'side'" class="camera-calibration-panel__hint">
-      Turn sideways, arms still out, and hold it for the countdown.
-    </p>
     <div class="camera-calibration-panel__actions">
       <Button size="sm" variant="secondary" @click="emit('cancel')">Cancel</Button>
       <Button v-if="isCalibrated" size="sm" variant="secondary" @click="emit('reset')">
