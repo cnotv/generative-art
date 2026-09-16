@@ -181,10 +181,16 @@ export const CAMERA_NECK_TURN_SHARE = 0.5
 export const CAMERA_HEAD_PITCH_OFFSET_RADIANS = 0.33
 /** The furthest the head can turn away from the chest, about 80°; a face reading past it is a misdetection. */
 export const CAMERA_HEAD_MAX_TURN_RADIANS = 1.4
-/** A limb bent less than this carries no trustworthy cue for how its upper bone is rolled. */
-export const CAMERA_TWIST_MIN_BEND_RADIANS = 0.17
-/** A limb bent at least this much has its roll read entirely from the bend. */
-export const CAMERA_TWIST_FULL_BEND_RADIANS = 0.52
+/** A limb bent less than this, in degrees, carries no trustworthy cue for how its upper bone is rolled. */
+export const CAMERA_TWIST_MIN_BEND_DEGREES = 10
+/** A limb bent at least this much, in degrees, has its roll read entirely from the bend. */
+export const CAMERA_TWIST_FULL_BEND_DEGREES = 30
+/** Range and step the Config panel's two roll cue sliders offer, in degrees. */
+export const CAMERA_TWIST_BEND_DEGREES_RANGE = { min: 0, max: 90, step: 1 }
+/** A body landmark reported less confident than this is treated as not detected. */
+export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
+/** Range and step the Config panel's landmark confidence slider offers. */
+export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0.05 }
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
@@ -200,10 +206,22 @@ export const CAMERA_SMOOTHING_MILLISECONDS = 150
 export const CAMERA_SMOOTHING_MILLISECONDS_RANGE = { min: 0, max: 500, step: 10 }
 /** How much a landmark's speed, per metre a second, loosens its smoothing: the One Euro filter's beta. */
 export const CAMERA_SMOOTHING_SPEED_RESPONSE = 12
+export const CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE = { min: 0, max: 60, step: 1 }
 /** How much the head's turn, per radian a second, loosens its smoothing. */
 export const CAMERA_SMOOTHING_TURN_RESPONSE = 2
+export const CAMERA_SMOOTHING_TURN_RESPONSE_RANGE = { min: 0, max: 20, step: 0.5 }
 /** Cutoff for each landmark's speed estimate, so a single noisy reading does not read as motion. */
 export const CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ = 1
+export const CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE = { min: 0.1, max: 10, step: 0.1 }
+/**
+ * How long, in milliseconds, each bone takes to settle on a newly applied rotation, on top of the
+ * landmark smoothing. It evens out what landmark smoothing cannot: a limb snapping back to rest
+ * when its landmarks drop out, or a roll flipping as an elbow straightens. 0 turns it off.
+ */
+export const CAMERA_BONE_SMOOTHING_MILLISECONDS = 0
+export const CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE = { min: 0, max: 500, step: 10 }
+/** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
+export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
 
 /** How far, in metres, a smoothed landmark may move in a single frame before the excess past
  * this is clamped off as a sudden jump rather than genuine motion. */

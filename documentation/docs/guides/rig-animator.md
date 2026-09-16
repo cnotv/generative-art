@@ -558,18 +558,36 @@ A live camera detection runs roughly every frame, and MediaPipe's own per-frame 
 most visible on depth, reads as jiggle if applied to the rig straight. Every landmark, body and
 hands alike, and the head's rotation pass through a One Euro filter before they drive anything:
 a smoothing whose strength follows how fast each landmark moves. Held still, where jiggle shows
-most, a landmark is smoothed over the full **Smoothing in ms (Live Feed)** set in the Config
-panel, 150 by default; moving fast, where lag shows most, it is let through close to as detected.
-A fixed blend per frame could only trade one for the other. The filter also works from the time
-between readings rather than per frame, so the same setting feels the same whether detection
-manages fifteen readings a second or sixty. 0 turns smoothing off. A photo is a single detection
-with nothing to smooth against, so this only affects the camera and an uploaded video.
+most, a landmark is smoothed over the full time set in the Config panel; moving fast, where lag
+shows most, it is let through close to as detected. A fixed blend per frame could only trade one
+for the other. The filter also works from the time between readings rather than per frame, so
+the same setting feels the same whether detection manages fifteen readings a second or sixty. A
+photo is a single detection with nothing to smooth against, so this only affects the camera and
+an uploaded video.
 
-Smoothing still lets one badly misdetected frame through in part, which can read as a sudden
-snap. **Max Jump (Live Feed)** clamps how far a landmark may move in a single reading: past that
-distance the excess is pulled back rather than applied, so a genuine fast movement still gets
-there, just over a couple of extra readings instead of one. Same slider for the body and every
-detected hand.
+Every knob behind that trade sits under **Camera Smoothing** in the Config panel, to tune jerky
+movement by eye:
+
+![The Config panel's Camera Smoothing sliders at their defaults](/img/animation/rig-camera-smoothing-sliders.webp)
+
+| Slider                     | Default | Raise it when                                                             |
+| -------------------------- | ------- | ------------------------------------------------------------------------- |
+| Landmarks Held Still (ms)  | 150     | a pose held still still jiggles; 0 turns landmark smoothing off           |
+| Let Go on Fast Moves       | 12      | fast moves trail behind; lower it when fast moves look shaky              |
+| Speed Sensitivity (Hz)     | 1       | the start of a fast move lags; lower it when noise reads as sudden motion |
+| Let Go on Fast Head Turns  | 2       | head turns trail behind; lower it when the head shakes                    |
+| Max Jump per Frame (m)     | 0.15    | real fast moves get held back; lower it when single frames snap           |
+| Bones Settle (ms)          | 0       | limbs snap between poses, dropping out to rest or flipping their roll     |
+| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest      |
+| Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                         |
+| Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                             |
+
+**Bones Settle** works on the result rather than the landmarks: each bone eases from where the
+last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,
+such as a limb whose landmarks drop out falling back to rest. A pose applied after more than half
+a second lands whole, so a new photo or a resumed video is not blended from a stale pose. Max Jump
+clamps how far a landmark may move in a single reading, so a genuine fast movement still gets
+there, just over a couple of extra readings instead of one.
 
 ### Frame shortcuts
 

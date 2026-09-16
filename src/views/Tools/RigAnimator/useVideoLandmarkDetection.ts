@@ -11,13 +11,14 @@ import type {
   CameraDetectionOptions,
   CameraLandmarkers,
   CameraPoseFilterState,
-  CameraPoseFrame
+  CameraPoseFrame,
+  CameraSmoothingSettings
 } from './types'
 
 interface Dependencies {
   videoElement: ShallowRef<HTMLVideoElement | null>
-  smoothingMilliseconds: Ref<number>
-  maxJump: Ref<number>
+  /** The Config panel's smoothing sliders, read fresh every frame. */
+  smoothingSettings: Ref<CameraSmoothingSettings>
   /** The Config panel's detection switches, read fresh every frame. */
   detectionOptions: Ref<CameraDetectionOptions>
   /** Whether the source reads as a mirror (a live self-view, matching how the subject sees
@@ -35,8 +36,7 @@ interface Dependencies {
  */
 export const useVideoLandmarkDetection = ({
   videoElement,
-  smoothingMilliseconds,
-  maxJump,
+  smoothingSettings,
   detectionOptions,
   mirror
 }: Dependencies) => {
@@ -77,10 +77,12 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value =
       detection.previewHandLandmarks.length > 0 ? detection.previewHandLandmarks : null
     const orientedFrame = mirror() ? mirrorCameraPoseFrame(detection.frame) : detection.frame
-    filterState = smoothCameraPoseFrame(filterState, orientedFrame, timestamp, {
-      smoothingMilliseconds: smoothingMilliseconds.value,
-      maxJump: maxJump.value
-    })
+    filterState = smoothCameraPoseFrame(
+      filterState,
+      orientedFrame,
+      timestamp,
+      smoothingSettings.value
+    )
     frame.value = filterState.frame
   }
 

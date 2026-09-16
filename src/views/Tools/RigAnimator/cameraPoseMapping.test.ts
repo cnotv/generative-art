@@ -6,6 +6,7 @@ import {
   lowPassBlendFactor,
   mirrorCameraLandmarks
 } from './cameraPoseMapping'
+import { buildSmoothingSettings } from './fixtures/cameraPoseFixtures'
 import type { CameraLandmark } from './types'
 
 const landmark = (x: number, y: number, z: number, visibility = 1): CameraLandmark => ({
@@ -63,7 +64,7 @@ describe('lowPassBlendFactor', () => {
 
 describe('filterCameraLandmarks', () => {
   const FRAME_SECONDS = 1 / 30
-  const SETTINGS = { smoothingMilliseconds: 150, maxJump: 10 }
+  const SETTINGS = buildSmoothingSettings({ smoothingMilliseconds: 150 })
   const STILL = { x: 0, y: 0, z: 0 }
 
   /** How much of a move from the origin to `movedTo` one reading lets through. */
@@ -89,17 +90,42 @@ describe('filterCameraLandmarks', () => {
   })
 
   it('passes every reading straight through with smoothing off', () => {
-    expect(shareLetThrough(0.2, 0, { smoothingMilliseconds: 0, maxJump: 10 })).toBeCloseTo(1)
+    expect(
+      shareLetThrough(0.2, 0, buildSmoothingSettings({ smoothingMilliseconds: 0 }))
+    ).toBeCloseTo(1)
   })
 
   it('holds a small jiggle back harder than a fast move', () => {
     expect(shareLetThrough(0.005, 0)).toBeLessThan(shareLetThrough(0.066, 2))
   })
 
-  it('holds a still landmark back harder the longer the smoothing', () => {
-    const light = shareLetThrough(0.005, 0, { smoothingMilliseconds: 50, maxJump: 10 })
-    const heavy = shareLetThrough(0.005, 0, { smoothingMilliseconds: 300, maxJump: 10 })
+  it.each([
+    [
+      'holds a still landmark back harder the longer the smoothing',
+      { smoothingMilliseconds: 50 },
+      { smoothingMilliseconds: 300 },
+      0
+    ],
+    [
+      'holds a fast landmark back harder the less its speed loosens smoothing',
+      { speedResponse: 40 },
+      { speedResponse: 0 },
+      2
+    ]
+  ])('%s', (_, lighter, heavier, velocityX) => {
+    const light = shareLetThrough(0.066, velocityX, buildSmoothingSettings(lighter))
+    const heavy = shareLetThrough(0.066, velocityX, buildSmoothingSettings(heavier))
     expect(heavy).toBeLessThan(light)
+  })
+
+  it('reads a sudden reading as motion sooner with a higher speed sensitivity', () => {
+    // Arrange: a landmark at rest jumps; how fast its speed estimate follows decides how much
+    // the speed loosens the smoothing on this very reading.
+    const moved = (speedCutoffHertz: number): number =>
+      shareLetThrough(0.066, 0, buildSmoothingSettings({ speedCutoffHertz }))
+
+    // Act, Assert
+    expect(moved(8)).toBeGreaterThan(moved(0.2))
   })
 
   it('keeps the new reading’s visibility rather than blending it', () => {
@@ -121,7 +147,7 @@ describe('filterCameraLandmarks', () => {
       { landmarks: [landmark(0, 0, 0)], velocities: [STILL] },
       [landmark(10, 0, 0)],
       FRAME_SECONDS,
-      { smoothingMilliseconds: 0, maxJump: 0.15 }
+      buildSmoothingSettings({ smoothingMilliseconds: 0, maxJump: 0.15 })
     )
 
     // Assert

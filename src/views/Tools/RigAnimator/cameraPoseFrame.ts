@@ -1,10 +1,6 @@
 import * as THREE from 'three'
 import type { HandSide, QuaternionData } from '@webgamekit/rig'
-import {
-  CAMERA_CROP_MIN_SIZE_PIXELS,
-  CAMERA_HAND_WRIST_MATCH_DISTANCE,
-  CAMERA_SMOOTHING_TURN_RESPONSE
-} from './config'
+import { CAMERA_CROP_MIN_SIZE_PIXELS, CAMERA_HAND_WRIST_MATCH_DISTANCE } from './config'
 import {
   filterCameraLandmarks,
   lowPassBlendFactor,
@@ -178,26 +174,26 @@ export const mirrorHeadRotation = ({ x, y, z, w }: QuaternionData): QuaternionDa
 
 /**
  * Turn the previous smoothed head rotation toward a new reading, the rotation counterpart of
- * `filterCameraLandmarks`: held still it settles over `smoothingMilliseconds`, and the faster the
- * head is turning the less it is held back.
+ * `filterCameraLandmarks`: held still it settles over `settings.smoothingMilliseconds`, and the
+ * faster the head is turning the less it is held back, by `settings.turnResponse`.
  * @param previous The previous smoothed rotation, or null for a first reading
  * @param next This reading's rotation
  * @param elapsedSeconds Time since the previous reading
- * @param smoothingMilliseconds How long a head held still takes to settle
+ * @param settings The smoothing length and how much turning loosens it
  * @returns The smoothed rotation
  */
 export const smoothHeadRotation = (
   previous: QuaternionData | null,
   next: QuaternionData,
   elapsedSeconds: number,
-  smoothingMilliseconds: number
+  settings: CameraSmoothingSettings
 ): QuaternionData => {
   if (!previous || elapsedSeconds <= 0) return next
   const from = new THREE.Quaternion(previous.x, previous.y, previous.z, previous.w)
   const to = new THREE.Quaternion(next.x, next.y, next.z, next.w)
   const turnSpeed = from.angleTo(to) / elapsedSeconds
   const cutoffHertz =
-    smoothingCutoffHertz(smoothingMilliseconds) + CAMERA_SMOOTHING_TURN_RESPONSE * turnSpeed
+    smoothingCutoffHertz(settings.smoothingMilliseconds) + settings.turnResponse * turnSpeed
   const blended = from.slerp(to, lowPassBlendFactor(cutoffHertz, elapsedSeconds))
   return { x: blended.x, y: blended.y, z: blended.z, w: blended.w }
 }
@@ -277,7 +273,7 @@ export const smoothCameraPoseFrame = (
             previous?.frame.headRotation ?? null,
             next.headRotation,
             elapsedSeconds,
-            settings.smoothingMilliseconds
+            settings
           )
         : null
     },

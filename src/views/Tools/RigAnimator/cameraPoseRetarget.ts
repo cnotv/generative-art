@@ -5,11 +5,15 @@ import {
   CAMERA_HEAD_PITCH_OFFSET_RADIANS,
   CAMERA_NECK_TURN_SHARE,
   CAMERA_PELVIS_LEAN_SHARE,
-  CAMERA_TWIST_FULL_BEND_RADIANS,
-  CAMERA_TWIST_MIN_BEND_RADIANS
+  CAMERA_BONE_SMOOTHING_RESET_SECONDS
 } from './config'
-import { CAMERA_LANDMARK_INDEX, CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './cameraPoseMapping'
+import {
+  CAMERA_LANDMARK_INDEX,
+  lowPassBlendFactor,
+  smoothingCutoffHertz
+} from './cameraPoseMapping'
 import type {
+  CameraBoneTransform,
   CameraHandLandmark,
   CameraLandmark,
   CameraPoseFrame,
@@ -168,16 +172,72 @@ export const cameraFrameDrivenBoneNames = (
   return new Set([...boneNamesInScope].filter((name) => isFinger(name) || isHead(name)))
 }
 
+/**
+ * Snapshot the local rotation and position of the named bones, so the next applied pose can ease
+ * away from them.
+ * @param bones The rig's bones
+ * @param boneNames The bones to snapshot
+ * @returns Each named bone's local transform, keyed by name
+ */
+export const captureBoneTransforms = (
+  bones: THREE.Bone[],
+  boneNames: Set<string>
+): Map<string, CameraBoneTransform> =>
+  new Map(
+    bones
+      .filter((bone) => boneNames.has(bone.name))
+      .map((bone) => [
+        bone.name,
+        { quaternion: bone.quaternion.clone(), position: bone.position.clone() }
+      ])
+  )
+
+/**
+ * How much of a newly applied pose each bone takes this frame when bone smoothing is on. A pose
+ * applied long enough ago is not blended from at all, so a photo, or a capture resumed after a
+ * pause, lands whole instead of drifting in from a stale pose.
+ * @param smoothingMilliseconds How long a bone takes to settle; 0 turns it off
+ * @param elapsedSeconds Time since the previous pose was applied
+ * @returns A share from 0 (keep the old pose) to 1 (take the new one)
+ */
+export const cameraBoneSmoothingShare = (
+  smoothingMilliseconds: number,
+  elapsedSeconds: number
+): number =>
+  smoothingMilliseconds <= 0 || elapsedSeconds > CAMERA_BONE_SMOOTHING_RESET_SECONDS
+    ? 1
+    : lowPassBlendFactor(smoothingCutoffHertz(smoothingMilliseconds), elapsedSeconds)
+
+/**
+ * Ease each snapshotted bone from where it was toward the pose just applied to it.
+ * @param bones The rig's bones, already posed
+ * @param previous The transforms from before the pose, from `captureBoneTransforms`
+ * @param share How much of the new pose to take, from `cameraBoneSmoothingShare`
+ */
+export const easeBonesFromTransforms = (
+  bones: THREE.Bone[],
+  previous: Map<string, CameraBoneTransform>,
+  share: number
+): void => {
+  if (share >= 1) return
+  bones.forEach((bone) => {
+    const before = previous.get(bone.name)
+    if (!before) return
+    bone.quaternion.copy(before.quaternion.clone().slerp(bone.quaternion, share))
+    bone.position.copy(before.position.clone().lerp(bone.position, share))
+  })
+}
+
 /** MediaPipe's y grows downward and z away from the camera; the scene's y grows up and z toward the viewer. */
 const landmarkToScene = (landmark: CameraHandLandmark, includeDepth = true): THREE.Vector3 =>
   new THREE.Vector3(landmark.x, -landmark.y, includeDepth ? -landmark.z : 0)
 
 const readBodyPoints =
-  (landmarks: CameraLandmark[] | null, includeDepth: boolean): BodyPointReader =>
+  (landmarks: CameraLandmark[] | null, options: CameraPoseMappingOptions): BodyPointReader =>
   (index) => {
     const landmark = landmarks?.[index]
-    return landmark && landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD
-      ? landmarkToScene(landmark, includeDepth)
+    return landmark && landmark.visibility >= options.visibilityThreshold
+      ? landmarkToScene(landmark, options.includeDepth)
       : null
   }
 
@@ -296,13 +356,16 @@ const aimBone = (
 }
 
 /** How far a limb's bend can be trusted to show its roll: not at all when straight, fully once clearly bent. */
-const bendTwistWeight = (upper: THREE.Vector3, lower: THREE.Vector3): number =>
-  THREE.MathUtils.clamp(
-    (upper.angleTo(lower) - CAMERA_TWIST_MIN_BEND_RADIANS) /
-      (CAMERA_TWIST_FULL_BEND_RADIANS - CAMERA_TWIST_MIN_BEND_RADIANS),
-    0,
-    1
-  )
+const bendTwistWeight = (
+  options: CameraPoseMappingOptions,
+  upper: THREE.Vector3,
+  lower: THREE.Vector3
+): number => {
+  const bend = upper.angleTo(lower)
+  const fadeRange = options.twistFullBendRadians - options.twistMinBendRadians
+  if (fadeRange <= 0) return bend >= options.twistMinBendRadians ? 1 : 0
+  return THREE.MathUtils.clamp((bend - options.twistMinBendRadians) / fadeRange, 0, 1)
+}
 
 const observeHips = (context: RetargetContext, point: BodyPointReader) => {
   const leftHip = point(CAMERA_LANDMARK_INDEX.leftHip)
@@ -504,7 +567,7 @@ const applyArm = (
       ? {
           observed: rejectFromAxis(lower, upper.clone().normalize()),
           rest: context.restForward,
-          weight: bendTwistWeight(upper, lower)
+          weight: bendTwistWeight(context.options, upper, lower)
         }
       : undefined
   aimBone(context, sideBone(side, 'Arm'), sideBone(side, 'ForeArm'), upper, elbowTwist)
@@ -580,7 +643,7 @@ const legTwistCue = (
 ): TwistCue | undefined => {
   const thighAxis = thigh.clone().normalize()
   const kneeForward = shin ? rejectFromAxis(shin, thighAxis).negate().normalize() : null
-  const bendWeight = shin ? bendTwistWeight(thigh, shin) : 0
+  const bendWeight = shin ? bendTwistWeight(context.options, thigh, shin) : 0
   const footDirection = footForward ? rejectFromAxis(footForward, thighAxis).normalize() : null
   if (!footDirection) {
     return kneeForward
@@ -692,7 +755,7 @@ export const applyCameraPoseFrame = (
 ): void => {
   const context = createRetargetContext(bones, rest, drivenBoneNames, options)
   if (!context) return
-  const point = readBodyPoints(frame.bodyLandmarks, options.includeDepth)
+  const point = readBodyPoints(frame.bodyLandmarks, options)
   const torso = observeTorso(context, point)
   if (torso) applyTorso(context, torso)
   const chest = torso?.chest ?? new THREE.Quaternion()

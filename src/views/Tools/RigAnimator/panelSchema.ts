@@ -3,6 +3,12 @@ import {
   POSITION_STEP_FRACTION,
   ROTATION_CONTROL,
   CAMERA_SMOOTHING_MILLISECONDS_RANGE,
+  CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE,
+  CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
+  CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
+  CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
+  CAMERA_VISIBILITY_THRESHOLD_RANGE,
+  CAMERA_TWIST_BEND_DEGREES_RANGE,
   CAMERA_MAX_JUMP_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
   ENCLOSURE_OPACITY_RANGE,
@@ -48,15 +54,44 @@ export const buildRigAnimatorSchema = (
         },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
         cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
+        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
         cameraSmoothingMilliseconds: {
           ...CAMERA_SMOOTHING_MILLISECONDS_RANGE,
-          label: 'Camera Pose: Smoothing in ms (Live Feed)'
+          label: 'Camera Smoothing: Landmarks Held Still (ms)',
+          sectionStart: true
+        },
+        cameraSpeedResponse: {
+          ...CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE,
+          label: 'Camera Smoothing: Let Go on Fast Moves'
+        },
+        cameraSpeedCutoffHertz: {
+          ...CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
+          label: 'Camera Smoothing: Speed Sensitivity (Hz)'
+        },
+        cameraTurnResponse: {
+          ...CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
+          label: 'Camera Smoothing: Let Go on Fast Head Turns'
         },
         cameraMaxJump: {
           ...CAMERA_MAX_JUMP_RANGE,
-          label: 'Camera Pose: Max Jump (Live Feed)'
+          label: 'Camera Smoothing: Max Jump per Frame (m)'
         },
-        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
+        cameraBoneSmoothingMilliseconds: {
+          ...CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
+          label: 'Camera Smoothing: Bones Settle (ms)'
+        },
+        cameraVisibilityThreshold: {
+          ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
+          label: 'Camera Smoothing: Landmark Confidence Needed'
+        },
+        cameraTwistMinBendDegrees: {
+          ...CAMERA_TWIST_BEND_DEGREES_RANGE,
+          label: 'Camera Smoothing: Roll Starts at Bend (°)'
+        },
+        cameraTwistFullBendDegrees: {
+          ...CAMERA_TWIST_BEND_DEGREES_RANGE,
+          label: 'Camera Smoothing: Roll Full at Bend (°)'
+        },
         cameraTrackFace: {
           checkbox: true,
           label: 'Camera Detect: Face Tracker for Head',

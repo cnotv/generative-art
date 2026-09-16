@@ -13,7 +13,11 @@ import {
   smoothHeadRotation
 } from './cameraPoseFrame'
 import { CAMERA_CROP_MIN_SIZE_PIXELS } from './config'
-import { buildBodyLandmarks, buildHandLandmarks } from './fixtures/cameraPoseFixtures'
+import {
+  buildBodyLandmarks,
+  buildHandLandmarks,
+  buildSmoothingSettings
+} from './fixtures/cameraPoseFixtures'
 import type { CameraPoseFrame } from './types'
 
 const EMPTY_FRAME: CameraPoseFrame = { bodyLandmarks: null, handLandmarks: {}, headRotation: null }
@@ -190,30 +194,36 @@ describe('smoothHeadRotation', () => {
 
   it('takes the first rotation as-is', () => {
     const next = quaternionData(YAW_AXIS, 1)
-    expect(smoothHeadRotation(null, next, 1 / 30, 150)).toEqual(next)
+    expect(smoothHeadRotation(null, next, 1 / 30, buildSmoothingSettings())).toEqual(next)
   })
 
-  it('turns only part of the way toward a new rotation, less of it with longer smoothing', () => {
-    // Arrange
-    const turned = (smoothingMilliseconds: number): number =>
-      toQuaternion(
-        smoothHeadRotation(
-          quaternionData(YAW_AXIS, 0),
-          quaternionData(YAW_AXIS, 0.2),
-          1 / 30,
-          smoothingMilliseconds
-        )
-      ).angleTo(new THREE.Quaternion())
+  it.each([
+    ['longer smoothing', { smoothingMilliseconds: 50 }, { smoothingMilliseconds: 300 }],
+    ['less loosening on a fast turn', { turnResponse: 10 }, { turnResponse: 0 }]
+  ])(
+    'turns only part of the way toward a new rotation, less of it with %s',
+    (_, lighter, heavier) => {
+      // Arrange
+      const turned = (overrides: object): number =>
+        toQuaternion(
+          smoothHeadRotation(
+            quaternionData(YAW_AXIS, 0),
+            quaternionData(YAW_AXIS, 0.2),
+            1 / 30,
+            buildSmoothingSettings(overrides)
+          )
+        ).angleTo(new THREE.Quaternion())
 
-    // Act
-    const light = turned(50)
-    const heavy = turned(300)
+      // Act
+      const light = turned(lighter)
+      const heavy = turned(heavier)
 
-    // Assert
-    expect(light).toBeLessThan(0.2)
-    expect(heavy).toBeGreaterThan(0)
-    expect(heavy).toBeLessThan(light)
-  })
+      // Assert
+      expect(light).toBeLessThan(0.2)
+      expect(heavy).toBeGreaterThan(0)
+      expect(heavy).toBeLessThan(light)
+    }
+  )
 })
 
 describe('hasCameraPoseContent', () => {
@@ -257,7 +267,7 @@ describe('mirrorCameraPoseFrame', () => {
 })
 
 describe('smoothCameraPoseFrame', () => {
-  const SETTINGS = { smoothingMilliseconds: 150, maxJump: 10 }
+  const SETTINGS = buildSmoothingSettings()
   const firstReading = (frame: CameraPoseFrame) =>
     smoothCameraPoseFrame(null, frame, 1000, SETTINGS)
 

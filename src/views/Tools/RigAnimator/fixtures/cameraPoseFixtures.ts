@@ -1,7 +1,21 @@
 import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
 import skeleton from './mixamoCharacterSkeleton.json'
-import type { CameraHandLandmark, CameraLandmark, CameraPoseMappingOptions } from '../types'
+import {
+  CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  CAMERA_SMOOTHING_MILLISECONDS,
+  CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
+  CAMERA_SMOOTHING_SPEED_RESPONSE,
+  CAMERA_SMOOTHING_TURN_RESPONSE,
+  CAMERA_TWIST_FULL_BEND_DEGREES,
+  CAMERA_TWIST_MIN_BEND_DEGREES
+} from '../config'
+import type {
+  CameraHandLandmark,
+  CameraLandmark,
+  CameraPoseMappingOptions,
+  CameraSmoothingSettings
+} from '../types'
 
 /**
  * Every bone rule switched on, the Config panel's default, with any switched as given.
@@ -24,6 +38,26 @@ export const buildMappingOptions = (
   aimLegs: true,
   rollThighsFromKneesAndFeet: true,
   aimFeet: true,
+  visibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  twistMinBendRadians: THREE.MathUtils.degToRad(CAMERA_TWIST_MIN_BEND_DEGREES),
+  twistFullBendRadians: THREE.MathUtils.degToRad(CAMERA_TWIST_FULL_BEND_DEGREES),
+  boneSmoothingMilliseconds: 0,
+  ...overrides
+})
+
+/**
+ * The Config panel's default smoothing, with any slider moved as given.
+ * @param overrides Sliders to set differently
+ * @returns The smoothing settings
+ */
+export const buildSmoothingSettings = (
+  overrides: Partial<CameraSmoothingSettings> = {}
+): CameraSmoothingSettings => ({
+  smoothingMilliseconds: CAMERA_SMOOTHING_MILLISECONDS,
+  maxJump: 10,
+  speedResponse: CAMERA_SMOOTHING_SPEED_RESPONSE,
+  turnResponse: CAMERA_SMOOTHING_TURN_RESPONSE,
+  speedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
   ...overrides
 })
 

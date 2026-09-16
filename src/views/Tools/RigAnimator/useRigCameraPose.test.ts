@@ -63,6 +63,33 @@ describe('useRigCameraPose', () => {
     expect(leftElbow.y).toBeGreaterThan(leftShoulder.y)
   })
 
+  it('eases the arm toward a new pose one frame later, and lands it whole after a pause', () => {
+    // Arrange
+    const { applyCameraPose, bone } = buildWiredRig()
+    const smoothed = buildMappingOptions({ boneSmoothingMilliseconds: 150 })
+    const raisedArm = {
+      ...EMPTY_FRAME,
+      bodyLandmarks: buildBodyLandmarks({ 13: [0.2, -0.8, 0], 15: [0.22, -1.05, 0] })
+    }
+    const tPose = { ...EMPTY_FRAME, bodyLandmarks: buildBodyLandmarks() }
+    const reference = buildWiredRig()
+    reference.applyCameraPose(tPose, OPTIONS, ALL_GROUPS, 0)
+    const tPoseArm = reference.bone('mixamorigLeftArm').quaternion.clone()
+
+    // Act
+    applyCameraPose(raisedArm, smoothed, ALL_GROUPS, 0)
+    const raisedArmQuaternion = bone('mixamorigLeftArm').quaternion.clone()
+    applyCameraPose(tPose, smoothed, ALL_GROUPS, 33)
+    const oneFrameLater = bone('mixamorigLeftArm').quaternion.clone()
+    applyCameraPose(tPose, smoothed, ALL_GROUPS, 2000)
+
+    // Assert
+    const fullTurn = raisedArmQuaternion.angleTo(tPoseArm)
+    expect(oneFrameLater.angleTo(tPoseArm)).toBeGreaterThan(0.1 * fullTurn)
+    expect(oneFrameLater.angleTo(raisedArmQuaternion)).toBeGreaterThan(0.1 * fullTurn)
+    expect(bone('mixamorigLeftArm').quaternion.angleTo(tPoseArm)).toBeLessThan(1e-6)
+  })
+
   it('curls the fingers of a hand filmed on its own without resetting the posed body', () => {
     // Arrange: the body is posed by an earlier frame, then only a hand stays in view.
     const { applyCameraPose, bone } = buildWiredRig()

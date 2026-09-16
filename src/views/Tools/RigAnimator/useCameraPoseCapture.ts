@@ -1,20 +1,17 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
-import type { CameraDetectionOptions } from './types'
+import type { CameraDetectionOptions, CameraSmoothingSettings } from './types'
 
 /**
  * Owns the webcam stream for the camera pose capture dialog: starting/stopping the camera and
  * running live detection for the on-screen skeleton overlay via `useVideoLandmarkDetection`,
  * exposing the latest detected body, hands and head for a caller to read.
- * @param smoothingMilliseconds How long a landmark held still takes to settle, read fresh every
- *   frame so a Config panel slider takes effect immediately rather than only on the next `start()`
- * @param maxJump The furthest a landmark may move from its previous position in one frame,
- *   read fresh every frame the same way `smoothingMilliseconds` is
+ * @param smoothingSettings The Config panel's smoothing sliders, read fresh every frame so a
+ *   change takes effect immediately rather than only on the next `start()`
  * @param detectionOptions The Config panel's detection switches, read fresh every frame
  */
 export const useCameraPoseCapture = (
-  smoothingMilliseconds: Ref<number>,
-  maxJump: Ref<number>,
+  smoothingSettings: Ref<CameraSmoothingSettings>,
   detectionOptions: Ref<CameraDetectionOptions>
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
@@ -32,8 +29,7 @@ export const useCameraPoseCapture = (
   // A live webcam feed reads as a mirror, matching how the subject sees themselves.
   const detection = useVideoLandmarkDetection({
     videoElement,
-    smoothingMilliseconds,
-    maxJump,
+    smoothingSettings,
     detectionOptions,
     mirror: () => detectionOptions.value.mirrorLiveCamera
   })

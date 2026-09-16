@@ -21,20 +21,19 @@ import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { useVideoPoseCapture } from './useVideoPoseCapture'
 import { useVideoTimelineSync } from './useVideoTimelineSync'
-import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './cameraPoseMapping'
 import { hasCameraPoseContent } from './cameraPoseFrame'
-import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
-import type { CameraDetectionOptions, CameraPoseFrame } from './types'
+import {
+  CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  CAMERA_PANEL_WIDTH_VW,
+  MEDIA_FILE_ACCEPT
+} from './config'
+import type { CameraDetectionOptions, CameraPoseFrame, CameraSmoothingSettings } from './types'
 
 const props = defineProps<{
-  /** How long a live-feed landmark held still takes to settle, in milliseconds; tuned from the
-   * Config panel. */
-  smoothingMilliseconds: number
+  /** The Config panel's smoothing sliders for the live feed. */
+  smoothingSettings: CameraSmoothingSettings
   /** The Config panel's detection switches, each rule on or off. */
   detectionOptions: CameraDetectionOptions
-  /** Furthest a landmark may move in one frame before the excess is clamped off as a sudden
-   * jump; tuned from the Config panel. */
-  maxJump: number
   /** Whether the mirrored camera preview is actually visible, versus detecting headlessly. */
   showPreview: boolean
   /** Whether the parent is currently sampling the live feed onto the rig timeline as
@@ -66,17 +65,10 @@ const videoReference = ref<HTMLVideoElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
 const detectionOptions = toRef(props, 'detectionOptions')
-const camera = useCameraPoseCapture(
-  toRef(props, 'smoothingMilliseconds'),
-  toRef(props, 'maxJump'),
-  detectionOptions
-)
+const smoothingSettings = toRef(props, 'smoothingSettings')
+const camera = useCameraPoseCapture(smoothingSettings, detectionOptions)
 const photo = useCameraPhotoPose(detectionOptions)
-const uploadedVideo = useVideoPoseCapture(
-  toRef(props, 'smoothingMilliseconds'),
-  toRef(props, 'maxJump'),
-  detectionOptions
-)
+const uploadedVideo = useVideoPoseCapture(smoothingSettings, detectionOptions)
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 /** Whether the current mode drives the rig from a continuously updating source, the same as a
  * live webcam feed does, versus a single still photo. Both camera and an uploaded video can

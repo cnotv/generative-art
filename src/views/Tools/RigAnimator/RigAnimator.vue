@@ -27,6 +27,13 @@ import {
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_SMOOTHING_MILLISECONDS,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
+  CAMERA_SMOOTHING_SPEED_RESPONSE,
+  CAMERA_SMOOTHING_TURN_RESPONSE,
+  CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
+  CAMERA_BONE_SMOOTHING_MILLISECONDS,
+  CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  CAMERA_TWIST_MIN_BEND_DEGREES,
+  CAMERA_TWIST_FULL_BEND_DEGREES,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
@@ -53,6 +60,7 @@ import type {
   CameraDetectionOptions,
   CameraPoseFrame,
   CameraPoseMappingOptions,
+  CameraSmoothingSettings,
   RigAnimatorConfig
 } from './types'
 
@@ -104,6 +112,13 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraUseViewpoint: false,
   cameraSmoothingMilliseconds: CAMERA_SMOOTHING_MILLISECONDS,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
+  cameraSpeedResponse: CAMERA_SMOOTHING_SPEED_RESPONSE,
+  cameraTurnResponse: CAMERA_SMOOTHING_TURN_RESPONSE,
+  cameraSpeedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
+  cameraBoneSmoothingMilliseconds: CAMERA_BONE_SMOOTHING_MILLISECONDS,
+  cameraVisibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  cameraTwistMinBendDegrees: CAMERA_TWIST_MIN_BEND_DEGREES,
+  cameraTwistFullBendDegrees: CAMERA_TWIST_FULL_BEND_DEGREES,
   cameraShowPreview: false,
   targetLeftArm: true,
   targetRightArm: true,
@@ -132,7 +147,21 @@ const cameraPoseMappingOptions = computed(
     rollForearmsToPalms: reactiveConfig.value.cameraRollForearms,
     aimLegs: reactiveConfig.value.cameraAimLegs,
     rollThighsFromKneesAndFeet: reactiveConfig.value.cameraRollThighs,
-    aimFeet: reactiveConfig.value.cameraAimFeet
+    aimFeet: reactiveConfig.value.cameraAimFeet,
+    visibilityThreshold: reactiveConfig.value.cameraVisibilityThreshold,
+    twistMinBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistMinBendDegrees),
+    twistFullBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistFullBendDegrees),
+    boneSmoothingMilliseconds: reactiveConfig.value.cameraBoneSmoothingMilliseconds
+  })
+)
+
+const cameraSmoothingSettings = computed(
+  (): CameraSmoothingSettings => ({
+    smoothingMilliseconds: reactiveConfig.value.cameraSmoothingMilliseconds,
+    maxJump: reactiveConfig.value.cameraMaxJump,
+    speedResponse: reactiveConfig.value.cameraSpeedResponse,
+    turnResponse: reactiveConfig.value.cameraTurnResponse,
+    speedCutoffHertz: reactiveConfig.value.cameraSpeedCutoffHertz
   })
 )
 
@@ -656,9 +685,8 @@ onUnmounted(() => {
   />
   <CameraPoseCapture
     v-if="showCameraCapture"
-    :smoothing-milliseconds="reactiveConfig.cameraSmoothingMilliseconds"
+    :smoothing-settings="cameraSmoothingSettings"
     :detection-options="cameraDetectionOptions"
-    :max-jump="reactiveConfig.cameraMaxJump"
     :show-preview="reactiveConfig.cameraShowPreview"
     :is-recording="motionRecording.isRecording.value"
     :frame="reactiveConfig.frame"

@@ -1,4 +1,4 @@
-import { CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ, CAMERA_SMOOTHING_SPEED_RESPONSE } from './config'
+import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './config'
 import type {
   CameraLandmark,
   CameraLandmarkVelocity,
@@ -87,7 +87,7 @@ export const filterCameraLandmarks = <T extends LandmarkPoint>(
   settings: CameraSmoothingSettings
 ): FilteredCameraLandmarks<T> => {
   const minimumCutoffHertz = smoothingCutoffHertz(settings.smoothingMilliseconds)
-  const velocityShare = lowPassBlendFactor(CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ, elapsedSeconds)
+  const velocityShare = lowPassBlendFactor(settings.speedCutoffHertz, elapsedSeconds)
   const filtered = next.map((landmark, index) => {
     const previousLandmark = previous?.landmarks[index]
     const previousVelocity = previous?.velocities[index]
@@ -100,7 +100,7 @@ export const filterCameraLandmarks = <T extends LandmarkPoint>(
         ((landmark[axis] - previousLandmark[axis]) / elapsedSeconds - previousVelocity[axis]) *
           velocityShare
     )
-    const cutoffHertz = minimumCutoffHertz + CAMERA_SMOOTHING_SPEED_RESPONSE * Math.hypot(x, y, z)
+    const cutoffHertz = minimumCutoffHertz + settings.speedResponse * Math.hypot(x, y, z)
     const share = lowPassBlendFactor(cutoffHertz, elapsedSeconds)
     const [blendedX, blendedY, blendedZ] = AXES.map(
       (axis) => previousLandmark[axis] + (landmark[axis] - previousLandmark[axis]) * share
@@ -193,9 +193,6 @@ export const CAMERA_LANDMARK_INDEX = {
   leftFootIndex: 31,
   rightFootIndex: 32
 } as const
-
-/** A landmark below this visibility is treated as not detected, leaving its bone untouched. */
-export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
 
 /**
  * Estimate how far the subject is turned from square-to-camera, from the shoulder line's own

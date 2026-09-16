@@ -3,8 +3,11 @@ import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
 import {
   applyCameraPoseFrame,
+  cameraBoneSmoothingShare,
   cameraFrameDrivenBoneNames,
-  captureCameraRetargetRest
+  captureBoneTransforms,
+  captureCameraRetargetRest,
+  easeBonesFromTransforms
 } from './cameraPoseRetarget'
 import { mirrorCameraLandmarks } from './cameraPoseMapping'
 import { faceMatrixToHeadRotation, mirrorCameraPoseFrame } from './cameraPoseFrame'
@@ -558,6 +561,89 @@ describe('each bone rule switches off on its own', () => {
 
     // Assert
     expect(pitchDegrees(facing(turnFromRest('Head')))).toBeLessThan(-15)
+  })
+})
+
+describe('tuning what counts as jitter', () => {
+  it.each([
+    ['drives', 0.5, false],
+    ['ignores', 0.7, true]
+  ])(
+    '%s an arm seen at 0.6 confidence with the threshold at %s',
+    (_, visibilityThreshold, staysAtRest) => {
+      // Arrange: the left arm raised, detected at 0.6 confidence.
+      const bodyLandmarks = buildBodyLandmarks({ 13: [0.2, -0.8, 0], 15: [0.22, -1.05, 0] }).map(
+        (landmark, index) =>
+          [11, 13, 15].includes(index) ? { ...landmark, visibility: 0.6 } : landmark
+      )
+      const restArm = buildMixamoRig().find((bone) => bone.name === 'mixamorigLeftArm')!.quaternion
+
+      // Act
+      const { bone } = poseRig({ bodyLandmarks }, buildMappingOptions({ visibilityThreshold }))
+
+      // Assert
+      expect(bone('mixamorigLeftArm').quaternion.angleTo(restArm) < 1e-6).toBe(staysAtRest)
+    }
+  )
+
+  it('takes no roll from an elbow bent less than the roll start angle', () => {
+    // Arrange: elbows bent forward about 50°, below a roll start raised to 90°.
+    const bodyLandmarks = buildBodyLandmarks({
+      13: [0.4, -0.5, 0],
+      15: [0.55, -0.5, -0.2]
+    })
+    const noRollCue = buildMappingOptions({
+      twistMinBendRadians: Math.PI / 2,
+      twistFullBendRadians: Math.PI
+    })
+
+    // Act
+    const raisedStart = poseRig({ bodyLandmarks }, noRollCue)
+    const rollOff = poseRig(
+      { bodyLandmarks },
+      buildMappingOptions({ rollUpperArmsFromElbows: false })
+    )
+
+    // Assert
+    expect(
+      raisedStart
+        .bone('mixamorigLeftArm')
+        .quaternion.angleTo(rollOff.bone('mixamorigLeftArm').quaternion)
+    ).toBeLessThan(1e-6)
+  })
+})
+
+describe('bone smoothing', () => {
+  it.each([
+    ['takes the whole new pose with bone smoothing off', 0, 1 / 30, 1],
+    ['takes the whole new pose when the last one was applied long ago', 150, 2, 1]
+  ])('%s', (_, smoothingMilliseconds, elapsedSeconds, expected) => {
+    expect(cameraBoneSmoothingShare(smoothingMilliseconds, elapsedSeconds)).toBe(expected)
+  })
+
+  it('takes only part of the new pose one frame later, less of it the longer the smoothing', () => {
+    const light = cameraBoneSmoothingShare(50, 1 / 30)
+    const heavy = cameraBoneSmoothingShare(300, 1 / 30)
+    expect(light).toBeLessThan(1)
+    expect(heavy).toBeGreaterThan(0)
+    expect(heavy).toBeLessThan(light)
+  })
+
+  it('eases each snapshotted bone the given share of the way to its new transform', () => {
+    // Arrange
+    const [bone] = buildMixamoRig()
+    const before = captureBoneTransforms([bone], new Set([bone.name]))
+    const turned = before
+      .get(bone.name)!
+      .quaternion.clone()
+      .premultiply(new THREE.Quaternion().setFromAxisAngle(WORLD_UP, 1))
+    bone.quaternion.copy(turned)
+
+    // Act
+    easeBonesFromTransforms([bone], before, 0.5)
+
+    // Assert
+    expect(bone.quaternion.angleTo(before.get(bone.name)!.quaternion)).toBeCloseTo(0.5)
   })
 })
 

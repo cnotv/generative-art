@@ -40,6 +40,13 @@ export interface RigAnimatorConfig {
   cameraUseViewpoint: boolean
   cameraSmoothingMilliseconds: number
   cameraMaxJump: number
+  cameraSpeedResponse: number
+  cameraTurnResponse: number
+  cameraSpeedCutoffHertz: number
+  cameraBoneSmoothingMilliseconds: number
+  cameraVisibilityThreshold: number
+  cameraTwistMinBendDegrees: number
+  cameraTwistFullBendDegrees: number
   cameraShowPreview: boolean
   targetLeftArm: boolean
   targetRightArm: boolean
@@ -104,6 +111,12 @@ export interface CameraSmoothingSettings {
   smoothingMilliseconds: number
   /** The furthest a landmark may move in one reading, in metres, before the rest is clamped off. */
   maxJump: number
+  /** How much a landmark's speed, per metre a second, loosens its smoothing. */
+  speedResponse: number
+  /** How much the head's turn, per radian a second, loosens its smoothing. */
+  turnResponse: number
+  /** Cutoff, in hertz, for each landmark's speed estimate. */
+  speedCutoffHertz: number
 }
 
 /** Everything the live feed's filter carries from one reading to the next. */
@@ -145,6 +158,14 @@ export interface CameraPoseMappingOptions {
   rollThighsFromKneesAndFeet: boolean
   /** Aim each foot at its toes. */
   aimFeet: boolean
+  /** How confident a body landmark must be to drive a bone. */
+  visibilityThreshold: number
+  /** A limb bent less than this carries no cue for its upper bone's roll. */
+  twistMinBendRadians: number
+  /** A limb bent at least this much has its roll read entirely from the bend. */
+  twistFullBendRadians: number
+  /** How long each bone takes to settle on a newly applied rotation; 0 turns it off. */
+  boneSmoothingMilliseconds: number
 }
 
 /** The Config panel's switches for how each frame is detected, before any bone is turned. */
@@ -165,6 +186,12 @@ export interface CameraDetectionOptions {
   mirrorLiveCamera: boolean
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
   detectOnlyWhilePlaying: boolean
+}
+
+/** One bone's local transform, kept so the next applied pose can ease away from it. */
+export interface CameraBoneTransform {
+  quaternion: THREE.Quaternion
+  position: THREE.Vector3
 }
 
 /** The rig's rest pose in world space, keyed by bone name: every applied rotation is a change from it. */

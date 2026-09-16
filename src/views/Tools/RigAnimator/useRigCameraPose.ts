@@ -3,8 +3,11 @@ import type * as THREE from 'three'
 import {
   CAMERA_POSE_REQUIRED_BONES,
   applyCameraPoseFrame,
+  cameraBoneSmoothingShare,
   cameraFrameDrivenBoneNames,
-  captureCameraRetargetRest
+  captureBoneTransforms,
+  captureCameraRetargetRest,
+  easeBonesFromTransforms
 } from './cameraPoseRetarget'
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
 import type { CameraPoseFrame, CameraPoseMappingOptions, CameraRetargetRest } from './types'
@@ -24,6 +27,8 @@ export const useRigCameraPose = (
   )
 
   let retargetRest: CameraRetargetRest | null = null
+  /** When the last frame was applied, so bone smoothing knows how long it has been. */
+  let lastAppliedAtMilliseconds: number | null = null
   // Synchronous on purpose: the rig stands at rest the instant its bones are adopted, and a
   // deferred watcher could run after a restored autosave has already posed it.
   watch(
@@ -44,24 +49,42 @@ export const useRigCameraPose = (
    * (see `boneBodyPartGroup`): a bone outside every selected group is left exactly as it was,
    * whether that is an earlier capture, a preset, or a manual edit, so a capture can be re-shot
    * for just one limb without disturbing whatever the rest of the rig already carries.
+   * With bone smoothing on, each driven bone then eases from where the previous frame left it
+   * toward its new rotation, see `cameraBoneSmoothingShare`.
    * @param frame The detected body, hands and head, from `CameraPoseCapture`
-   * @param options Depth flattening and foot grounding, see `CameraPoseMappingOptions`
+   * @param options Which rules to apply and how, see `CameraPoseMappingOptions`
    * @param targetGroups Which body-part groups this capture is allowed to touch
+   * @param timestampMilliseconds When this frame is applied, for bone smoothing
    */
   const applyCameraPose = (
     frame: CameraPoseFrame,
     options: CameraPoseMappingOptions,
-    targetGroups: Set<RigBodyPartGroup>
+    targetGroups: Set<RigBodyPartGroup>,
+    timestampMilliseconds: number = performance.now()
   ): void => {
     if (!retargetRest) return
     const drivenBoneNames = cameraFrameDrivenBoneNames(
       frame,
       boneNamesInGroups(bones.value, targetGroups)
     )
+    const previousTransforms =
+      options.boneSmoothingMilliseconds > 0
+        ? captureBoneTransforms(bones.value, drivenBoneNames)
+        : new Map()
     resetAllBonesToRest(
       new Set(bones.value.map((bone) => bone.name).filter((name) => !drivenBoneNames.has(name)))
     )
     applyCameraPoseFrame(bones.value, retargetRest, frame, options, drivenBoneNames)
+    const elapsedSeconds =
+      lastAppliedAtMilliseconds === null
+        ? Infinity
+        : (timestampMilliseconds - lastAppliedAtMilliseconds) / 1000
+    lastAppliedAtMilliseconds = timestampMilliseconds
+    easeBonesFromTransforms(
+      bones.value,
+      previousTransforms,
+      cameraBoneSmoothingShare(options.boneSmoothingMilliseconds, elapsedSeconds)
+    )
   }
 
   return { canCaptureFromCamera, applyCameraPose }
