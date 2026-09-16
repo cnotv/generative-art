@@ -26,6 +26,8 @@ import {
   BALL_RADIUS,
   BALL_SPAWN_X,
   BALL_SPAWN_Y,
+  BALL_TRAIL_LENGTH,
+  BALL_TRAIL_SAMPLE_INTERVAL_SECONDS,
   BALL_RESPAWN_BELOW_Y,
   BALL_GRAVITY,
   BALL_HIT_SPEED,
@@ -210,7 +212,9 @@ const initScene = async (): Promise<void> => {
       radius: BALL_RADIUS,
       spawnX: BALL_SPAWN_X,
       spawnY: BALL_SPAWN_Y,
-      respawnBelowY: BALL_RESPAWN_BELOW_Y
+      respawnBelowY: BALL_RESPAWN_BELOW_Y,
+      trailLength: BALL_TRAIL_LENGTH,
+      trailSampleIntervalSeconds: BALL_TRAIL_SAMPLE_INTERVAL_SECONDS
     },
     {
       gravity: BALL_GRAVITY,

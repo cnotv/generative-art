@@ -5,6 +5,8 @@ export interface BallSpawnBounds {
   spawnX: number
   spawnY: number
   respawnBelowY: number
+  trailLength: number
+  trailSampleIntervalSeconds: number
 }
 
 export interface BallPhysicsConfig {
@@ -38,9 +40,35 @@ export const createBallField = (
   const velocity = new THREE.Vector3()
   scene.add(mesh)
 
+  // A short ring buffer of the ball's own past positions, rendered as shrinking, fading ghost
+  // spheres trailing behind it, so a single small object still reads as moving rather than
+  // teleporting between frames.
+  const trailPositions = Array.from({ length: bounds.trailLength }, () => new THREE.Vector3())
+  const trailGhosts = trailPositions.map((_, index) => {
+    const age = (index + 1) / bounds.trailLength
+    const ghostMaterial = new THREE.MeshBasicMaterial({
+      color: 0xf2c9c2,
+      transparent: true,
+      opacity: 0.5 * (1 - age)
+    })
+    const ghost = new THREE.Mesh(geometry, ghostMaterial)
+    ghost.scale.setScalar(1 - age * 0.6)
+    scene.add(ghost)
+    return ghost
+  })
+  let trailCursor = 0
+  let trailSampleAccumulator = 0
+
+  const resetTrail = (): void => {
+    trailPositions.forEach((position) => position.copy(mesh.position))
+    trailGhosts.forEach((ghost) => ghost.position.copy(mesh.position))
+    trailSampleAccumulator = 0
+  }
+
   const resetBall = (): void => {
     mesh.position.set(bounds.spawnX, bounds.spawnY, 0)
     velocity.set(0, 0, 0)
+    resetTrail()
   }
   resetBall()
 
@@ -49,7 +77,19 @@ export const createBallField = (
   const update = (deltaSeconds: number): void => {
     velocity.y -= physics.gravity * deltaSeconds
     mesh.position.addScaledVector(velocity, deltaSeconds)
-    if (mesh.position.y < bounds.respawnBelowY) resetBall()
+    if (mesh.position.y < bounds.respawnBelowY) {
+      resetBall()
+      return
+    }
+    trailSampleAccumulator += deltaSeconds
+    if (trailSampleAccumulator < bounds.trailSampleIntervalSeconds) return
+    trailSampleAccumulator = 0
+    trailPositions[trailCursor].copy(mesh.position)
+    trailCursor = (trailCursor + 1) % bounds.trailLength
+    trailGhosts.forEach((ghost, index) => {
+      const historyIndex = (trailCursor - 1 - index + bounds.trailLength * 2) % bounds.trailLength
+      ghost.position.copy(trailPositions[historyIndex])
+    })
   }
 
   const hitDirectionScratch = new THREE.Vector3()
@@ -74,6 +114,10 @@ export const createBallField = (
   const dispose = (): void => {
     scene.remove(mesh)
     geometry.dispose()
+    trailGhosts.forEach((ghost) => {
+      scene.remove(ghost)
+      ;(ghost.material as THREE.Material).dispose()
+    })
     material.dispose()
   }
 

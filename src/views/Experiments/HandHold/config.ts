@@ -88,6 +88,14 @@ export const BALL_RADIUS = 0.18
  * camera to already be in front of it rather than falling in from off the top of the frame. */
 export const BALL_SPAWN_X = 0
 export const BALL_SPAWN_Y = 1.4
+/** Shrinking, fading ghost spheres trailing the ball, so its motion reads clearly even though
+ * it is a single small object against a plain background. */
+export const BALL_TRAIL_LENGTH = 6
+/** How long the ball travels between two trail samples. Sampling every render frame packs
+ * every ghost inside the ball's own radius during a slow fall, since gravity alone barely
+ * moves it frame to frame; spacing samples out in time instead keeps the trail visibly spread
+ * out, at the cost of it starting short right after a reset and growing as the ball speeds up. */
+export const BALL_TRAIL_SAMPLE_INTERVAL_SECONDS = 0.05
 /** Once a ball falls this far below centre, whether from gravity alone or after a hit arcs it
  * back down, it recycles back to a fresh spawn instead of continuing to fall forever. */
 export const BALL_RESPAWN_BELOW_Y = -3.5
