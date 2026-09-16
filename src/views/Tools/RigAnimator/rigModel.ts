@@ -34,6 +34,23 @@ export const sortBoneNamesForDisplay = (boneNames: string[]): string[] =>
     return a.localeCompare(b)
   })
 
+/**
+ * Swap each bone for the topmost bone in its own ancestry that shares its name. A model with more
+ * than one skinned mesh can load with one skeleton's bones hung at zero offset beneath another's
+ * same-named bones, as Mixamo's Y Bot does, one mesh per skeleton: posing the lower copy turns
+ * only the vertices bound to it, not the limb below it, so the mesh comes apart at every joint.
+ * The topmost copy carries the real hierarchy, and every copy beneath it follows it.
+ * @param bones A skinned mesh's own skeleton bones
+ * @returns The bones that actually move the whole model, in the same order
+ */
+export const resolveHierarchyBones = (bones: THREE.Bone[]): THREE.Bone[] => {
+  const topmostNamesake = (bone: THREE.Bone): THREE.Bone =>
+    bone.parent instanceof THREE.Bone && bone.parent.name === bone.name
+      ? topmostNamesake(bone.parent)
+      : bone
+  return bones.map(topmostNamesake)
+}
+
 const GLTF_EXTENSION_PATTERN = /\.(glb|gltf)$/i
 
 /**
