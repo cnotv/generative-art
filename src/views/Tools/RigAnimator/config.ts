@@ -156,20 +156,52 @@ export const MEDIAPIPE_POSE_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
 export const MEDIAPIPE_HAND_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
+export const MEDIAPIPE_FACE_MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
+
+/** Side of the square canvas a face or hand crop is drawn into before its detector reads it. */
+export const CAMERA_CROP_CANVAS_SIZE = 256
+/** A crop never shrinks below this many source pixels, however far away the subject stands. */
+export const CAMERA_CROP_MIN_SIZE_PIXELS = 48
+/** A face crop's side, as a multiple of the detected shoulder span. */
+export const CAMERA_FACE_CROP_SPAN_MULTIPLIER = 1.3
+/** A hand crop's side, as a multiple of the detected shoulder span. */
+export const CAMERA_HAND_CROP_SPAN_MULTIPLIER = 1.2
+/** How close, as a share of the image, a detected hand must be to a body wrist to belong to it. */
+export const CAMERA_HAND_WRIST_MATCH_DISTANCE = 0.15
+
+/** How much of the torso's lean the pelvis takes; the spine bones above it share the rest. */
+export const CAMERA_PELVIS_LEAN_SHARE = 0.35
+/** How much of the head's turn away from the chest the neck takes; the head takes the rest. */
+export const CAMERA_NECK_TURN_SHARE = 0.5
+/**
+ * BlazePose places the nose below the ear line, so a level gaze read from the ears and nose alone
+ * points down. Measured against the Face Landmarker on the same clip: about 19°.
+ */
+export const CAMERA_HEAD_PITCH_OFFSET_RADIANS = 0.33
+/** A limb bent less than this carries no trustworthy cue for how its upper bone is rolled. */
+export const CAMERA_TWIST_MIN_BEND_RADIANS = 0.17
+/** A limb bent at least this much has its roll read entirely from the bend. */
+export const CAMERA_TWIST_FULL_BEND_RADIANS = 0.52
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
 export const CAMERA_PANEL_WIDTH_VW = 30
 
-/** Fraction of each new frame's landmarks blended into the running smoothed set, for the live
- * camera feed. Lower reads smoother but laggier; 1 would turn smoothing off entirely. */
-export const CAMERA_LANDMARK_SMOOTHING_FACTOR = 0.35
-/** Range and step the Config panel's smoothing slider offers. Lower than the default's own
- * 0.05 step reaches so heavier smoothing than the initial range allowed is still reachable. */
-export const CAMERA_SMOOTHING_FACTOR_RANGE = { min: 0.01, max: 1, step: 0.01 }
-
-/** Range and step the Config panel's reach multiplier slider offers. */
-export const CAMERA_REACH_MULTIPLIER_RANGE = { min: 0.5, max: 2, step: 0.05 }
+/**
+ * How long, in milliseconds, the live feed takes to settle on a landmark held still. Longer irons
+ * out more jiggle; a moving landmark is barely delayed either way, since the filter lets go as it
+ * speeds up (see `filterCameraLandmarks`). 0 turns smoothing off.
+ */
+export const CAMERA_SMOOTHING_MILLISECONDS = 150
+/** Range and step the Config panel's smoothing slider offers. */
+export const CAMERA_SMOOTHING_MILLISECONDS_RANGE = { min: 0, max: 500, step: 10 }
+/** How much a landmark's speed, per metre a second, loosens its smoothing: the One Euro filter's beta. */
+export const CAMERA_SMOOTHING_SPEED_RESPONSE = 12
+/** How much the head's turn, per radian a second, loosens its smoothing. */
+export const CAMERA_SMOOTHING_TURN_RESPONSE = 2
+/** Cutoff for each landmark's speed estimate, so a single noisy reading does not read as motion. */
+export const CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ = 1
 
 /** How far, in metres, a smoothed landmark may move in a single frame before the excess past
  * this is clamped off as a sudden jump rather than genuine motion. */

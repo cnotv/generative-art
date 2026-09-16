@@ -7,13 +7,7 @@ import { getTools } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
-import {
-  ikFindTwoBoneChain,
-  applyHandPose,
-  type TwoBoneIkChain,
-  type HandSide,
-  type HandPoseDefinition
-} from '@webgamekit/rig'
+import { ikFindTwoBoneChain, type TwoBoneIkChain } from '@webgamekit/rig'
 import { Upload, Camera as CameraIcon, Lightbulb, Circle, Bone, Eye } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
@@ -31,7 +25,7 @@ import {
   DEFAULT_MODEL_PATH,
   MODEL_FILE_ACCEPT,
   CAMERA_PANEL_WIDTH_VW,
-  CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  CAMERA_SMOOTHING_MILLISECONDS,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
@@ -42,7 +36,7 @@ import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { centerCameraOnVisibleCanvas, frameCameraOnModel } from './cameraFraming'
-import { estimateCameraYaw, type CameraLandmark } from './cameraPoseMapping'
+import { estimateCameraYaw } from './cameraPoseMapping'
 import {
   selectedBodyPartGroups,
   toggleBodyPartGroupTarget,
@@ -55,7 +49,7 @@ import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
 import CameraPoseCapture from './CameraPoseCapture.vue'
-import type { RigAnimatorConfig } from './types'
+import type { CameraPoseFrame, RigAnimatorConfig } from './types'
 
 const route = useRoute()
 const routeName = route.name as string
@@ -81,14 +75,10 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   frame: 0,
   fps: DEFAULT_FPS,
   showBoneMarkers: false,
-  cameraUseElbows: true,
-  cameraUseKnees: true,
-  cameraUseNeck: true,
-  cameraUseHips: false,
+  cameraGroundFeet: true,
   cameraUseDepth: true,
   cameraUseViewpoint: false,
-  cameraReachMultiplier: 1,
-  cameraSmoothingFactor: CAMERA_LANDMARK_SMOOTHING_FACTOR,
+  cameraSmoothingMilliseconds: CAMERA_SMOOTHING_MILLISECONDS,
   cameraMaxJump: CAMERA_LANDMARK_MAX_JUMP_METERS,
   cameraShowPreview: false,
   targetLeftArm: true,
@@ -105,12 +95,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
 })
 
 const cameraPoseMappingOptions = computed(() => ({
-  includeElbows: reactiveConfig.value.cameraUseElbows,
-  includeKnees: reactiveConfig.value.cameraUseKnees,
-  includeNeck: reactiveConfig.value.cameraUseNeck,
-  includeHips: reactiveConfig.value.cameraUseHips,
   includeDepth: reactiveConfig.value.cameraUseDepth,
-  reachMultiplier: reactiveConfig.value.cameraReachMultiplier
+  groundFeet: reactiveConfig.value.cameraGroundFeet
 }))
 
 /** Which body-part groups the next capture, photo or preset is allowed to touch, read from the
@@ -304,26 +290,21 @@ const toggleMarbleFlow = (): void => {
 }
 
 /**
- * Applies a detected body pose and, riding along on the same emit, any detected hand poses.
+ * Applies a detected frame, body, hands and head together, scoped to the Merge Target groups.
  * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
  * from, the one camera-relative detail a single photo's body landmarks can actually support
  * (see `estimateCameraYaw`'s own doc comment for why not more than that).
  */
-const handleCameraApply = (
-  landmarks: CameraLandmark[],
-  handPoses: Partial<Record<HandSide, HandPoseDefinition>>
-): void => {
-  rig.applyCameraPose(landmarks, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
-  const restQuaternions = rig.getRestQuaternions()
-  Object.entries(handPoses).forEach(([side, pose]) => {
-    // A hand's fingers belong to that side's arm group (see `boneBodyPartGroup`), so a capture
-    // scoped away from that arm must not curl its fingers either.
-    const armGroup = side === 'Left' ? 'leftArm' : 'rightArm'
-    if (!targetBodyPartGroups.value.has(armGroup)) return
-    applyHandPose(rig.bones.value, side as HandSide, pose, restQuaternions)
-  })
-  if (reactiveConfig.value.cameraUseViewpoint && rig.model.value && cameraReference) {
-    const yaw = estimateCameraYaw(landmarks)
+const handleCameraApply = (frame: CameraPoseFrame): void => {
+  rig.applyCameraPose(frame, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
+  const { bodyLandmarks } = frame
+  if (
+    reactiveConfig.value.cameraUseViewpoint &&
+    bodyLandmarks &&
+    rig.model.value &&
+    cameraReference
+  ) {
+    const yaw = estimateCameraYaw(bodyLandmarks)
     if (yaw !== null) frameCameraOnModel(cameraReference, orbitReference, rig.model.value, yaw)
   }
   motionRecording.recordFrameIfActive()
@@ -625,7 +606,7 @@ onUnmounted(() => {
   />
   <CameraPoseCapture
     v-if="showCameraCapture"
-    :smoothing-factor="reactiveConfig.cameraSmoothingFactor"
+    :smoothing-milliseconds="reactiveConfig.cameraSmoothingMilliseconds"
     :max-jump="reactiveConfig.cameraMaxJump"
     :show-preview="reactiveConfig.cameraShowPreview"
     :is-recording="motionRecording.isRecording.value"

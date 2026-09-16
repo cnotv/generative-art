@@ -2,8 +2,7 @@ import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import {
   POSITION_STEP_FRACTION,
   ROTATION_CONTROL,
-  CAMERA_SMOOTHING_FACTOR_RANGE,
-  CAMERA_REACH_MULTIPLIER_RANGE,
+  CAMERA_SMOOTHING_MILLISECONDS_RANGE,
   CAMERA_MAX_JUMP_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
   ENCLOSURE_OPACITY_RANGE,
@@ -42,23 +41,16 @@ export const buildRigAnimatorSchema = (
     : {}),
   ...(canCaptureFromCamera
     ? {
-        cameraUseElbows: {
+        cameraGroundFeet: {
           checkbox: true,
-          label: 'Camera Pose: Bend Elbows to Photo',
+          label: 'Camera Pose: Keep Feet on Ground',
           sectionStart: true
         },
-        cameraUseKnees: { checkbox: true, label: 'Camera Pose: Bend Knees to Photo' },
-        cameraUseNeck: { checkbox: true, label: 'Camera Pose: Bend Neck to Photo' },
-        cameraUseHips: { checkbox: true, label: 'Camera Pose: Move Hips to Photo' },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
         cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
-        cameraReachMultiplier: {
-          ...CAMERA_REACH_MULTIPLIER_RANGE,
-          label: 'Camera Pose: Reach Multiplier'
-        },
-        cameraSmoothingFactor: {
-          ...CAMERA_SMOOTHING_FACTOR_RANGE,
-          label: 'Camera Pose: Smoothing (Live Feed)'
+        cameraSmoothingMilliseconds: {
+          ...CAMERA_SMOOTHING_MILLISECONDS_RANGE,
+          label: 'Camera Pose: Smoothing in ms (Live Feed)'
         },
         cameraMaxJump: {
           ...CAMERA_MAX_JUMP_RANGE,

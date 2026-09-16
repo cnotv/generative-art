@@ -15,19 +15,21 @@ import {
   Upload,
   X as CloseIcon
 } from 'lucide-vue-next'
-import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
 import Button from '@/components/ui/button/Button.vue'
 import IconButton from '@/components/IconButton.vue'
 import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { useVideoPoseCapture } from './useVideoPoseCapture'
 import { useVideoTimelineSync } from './useVideoTimelineSync'
-import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD, type CameraLandmark } from './cameraPoseMapping'
+import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './cameraPoseMapping'
+import { hasCameraPoseContent } from './cameraPoseFrame'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
+import type { CameraPoseFrame } from './types'
 
 const props = defineProps<{
-  /** Fraction of each new live-feed frame blended in; tuned from the Config panel. */
-  smoothingFactor: number
+  /** How long a live-feed landmark held still takes to settle, in milliseconds; tuned from the
+   * Config panel. */
+  smoothingMilliseconds: number
   /** Furthest a landmark may move in one frame before the excess is clamped off as a sudden
    * jump; tuned from the Config panel. */
   maxJump: number
@@ -49,7 +51,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  apply: [landmarks: CameraLandmark[], handPoses: Partial<Record<HandSide, HandPoseDefinition>>]
+  apply: [frame: CameraPoseFrame]
   close: []
   toggleRecord: []
   enablePreview: []
@@ -61,9 +63,12 @@ const emit = defineEmits<{
 const videoReference = ref<HTMLVideoElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
-const camera = useCameraPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
+const camera = useCameraPoseCapture(toRef(props, 'smoothingMilliseconds'), toRef(props, 'maxJump'))
 const photo = useCameraPhotoPose()
-const uploadedVideo = useVideoPoseCapture(toRef(props, 'smoothingFactor'), toRef(props, 'maxJump'))
+const uploadedVideo = useVideoPoseCapture(
+  toRef(props, 'smoothingMilliseconds'),
+  toRef(props, 'maxJump')
+)
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 /** Whether the current mode drives the rig from a continuously updating source, the same as a
  * live webcam feed does, versus a single still photo. Both camera and an uploaded video can
@@ -97,15 +102,12 @@ const previewHandLandmarks = computed(() =>
     photo.previewHandLandmarks.value
   )
 )
-const worldLandmarks = computed(() =>
-  pickByMode(
-    camera.worldLandmarks.value,
-    uploadedVideo.worldLandmarks.value,
-    photo.worldLandmarks.value
-  )
+const detectedFrame = computed(() =>
+  pickByMode(camera.frame.value, uploadedVideo.frame.value, photo.frame.value)
 )
-const handPoses = computed(() =>
-  pickByMode(camera.handPoses.value, uploadedVideo.handPoses.value, photo.handPoses.value)
+/** Whether the current source found anything to apply: a body, a hand or a face. */
+const hasDetection = computed(
+  () => detectedFrame.value !== null && hasCameraPoseContent(detectedFrame.value)
 )
 
 let drawingUtilities: DrawingUtils | null = null
@@ -171,10 +173,10 @@ watch([previewLandmarks, previewHandLandmarks, () => photo.photoImage.value], dr
 // Applies live: every newly detected frame (continuous for the camera, once for a photo) goes
 // straight to the rig, so the model mirrors the source in real time instead of waiting for a
 // separate capture click. This is what makes the side-by-side comparison actually prove the
-// mapping matches, rather than only a snapshot of it. Hand poses ride along on the same emit,
-// since both detections finish within the same detectFrame/detectPhoto call.
-watch(worldLandmarks, (landmarks) => {
-  if (landmarks) emit('apply', landmarks, handPoses.value)
+// mapping matches, rather than only a snapshot of it. A frame with only a hand or only a face
+// applies too: a close-up of one hand still curls the rig's fingers.
+watch(detectedFrame, (detected) => {
+  if (detected && hasCameraPoseContent(detected)) emit('apply', detected)
 })
 
 /** An uploaded photo or video is the whole reason to look at this panel right then, so its
@@ -289,19 +291,27 @@ onUnmounted(() => {
       {{ error }}
     </p>
     <p
-      v-else-if="mode === 'camera' && camera.isActive.value && !worldLandmarks"
+      v-else-if="mode === 'camera' && camera.isActive.value && !hasDetection"
       class="camera-pose-capture__status"
     >
       No person detected yet. Step into frame.
     </p>
     <p
-      v-else-if="mode === 'video' && uploadedVideo.isActive.value && !worldLandmarks"
+      v-else-if="
+        mode === 'video' && uploadedVideo.isActive.value && !uploadedVideo.isDetecting.value
+      "
+      class="camera-pose-capture__status"
+    >
+      Detection paused. Play the video to keep posing the model.
+    </p>
+    <p
+      v-else-if="mode === 'video' && uploadedVideo.isActive.value && !hasDetection"
       class="camera-pose-capture__status"
     >
       No person detected in this video.
     </p>
     <p
-      v-else-if="mode === 'photo' && photo.photoImage.value && !worldLandmarks"
+      v-else-if="mode === 'photo' && photo.photoImage.value && !hasDetection"
       class="camera-pose-capture__status"
     >
       No person detected in this photo.

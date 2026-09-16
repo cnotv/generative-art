@@ -25,7 +25,8 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/useRigKeyframeIO.ts`: every way keyframes enter or leave the
   tool: GLB/JSON export, JSON import, loading a bundled preset, autosave restore and reset
 - `src/views/Tools/RigAnimator/rigModel.ts` (+ `.test.ts`): loading a model file, generating an
-  auto-rig, and ordering the Bone dropdown's display
+  auto-rig, adopting the bones that actually carry the hierarchy, and ordering the Bone
+  dropdown's display
 - `src/views/Tools/RigAnimator/boneMarkers.ts`: the clickable, hierarchy-scaled per-bone markers
 - `src/views/Tools/RigAnimator/boneDragPlane.ts`: the camera-facing plane a drag reads the
   pointer against, so posing never jumps with a world axis
@@ -58,25 +59,33 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/panelSchema.ts`: the Config panel schema (upload, auto-rig,
   bone selection and pose fields), rebuilt whenever the bone list or the auto-rig availability
   changes
-- `src/views/Tools/RigAnimator/cameraPoseMapping.ts`: pure mapping from detected camera
-  landmarks to world-space bone targets, anchored and scaled to the loaded rig, plus the
-  exponential-moving-average landmark smoothing the live camera feed uses
-- `src/views/Tools/RigAnimator/cameraHandPoseMapping.ts` (+ `.test.ts`): pure mapping from
-  detected hand landmarks to per-finger joint curl, and MediaPipe's handedness label to the
-  rig's actual left/right
-- `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs MediaPipe's Pose and Hand
-  Landmarkers against a playing `<video>` element in a `requestAnimationFrame` loop, shared by
-  the live webcam feed and an uploaded video file
+- `src/views/Tools/RigAnimator/cameraPoseMapping.ts` (+ `.test.ts`): body landmark helpers:
+  BlazePose's landmark indices, mirroring, the camera yaw estimate, and the time-based One Euro
+  filter the live feed smooths every landmark with
+- `src/views/Tools/RigAnimator/cameraHandPoseMapping.ts` (+ `.test.ts`): hand landmark helpers:
+  mirroring a detected hand onto the other side, and MediaPipe's handedness label to a side
+- `src/views/Tools/RigAnimator/cameraPoseFrame.ts` (+ `.test.ts`): one detected frame of body,
+  hands and head together: mirroring and smoothing it as a whole, the face matrix read into a
+  head rotation, and the crop geometry the face and hand detectors run on
+- `src/views/Tools/RigAnimator/cameraPoseDetection.ts`: loading the pose, hand and face
+  detectors, and running the hand and face ones on crops around the detected body
+- `src/views/Tools/RigAnimator/cameraPoseRetarget.ts` (+ `.test.ts`): turning every bone of the
+  rig to match a detected frame, see **How a detected pose drives the rig** below
+- `src/views/Tools/RigAnimator/fixtures/`: the default character's real skeleton and nine
+  frames MediaPipe detected from a dance clip, which the retargeting tests run against
+- `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs the detectors against a
+  playing `<video>` element in a `requestAnimationFrame` loop, shared by the live webcam feed
+  and an uploaded video file
 - `src/views/Tools/RigAnimator/useCameraPoseCapture.ts`: the webcam stream for the capture
   dialog's overlay, wiring `useVideoLandmarkDetection` against it
 - `src/views/Tools/RigAnimator/useVideoPoseCapture.ts`: an uploaded video file played through
   once, wiring `useVideoLandmarkDetection` against it the same way the webcam stream does
 - `src/views/Tools/RigAnimator/useVideoTimelineSync.ts`: keeps the rig timeline's frame and an
   uploaded video's playback position in sync while the **Sync timeline to video** toggle is on
-- `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body and hand pose from a
+- `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body, hands and head from a
   single uploaded photo instead of a continuous feed
-- `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check
-  and applying a detected pose onto the rig
+- `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check,
+  the rig's rest pose measured when it is adopted, and applying a detected frame onto the rig
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
 - `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting one keyframe's
@@ -303,22 +312,21 @@ Mixamo export.
 
 ### Fingers from the camera
 
-Camera capture and Upload Photo also run MediaPipe's Hand Landmarker alongside the Pose
-Landmarker, reading real per-finger curl instead of only offering these canned presets. For each
-hand it detects, it measures the bend at every joint the same way a preset's angle already
-means, zero for straight and growing as the joint curls, and applies it through the exact same
-`applyHandPose` a preset uses, so it fits a model's fingers no differently than picking Fist
-would. This rides along on the same live application the body mapping already does: no separate
-button, no separate confidence gate, since a hand simply not being detected in frame just leaves
-whatever the fingers were doing untouched.
+Camera capture and Upload Photo/Video also run MediaPipe's Hand Landmarker alongside the Pose
+Landmarker, so the fingers follow the real hand instead of only these canned presets. Every
+finger joint turns to point where the detected one points, which carries curl, spread and the
+thumb's reach across the palm alike, and the hand itself turns to the detected palm. This rides
+along on the same live application the body does, with no separate button.
 
-MediaPipe's own handedness label, and its own left/right landmark indices, are read straight
-through with no swap: an earlier version swapped the Hand Landmarker's label specifically,
-reasoning from MediaPipe's documented caveat that it assumes a mirrored ("selfie") input; a
-real camera session immediately surfaced that as wrong, an arm and its own hand visibly moving
-as if they belonged to each other. The body Pose Landmarker's own left/right needs no swap
-either, confirmed separately against a real photo. What the live camera path does instead, for
-both detectors together, is described below.
+A hand the Hand Landmarker finds on the whole frame takes priority over anything the body
+detector suggests about it. Its side comes from the body's nearer visible wrist, since on a
+full-body clip the detector's own left/right label disagreed with the nearest wrist about half
+the time; with no wrist in view, a close-up of just a hand, the label decides, read straight
+through with no swap. Only a side the whole frame missed is looked for again, in a crop around
+that side's own wrist, because the Hand Landmarker is trained on close-ups and misses a hand that
+is small in a wide shot. A frame showing a hand but no body curls only that hand's fingers and
+leaves the rest of the rig exactly as it was, rather than snapping a body the camera is simply
+not showing back to rest.
 
 ## Auto-rig for a model with no skeleton
 
@@ -334,13 +342,14 @@ out whether the fit works for that particular mesh.
 
 ## Capturing a pose from the camera
 
-Once the rig has every bone the mapping needs (`mixamorigLeftShoulder`,
-`mixamorigRightShoulder`, and a `mixamorigLeftHand`/`RightHand`/`LeftFoot`/`RightFoot`/`Head` to
-drive), **Capture Pose from Camera**, docked on the canvas next to Upload Model, opens a compact
-panel docked at the top right of the screen: the 3D view stays fully visible and interactive
-beside it, so you can watch the rig mirror you live instead of only seeing a preview of the
-camera feed. Its controls are icons: an X at the top closes it, and the action row under the
-feed holds upload, camera, sync and record. The panel shows a mirrored webcam feed with a live skeleton overlay from
+Once the rig has every bone the mapping cannot do without (`mixamorigHips` and both arms and
+forearms; the spine, neck, head, legs, fingers and toes are driven whenever the rig has them),
+**Capture Pose from Camera**, docked on the canvas next to Upload Model, opens a compact panel
+docked at the top right of the screen: the 3D view stays fully visible and interactive beside
+it, so you can watch the rig mirror you live instead of only seeing a preview of the camera
+feed. Its controls are icons: an X at the top closes it, and the action row under the feed holds
+upload, camera, sync and record. The panel shows a mirrored webcam feed with a live skeleton
+overlay from
 MediaPipe's Pose Landmarker. The overlay only draws a landmark MediaPipe is actually confident
 about: one it isn't, typically a body part out of frame, still gets a guessed position
 internally, and drawing that would show a confident-looking line to something that isn't really
@@ -405,7 +414,10 @@ continuously the same way a webcam does — Record Motion works against it exact
 against the camera, and starts automatically: uploading a video begins a take as soon as
 playback starts, and the take ends on its own once the video reaches its natural end, the same
 as a manual **Stop Recording** click would. It plays once rather than looping specifically so
-that end has something to trigger on. Either kind stays available once something is already
+that end has something to trigger on. Detection only runs while the video actually plays:
+pausing it stops posing the model and stops a take sampling the same frozen frame, and the
+status line says detection is paused until playback resumes. The camera is always live, and a
+photo is read once. Either kind stays available once something is already
 loaded, so picking a different file never needs switching back to the camera first, and **Use
 Camera**, a camera icon that joins the action row once an upload is showing, switches back from
 either. A photo or video is shown as it is, not mirrored, since
@@ -432,87 +444,71 @@ viewing camera the same way the subject faces their webcam moves the subject's r
 on whichever screen side an actual mirror would show as the subject's left, unless the pose
 itself is reflected the same way the preview already is: `mirrorCameraLandmarks` negates every
 landmark's x and swaps each left/right pair (shoulders, wrists, hips, ankles, and so on) right
-where MediaPipe's landmarks are first read, before any of the mapping above ever sees them, and
-`mirrorCameraHandPoses` does the equivalent swap for which side a detected hand's finger curl
-lands on. Everything downstream, the bone mapping and the camera-angle-matching yaw estimate
-alike, needed no changes of its own: both simply read whichever pose they are handed, and a
-pre-mirrored one comes out correctly mirrored on its own. A photo or an uploaded video gets
-neither of these, since its own preview is not mirrored either.
+where MediaPipe's landmarks are first read, before any of the mapping below ever sees them.
+`mirrorCameraPoseFrame` mirrors the hands and the head's rotation in the same step, so all three
+agree on which side is which. Everything downstream, the retargeting and the
+camera-angle-matching yaw estimate alike, simply reads whichever frame it is handed, and a
+pre-mirrored one comes out correctly mirrored on its own. A photo or an uploaded video is not
+mirrored, since its own preview is not mirrored either.
 
-The mapping reads the detector's 3D world landmarks for the wrist, ankle and nose, anchors them
-to the rig's own shoulder center, and scales them by the ratio between the rig's shoulder width
-and the detected person's, so the same pose maps sensibly regardless of the model's scale.
-Anchoring to the shoulders rather than the hips matters in practice: a webcam framed for arms
-and head, the normal way to use this feature, usually leaves the hips out of frame, where
-MediaPipe still reports a low-confidence guessed position for them rather than nothing, and
-anchoring to that guess used to throw the whole mapping off. Each mapped bone then reaches for
-its target through the exact same drag-to-chain IK solve a mouse drag on that bone already uses
-(see "Dragging never stretches a segment" above): no separate rotation math for camera input,
-just a different source of target positions. A body part out of frame, or below the detector's
-own confidence threshold, leaves its bone untouched rather than snapping it to the origin.
+### How a detected pose drives the rig
 
-Feet and knees scale off the rig's own hip width instead of its shoulder width, anchored to the
-hip center rather than the shoulder center, whenever the photo shows the hips confidently: a
-rig's leg length does not reliably track its shoulder width the way a real human's roughly
-does. A real seated photo surfaced this directly on a stylized character whose own legs, rest
-to rest, measured four times its shoulder width, a ratio well past a real body's: scaling the
-detected ankle reach off the shoulders left the target barely a third of the leg's own length,
-forcing the knee to fold into an unnatural crouch just to take up the slack neither end of the
-chain actually had. This falls back to the shoulder anchor and scale when the hips aren't
-confidently detected, same as before.
+The rig never has a joint placed at a detected position. Every bone is turned instead, by how far
+the matching part of the performer has turned from the rig's own rest pose, measured once when
+the rig is loaded. That is what lets any rig copy a performer whatever its proportions: a T-pose
+stretches fully straight and a reach overhead points straight up, where scaling a wrist position
+to the rig's shoulder width used to leave a longer-armed character's elbows bent. The reasoning,
+the libraries and papers it draws on, and what the attached dance clip showed are in
+[Copying a Performer onto a Rig](/docs/journey/camera-motion-retargeting).
+
+![Nine moments of a dance clip beside the default character posed from it: walking, an arm raised overhead, a turn, arms stretched out, a high kick and a profile](/img/animation/rig-camera-dance-retarget.webp)
+
+- **Torso.** The hips turn to face square to the detected hip line and the chest to the shoulder
+  line, so turning around turns the whole rig. A lean is shared out: the pelvis takes part of it
+  and the spine bones split the rest evenly, so a back bends rather than hinging at the hips.
+  With the hips out of frame, a webcam framed on the upper body, the pelvis stays put and the
+  chest turns about the vertical alone.
+- **Head.** When the Face Landmarker finds the face, its reading turns the head directly and the
+  neck takes half the turn. Otherwise the ears and nose do, tipped back up by the 19° a level
+  gaze reads downward from them. With a body in view the face is looked for in a crop around the
+  nose, since on a full-body clip it was never found in the whole frame and was found in most
+  frames of the crop. A face filmed on its own, with no body, turns only the neck and head.
+- **Arms and legs.** Each upper arm points at the elbow, forearm at the wrist, thigh at the knee,
+  shin at the ankle and foot at the toes. How each one is rolled about its own length comes from
+  what shows it: which way the forearm swings off the upper arm, which way the kneecap and foot
+  point, and the palm for the forearm and hand. A segment whose landmarks drop out of view is
+  skipped on its own, so a wrist behind the body still leaves the upper arm following. A
+  landmark the pose detector places outside the image counts as out of view however confident
+  it claims to be: it is a guess, so legs below a webcam framed on the upper body keep their rest
+  pose instead of following it.
+- **Hands.** See **Fingers from the camera** above.
+
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
-Merge Target diagram currently has active — see **Merging sources by body part** below. With
-every region active, the default, that is the whole rig: a bone the mapping does
-not drive this frame never keeps a stale pose left over from an earlier manual edit or a
-previous capture.
+Merge Target diagram currently has active; see **Merging sources by body part** below. With
+every region active, the default, that is the whole rig: a bone the mapping does not drive this
+frame never keeps a stale pose left over from an earlier manual edit or a previous capture.
 
-The head applies before the hands specifically, even though both are just entries in the same
-mapping table: the head's own IK chain root is the upper spine, an ancestor of both arms, so
-aiming the head bends the spine the arms hang off. Applying it after the hands would drag an
-already-placed hand out of position along with that bend.
+A model with more than one skinned mesh, such as Mixamo's Y Bot, loads with one mesh's skeleton
+hung at zero offset beneath the other's bones of the same name. The tool adopts the topmost bone
+of each such pair, the one carrying the real hierarchy: posing a lower copy turned only the
+vertices bound to it, and the model came apart at every joint.
 
-Spine bend is not driven by the camera: the Pose Landmarker has no per-vertebra landmarks to
-drive a convincing torso curve, so this only drives the limbs and the head. Fingers are, through
-a second detector alongside it, covered in "Fingers from the camera" above.
+![Mixamo's Y Bot posed from the same clip, an arm raised overhead and a high kick, every limb attached](/img/animation/rig-camera-ybot-retarget.webp)
 
 ### Extra details to try
 
 Checkboxes and sliders in the Config panel, shown once the rig has every bone the base mapping
 needs, control more of what MediaPipe actually detects and how the result is tuned:
 
-- **Bend Elbows to Photo** and **Bend Knees to Photo**, on by default, feed the detected elbow
-  and knee landmarks in as the two-bone IK solve's pole hint, the same re-aim a manual drag on
-  that mid joint already does (see "Re-aiming the bend without moving the hand" above). Without
-  these, a limb's bend direction just keeps whatever its rest pose had, since the base mapping
-  only ever drives the hand or foot as the chain's end target: for anything but a rough T-pose,
-  the two-bone solve then has to reach the target by rotating almost entirely at the elbow or
-  knee while the upper arm or thigh barely moves at all, since that is the only bend direction it
-  has to work with. A seated photo is the clearest case: the solve was pulling nearly its whole
-  bend into the forearm and shin, which stayed pointed straight down from the shoulder or hip
-  like a standing pose, folding the limb into an unnatural zigzag rather than the shoulder/hip
-  and elbow/knee sharing the bend the way a real arm or leg actually does. Turning them off goes
-  back to that behaviour, closest to the original mapping.
-- **Bend Neck to Photo**, on by default, feeds the detected ear midpoint in as the head chain's
-  own pole hint, the same idea as the elbow and knee options above. MediaPipe has no landmark
-  for the neck itself the way it does for an elbow or knee, so the ear midpoint stands in as the
-  closest available proxy for which way the head should lean; without it the neck bends however
-  the two-bone solve happens to pick, which read as the head tending to point down with an
-  implausible fold at the neck.
-- **Move Hips to Photo**, off by default, moves the rig's root to the detected hip midpoint
-  instead of leaving it at rest, so a lean or a step reads in the root position too, not only the
-  limbs. Left off by default since it did not measurably improve the seated case above on its
-  own, and moving the whole root is a bigger, more visible change than re-aiming a limb's bend.
-  Unlike every other mapped bone, the root is never snapped back to rest on a frame with no hip
-  target of its own — a webcam framed for arms and head routinely loses the hips out of the
-  bottom of the frame for a stretch of frames at a time, and resetting the whole rig to the
-  origin on each of those read as the model twitching back to rest rather than simply not moving
-  that frame. It holds wherever it was last driven to instead, until a fresh hip detection moves
-  it again.
-- **Use Depth (Z Axis)**, on by default, is the original behaviour: a landmark's estimated depth
-  scales into the target the same as its x and y. A single photo gives MediaPipe far less to
-  judge depth from than two eyes or a video's own motion parallax do, making z the least
-  reliable of the three axes it reports; turning this off projects every target onto the
-  shoulder anchor's own depth plane instead of trusting a noisy estimate.
+- **Keep Feet on Ground**, on by default, raises or lowers the whole rig so its lowest foot stays
+  where it stands at rest. World landmarks are centred on the hips, so nothing in them says how
+  high the body is: without this a crouch folds the legs up off the floor instead of bringing the
+  hips down. Recorded keyframes store rotations only, so a recorded take plays the crouch back
+  without the lowered hips.
+- **Use Depth (Z Axis)**, on by default, reads every direction in three dimensions. A single photo
+  gives MediaPipe far less to judge depth from than a video's own motion does, making z the least
+  reliable of the three axes it reports; turning this off reads every body direction flattened
+  onto the image plane instead.
 - **Match Camera Angle to Photo**, off by default, turns the 3D view's own camera to roughly the
   angle the photo shows the subject from, so a turned pose reads as turned in the viewport too
   instead of always being viewed square-on. This is the one camera-relative detail a single
@@ -523,15 +519,6 @@ needs, control more of what MediaPipe actually detects and how the result is tun
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Reach Multiplier**, 1 by default, scales every mapped target's distance from its anchor by
-  this factor on top of the rig's own proportions, above 1 reaching further than the computed
-  scale predicts and below 1 reaching less far. Even with the right bone anchored to the right
-  landmark, a rig can still systematically under- or over-reach in a way neither the shoulder nor
-  the hip anchor accounts for, most often the head: a stylized character's head and neck length
-  relative to its own shoulder width does not have to match a real person's, so the same detected
-  nose landmark can pull the neck into a bend that reads as the head always pointing down,
-  independent of whatever the photo actually shows. This slider is the manual escape hatch for
-  that, tuned by eye per rig rather than solved by a fixed formula.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
@@ -541,24 +528,20 @@ needs, control more of what MediaPipe actually detects and how the result is tun
 ### Smoothing the live feed
 
 A live camera detection runs roughly every frame, and MediaPipe's own per-frame landmark noise,
-most visible on depth, reads as jitter if applied to the rig straight. Each frame is blended
-against the previous one, an exponential moving average per landmark, before it drives anything;
-a photo is a single detection with nothing to blend against, so this only affects the live
-camera feed. It costs a small amount of lag for a visibly steadier pose. **Smoothing (Live
-Feed)** in the Config panel tunes how much: lower blends in less of each new frame, reading
-smoother but laggier. The same blend, and the same slider, also applies to each detected hand's
-finger landmarks, tracked separately per hand side rather than by MediaPipe's own per-frame
-array order (a hand entering or leaving the frame can shift which index the other hand reports
-at, and blending against the wrong hand's last position would read as a jump): a hand's own
-per-joint curl angle is a small difference between two nearby points, so the same raw per-frame
-noise a body landmark shrugs off reads as visible finger twitching once it is small enough to
-change a joint's read angle.
+most visible on depth, reads as jiggle if applied to the rig straight. Every landmark, body and
+hands alike, and the head's rotation pass through a One Euro filter before they drive anything:
+a smoothing whose strength follows how fast each landmark moves. Held still, where jiggle shows
+most, a landmark is smoothed over the full **Smoothing in ms (Live Feed)** set in the Config
+panel, 150 by default; moving fast, where lag shows most, it is let through close to as detected.
+A fixed blend per frame could only trade one for the other. The filter also works from the time
+between readings rather than per frame, so the same setting feels the same whether detection
+manages fifteen readings a second or sixty. 0 turns smoothing off. A photo is a single detection
+with nothing to smooth against, so this only affects the camera and an uploaded video.
 
-Blending alone still lets one badly misdetected frame through, just scaled down by the smoothing
-factor rather than applied whole, which can still read as a sudden snap. **Max Jump (Live
-Feed)** clamps how far a landmark may move, past the blend, in a single frame: past that
+Smoothing still lets one badly misdetected frame through in part, which can read as a sudden
+snap. **Max Jump (Live Feed)** clamps how far a landmark may move in a single reading: past that
 distance the excess is pulled back rather than applied, so a genuine fast movement still gets
-there, just over a couple of extra frames instead of one. Same slider for the body and every
+there, just over a couple of extra readings instead of one. Same slider for the body and every
 detected hand.
 
 ### Frame shortcuts

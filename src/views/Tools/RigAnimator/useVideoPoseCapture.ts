@@ -1,5 +1,5 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
-import { CAMERA_LANDMARK_SMOOTHING_FACTOR, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
+import { CAMERA_SMOOTHING_MILLISECONDS, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
 
 /**
@@ -7,13 +7,13 @@ import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
  * `useCameraPoseCapture`, playing the file at its own rate and running the same live detection
  * via `useVideoLandmarkDetection` against it instead of a webcam stream — useful for testing
  * against a known performance, or when there is no working camera.
- * @param smoothingFactor Fraction of each new frame blended in, read fresh every frame the same
- *   way `useCameraPoseCapture`'s own does
+ * @param smoothingMilliseconds How long a landmark held still takes to settle, read fresh every
+ *   frame the same way `useCameraPoseCapture`'s own is
  * @param maxJump The furthest a landmark may move from its previous position in one frame, read
- *   fresh every frame the same way `smoothingFactor` is
+ *   fresh every frame the same way `smoothingMilliseconds` is
  */
 export const useVideoPoseCapture = (
-  smoothingFactor: Ref<number> = ref(CAMERA_LANDMARK_SMOOTHING_FACTOR),
+  smoothingMilliseconds: Ref<number> = ref(CAMERA_SMOOTHING_MILLISECONDS),
   maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS)
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
@@ -26,7 +26,7 @@ export const useVideoPoseCapture = (
   // `useCameraPhotoPose` already applies to an uploaded photo.
   const detection = useVideoLandmarkDetection({
     videoElement,
-    smoothingFactor,
+    smoothingMilliseconds,
     maxJump,
     mirror: false
   })
