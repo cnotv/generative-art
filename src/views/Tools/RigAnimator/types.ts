@@ -61,14 +61,6 @@ export interface RigAnimatorConfig {
   enclosureOpacity: number
 }
 
-/** One BlazePose landmark: metres in world mode, normalized [0,1] in image mode either way. */
-export interface CameraLandmark {
-  x: number
-  y: number
-  z: number
-  visibility: number
-}
-
 /**
  * One hand landmark from MediaPipe's Hand Landmarker. Unlike a body pose landmark, a hand
  * landmark carries no per-point visibility score; the model scores the whole hand instead.
@@ -77,6 +69,13 @@ export interface CameraHandLandmark {
   x: number
   y: number
   z: number
+  /** How fast it was moving, once the live feed's smoothing has read it. */
+  velocity?: CameraLandmarkVelocity
+}
+
+/** One BlazePose landmark: metres in world mode, normalized [0,1] in image mode either way. */
+export interface CameraLandmark extends CameraHandLandmark {
+  visibility: number
 }
 
 /**
@@ -90,6 +89,8 @@ export interface CameraPoseFrame {
   handLandmarks: Partial<Record<HandSide, CameraHandLandmark[]>>
   /** The head's rotation read from the Face Landmarker, in scene axes, or null. */
   headRotation: QuaternionData | null
+  /** When the live feed read it, once smoothed; the next reading measures its elapsed time from here. */
+  timestampMilliseconds?: number
 }
 
 /** How fast a landmark was last moving, in its own units per second. */
@@ -97,12 +98,6 @@ export interface CameraLandmarkVelocity {
   x: number
   y: number
   z: number
-}
-
-/** Filtered landmarks and the velocity each was last moving at, carried between readings. */
-export interface FilteredCameraLandmarks<T> {
-  landmarks: T[]
-  velocities: CameraLandmarkVelocity[]
 }
 
 /** The live feed's smoothing, tuned from the Config panel. */
@@ -117,14 +112,6 @@ export interface CameraSmoothingSettings {
   turnResponse: number
   /** Cutoff, in hertz, for each landmark's speed estimate. */
   speedCutoffHertz: number
-}
-
-/** Everything the live feed's filter carries from one reading to the next. */
-export interface CameraPoseFilterState {
-  frame: CameraPoseFrame
-  bodyVelocities: CameraLandmarkVelocity[] | null
-  handVelocities: Partial<Record<HandSide, CameraLandmarkVelocity[]>>
-  timestampMilliseconds: number
 }
 
 /** The Config panel's switches for how a detected frame is applied to the rig. */

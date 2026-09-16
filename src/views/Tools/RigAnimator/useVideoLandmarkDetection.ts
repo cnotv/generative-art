@@ -10,7 +10,6 @@ import { mirrorCameraPoseFrame, smoothCameraPoseFrame } from './cameraPoseFrame'
 import type {
   CameraDetectionOptions,
   CameraLandmarkers,
-  CameraPoseFilterState,
   CameraPoseFrame,
   CameraSmoothingSettings
 } from './types'
@@ -42,7 +41,7 @@ export const useVideoLandmarkDetection = ({
 }: Dependencies) => {
   const previewLandmarks = shallowRef<NormalizedLandmark[] | null>(null)
   const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
-  /** The latest oriented, smoothed detection. */
+  /** The latest oriented, smoothed detection; the next reading is smoothed against it. */
   const frame = shallowRef<CameraPoseFrame | null>(null)
   /** Whether frames are being read right now: the source is playing, not paused or finished. */
   const isDetecting = ref(false)
@@ -50,8 +49,6 @@ export const useVideoLandmarkDetection = ({
 
   let landmarkers: CameraLandmarkers | null = null
   let animationFrame: number | null = null
-  /** What the smoothing filter carries into the next reading. */
-  let filterState: CameraPoseFilterState | null = null
 
   const detectFrame = (): void => {
     const video = videoElement.value
@@ -77,13 +74,12 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value =
       detection.previewHandLandmarks.length > 0 ? detection.previewHandLandmarks : null
     const orientedFrame = mirror() ? mirrorCameraPoseFrame(detection.frame) : detection.frame
-    filterState = smoothCameraPoseFrame(
-      filterState,
+    frame.value = smoothCameraPoseFrame(
+      frame.value,
       orientedFrame,
       timestamp,
       smoothingSettings.value
     )
-    frame.value = filterState.frame
   }
 
   /** Load the detectors and start the loop against whatever the video element is already
@@ -100,7 +96,6 @@ export const useVideoLandmarkDetection = ({
     animationFrame = null
     closeCameraLandmarkers(landmarkers)
     landmarkers = null
-    filterState = null
     isDetecting.value = false
     previewLandmarks.value = null
     previewHandLandmarks.value = null

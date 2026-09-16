@@ -69,13 +69,13 @@ describe('filterCameraLandmarks', () => {
 
   /** How much of a move from the origin to `movedTo` one reading lets through. */
   const shareLetThrough = (movedTo: number, velocityX: number, settings = SETTINGS): number => {
-    const { landmarks } = filterCameraLandmarks(
-      { landmarks: [landmark(0, 0, 0)], velocities: [{ ...STILL, x: velocityX }] },
+    const [filtered] = filterCameraLandmarks(
+      [{ ...landmark(0, 0, 0), velocity: { ...STILL, x: velocityX } }],
       [landmark(movedTo, 0, 0)],
       FRAME_SECONDS,
       settings
     )
-    return landmarks[0].x / movedTo
+    return filtered.x / movedTo
   }
 
   it('takes a first reading as-is, standing still', () => {
@@ -86,7 +86,20 @@ describe('filterCameraLandmarks', () => {
     const filtered = filterCameraLandmarks(null, next, FRAME_SECONDS, SETTINGS)
 
     // Assert
-    expect(filtered).toEqual({ landmarks: next, velocities: [STILL] })
+    expect(filtered).toEqual([{ ...next[0], velocity: STILL }])
+  })
+
+  it('carries the velocity it measured on each landmark into the next reading', () => {
+    // Arrange, Act
+    const [filtered] = filterCameraLandmarks(
+      [{ ...landmark(0, 0, 0), velocity: STILL }],
+      [landmark(0.1, 0, 0)],
+      FRAME_SECONDS,
+      SETTINGS
+    )
+
+    // Assert
+    expect(filtered.velocity?.x).toBeGreaterThan(0)
   })
 
   it('passes every reading straight through with smoothing off', () => {
@@ -130,28 +143,28 @@ describe('filterCameraLandmarks', () => {
 
   it('keeps the new reading’s visibility rather than blending it', () => {
     // Arrange, Act
-    const { landmarks } = filterCameraLandmarks(
-      { landmarks: [landmark(0, 0, 0, 1)], velocities: [STILL] },
+    const [filtered] = filterCameraLandmarks(
+      [landmark(0, 0, 0, 1)],
       [landmark(0.01, 0, 0, 0.2)],
       FRAME_SECONDS,
       SETTINGS
     )
 
     // Assert
-    expect(landmarks[0].visibility).toBe(0.2)
+    expect(filtered.visibility).toBe(0.2)
   })
 
   it('clamps a sudden jump past the max jump distance instead of applying it whole', () => {
     // Arrange, Act
-    const { landmarks } = filterCameraLandmarks(
-      { landmarks: [landmark(0, 0, 0)], velocities: [STILL] },
+    const [filtered] = filterCameraLandmarks(
+      [landmark(0, 0, 0)],
       [landmark(10, 0, 0)],
       FRAME_SECONDS,
       buildSmoothingSettings({ smoothingMilliseconds: 0, maxJump: 0.15 })
     )
 
     // Assert
-    expect(landmarks[0].x).toBeCloseTo(0.15)
+    expect(filtered.x).toBeCloseTo(0.15)
   })
 })
 

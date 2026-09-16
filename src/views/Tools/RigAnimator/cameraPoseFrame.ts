@@ -11,14 +11,9 @@ import { mirrorCameraHandLandmarks } from './cameraHandPoseMapping'
 import type {
   CameraCropSquare,
   CameraHandLandmark,
-  CameraLandmarkVelocity,
-  CameraPoseFilterState,
   CameraPoseFrame,
-  CameraSmoothingSettings,
-  FilteredCameraLandmarks
+  CameraSmoothingSettings
 } from './types'
-
-const RIG_SIDES: HandSide[] = ['Left', 'Right']
 
 interface ImagePoint {
   x: number
@@ -221,64 +216,43 @@ export const mirrorCameraPoseFrame = (frame: CameraPoseFrame): CameraPoseFrame =
 })
 
 /**
- * Filter every part of a new reading against the previous state, body and hands through
+ * Smooth every part of a new reading against the previous smoothed frame, body and hands through
  * `filterCameraLandmarks` and the head through `smoothHeadRotation`. A part missing from either
  * reading is taken as-is, so something reappearing after a dropout is not blended against a stale
  * position.
- * @param previous The state the previous reading left, or null for a first reading
+ * @param previous The previous smoothed frame, or null for a first reading
  * @param next This reading's detection
  * @param timestampMilliseconds When this reading was taken
- * @param settings The smoothing length and the jump limit
- * @returns The new state, whose `frame` is what to apply to the rig
+ * @param settings The Config panel's smoothing sliders
+ * @returns The smoothed frame, stamped with its time, to apply and to hand back in next time
  */
 export const smoothCameraPoseFrame = (
-  previous: CameraPoseFilterState | null,
+  previous: CameraPoseFrame | null,
   next: CameraPoseFrame,
   timestampMilliseconds: number,
   settings: CameraSmoothingSettings
-): CameraPoseFilterState => {
-  const elapsedSeconds = previous
-    ? (timestampMilliseconds - previous.timestampMilliseconds) / 1000
-    : 0
-  const filterPart = <T extends CameraHandLandmark>(
-    landmarks: T[],
-    previousLandmarks: T[] | null | undefined,
-    previousVelocities: CameraLandmarkVelocity[] | null | undefined
-  ): FilteredCameraLandmarks<T> =>
-    filterCameraLandmarks(
-      previousLandmarks && previousVelocities
-        ? { landmarks: previousLandmarks, velocities: previousVelocities }
-        : null,
-      landmarks,
-      elapsedSeconds,
-      settings
-    )
-  const body = next.bodyLandmarks
-    ? filterPart(next.bodyLandmarks, previous?.frame.bodyLandmarks, previous?.bodyVelocities)
-    : null
-  const hands = RIG_SIDES.flatMap(
-    (side): [HandSide, FilteredCameraLandmarks<CameraHandLandmark>][] => {
-      const landmarks = next.handLandmarks[side]
-      if (!landmarks) return []
-      const previousHand = previous?.frame.handLandmarks[side]
-      return [[side, filterPart(landmarks, previousHand, previous?.handVelocities[side])]]
-    }
-  )
+): CameraPoseFrame => {
+  const elapsedSeconds =
+    previous?.timestampMilliseconds === undefined
+      ? 0
+      : (timestampMilliseconds - previous.timestampMilliseconds) / 1000
+  const smooth = <T extends CameraHandLandmark>(last: T[] | null | undefined, landmarks: T[]) =>
+    filterCameraLandmarks(last ?? null, landmarks, elapsedSeconds, settings)
+  const smoothHand = (side: HandSide) => {
+    const landmarks = next.handLandmarks[side]
+    return landmarks ? { [side]: smooth(previous?.handLandmarks[side], landmarks) } : {}
+  }
   return {
-    frame: {
-      bodyLandmarks: body?.landmarks ?? null,
-      handLandmarks: Object.fromEntries(hands.map(([side, hand]) => [side, hand.landmarks])),
-      headRotation: next.headRotation
-        ? smoothHeadRotation(
-            previous?.frame.headRotation ?? null,
-            next.headRotation,
-            elapsedSeconds,
-            settings
-          )
-        : null
-    },
-    bodyVelocities: body?.velocities ?? null,
-    handVelocities: Object.fromEntries(hands.map(([side, hand]) => [side, hand.velocities])),
+    bodyLandmarks: next.bodyLandmarks && smooth(previous?.bodyLandmarks, next.bodyLandmarks),
+    handLandmarks: { ...smoothHand('Left'), ...smoothHand('Right') },
+    headRotation:
+      next.headRotation &&
+      smoothHeadRotation(
+        previous?.headRotation ?? null,
+        next.headRotation,
+        elapsedSeconds,
+        settings
+      ),
     timestampMilliseconds
   }
 }

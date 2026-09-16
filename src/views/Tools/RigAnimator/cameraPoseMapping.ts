@@ -1,9 +1,9 @@
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './config'
 import type {
+  CameraHandLandmark,
   CameraLandmark,
   CameraLandmarkVelocity,
-  CameraSmoothingSettings,
-  FilteredCameraLandmarks
+  CameraSmoothingSettings
 } from './types'
 
 /** The minimal shape `clampLandmarkJump` needs: any landmark-like point. */
@@ -74,26 +74,25 @@ const AXES = ['x', 'y', 'z'] as const
  * cannot do both: enough of it to still the jiggle leaves a fast arm swing trailing visibly behind.
  * The jump clamp still catches a single wild misdetection on top. Every field besides position,
  * visibility say, comes from the new reading, so a landmark leaving view is not held half-visible.
- * @param previous The previous filtered landmarks and velocities, or null for a first reading
+ * @param previous The previous filtered landmarks, carrying their velocities, or null for a first
+ *   reading
  * @param next This reading's landmarks
  * @param elapsedSeconds Time since the previous reading
  * @param settings The smoothing length and the jump limit
- * @returns The filtered landmarks and velocities, to hand back in as `previous` next time
+ * @returns The filtered landmarks, each carrying its velocity, to hand back in as `previous`
  */
-export const filterCameraLandmarks = <T extends LandmarkPoint>(
-  previous: FilteredCameraLandmarks<T> | null,
+export const filterCameraLandmarks = <T extends CameraHandLandmark>(
+  previous: T[] | null,
   next: T[],
   elapsedSeconds: number,
   settings: CameraSmoothingSettings
-): FilteredCameraLandmarks<T> => {
+): T[] => {
   const minimumCutoffHertz = smoothingCutoffHertz(settings.smoothingMilliseconds)
   const velocityShare = lowPassBlendFactor(settings.speedCutoffHertz, elapsedSeconds)
-  const filtered = next.map((landmark, index) => {
-    const previousLandmark = previous?.landmarks[index]
-    const previousVelocity = previous?.velocities[index]
-    if (!previousLandmark || !previousVelocity || elapsedSeconds <= 0) {
-      return { landmark, velocity: STILL }
-    }
+  return next.map((landmark, index) => {
+    const previousLandmark = previous?.[index]
+    if (!previousLandmark || elapsedSeconds <= 0) return { ...landmark, velocity: STILL }
+    const previousVelocity = previousLandmark.velocity ?? STILL
     const [x, y, z] = AXES.map(
       (axis) =>
         previousVelocity[axis] +
@@ -107,14 +106,10 @@ export const filterCameraLandmarks = <T extends LandmarkPoint>(
     )
     const blended = { ...landmark, x: blendedX, y: blendedY, z: blendedZ }
     return {
-      landmark: clampLandmarkJump(previousLandmark, blended, settings.maxJump),
+      ...clampLandmarkJump(previousLandmark, blended, settings.maxJump),
       velocity: { x, y, z }
     }
   })
-  return {
-    landmarks: filtered.map(({ landmark }) => landmark),
-    velocities: filtered.map(({ velocity }) => velocity)
-  }
 }
 
 /**

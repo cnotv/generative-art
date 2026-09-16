@@ -289,11 +289,12 @@ describe('smoothCameraPoseFrame', () => {
     const smoothed = smoothCameraPoseFrame(previous, next, 1033, SETTINGS)
 
     // Assert
-    const shoulderX = smoothed.frame.bodyLandmarks?.[11].x ?? 0
+    const shoulderX = smoothed.bodyLandmarks?.[11].x ?? 0
     expect(shoulderX).toBeGreaterThan(0.18)
     expect(shoulderX).toBeLessThan(0.28)
-    expect(smoothed.frame.handLandmarks.Right).toEqual(rightHand)
-    expect(smoothed.handVelocities.Right).toHaveLength(21)
+    expect(smoothed.handLandmarks.Right).toEqual(
+      rightHand.map((landmark) => ({ ...landmark, velocity: { x: 0, y: 0, z: 0 } }))
+    )
     expect(smoothed.timestampMilliseconds).toBe(1033)
   })
 
@@ -305,7 +306,6 @@ describe('smoothCameraPoseFrame', () => {
     const smoothed = smoothCameraPoseFrame(previous, EMPTY_FRAME, 1033, SETTINGS)
 
     // Assert
-    expect(smoothed.frame.bodyLandmarks).toBeNull()
-    expect(smoothed.bodyVelocities).toBeNull()
+    expect(smoothed.bodyLandmarks).toBeNull()
   })
 })
