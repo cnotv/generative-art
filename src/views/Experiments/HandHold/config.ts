@@ -90,7 +90,7 @@ export const BALL_SPAWN_X = 0
 export const BALL_SPAWN_Y = 1.4
 /** Shrinking, fading ghost spheres trailing the ball, so its motion reads clearly even though
  * it is a single small object against a plain background. */
-export const BALL_TRAIL_LENGTH = 6
+export const BALL_TRAIL_LENGTH = 9
 /** How long the ball travels between two trail samples. Sampling every render frame packs
  * every ghost inside the ball's own radius during a slow fall, since gravity alone barely
  * moves it frame to frame; spacing samples out in time instead keeps the trail visibly spread

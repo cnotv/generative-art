@@ -305,15 +305,21 @@ onUnmounted(() => {
     <video ref="video" class="hand-hold__video" autoplay playsinline muted></video>
     <canvas ref="canvas" class="hand-hold__canvas"></canvas>
     <div ref="statsElement" class="hand-hold__stats"></div>
-    <p v-if="isActive" class="hand-hold__hint">
-      Make a fist to grab the bat. Swing to hit the ball.
-    </p>
-    <div v-if="!isActive" class="hand-hold__gate">
-      <Button :disabled="isLoadingModel" @click="startCamera">
-        {{ isLoadingModel ? 'Starting…' : 'Start camera' }}
-      </Button>
-      <p v-if="cameraError" class="hand-hold__error">{{ cameraError }}</p>
-    </div>
+    <Transition name="hand-hold-fade">
+      <p v-if="isActive" class="hand-hold__hint">
+        Make a fist to grab the bat. Swing to hit the ball.
+      </p>
+    </Transition>
+    <Transition name="hand-hold-fade">
+      <div v-if="!isActive" class="hand-hold__gate">
+        <div class="hand-hold__gate-card">
+          <Button :disabled="isLoadingModel" @click="startCamera">
+            {{ isLoadingModel ? 'Starting…' : 'Start camera' }}
+          </Button>
+          <p v-if="cameraError" class="hand-hold__error">{{ cameraError }}</p>
+        </div>
+      </div>
+    </Transition>
     <LoadingOverlay :visible="isLoadingModel" stage="Loading hand tracking…" />
   </div>
 </template>
@@ -362,6 +368,11 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-full);
+  background: var(--panel-overlay-bg);
+  backdrop-filter: blur(4px);
+  box-shadow: var(--shadow-md);
   color: var(--color-canvas-overlay-foreground);
   text-shadow: var(--shadow-text-canvas-overlay);
   font-size: var(--font-size-sm);
@@ -372,17 +383,36 @@ onUnmounted(() => {
   inset: 0;
   z-index: var(--z-overlay);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-3);
   background: rgb(0 0 0 / 70%);
   backdrop-filter: blur(4px);
+}
+
+.hand-hold__gate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8) var(--spacing-6);
+  border-radius: var(--radius-2xl);
+  background: var(--color-background);
+  box-shadow: var(--shadow-lg);
 }
 
 .hand-hold__error {
   margin: 0;
   color: var(--color-destructive);
   font-size: var(--font-size-sm);
+}
+
+.hand-hold-fade-enter-active,
+.hand-hold-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.hand-hold-fade-enter-from,
+.hand-hold-fade-leave-to {
+  opacity: 0;
 }
 </style>

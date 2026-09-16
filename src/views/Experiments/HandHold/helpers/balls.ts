@@ -46,13 +46,17 @@ export const createBallField = (
   const trailPositions = Array.from({ length: bounds.trailLength }, () => new THREE.Vector3())
   const trailGhosts = trailPositions.map((_, index) => {
     const age = (index + 1) / bounds.trailLength
+    // An eased falloff (rather than a straight linear one) keeps the near end of the trail
+    // fuller for longer and tapers the tail off gently, reading as a soft glow rather than a
+    // row of evenly dimming balls.
+    const eased = 1 - age ** 1.6
     const ghostMaterial = new THREE.MeshBasicMaterial({
       color: 0xf2c9c2,
       transparent: true,
-      opacity: 0.5 * (1 - age)
+      opacity: 0.45 * eased
     })
     const ghost = new THREE.Mesh(geometry, ghostMaterial)
-    ghost.scale.setScalar(1 - age * 0.6)
+    ghost.scale.setScalar(0.35 + 0.65 * eased)
     scene.add(ghost)
     return ghost
   })
