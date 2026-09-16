@@ -1,47 +1,64 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
-import { CAMERA_LANDMARK_SMOOTHING_FACTOR, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
+import type { CameraDetectionOptions, CameraSmoothingSettings } from './types'
 
 /**
  * Owns the webcam stream for the camera pose capture dialog: starting/stopping the camera and
  * running live detection for the on-screen skeleton overlay via `useVideoLandmarkDetection`,
- * exposing the latest detected body and finger poses for a caller to read.
- * @param smoothingFactor Fraction of each new frame blended in, read fresh every frame so a
- *   Config panel slider takes effect immediately rather than only on the next `start()`
- * @param maxJump The furthest a landmark may move from its previous position in one frame,
- *   read fresh every frame the same way `smoothingFactor` is
+ * exposing the latest detected body, hands and head for a caller to read.
+ * @param smoothingSettings The Config panel's smoothing sliders, read fresh every frame so a
+ *   change takes effect immediately rather than only on the next `start()`
+ * @param detectionOptions The Config panel's detection switches, read fresh every frame
  */
 export const useCameraPoseCapture = (
-  smoothingFactor: Ref<number> = ref(CAMERA_LANDMARK_SMOOTHING_FACTOR),
-  maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS)
+  smoothingSettings: Ref<CameraSmoothingSettings>,
+  detectionOptions: Ref<CameraDetectionOptions>
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   let stream: MediaStream | null = null
+  /**
+   * Bumped by every `stop`, so a `start` still waiting on the camera permission prompt or the
+   * detectors can tell it was cancelled meanwhile, typically by a video uploaded into the same
+   * `<video>` element, and must not take that element over once it resumes.
+   */
+  let startAttempt = 0
 
   // A live webcam feed reads as a mirror, matching how the subject sees themselves.
   const detection = useVideoLandmarkDetection({
     videoElement,
-    smoothingFactor,
-    maxJump,
-    mirror: true
+    smoothingSettings,
+    detectionOptions,
+    mirror: () => detectionOptions.value.mirrorLiveCamera
   })
 
-  /** Request the camera and load the pose model, then start live detection. */
+  /** Request the camera and load the detectors, then start live detection. */
   const start = async (): Promise<void> => {
     if (isActive.value || isLoading.value) return
+    startAttempt += 1
+    const attempt = startAttempt
     isLoading.value = true
     error.value = null
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const requestedStream = await navigator.mediaDevices.getUserMedia({ video: true })
+      if (attempt !== startAttempt) {
+        requestedStream.getTracks().forEach((track) => track.stop())
+        return
+      }
+      stream = requestedStream
       if (!videoElement.value) throw new Error('Camera preview is not ready')
       videoElement.value.srcObject = stream
       await videoElement.value.play()
       await detection.startDetectionLoop()
+      if (attempt !== startAttempt) {
+        detection.stopDetectionLoop()
+        return
+      }
       isActive.value = true
     } catch (caught) {
+      if (attempt !== startAttempt) return
       error.value = caught instanceof Error ? caught.message : 'Could not start the camera'
       stop()
     } finally {
@@ -49,12 +66,15 @@ export const useCameraPoseCapture = (
     }
   }
 
-  /** Release the camera and the pose model. Safe to call even if `start` never succeeded. */
+  /** Release the camera and the detectors. Safe to call even if `start` never succeeded. */
   const stop = (): void => {
+    startAttempt += 1
     detection.stopDetectionLoop()
     stream?.getTracks().forEach((track) => track.stop())
     stream = null
-    if (videoElement.value) videoElement.value.srcObject = null
+    // Assigning srcObject reloads the element even when it was already null, which rewinds and
+    // pauses an uploaded video playing in this same element: only clear a stream actually set.
+    if (videoElement.value?.srcObject) videoElement.value.srcObject = null
     isActive.value = false
   }
 

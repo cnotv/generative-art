@@ -1,5 +1,24 @@
 import { describe, it, expect } from 'vitest'
-import { isGltfModelUrl, sortBoneNamesForDisplay } from './rigModel'
+import * as THREE from 'three'
+import { isGltfModelUrl, resolveHierarchyBones, sortBoneNamesForDisplay } from './rigModel'
+
+describe('resolveHierarchyBones', () => {
+  it('swaps a copy hung beneath a same-named bone for the bone that carries the hierarchy', () => {
+    // Arrange: the Y Bot shape, a second skeleton's forearm at zero offset under the real one.
+    const arm = Object.assign(new THREE.Bone(), { name: 'mixamorigLeftArm' })
+    const forearm = Object.assign(new THREE.Bone(), { name: 'mixamorigLeftForeArm' })
+    const forearmCopy = Object.assign(new THREE.Bone(), { name: 'mixamorigLeftForeArm' })
+    arm.add(forearm)
+    forearm.add(forearmCopy)
+
+    // Act
+    const resolved = resolveHierarchyBones([arm, forearmCopy])
+
+    // Assert
+    expect(resolved).toEqual([arm, forearm])
+    expect(resolved[1]).toBe(forearm)
+  })
+})
 
 describe('isGltfModelUrl', () => {
   it.each([

@@ -186,6 +186,11 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   leaves the camera at the wider virtual frame's aspect once the offset clears, and the scene
   renders squashed until a window resize happens to fix it. Reset `aspect` from the canvas
   before clearing, as the Rig Animator's `centerCameraOnVisibleCanvas` does.
+- **Pose the topmost bone of a same-named pair.** A model with more than one skinned mesh, such as
+  Mixamo's Y Bot, can load one mesh's skeleton as zero-offset copies hung beneath the other's
+  bones, and `skeleton.bones` may hand back the copies. Rotating a copy moves only its own
+  vertices, so the model comes apart at every joint. Walk up while the parent shares the name
+  (`resolveHierarchyBones` in the Rig Animator).
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.

@@ -14,7 +14,13 @@ import {
   resetAllBonesToRest as resetAllBoneTransformsToRest,
   type BoneRestPose
 } from './boneDragTarget'
-import { loadModelFile, disposeModel, generateAutoRig, sortBoneNamesForDisplay } from './rigModel'
+import {
+  loadModelFile,
+  disposeModel,
+  generateAutoRig,
+  resolveHierarchyBones,
+  sortBoneNamesForDisplay
+} from './rigModel'
 import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
 import { useRigBoneMarkerVisibility } from './useRigBoneMarkerVisibility'
 import type { RigAnimatorConfig } from './types'
@@ -48,7 +54,7 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
 
   const attachRig = (nextSkinnedMesh: THREE.SkinnedMesh): void => {
     skinnedMesh.value = nextSkinnedMesh
-    bones.value = nextSkinnedMesh.skeleton.bones
+    bones.value = resolveHierarchyBones(nextSkinnedMesh.skeleton.bones)
     // Marker sizing reads world positions, so the bones' matrices must be current before the
     // very first render gets a chance to update them.
     model.value?.updateMatrixWorld(true)

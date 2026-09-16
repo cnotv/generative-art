@@ -2,8 +2,13 @@ import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import {
   POSITION_STEP_FRACTION,
   ROTATION_CONTROL,
-  CAMERA_SMOOTHING_FACTOR_RANGE,
-  CAMERA_REACH_MULTIPLIER_RANGE,
+  CAMERA_SMOOTHING_MILLISECONDS_RANGE,
+  CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE,
+  CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
+  CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
+  CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
+  CAMERA_VISIBILITY_THRESHOLD_RANGE,
+  CAMERA_TWIST_BEND_DEGREES_RANGE,
   CAMERA_MAX_JUMP_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
   ENCLOSURE_OPACITY_RANGE,
@@ -42,29 +47,101 @@ export const buildRigAnimatorSchema = (
     : {}),
   ...(canCaptureFromCamera
     ? {
-        cameraUseElbows: {
+        cameraGroundFeet: {
           checkbox: true,
-          label: 'Camera Pose: Bend Elbows to Photo',
+          label: 'Camera Pose: Keep Feet on Ground',
           sectionStart: true
         },
-        cameraUseKnees: { checkbox: true, label: 'Camera Pose: Bend Knees to Photo' },
-        cameraUseNeck: { checkbox: true, label: 'Camera Pose: Bend Neck to Photo' },
-        cameraUseHips: { checkbox: true, label: 'Camera Pose: Move Hips to Photo' },
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
         cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
-        cameraReachMultiplier: {
-          ...CAMERA_REACH_MULTIPLIER_RANGE,
-          label: 'Camera Pose: Reach Multiplier'
+        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
+        cameraSmoothingMilliseconds: {
+          ...CAMERA_SMOOTHING_MILLISECONDS_RANGE,
+          label: 'Camera Smoothing: Landmarks Held Still (ms)',
+          sectionStart: true
         },
-        cameraSmoothingFactor: {
-          ...CAMERA_SMOOTHING_FACTOR_RANGE,
-          label: 'Camera Pose: Smoothing (Live Feed)'
+        cameraSpeedResponse: {
+          ...CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE,
+          label: 'Camera Smoothing: Let Go on Fast Moves'
+        },
+        cameraSpeedCutoffHertz: {
+          ...CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
+          label: 'Camera Smoothing: Speed Sensitivity (Hz)'
+        },
+        cameraTurnResponse: {
+          ...CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
+          label: 'Camera Smoothing: Let Go on Fast Head Turns'
         },
         cameraMaxJump: {
           ...CAMERA_MAX_JUMP_RANGE,
-          label: 'Camera Pose: Max Jump (Live Feed)'
+          label: 'Camera Smoothing: Max Jump per Frame (m)'
         },
-        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
+        cameraBoneSmoothingMilliseconds: {
+          ...CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
+          label: 'Camera Smoothing: Bones Settle (ms)'
+        },
+        cameraVisibilityThreshold: {
+          ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
+          label: 'Camera Smoothing: Landmark Confidence Needed'
+        },
+        cameraTwistMinBendDegrees: {
+          ...CAMERA_TWIST_BEND_DEGREES_RANGE,
+          label: 'Camera Smoothing: Roll Starts at Bend (°)'
+        },
+        cameraTwistFullBendDegrees: {
+          ...CAMERA_TWIST_BEND_DEGREES_RANGE,
+          label: 'Camera Smoothing: Roll Full at Bend (°)'
+        },
+        cameraTrackFace: {
+          checkbox: true,
+          label: 'Camera Detect: Face Tracker for Head',
+          sectionStart: true
+        },
+        cameraSearchFaceAroundBody: {
+          checkbox: true,
+          label: 'Camera Detect: Face Search Around Nose'
+        },
+        cameraTrackHands: { checkbox: true, label: 'Camera Detect: Hand Tracker for Fingers' },
+        cameraSearchHandsAroundWrists: {
+          checkbox: true,
+          label: 'Camera Detect: Hand Search Around Wrists'
+        },
+        cameraSideHandsByWrist: {
+          checkbox: true,
+          label: 'Camera Detect: Hand Side by Nearest Wrist'
+        },
+        cameraIgnoreOutsideImage: {
+          checkbox: true,
+          label: 'Camera Detect: Ignore Body Outside Image'
+        },
+        cameraMirrorLive: { checkbox: true, label: 'Camera Detect: Mirror Live Camera' },
+        cameraDetectOnlyWhilePlaying: {
+          checkbox: true,
+          label: 'Camera Detect: Only While Video Plays'
+        },
+        cameraTurnHips: { checkbox: true, label: 'Camera Bones: Turn Hips', sectionStart: true },
+        cameraBendSpine: { checkbox: true, label: 'Camera Bones: Bend Spine' },
+        cameraTurnHead: { checkbox: true, label: 'Camera Bones: Turn Neck and Head' },
+        cameraCorrectHeadPitch: {
+          checkbox: true,
+          label: 'Camera Bones: Correct Ear and Nose Head Pitch'
+        },
+        cameraLimitHeadTurn: {
+          checkbox: true,
+          label: 'Camera Bones: Ignore Impossible Head Turns'
+        },
+        cameraAimArms: { checkbox: true, label: 'Camera Bones: Aim Arms' },
+        cameraRollUpperArms: { checkbox: true, label: 'Camera Bones: Roll Upper Arms from Elbows' },
+        cameraRollForearms: {
+          checkbox: true,
+          label: 'Camera Bones: Roll Forearms and Hands to Palms'
+        },
+        cameraAimLegs: { checkbox: true, label: 'Camera Bones: Aim Legs' },
+        cameraRollThighs: {
+          checkbox: true,
+          label: 'Camera Bones: Roll Thighs from Knees and Feet'
+        },
+        cameraAimFeet: { checkbox: true, label: 'Camera Bones: Aim Feet' }
       }
     : {}),
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },

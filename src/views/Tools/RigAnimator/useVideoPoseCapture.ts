@@ -1,20 +1,18 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
-import { CAMERA_LANDMARK_SMOOTHING_FACTOR, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
+import type { CameraDetectionOptions, CameraSmoothingSettings } from './types'
 
 /**
  * Owns an uploaded video file for the camera pose capture dialog: the video-file counterpart to
  * `useCameraPoseCapture`, playing the file at its own rate and running the same live detection
- * via `useVideoLandmarkDetection` against it instead of a webcam stream — useful for testing
+ * via `useVideoLandmarkDetection` against it instead of a webcam stream. Useful for testing
  * against a known performance, or when there is no working camera.
- * @param smoothingFactor Fraction of each new frame blended in, read fresh every frame the same
- *   way `useCameraPoseCapture`'s own does
- * @param maxJump The furthest a landmark may move from its previous position in one frame, read
- *   fresh every frame the same way `smoothingFactor` is
+ * @param smoothingSettings The Config panel's smoothing sliders, read fresh every frame
+ * @param detectionOptions The Config panel's detection switches, read fresh every frame
  */
 export const useVideoPoseCapture = (
-  smoothingFactor: Ref<number> = ref(CAMERA_LANDMARK_SMOOTHING_FACTOR),
-  maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS)
+  smoothingSettings: Ref<CameraSmoothingSettings>,
+  detectionOptions: Ref<CameraDetectionOptions>
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
@@ -26,9 +24,9 @@ export const useVideoPoseCapture = (
   // `useCameraPhotoPose` already applies to an uploaded photo.
   const detection = useVideoLandmarkDetection({
     videoElement,
-    smoothingFactor,
-    maxJump,
-    mirror: false
+    smoothingSettings,
+    detectionOptions,
+    mirror: () => false
   })
 
   /** Play an uploaded video file through once and start live detection against it, replacing

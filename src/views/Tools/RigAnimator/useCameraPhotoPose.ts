@@ -1,25 +1,20 @@
-import { ref, shallowRef } from 'vue'
-import type { HandSide, HandPoseDefinition } from '@webgamekit/rig'
+import { ref, shallowRef, type Ref } from 'vue'
+import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import {
-  FilesetResolver,
-  PoseLandmarker,
-  HandLandmarker,
-  type NormalizedLandmark
-} from '@mediapipe/tasks-vision'
-import {
-  MEDIAPIPE_WASM_BASE_PATH,
-  MEDIAPIPE_POSE_MODEL_URL,
-  MEDIAPIPE_HAND_MODEL_URL
-} from './config'
-import type { CameraLandmark } from './cameraPoseMapping'
-import { cameraDetectedHandsToPoses } from './cameraHandPoseMapping'
+  closeCameraLandmarkers,
+  createCameraCropCanvas,
+  createCameraLandmarkers,
+  detectCameraPose
+} from './cameraPoseDetection'
+import type { CameraDetectionOptions, CameraLandmarkers, CameraPoseFrame } from './types'
 
 /**
  * Owns detecting a pose from a single uploaded photo, the static-image counterpart to
  * `useCameraPoseCapture`: useful for posing from a reference photo, and for anyone without a
  * working webcam.
+ * @param detectionOptions The Config panel's detection switches, read when a photo is detected
  */
-export const useCameraPhotoPose = () => {
+export const useCameraPhotoPose = (detectionOptions: Ref<CameraDetectionOptions>) => {
   const photoImage = shallowRef<ImageBitmap | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -27,73 +22,53 @@ export const useCameraPhotoPose = () => {
   const previewLandmarks = shallowRef<NormalizedLandmark[] | null>(null)
   /** Normalized [0,1] image-space landmarks per detected hand, for drawing the finger overlay. */
   const previewHandLandmarks = shallowRef<NormalizedLandmark[][] | null>(null)
-  /** Metric world-space landmarks, for mapping onto the rig's bones. */
-  const worldLandmarks = shallowRef<CameraLandmark[] | null>(null)
-  /** Detected finger curl per side, for whichever hand(s) the photo shows. */
-  const handPoses = shallowRef<Partial<Record<HandSide, HandPoseDefinition>>>({})
+  /** The body, hands and head found in the photo, for applying to the rig. */
+  const frame = shallowRef<CameraPoseFrame | null>(null)
+
+  const clearDetection = (): void => {
+    previewLandmarks.value = null
+    previewHandLandmarks.value = null
+    frame.value = null
+  }
 
   /** Read a person's pose out of an uploaded photo file, replacing whatever was detected before. */
   const detectPhoto = async (file: File): Promise<void> => {
     isLoading.value = true
     error.value = null
-    previewLandmarks.value = null
-    previewHandLandmarks.value = null
-    worldLandmarks.value = null
-    handPoses.value = {}
-    let landmarker: PoseLandmarker | null = null
-    let handLandmarker: HandLandmarker | null = null
+    clearDetection()
+    let landmarkers: CameraLandmarkers | null = null
     try {
-      photoImage.value = await createImageBitmap(file)
-      const fileset = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_BASE_PATH)
-      landmarker = await PoseLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: MEDIAPIPE_POSE_MODEL_URL, delegate: 'CPU' },
-        runningMode: 'IMAGE',
-        numPoses: 1
-      })
-      handLandmarker = await HandLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: MEDIAPIPE_HAND_MODEL_URL, delegate: 'CPU' },
-        runningMode: 'IMAGE',
-        numHands: 2
-      })
-      const result = landmarker.detect(photoImage.value)
-      previewLandmarks.value = result.landmarks[0] ?? null
-      worldLandmarks.value = (result.worldLandmarks[0] as CameraLandmark[] | undefined) ?? null
-
-      const handResult = handLandmarker.detect(photoImage.value)
-      previewHandLandmarks.value = handResult.landmarks.length > 0 ? handResult.landmarks : null
-      handPoses.value = cameraDetectedHandsToPoses(
-        handResult.worldLandmarks.map((landmarksForHand, index) => ({
-          worldLandmarks: landmarksForHand,
-          categoryName: handResult.handedness[index]?.[0]?.categoryName ?? ''
-        }))
+      const image = await createImageBitmap(file)
+      photoImage.value = image
+      landmarkers = await createCameraLandmarkers('IMAGE')
+      const detection = detectCameraPose(
+        {
+          source: image,
+          frameSize: { width: image.width, height: image.height },
+          landmarkers,
+          cropCanvas: createCameraCropCanvas(),
+          options: detectionOptions.value
+        },
+        landmarkers.pose.detect(image)
       )
+      previewLandmarks.value = detection.previewLandmarks
+      previewHandLandmarks.value =
+        detection.previewHandLandmarks.length > 0 ? detection.previewHandLandmarks : null
+      frame.value = detection.frame
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Could not read that photo'
     } finally {
-      // isLoading has to clear even if the detection above succeeded and closing the
-      // landmarker itself then throws, or the dialog is stuck showing "Reading photo…"
-      // forever despite already having a result.
+      // isLoading has to clear even if the detection above succeeded and closing a detector
+      // then throws, or the dialog is stuck showing "Reading photo…" despite having a result.
       isLoading.value = false
-      try {
-        landmarker?.close()
-      } catch {
-        // Nothing to recover: the landmarker is being thrown away either way.
-      }
-      try {
-        handLandmarker?.close()
-      } catch {
-        // Nothing to recover: the landmarker is being thrown away either way.
-      }
+      closeCameraLandmarkers(landmarkers)
     }
   }
 
   /** Drop the loaded photo and whatever was detected from it. */
   const reset = (): void => {
     photoImage.value = null
-    previewLandmarks.value = null
-    previewHandLandmarks.value = null
-    worldLandmarks.value = null
-    handPoses.value = {}
+    clearDetection()
     error.value = null
   }
 
@@ -103,8 +78,7 @@ export const useCameraPhotoPose = () => {
     error,
     previewLandmarks,
     previewHandLandmarks,
-    worldLandmarks,
-    handPoses,
+    frame,
     detectPhoto,
     reset
   }
