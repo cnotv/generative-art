@@ -302,7 +302,7 @@ onUnmounted(() => {
     <canvas ref="canvas" class="hand-hold__canvas"></canvas>
     <div ref="statsElement" class="hand-hold__stats"></div>
     <p v-if="isActive" class="hand-hold__hint">
-      Make a fist to grab the bat. Swing to hit the balls.
+      Make a fist to grab the bat. Swing to hit the ball.
     </p>
     <div v-if="!isActive" class="hand-hold__gate">
       <Button :disabled="isLoadingModel" @click="startCamera">
