@@ -23,9 +23,8 @@ import {
   BAT_LENGTH,
   BAT_SAMPLE_FRACTIONS,
   BAT_HIT_RADIUS,
-  BALL_COUNT,
   BALL_RADIUS,
-  BALL_SPAWN_HALF_WIDTH,
+  BALL_SPAWN_X,
   BALL_SPAWN_Y,
   BALL_RESPAWN_BELOW_Y,
   BALL_GRAVITY,
@@ -208,9 +207,8 @@ const initScene = async (): Promise<void> => {
   balls = createBallField(
     scene,
     {
-      count: BALL_COUNT,
       radius: BALL_RADIUS,
-      halfWidth: BALL_SPAWN_HALF_WIDTH,
+      spawnX: BALL_SPAWN_X,
       spawnY: BALL_SPAWN_Y,
       respawnBelowY: BALL_RESPAWN_BELOW_Y
     },

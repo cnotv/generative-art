@@ -83,12 +83,11 @@ export const BAT_SAMPLE_FRACTIONS = [0.5, 0.65, 0.8, 0.95, 1] as const
  * by hand distance) plus the ball's radius, with a margin for the gap between sample points. */
 export const BAT_HIT_RADIUS = 0.45
 
-export const BALL_COUNT = 10
 export const BALL_RADIUS = 0.18
-/** How far either side of centre a ball may spawn: roughly the reachable width at z=0 for the
- * configured camera distance and field of view. */
-export const BALL_SPAWN_HALF_WIDTH = 2.5
-export const BALL_SPAWN_Y = 3.2
+/** Fixed spawn point, straight ahead at z=0 like the hand plane itself, close enough to the
+ * camera to already be in front of it rather than falling in from off the top of the frame. */
+export const BALL_SPAWN_X = 0
+export const BALL_SPAWN_Y = 1.4
 /** Once a ball falls this far below centre, whether from gravity alone or after a hit arcs it
  * back down, it recycles back to a fresh spawn instead of continuing to fall forever. */
 export const BALL_RESPAWN_BELOW_Y = -3.5
