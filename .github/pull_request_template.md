@@ -4,6 +4,15 @@ Closes #
 e.g. https://deploy-preview-<pr-number>--cnotv-generative-art.netlify.app/tools/RigAnimator.
 Filled in once `deploy/netlify` succeeds — see the open-pr procedure. -->
 
+## In short
+
+<!-- Written for a reader with ADHD, who reads these lines and nothing else. Three to five
+     bullets, one idea each, plain words, most important first:
+     - what changed, in one sentence
+     - why it matters to the person using it
+     - the one core change that made it work, named outright
+     - how to see it: the route, the button, the setting -->
+
 ## Summary
 
 <!-- What does this PR do and why? 1–3 sentences. -->
