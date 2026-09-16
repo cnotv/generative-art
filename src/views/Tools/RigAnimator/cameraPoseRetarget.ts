@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
 import {
+  CAMERA_HEAD_MAX_TURN_RADIANS,
   CAMERA_HEAD_PITCH_OFFSET_RADIANS,
   CAMERA_NECK_TURN_SHARE,
   CAMERA_PELVIS_LEAN_SHARE,
@@ -99,6 +100,7 @@ interface RetargetContext {
   bonesByName: Map<string, THREE.Bone>
   rest: CameraRetargetRest
   drivenBoneNames: Set<string>
+  options: CameraPoseMappingOptions
   /** The rig's own left, and the way it faces, at rest. */
   restLateral: THREE.Vector3
   restForward: THREE.Vector3
@@ -364,16 +366,15 @@ const spineBoneNames = (context: RetargetContext): string[] => {
 
 /** Turn the pelvis, then spread the rest of the way to the chest evenly up the spine, so a back bends rather than hinging at one joint. */
 const applyTorso = (context: RetargetContext, torso: TorsoRotations): void => {
-  rotateFromRest(context, HIPS, torso.pelvis)
+  // With the hips switched off the pelvis stays at rest and the spine takes the whole turn.
+  const pelvis = context.options.turnHips ? torso.pelvis : new THREE.Quaternion()
+  rotateFromRest(context, HIPS, pelvis)
+  if (!context.options.bendSpine) return
   const spineNames = spineBoneNames(context)
-  const bend = torso.chest.clone().multiply(torso.pelvis.clone().invert())
+  const bend = torso.chest.clone().multiply(pelvis.clone().invert())
   spineNames.forEach((boneName, index) => {
     const share = (index + 1) / spineNames.length
-    rotateFromRest(
-      context,
-      boneName,
-      new THREE.Quaternion().slerp(bend, share).multiply(torso.pelvis)
-    )
+    rotateFromRest(context, boneName, new THREE.Quaternion().slerp(bend, share).multiply(pelvis))
   })
 }
 
@@ -385,19 +386,44 @@ const applyTorso = (context: RetargetContext, torso: TorsoRotations): void => {
 const observeHead = (
   context: RetargetContext,
   frame: CameraPoseFrame,
+  point: BodyPointReader,
+  chest: THREE.Quaternion
+): THREE.Quaternion | null => {
+  const fromFace = observeHeadFromFace(context, frame)
+  // A face half hidden behind a raised arm read as flipped round by 150° for a frame in the
+  // attached clip; no neck turns that far from the chest, so such a reading is dropped.
+  const isImpossible =
+    fromFace !== null &&
+    context.options.limitHeadTurn &&
+    fromFace.angleTo(chest) > CAMERA_HEAD_MAX_TURN_RADIANS
+  return fromFace && !isImpossible ? fromFace : observeHeadFromEars(context, point)
+}
+
+const restFacingFrame = (context: RetargetContext): SegmentFrame => ({
+  primary: context.restForward,
+  lateral: context.restLateral
+})
+
+const observeHeadFromFace = (
+  context: RetargetContext,
+  frame: CameraPoseFrame
+): THREE.Quaternion | null => {
+  if (!frame.headRotation) return null
+  const { x, y, z, w } = frame.headRotation
+  const canonicalToRest = frameChange(restFacingFrame(context), {
+    primary: CANONICAL_FACE_FORWARD,
+    lateral: CANONICAL_FACE_LATERAL
+  })
+  return canonicalToRest
+    ? new THREE.Quaternion(x, y, z, w).multiply(canonicalToRest.invert())
+    : null
+}
+
+const observeHeadFromEars = (
+  context: RetargetContext,
   point: BodyPointReader
 ): THREE.Quaternion | null => {
-  const restFacing = { primary: context.restForward, lateral: context.restLateral }
-  if (frame.headRotation) {
-    const { x, y, z, w } = frame.headRotation
-    const canonicalToRest = frameChange(restFacing, {
-      primary: CANONICAL_FACE_FORWARD,
-      lateral: CANONICAL_FACE_LATERAL
-    })
-    return canonicalToRest
-      ? new THREE.Quaternion(x, y, z, w).multiply(canonicalToRest.invert())
-      : null
-  }
+  const restFacing = restFacingFrame(context)
   const leftEar = point(CAMERA_LANDMARK_INDEX.leftEar)
   const rightEar = point(CAMERA_LANDMARK_INDEX.rightEar)
   const nose = point(CAMERA_LANDMARK_INDEX.nose)
@@ -405,7 +431,10 @@ const observeHead = (
   const lateral = leftEar.clone().sub(rightEar).normalize()
   const forward = rejectFromAxis(nose.clone().sub(midpoint(leftEar, rightEar)), lateral)
     .normalize()
-    .applyAxisAngle(lateral, -CAMERA_HEAD_PITCH_OFFSET_RADIANS)
+    .applyAxisAngle(
+      lateral,
+      context.options.correctHeadPitch ? -CAMERA_HEAD_PITCH_OFFSET_RADIANS : 0
+    )
   return frameChange({ primary: forward, lateral }, restFacing)
 }
 
@@ -470,16 +499,21 @@ const applyArm = (
   // A wrist that drops out of view, the dancer's own arm crossing behind her in the attached
   // clip, still leaves the upper arm to follow; only the forearm and hand wait for it.
   const lower = wrist?.clone().sub(elbow)
-  const elbowTwist = lower && {
-    observed: rejectFromAxis(lower, upper.clone().normalize()),
-    rest: context.restForward,
-    weight: bendTwistWeight(upper, lower)
-  }
+  const elbowTwist =
+    lower && context.options.rollUpperArmsFromElbows
+      ? {
+          observed: rejectFromAxis(lower, upper.clone().normalize()),
+          rest: context.restForward,
+          weight: bendTwistWeight(upper, lower)
+        }
+      : undefined
   aimBone(context, sideBone(side, 'Arm'), sideBone(side, 'ForeArm'), upper, elbowTwist)
   if (!lower) return
-  const observedHand = handLandmarks
-    ? handFrameFromLandmarks(handLandmarks)
-    : handFrameFromBody(point, indices)
+  const observedHand = !context.options.rollForearmsToPalms
+    ? null
+    : handLandmarks
+      ? handFrameFromLandmarks(handLandmarks)
+      : handFrameFromBody(point, indices)
   const restHand = restHandFrame(context.rest, side)
   const forearmTwist =
     observedHand && restHand
@@ -573,16 +607,21 @@ const applyLeg = (context: RetargetContext, side: HandSide, point: BodyPointRead
   const thigh = knee.clone().sub(hip)
   const shin = ankle?.clone().sub(knee)
   const footForward = ankle && heel && toe ? toe.clone().sub(heel) : null
+  const thighTwist = context.options.rollThighsFromKneesAndFeet
+    ? legTwistCue(context, thigh, shin, footForward)
+    : undefined
   const thighDriven = aimBone(
     context,
     sideBone(side, 'UpLeg'),
     sideBone(side, 'Leg'),
     thigh,
-    legTwistCue(context, thigh, shin, footForward)
+    thighTwist
   )
   if (!ankle || !shin) return thighDriven
   aimBone(context, sideBone(side, 'Leg'), sideBone(side, 'Foot'), shin)
-  if (toe) aimBone(context, sideBone(side, 'Foot'), sideBone(side, 'ToeBase'), toe.sub(ankle))
+  if (toe && context.options.aimFeet) {
+    aimBone(context, sideBone(side, 'Foot'), sideBone(side, 'ToeBase'), toe.sub(ankle))
+  }
   return thighDriven
 }
 
@@ -614,7 +653,8 @@ const groundFeet = (context: RetargetContext): void => {
 const createRetargetContext = (
   bones: THREE.Bone[],
   rest: CameraRetargetRest,
-  drivenBoneNames: Set<string>
+  drivenBoneNames: Set<string>,
+  options: CameraPoseMappingOptions
 ): RetargetContext | null => {
   const restLeftArm = rest.worldPositions.get('mixamorigLeftArm')
   const restRightArm = rest.worldPositions.get('mixamorigRightArm')
@@ -624,6 +664,7 @@ const createRetargetContext = (
     bonesByName: new Map(bones.map((bone) => [bone.name, bone])),
     rest,
     drivenBoneNames,
+    options,
     restLateral,
     restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize()
   }
@@ -639,7 +680,7 @@ const createRetargetContext = (
  * @param bones The rig's bones, with every bone in `drivenBoneNames` already reset to rest
  * @param rest The rig's rest pose, from `captureCameraRetargetRest`
  * @param frame What the camera found this frame, oriented and smoothed
- * @param options Depth flattening and foot grounding
+ * @param options Which rules to apply, each switchable from the Config panel
  * @param drivenBoneNames The bones this frame may change, from `cameraFrameDrivenBoneNames`
  */
 export const applyCameraPoseFrame = (
@@ -649,18 +690,20 @@ export const applyCameraPoseFrame = (
   options: CameraPoseMappingOptions,
   drivenBoneNames: Set<string>
 ): void => {
-  const context = createRetargetContext(bones, rest, drivenBoneNames)
+  const context = createRetargetContext(bones, rest, drivenBoneNames, options)
   if (!context) return
   const point = readBodyPoints(frame.bodyLandmarks, options.includeDepth)
   const torso = observeTorso(context, point)
   if (torso) applyTorso(context, torso)
-  const head = observeHead(context, frame, point)
-  if (head) applyHead(context, head, torso?.chest ?? new THREE.Quaternion())
+  const chest = torso?.chest ?? new THREE.Quaternion()
+  const head = options.turnHead ? observeHead(context, frame, point, chest) : null
+  if (head) applyHead(context, head, chest)
   RIG_SIDES.forEach((side) => {
     const handLandmarks = frame.handLandmarks[side]
-    applyArm(context, side, point, handLandmarks)
+    if (options.aimArms) applyArm(context, side, point, handLandmarks)
     if (handLandmarks) applyFingers(context, side, handLandmarks)
   })
-  const legsDriven = RIG_SIDES.map((side) => applyLeg(context, side, point)).some(Boolean)
+  const legsDriven =
+    options.aimLegs && RIG_SIDES.map((side) => applyLeg(context, side, point)).some(Boolean)
   if (options.groundFeet && legsDriven) groundFeet(context)
 }

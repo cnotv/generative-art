@@ -1,4 +1,4 @@
-import { ref, shallowRef } from 'vue'
+import { ref, shallowRef, type Ref } from 'vue'
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import {
   closeCameraLandmarkers,
@@ -6,14 +6,15 @@ import {
   createCameraLandmarkers,
   detectCameraPose
 } from './cameraPoseDetection'
-import type { CameraLandmarkers, CameraPoseFrame } from './types'
+import type { CameraDetectionOptions, CameraLandmarkers, CameraPoseFrame } from './types'
 
 /**
  * Owns detecting a pose from a single uploaded photo, the static-image counterpart to
  * `useCameraPoseCapture`: useful for posing from a reference photo, and for anyone without a
  * working webcam.
+ * @param detectionOptions The Config panel's detection switches, read when a photo is detected
  */
-export const useCameraPhotoPose = () => {
+export const useCameraPhotoPose = (detectionOptions: Ref<CameraDetectionOptions>) => {
   const photoImage = shallowRef<ImageBitmap | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -41,10 +42,13 @@ export const useCameraPhotoPose = () => {
       photoImage.value = image
       landmarkers = await createCameraLandmarkers('IMAGE')
       const detection = detectCameraPose(
-        image,
-        { width: image.width, height: image.height },
-        landmarkers,
-        createCameraCropCanvas(),
+        {
+          source: image,
+          frameSize: { width: image.width, height: image.height },
+          landmarkers,
+          cropCanvas: createCameraCropCanvas(),
+          options: detectionOptions.value
+        },
         landmarkers.pose.detect(image)
       )
       previewLandmarks.value = detection.previewLandmarks

@@ -56,7 +56,57 @@ export const buildRigAnimatorSchema = (
           ...CAMERA_MAX_JUMP_RANGE,
           label: 'Camera Pose: Max Jump (Live Feed)'
         },
-        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' }
+        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
+        cameraTrackFace: {
+          checkbox: true,
+          label: 'Camera Detect: Face Tracker for Head',
+          sectionStart: true
+        },
+        cameraSearchFaceAroundBody: {
+          checkbox: true,
+          label: 'Camera Detect: Face Search Around Nose'
+        },
+        cameraTrackHands: { checkbox: true, label: 'Camera Detect: Hand Tracker for Fingers' },
+        cameraSearchHandsAroundWrists: {
+          checkbox: true,
+          label: 'Camera Detect: Hand Search Around Wrists'
+        },
+        cameraSideHandsByWrist: {
+          checkbox: true,
+          label: 'Camera Detect: Hand Side by Nearest Wrist'
+        },
+        cameraIgnoreOutsideImage: {
+          checkbox: true,
+          label: 'Camera Detect: Ignore Body Outside Image'
+        },
+        cameraMirrorLive: { checkbox: true, label: 'Camera Detect: Mirror Live Camera' },
+        cameraDetectOnlyWhilePlaying: {
+          checkbox: true,
+          label: 'Camera Detect: Only While Video Plays'
+        },
+        cameraTurnHips: { checkbox: true, label: 'Camera Bones: Turn Hips', sectionStart: true },
+        cameraBendSpine: { checkbox: true, label: 'Camera Bones: Bend Spine' },
+        cameraTurnHead: { checkbox: true, label: 'Camera Bones: Turn Neck and Head' },
+        cameraCorrectHeadPitch: {
+          checkbox: true,
+          label: 'Camera Bones: Correct Ear and Nose Head Pitch'
+        },
+        cameraLimitHeadTurn: {
+          checkbox: true,
+          label: 'Camera Bones: Ignore Impossible Head Turns'
+        },
+        cameraAimArms: { checkbox: true, label: 'Camera Bones: Aim Arms' },
+        cameraRollUpperArms: { checkbox: true, label: 'Camera Bones: Roll Upper Arms from Elbows' },
+        cameraRollForearms: {
+          checkbox: true,
+          label: 'Camera Bones: Roll Forearms and Hands to Palms'
+        },
+        cameraAimLegs: { checkbox: true, label: 'Camera Bones: Aim Legs' },
+        cameraRollThighs: {
+          checkbox: true,
+          label: 'Camera Bones: Roll Thighs from Knees and Feet'
+        },
+        cameraAimFeet: { checkbox: true, label: 'Camera Bones: Aim Feet' }
       }
     : {}),
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },

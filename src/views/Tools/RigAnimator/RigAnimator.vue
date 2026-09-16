@@ -49,7 +49,12 @@ import { applyPoleDrag } from './boneDragTarget'
 import { loadRigAutosave } from './autosave'
 import RigTimeline from './RigTimeline.vue'
 import CameraPoseCapture from './CameraPoseCapture.vue'
-import type { CameraPoseFrame, RigAnimatorConfig } from './types'
+import type {
+  CameraDetectionOptions,
+  CameraPoseFrame,
+  CameraPoseMappingOptions,
+  RigAnimatorConfig
+} from './types'
 
 const route = useRoute()
 const routeName = route.name as string
@@ -76,6 +81,25 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   fps: DEFAULT_FPS,
   showBoneMarkers: false,
   cameraGroundFeet: true,
+  cameraTurnHips: true,
+  cameraBendSpine: true,
+  cameraTurnHead: true,
+  cameraCorrectHeadPitch: true,
+  cameraLimitHeadTurn: true,
+  cameraAimArms: true,
+  cameraRollUpperArms: true,
+  cameraRollForearms: true,
+  cameraAimLegs: true,
+  cameraRollThighs: true,
+  cameraAimFeet: true,
+  cameraTrackFace: true,
+  cameraSearchFaceAroundBody: true,
+  cameraTrackHands: true,
+  cameraSearchHandsAroundWrists: true,
+  cameraSideHandsByWrist: true,
+  cameraIgnoreOutsideImage: true,
+  cameraMirrorLive: true,
+  cameraDetectOnlyWhilePlaying: true,
   cameraUseDepth: true,
   cameraUseViewpoint: false,
   cameraSmoothingMilliseconds: CAMERA_SMOOTHING_MILLISECONDS,
@@ -94,10 +118,36 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   enclosureOpacity: DEFAULT_ENCLOSURE_OPACITY
 })
 
-const cameraPoseMappingOptions = computed(() => ({
-  includeDepth: reactiveConfig.value.cameraUseDepth,
-  groundFeet: reactiveConfig.value.cameraGroundFeet
-}))
+const cameraPoseMappingOptions = computed(
+  (): CameraPoseMappingOptions => ({
+    includeDepth: reactiveConfig.value.cameraUseDepth,
+    groundFeet: reactiveConfig.value.cameraGroundFeet,
+    turnHips: reactiveConfig.value.cameraTurnHips,
+    bendSpine: reactiveConfig.value.cameraBendSpine,
+    turnHead: reactiveConfig.value.cameraTurnHead,
+    correctHeadPitch: reactiveConfig.value.cameraCorrectHeadPitch,
+    limitHeadTurn: reactiveConfig.value.cameraLimitHeadTurn,
+    aimArms: reactiveConfig.value.cameraAimArms,
+    rollUpperArmsFromElbows: reactiveConfig.value.cameraRollUpperArms,
+    rollForearmsToPalms: reactiveConfig.value.cameraRollForearms,
+    aimLegs: reactiveConfig.value.cameraAimLegs,
+    rollThighsFromKneesAndFeet: reactiveConfig.value.cameraRollThighs,
+    aimFeet: reactiveConfig.value.cameraAimFeet
+  })
+)
+
+const cameraDetectionOptions = computed(
+  (): CameraDetectionOptions => ({
+    trackFace: reactiveConfig.value.cameraTrackFace,
+    searchFaceAroundBody: reactiveConfig.value.cameraSearchFaceAroundBody,
+    trackHands: reactiveConfig.value.cameraTrackHands,
+    searchHandsAroundWrists: reactiveConfig.value.cameraSearchHandsAroundWrists,
+    sideHandsByNearestWrist: reactiveConfig.value.cameraSideHandsByWrist,
+    ignoreLandmarksOutsideImage: reactiveConfig.value.cameraIgnoreOutsideImage,
+    mirrorLiveCamera: reactiveConfig.value.cameraMirrorLive,
+    detectOnlyWhilePlaying: reactiveConfig.value.cameraDetectOnlyWhilePlaying
+  })
+)
 
 /** Which body-part groups the next capture, photo or preset is allowed to touch, read from the
  * Merge Target diagram's own toggled regions; see `bodyPartGroups.ts`. */
@@ -607,6 +657,7 @@ onUnmounted(() => {
   <CameraPoseCapture
     v-if="showCameraCapture"
     :smoothing-milliseconds="reactiveConfig.cameraSmoothingMilliseconds"
+    :detection-options="cameraDetectionOptions"
     :max-jump="reactiveConfig.cameraMaxJump"
     :show-preview="reactiveConfig.cameraShowPreview"
     :is-recording="motionRecording.isRecording.value"

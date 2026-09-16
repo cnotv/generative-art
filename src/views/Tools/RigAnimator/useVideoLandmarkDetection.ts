@@ -7,17 +7,24 @@ import {
   detectCameraPose
 } from './cameraPoseDetection'
 import { mirrorCameraPoseFrame, smoothCameraPoseFrame } from './cameraPoseFrame'
-import type { CameraLandmarkers, CameraPoseFilterState, CameraPoseFrame } from './types'
+import type {
+  CameraDetectionOptions,
+  CameraLandmarkers,
+  CameraPoseFilterState,
+  CameraPoseFrame
+} from './types'
 
 interface Dependencies {
   videoElement: ShallowRef<HTMLVideoElement | null>
   smoothingMilliseconds: Ref<number>
   maxJump: Ref<number>
+  /** The Config panel's detection switches, read fresh every frame. */
+  detectionOptions: Ref<CameraDetectionOptions>
   /** Whether the source reads as a mirror (a live self-view, matching how the subject sees
    * themselves) or should be taken as shown (an uploaded clip is not a self-view, the same as
    * an uploaded photo isn't). See `mirrorCameraPoseFrame` for why body, hands and head have to
-   * flip together. */
-  mirror: boolean
+   * flip together. Read every frame, so a Config panel switch applies straight away. */
+  mirror: () => boolean
 }
 
 /**
@@ -30,6 +37,7 @@ export const useVideoLandmarkDetection = ({
   videoElement,
   smoothingMilliseconds,
   maxJump,
+  detectionOptions,
   mirror
 }: Dependencies) => {
   const previewLandmarks = shallowRef<NormalizedLandmark[] | null>(null)
@@ -49,22 +57,26 @@ export const useVideoLandmarkDetection = ({
     const video = videoElement.value
     if (!video || !landmarkers) return
     animationFrame = requestAnimationFrame(detectFrame)
+    const options = detectionOptions.value
     // A paused or finished video shows the same frame over and over: detecting it again would
     // only keep applying a pose nobody is performing, and keep a recording sampling it.
-    isDetecting.value = !video.paused && !video.ended
+    isDetecting.value = !options.detectOnlyWhilePlaying || (!video.paused && !video.ended)
     if (!isDetecting.value) return
     const timestamp = performance.now()
     const detection = detectCameraPose(
-      video,
-      { width: video.videoWidth, height: video.videoHeight },
-      landmarkers,
-      cropCanvas,
+      {
+        source: video,
+        frameSize: { width: video.videoWidth, height: video.videoHeight },
+        landmarkers,
+        cropCanvas,
+        options
+      },
       landmarkers.pose.detectForVideo(video, timestamp)
     )
     previewLandmarks.value = detection.previewLandmarks
     previewHandLandmarks.value =
       detection.previewHandLandmarks.length > 0 ? detection.previewHandLandmarks : null
-    const orientedFrame = mirror ? mirrorCameraPoseFrame(detection.frame) : detection.frame
+    const orientedFrame = mirror() ? mirrorCameraPoseFrame(detection.frame) : detection.frame
     filterState = smoothCameraPoseFrame(filterState, orientedFrame, timestamp, {
       smoothingMilliseconds: smoothingMilliseconds.value,
       maxJump: maxJump.value

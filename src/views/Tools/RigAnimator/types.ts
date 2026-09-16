@@ -17,6 +17,25 @@ export interface RigAnimatorConfig {
   fps: number
   showBoneMarkers: boolean
   cameraGroundFeet: boolean
+  cameraTurnHips: boolean
+  cameraBendSpine: boolean
+  cameraTurnHead: boolean
+  cameraCorrectHeadPitch: boolean
+  cameraLimitHeadTurn: boolean
+  cameraAimArms: boolean
+  cameraRollUpperArms: boolean
+  cameraRollForearms: boolean
+  cameraAimLegs: boolean
+  cameraRollThighs: boolean
+  cameraAimFeet: boolean
+  cameraTrackFace: boolean
+  cameraSearchFaceAroundBody: boolean
+  cameraTrackHands: boolean
+  cameraSearchHandsAroundWrists: boolean
+  cameraSideHandsByWrist: boolean
+  cameraIgnoreOutsideImage: boolean
+  cameraMirrorLive: boolean
+  cameraDetectOnlyWhilePlaying: boolean
   cameraUseDepth: boolean
   cameraUseViewpoint: boolean
   cameraSmoothingMilliseconds: number
@@ -104,6 +123,48 @@ export interface CameraPoseMappingOptions {
   includeDepth: boolean
   /** Raise or lower the whole rig so its lowest foot stays on the floor it stands on at rest. */
   groundFeet: boolean
+  /** Turn the pelvis to the detected hip line; off, the spine takes the whole turn. */
+  turnHips: boolean
+  /** Turn and bend the spine bones toward the detected shoulder line. */
+  bendSpine: boolean
+  /** Turn the neck and head, from the face tracker or else the ears and nose. */
+  turnHead: boolean
+  /** Tip a head read from the ears and nose back up by BlazePose's measured nose offset. */
+  correctHeadPitch: boolean
+  /** Drop a face reading turned further from the chest than a neck can, using the ears instead. */
+  limitHeadTurn: boolean
+  /** Aim the upper arms at the elbows and the forearms at the wrists. */
+  aimArms: boolean
+  /** Roll each upper arm so the elbow bends the way the forearm swings. */
+  rollUpperArmsFromElbows: boolean
+  /** Roll each forearm, and turn the hand, to the detected palm. */
+  rollForearmsToPalms: boolean
+  /** Aim the thighs at the knees and the shins at the ankles. */
+  aimLegs: boolean
+  /** Roll each thigh to where the kneecap and the foot point. */
+  rollThighsFromKneesAndFeet: boolean
+  /** Aim each foot at its toes. */
+  aimFeet: boolean
+}
+
+/** The Config panel's switches for how each frame is detected, before any bone is turned. */
+export interface CameraDetectionOptions {
+  /** Run the Face Landmarker for the head; off, the head is read from the ears and nose. */
+  trackFace: boolean
+  /** Look for a face the whole frame missed in a crop around the body's nose. */
+  searchFaceAroundBody: boolean
+  /** Run the Hand Landmarker for the fingers. */
+  trackHands: boolean
+  /** Look for a hand the whole frame missed in a crop around the body's wrist. */
+  searchHandsAroundWrists: boolean
+  /** Side each hand by the body's nearer wrist rather than the detector's own label. */
+  sideHandsByNearestWrist: boolean
+  /** Treat body landmarks placed outside the image as not detected. */
+  ignoreLandmarksOutsideImage: boolean
+  /** Mirror the live camera, body, hands and head, to match its mirrored preview. */
+  mirrorLiveCamera: boolean
+  /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
+  detectOnlyWhilePlaying: boolean
 }
 
 /** The rig's rest pose in world space, keyed by bone name: every applied rotation is a change from it. */
@@ -124,6 +185,16 @@ export interface CameraLandmarkers {
   pose: PoseLandmarker
   hand: HandLandmarker
   face: FaceLandmarker
+}
+
+/** Everything one detection pass reads from. */
+export interface CameraDetectionContext {
+  source: HTMLVideoElement | ImageBitmap
+  frameSize: { width: number; height: number }
+  landmarkers: CameraLandmarkers
+  /** The canvas face and hand crops are drawn into. */
+  cropCanvas: HTMLCanvasElement
+  options: CameraDetectionOptions
 }
 
 /** One detection pass: what to draw over the preview, and the frame to apply to the rig. */

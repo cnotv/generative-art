@@ -7,12 +7,13 @@ import { RIG_BODY_PART_GROUPS, type RigBodyPartGroup } from './bodyPartGroups'
 import {
   buildBodyLandmarks,
   buildHandLandmarks,
+  buildMappingOptions,
   buildMixamoRig
 } from './fixtures/cameraPoseFixtures'
-import type { CameraPoseFrame, CameraPoseMappingOptions } from './types'
+import type { CameraPoseFrame } from './types'
 
 const ALL_GROUPS = new Set(RIG_BODY_PART_GROUPS)
-const OPTIONS: CameraPoseMappingOptions = { includeDepth: true, groundFeet: false }
+const OPTIONS = buildMappingOptions()
 const EMPTY_FRAME: CameraPoseFrame = { bodyLandmarks: null, handLandmarks: {}, headRotation: null }
 
 /** The same wiring `useRigAnimator` gives `useRigCameraPose`, built on the real Mixamo skeleton. */

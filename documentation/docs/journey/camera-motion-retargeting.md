@@ -84,10 +84,10 @@ flowchart TD
   pose --> inFrame[Hide landmarks outside the image]
   frame --> handWhole[Hand Landmarker on the whole frame]
   handWhole -->|a side missed, body found| handCrop[Crop around that wrist]
-  pose -->|body found| faceCrop[Crop around the nose]
-  pose -->|no body| faceWhole[Whole frame]
-  faceCrop --> face[Face Landmarker: head rotation]
-  faceWhole --> face
+  frame --> faceWhole[Face Landmarker on the whole frame]
+  faceWhole -->|missed, body found| faceCrop[Crop around the nose]
+  faceWhole --> face[Head rotation]
+  faceCrop --> face
   handWhole --> hand[Finger landmarks, sided by the nearer wrist]
   handCrop --> hand
   face --> mirror[Mirror for a self view]
@@ -111,14 +111,17 @@ elapsed time, the same setting holds whether detection manages fifteen readings 
 Most of the constants and two of the design decisions came from running the detectors over the
 attached dance clip rather than from documentation.
 
-| Finding                                                                                                                      | Consequence                                                                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --- | ------------------------------------------------------------------------------------------------- | ------------------------ |
-| The Face Landmarker found the face in 0 of 162 full frames, and in 139 of the same frames cropped around the pose's own nose | Face and hands are detected in crops around the body, the way MediaPipe's holistic pipeline does internally |
-| The Hand Landmarker found a hand in 25 of 162 full frames                                                                    | A hand found on the whole frame wins; a side it missed is looked for again in a crop around that wrist      |
-| The hand detector's left/right label disagreed with the nearest wrist about half the time                                    | A hand's side comes from the body's nearer visible wrist, the label only when no wrist is in view           |
-| The face matrix's yaw agreed in sign with the yaw read from the ears, and looking into the lens reads as no rotation         | Its rotation is used with no axis conversion                                                                |
-| A level gaze read about 19° downward from the ears and nose alone                                                            | That reading is tipped back up by a measured offset                                                         |
-| A wrist dropped below the visibility threshold while its shoulder and elbow stayed clear                                     | The upper arm and thigh are driven on their own; only the segments below wait                               |     | The ankle to toe direction matched the rig's foot bone within a few degrees, even in heeled boots | No foot offset is needed |
+| Finding                                                                                                                                     | Consequence                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| The Face Landmarker found the face in 0 of 162 full frames, and in 139 of the same frames cropped around the pose's own nose                | Face and hands are detected in crops around the body, the way MediaPipe's holistic pipeline does internally |
+| The Hand Landmarker found a hand in 25 of 162 full frames                                                                                   | A hand found on the whole frame wins; a side it missed is looked for again in a crop around that wrist      |
+| The hand detector's left/right label disagreed with the nearest wrist about half the time                                                   | A hand's side comes from the body's nearer visible wrist, the label only when no wrist is in view           |
+| With a face crop sized off the shoulder span, a webcam close-up could miss a face filling the frame, leaving the weak ear reading in charge | The whole frame is searched for the face first, the crop only when that misses                              |
+| With an arm across the face, the face reading flipped round by about 150° for a frame                                                       | A face reading turned further from the chest than a neck can turn is dropped for the ears                   |
+| The face matrix's yaw agreed in sign with the yaw read from the ears, and looking into the lens reads as no rotation                        | Its rotation is used with no axis conversion                                                                |
+| A level gaze read about 19° downward from the ears and nose alone                                                                           | That reading is tipped back up by a measured offset                                                         |
+| A wrist dropped below the visibility threshold while its shoulder and elbow stayed clear                                                    | The upper arm and thigh are driven on their own; only the segments below wait                               |
+| The ankle to toe direction matched the rig's foot bone within a few degrees, even in heeled boots                                           | No foot offset is needed                                                                                    |
 
 Nine frames of that clip are kept as a test fixture alongside the default character's real
 skeleton. Every visible limb segment lands within a degree of the dancer's, the head matches the

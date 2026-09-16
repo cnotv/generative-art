@@ -24,12 +24,14 @@ import { useVideoTimelineSync } from './useVideoTimelineSync'
 import { CAMERA_LANDMARK_VISIBILITY_THRESHOLD } from './cameraPoseMapping'
 import { hasCameraPoseContent } from './cameraPoseFrame'
 import { CAMERA_PANEL_WIDTH_VW, MEDIA_FILE_ACCEPT } from './config'
-import type { CameraPoseFrame } from './types'
+import type { CameraDetectionOptions, CameraPoseFrame } from './types'
 
 const props = defineProps<{
   /** How long a live-feed landmark held still takes to settle, in milliseconds; tuned from the
    * Config panel. */
   smoothingMilliseconds: number
+  /** The Config panel's detection switches, each rule on or off. */
+  detectionOptions: CameraDetectionOptions
   /** Furthest a landmark may move in one frame before the excess is clamped off as a sudden
    * jump; tuned from the Config panel. */
   maxJump: number
@@ -63,11 +65,17 @@ const emit = defineEmits<{
 const videoReference = ref<HTMLVideoElement | null>(null)
 const canvasReference = ref<HTMLCanvasElement | null>(null)
 const fileInputReference = ref<HTMLInputElement | null>(null)
-const camera = useCameraPoseCapture(toRef(props, 'smoothingMilliseconds'), toRef(props, 'maxJump'))
-const photo = useCameraPhotoPose()
+const detectionOptions = toRef(props, 'detectionOptions')
+const camera = useCameraPoseCapture(
+  toRef(props, 'smoothingMilliseconds'),
+  toRef(props, 'maxJump'),
+  detectionOptions
+)
+const photo = useCameraPhotoPose(detectionOptions)
 const uploadedVideo = useVideoPoseCapture(
   toRef(props, 'smoothingMilliseconds'),
-  toRef(props, 'maxJump')
+  toRef(props, 'maxJump'),
+  detectionOptions
 )
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 /** Whether the current mode drives the rig from a continuously updating source, the same as a
@@ -261,7 +269,8 @@ onUnmounted(() => {
     <div
       class="camera-pose-capture__preview"
       :class="{
-        'camera-pose-capture__preview--mirrored': mode === 'camera',
+        'camera-pose-capture__preview--mirrored':
+          mode === 'camera' && detectionOptions.mirrorLiveCamera,
         'camera-pose-capture__preview--hidden': !showPreview
       }"
     >

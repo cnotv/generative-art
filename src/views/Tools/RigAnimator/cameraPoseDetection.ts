@@ -30,24 +30,14 @@ import {
 import type {
   CameraCropSquare,
   CameraDetection,
+  CameraDetectionContext,
   CameraHandLandmark,
   CameraLandmarkers
 } from './types'
 
-type CameraImageSource = HTMLVideoElement | ImageBitmap
+type DetectionContext = CameraDetectionContext
 
-interface FrameSize {
-  width: number
-  height: number
-}
-
-/** Everything one detection pass reads from, bundled so each step takes it as one argument. */
-interface DetectionContext {
-  source: CameraImageSource
-  frameSize: FrameSize
-  landmarkers: CameraLandmarkers
-  cropCanvas: HTMLCanvasElement
-}
+const NO_WRISTS: Record<HandSide, NormalizedLandmark | null> = { Left: null, Right: null }
 
 interface DetectedHand {
   side: HandSide
@@ -198,7 +188,7 @@ const detectHandsInWholeFrame = (
   const sides = assignHandSides(
     result.landmarks.map(([wrist]) => wrist),
     result.handedness.map((categories) => resolveCameraHandSide(categories[0]?.categoryName ?? '')),
-    visibleWrists(bodyImage)
+    context.options.sideHandsByNearestWrist ? visibleWrists(bodyImage) : NO_WRISTS
   )
   return result.worldLandmarks.flatMap((worldLandmarks, index) => {
     const side = sides[index]
@@ -243,8 +233,9 @@ const detectHands = (
   context: DetectionContext,
   bodyImage: NormalizedLandmark[] | null
 ): DetectedHand[] => {
+  if (!context.options.trackHands) return []
   const wholeFrameHands = detectHandsInWholeFrame(context, bodyImage)
-  if (!bodyImage) return wholeFrameHands
+  if (!bodyImage || !context.options.searchHandsAroundWrists) return wholeFrameHands
   const missingSides = RIG_SIDES.filter(
     (side) => !wholeFrameHands.some((hand) => hand.side === side)
   )
@@ -256,18 +247,26 @@ const detectHands = (
 
 const readHeadRotation = (
   landmarkers: CameraLandmarkers,
-  image: CameraImageSource | HTMLCanvasElement
+  image: DetectionContext['source'] | HTMLCanvasElement
 ): QuaternionData | null => {
   const matrix = landmarkers.face.detect(image).facialTransformationMatrixes?.[0]
   return matrix ? faceMatrixToHeadRotation(matrix.data) : null
 }
 
-/** With a body in view the face is read in a crop around its nose; without one, on the whole frame. */
+/**
+ * Read the face on the whole frame first, which is all a webcam close-up needs, and only when
+ * that finds nothing look again in a crop around the body's nose, the case of a face small in a
+ * wide shot.
+ */
 const detectHead = (
   context: DetectionContext,
   bodyImage: NormalizedLandmark[] | null
 ): QuaternionData | null => {
-  if (!bodyImage) return readHeadRotation(context.landmarkers, context.source)
+  if (!context.options.trackFace) return null
+  const wholeFrameRotation = readHeadRotation(context.landmarkers, context.source)
+  if (wholeFrameRotation || !bodyImage || !context.options.searchFaceAroundBody) {
+    return wholeFrameRotation
+  }
   const nose = bodyImage[CAMERA_LANDMARK_INDEX.nose]
   if (!isVisibleInFrame(nose)) return null
   drawCrop(context, cropAroundBody(context, bodyImage, nose, CAMERA_FACE_CROP_SPAN_MULTIPLIER))
@@ -278,31 +277,27 @@ const detectHead = (
  * Run the hand and face detectors against one frame whose pose was already detected. Both are
  * trained on close-ups, so with a body in view they also read crops around its wrists and nose,
  * the way MediaPipe's own holistic pipeline does, to find a hand or face small in a wide shot.
- * Body landmarks placed outside the image are hidden: they are guesses, not detections.
- * @param source The video or photo the pose was detected on
- * @param frameSize The source's size in pixels
- * @param landmarkers The detectors, from `createCameraLandmarkers`
- * @param cropCanvas The canvas crops are drawn into, from `createCameraCropCanvas`
+ * Every step can be switched off from the Config panel through `context.options`.
+ * @param context The source, its size, the detectors, the crop canvas and the detection switches
  * @param poseResult The pose detector's result for this same frame
  * @returns The overlay landmarks and the frame to apply to the rig
  */
 export const detectCameraPose = (
-  source: CameraImageSource,
-  frameSize: FrameSize,
-  landmarkers: CameraLandmarkers,
-  cropCanvas: HTMLCanvasElement,
+  context: CameraDetectionContext,
   poseResult: PoseLandmarkerResult
 ): CameraDetection => {
-  const context: DetectionContext = { source, frameSize, landmarkers, cropCanvas }
   const bodyImage = poseResult.landmarks[0] ?? null
   const bodyWorld = poseResult.worldLandmarks[0] ?? null
   const hands = detectHands(context, bodyImage)
+  const bodyLandmarks =
+    bodyWorld && bodyImage && context.options.ignoreLandmarksOutsideImage
+      ? hideLandmarksOutsideFrame(bodyWorld, bodyImage)
+      : bodyWorld
   return {
     previewLandmarks: bodyImage,
     previewHandLandmarks: hands.map((hand) => hand.imageLandmarks),
     frame: {
-      bodyLandmarks:
-        bodyWorld && bodyImage ? hideLandmarksOutsideFrame(bodyWorld, bodyImage) : null,
+      bodyLandmarks,
       handLandmarks: Object.fromEntries(hands.map((hand) => [hand.side, hand.worldLandmarks])),
       headRotation: detectHead(context, bodyImage)
     }

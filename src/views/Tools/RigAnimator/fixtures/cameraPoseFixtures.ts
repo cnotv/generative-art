@@ -1,7 +1,31 @@
 import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
 import skeleton from './mixamoCharacterSkeleton.json'
-import type { CameraHandLandmark, CameraLandmark } from '../types'
+import type { CameraHandLandmark, CameraLandmark, CameraPoseMappingOptions } from '../types'
+
+/**
+ * Every bone rule switched on, the Config panel's default, with any switched as given.
+ * @param overrides Rules to set differently
+ * @returns The mapping options
+ */
+export const buildMappingOptions = (
+  overrides: Partial<CameraPoseMappingOptions> = {}
+): CameraPoseMappingOptions => ({
+  includeDepth: true,
+  groundFeet: false,
+  turnHips: true,
+  bendSpine: true,
+  turnHead: true,
+  correctHeadPitch: true,
+  limitHeadTurn: true,
+  aimArms: true,
+  rollUpperArmsFromElbows: true,
+  rollForearmsToPalms: true,
+  aimLegs: true,
+  rollThighsFromKneesAndFeet: true,
+  aimFeet: true,
+  ...overrides
+})
 
 type Point = [number, number, number]
 

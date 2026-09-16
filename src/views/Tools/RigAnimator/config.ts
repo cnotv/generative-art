@@ -179,6 +179,8 @@ export const CAMERA_NECK_TURN_SHARE = 0.5
  * points down. Measured against the Face Landmarker on the same clip: about 19°.
  */
 export const CAMERA_HEAD_PITCH_OFFSET_RADIANS = 0.33
+/** The furthest the head can turn away from the chest, about 80°; a face reading past it is a misdetection. */
+export const CAMERA_HEAD_MAX_TURN_RADIANS = 1.4
 /** A limb bent less than this carries no trustworthy cue for how its upper bone is rolled. */
 export const CAMERA_TWIST_MIN_BEND_RADIANS = 0.17
 /** A limb bent at least this much has its roll read entirely from the bend. */

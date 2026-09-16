@@ -1,6 +1,6 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
-import { CAMERA_SMOOTHING_MILLISECONDS, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
+import type { CameraDetectionOptions } from './types'
 
 /**
  * Owns an uploaded video file for the camera pose capture dialog: the video-file counterpart to
@@ -11,10 +11,12 @@ import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
  *   frame the same way `useCameraPoseCapture`'s own is
  * @param maxJump The furthest a landmark may move from its previous position in one frame, read
  *   fresh every frame the same way `smoothingMilliseconds` is
+ * @param detectionOptions The Config panel's detection switches, read fresh every frame
  */
 export const useVideoPoseCapture = (
-  smoothingMilliseconds: Ref<number> = ref(CAMERA_SMOOTHING_MILLISECONDS),
-  maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS)
+  smoothingMilliseconds: Ref<number>,
+  maxJump: Ref<number>,
+  detectionOptions: Ref<CameraDetectionOptions>
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
@@ -28,7 +30,8 @@ export const useVideoPoseCapture = (
     videoElement,
     smoothingMilliseconds,
     maxJump,
-    mirror: false
+    detectionOptions,
+    mirror: () => false
   })
 
   /** Play an uploaded video file through once and start live detection against it, replacing

@@ -1,6 +1,6 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
-import { CAMERA_SMOOTHING_MILLISECONDS, CAMERA_LANDMARK_MAX_JUMP_METERS } from './config'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
+import type { CameraDetectionOptions } from './types'
 
 /**
  * Owns the webcam stream for the camera pose capture dialog: starting/stopping the camera and
@@ -10,10 +10,12 @@ import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
  *   frame so a Config panel slider takes effect immediately rather than only on the next `start()`
  * @param maxJump The furthest a landmark may move from its previous position in one frame,
  *   read fresh every frame the same way `smoothingMilliseconds` is
+ * @param detectionOptions The Config panel's detection switches, read fresh every frame
  */
 export const useCameraPoseCapture = (
-  smoothingMilliseconds: Ref<number> = ref(CAMERA_SMOOTHING_MILLISECONDS),
-  maxJump: Ref<number> = ref(CAMERA_LANDMARK_MAX_JUMP_METERS)
+  smoothingMilliseconds: Ref<number>,
+  maxJump: Ref<number>,
+  detectionOptions: Ref<CameraDetectionOptions>
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
@@ -32,7 +34,8 @@ export const useCameraPoseCapture = (
     videoElement,
     smoothingMilliseconds,
     maxJump,
-    mirror: true
+    detectionOptions,
+    mirror: () => detectionOptions.value.mirrorLiveCamera
   })
 
   /** Request the camera and load the detectors, then start live detection. */

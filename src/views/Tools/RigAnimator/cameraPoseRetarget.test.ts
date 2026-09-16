@@ -7,16 +7,17 @@ import {
   captureCameraRetargetRest
 } from './cameraPoseRetarget'
 import { mirrorCameraLandmarks } from './cameraPoseMapping'
-import { faceMatrixToHeadRotation } from './cameraPoseFrame'
+import { faceMatrixToHeadRotation, mirrorCameraPoseFrame } from './cameraPoseFrame'
 import {
   buildBodyLandmarks,
   buildHandLandmarks,
+  buildMappingOptions,
   buildMixamoRig
 } from './fixtures/cameraPoseFixtures'
 import danceClip from './fixtures/danceClipFrames.json'
-import type { CameraLandmark, CameraPoseFrame, CameraPoseMappingOptions } from './types'
+import type { CameraLandmark, CameraPoseFrame } from './types'
 
-const DEFAULT_OPTIONS: CameraPoseMappingOptions = { includeDepth: true, groundFeet: false }
+const DEFAULT_OPTIONS = buildMappingOptions()
 const WORLD_UP = new THREE.Vector3(0, 1, 0)
 
 const poseRig = (frame: Partial<CameraPoseFrame>, options = DEFAULT_OPTIONS) => {
@@ -60,6 +61,9 @@ const landmarkDirection = (
     -(landmarks[to].y - landmarks[from].y),
     -(landmarks[to].z - landmarks[from].z)
   ).normalize()
+
+const mirrorIf = (mirrored: boolean, frame: CameraPoseFrame): CameraPoseFrame =>
+  mirrored ? mirrorCameraPoseFrame(frame) : frame
 
 const degreesBetween = (a: THREE.Vector3, b: THREE.Vector3): number =>
   THREE.MathUtils.radToDeg(a.angleTo(b))
@@ -170,7 +174,7 @@ describe('applyCameraPoseFrame', () => {
     const untouched = buildMixamoRig()
 
     // Act
-    const { bone } = poseRig({ bodyLandmarks }, { includeDepth: true, groundFeet: true })
+    const { bone } = poseRig({ bodyLandmarks }, buildMappingOptions({ groundFeet: true }))
 
     // Assert
     ;['LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot'].forEach((name) => {
@@ -293,6 +297,39 @@ describe('applyCameraPoseFrame', () => {
     })
   })
 
+  it.each([
+    ['as detected', false],
+    ['mirrored for a self view', true]
+  ])('turns the head the same way from the face tracker as from the ears, %s', (_, mirrored) => {
+    // Arrange: the head turned 35° about the vertical, read both by the face tracker and by
+    // BlazePose's own ears and nose. Built in scene axes, then flipped into MediaPipe's.
+    const turn = new THREE.Quaternion().setFromAxisAngle(WORLD_UP, THREE.MathUtils.degToRad(35))
+    const earCentre = new THREE.Vector3(0, 0.62, 0)
+    const headPoint = (scenePoint: THREE.Vector3): [number, number, number] => {
+      const turned = scenePoint.clone().sub(earCentre).applyQuaternion(turn).add(earCentre)
+      return [turned.x, -turned.y, -turned.z]
+    }
+    const bodyLandmarks = buildBodyLandmarks({
+      0: headPoint(new THREE.Vector3(0, 0.586, 0.1)),
+      7: headPoint(new THREE.Vector3(0.07, 0.62, 0)),
+      8: headPoint(new THREE.Vector3(-0.07, 0.62, 0))
+    })
+    const faceFrame = mirrorIf(mirrored, {
+      bodyLandmarks,
+      handLandmarks: {},
+      headRotation: { x: turn.x, y: turn.y, z: turn.z, w: turn.w }
+    })
+    const earFrame = { ...faceFrame, headRotation: null }
+
+    // Act
+    const fromFace = poseRig(faceFrame).turnFromRest('Head')
+    const fromEars = poseRig(earFrame).turnFromRest('Head')
+
+    // Assert
+    expect(yawDegrees(facing(fromFace))).toBeCloseTo(mirrored ? -35 : 35, 0)
+    expect(yawDegrees(facing(fromEars))).toBeCloseTo(yawDegrees(facing(fromFace)), -0.5)
+  })
+
   it('raises the rig arm on the same screen side as a mirrored self-view preview', () => {
     // Arrange: the performer raises their own right arm; the live feed is mirrored.
     const bodyLandmarks = mirrorCameraLandmarks(
@@ -327,7 +364,7 @@ describe('applyCameraPoseFrame', () => {
       )
 
     // Act
-    const grounded = poseRig({ bodyLandmarks }, { includeDepth: true, groundFeet: true })
+    const grounded = poseRig({ bodyLandmarks }, buildMappingOptions({ groundFeet: true }))
     const floating = poseRig({ bodyLandmarks }, DEFAULT_OPTIONS)
 
     // Assert
@@ -426,6 +463,101 @@ describe('applyCameraPoseFrame', () => {
         })
       }
     )
+  })
+})
+
+describe('each bone rule switches off on its own', () => {
+  const HEAD_YAW = new THREE.Quaternion().setFromAxisAngle(WORLD_UP, THREE.MathUtils.degToRad(30))
+  /** Leaning, hips turned, head turned, elbows and knees bent: every rule has something to do. */
+  const ACTIVE_FRAME: Partial<CameraPoseFrame> = {
+    bodyLandmarks: buildBodyLandmarks({
+      11: [0.18, -0.46, -0.2],
+      12: [-0.18, -0.46, -0.2],
+      13: [0.4, -0.3, -0.1],
+      14: [-0.4, -0.3, -0.1],
+      15: [0.45, -0.3, -0.35],
+      16: [-0.45, -0.3, -0.35],
+      17: [0.47, -0.3, -0.43],
+      18: [-0.47, -0.3, -0.43],
+      19: [0.43, -0.3, -0.44],
+      20: [-0.43, -0.3, -0.44],
+      23: [0.1, 0, 0.05],
+      24: [-0.1, 0, -0.05],
+      25: [0.12, 0.4, -0.15],
+      26: [-0.12, 0.4, -0.15],
+      27: [0.1, 0.8, 0],
+      28: [-0.1, 0.8, 0]
+    }),
+    headRotation: { x: HEAD_YAW.x, y: HEAD_YAW.y, z: HEAD_YAW.z, w: HEAD_YAW.w }
+  }
+  const restRig = buildMixamoRig()
+  const restQuaternion = (name: string): THREE.Quaternion =>
+    restRig.find((candidate) => candidate.name === `mixamorig${name}`)!.quaternion
+
+  it.each([
+    ['turnHips', ['Hips']],
+    ['bendSpine', ['Spine', 'Spine1', 'Spine2']],
+    ['turnHead', ['Neck', 'Head']],
+    ['aimArms', ['LeftArm', 'LeftForeArm', 'RightArm', 'RightForeArm']],
+    ['aimLegs', ['LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot']],
+    ['aimFeet', ['LeftFoot', 'RightFoot']]
+  ] as const)('leaves the bones %s drives at rest when it is off: %j', (rule, boneNames) => {
+    // Arrange, Act
+    const on = poseRig(ACTIVE_FRAME, buildMappingOptions())
+    const off = poseRig(ACTIVE_FRAME, buildMappingOptions({ [rule]: false }))
+
+    // Assert
+    const turned = (rig: ReturnType<typeof poseRig>, name: string): number =>
+      rig.bone(`mixamorig${name}`).quaternion.angleTo(restQuaternion(name))
+    boneNames.forEach((name) => expect(turned(off, name)).toBeLessThan(1e-6))
+    expect(Math.max(...boneNames.map((name) => turned(on, name)))).toBeGreaterThan(0.01)
+  })
+
+  it.each([
+    ['rollUpperArmsFromElbows', 'LeftArm', 'LeftForeArm'],
+    ['rollForearmsToPalms', 'LeftForeArm', 'LeftHand'],
+    ['rollThighsFromKneesAndFeet', 'LeftUpLeg', 'LeftLeg']
+  ] as const)('changes only the roll, not the aim, of %s when it is off', (rule, from, to) => {
+    // Arrange, Act
+    const on = poseRig(ACTIVE_FRAME, buildMappingOptions())
+    const off = poseRig(ACTIVE_FRAME, buildMappingOptions({ [rule]: false }))
+
+    // Assert
+    expect(degreesBetween(on.segment(from, to), off.segment(from, to))).toBeLessThan(1)
+    expect(
+      on.bone(`mixamorig${from}`).quaternion.angleTo(off.bone(`mixamorig${from}`).quaternion)
+    ).toBeGreaterThan(0.01)
+  })
+
+  it.each([
+    ['on, the ears decide', true, 0],
+    ['off, the flipped reading goes through', false, 150]
+  ])('with the impossible head turn limit %s', (_, limitHeadTurn, expectedYaw) => {
+    // Arrange: a face reading flipped round by 150° on a body facing the camera.
+    const flipped = new THREE.Quaternion().setFromAxisAngle(WORLD_UP, THREE.MathUtils.degToRad(150))
+
+    // Act
+    const { turnFromRest } = poseRig(
+      {
+        bodyLandmarks: buildBodyLandmarks(),
+        headRotation: { x: flipped.x, y: flipped.y, z: flipped.z, w: flipped.w }
+      },
+      buildMappingOptions({ limitHeadTurn })
+    )
+
+    // Assert
+    expect(yawDegrees(facing(turnFromRest('Head')))).toBeCloseTo(expectedYaw, -1)
+  })
+
+  it('reads a level gaze as tipped down by BlazePose’s nose offset when the pitch correction is off', () => {
+    // Arrange, Act
+    const { turnFromRest } = poseRig(
+      { bodyLandmarks: buildBodyLandmarks() },
+      buildMappingOptions({ correctHeadPitch: false })
+    )
+
+    // Assert
+    expect(pitchDegrees(facing(turnFromRest('Head')))).toBeLessThan(-15)
   })
 })
 

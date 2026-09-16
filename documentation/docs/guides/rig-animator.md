@@ -470,9 +470,12 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   chest turns about the vertical alone.
 - **Head.** When the Face Landmarker finds the face, its reading turns the head directly and the
   neck takes half the turn. Otherwise the ears and nose do, tipped back up by the 19° a level
-  gaze reads downward from them. With a body in view the face is looked for in a crop around the
-  nose, since on a full-body clip it was never found in the whole frame and was found in most
-  frames of the crop. A face filmed on its own, with no body, turns only the neck and head.
+  gaze reads downward from them. The face is looked for on the whole frame first, which is all a
+  webcam close-up needs; when that misses and a body is in view, it is looked for again in a crop
+  around the nose, since on a full-body clip it was never found in the whole frame and was found
+  in most frames of the crop. A face reading turned further from the chest than a neck can turn
+  is a misdetection and the ears stand in for that frame. A face filmed on its own, with no body,
+  turns only the neck and head.
 - **Arms and legs.** Each upper arm points at the elbow, forearm at the wrist, thigh at the knee,
   shin at the ankle and foot at the toes. How each one is rolled about its own length comes from
   what shows it: which way the forearm swings off the upper arm, which way the kneecap and foot
@@ -495,10 +498,34 @@ vertices bound to it, and the model came apart at every joint.
 
 ![Mixamo's Y Bot posed from the same clip, an arm raised overhead and a high kick, every limb attached](/img/animation/rig-camera-ybot-retarget.webp)
 
-### Extra details to try
+### Switching each rule on and off
 
-Checkboxes and sliders in the Config panel, shown once the rig has every bone the base mapping
-needs, control more of what MediaPipe actually detects and how the result is tuned:
+Every rule the capture follows has its own checkbox in the Config panel, all on by default, so a
+pose that reads wrong can be taken apart one rule at a time. **Camera Detect** rules decide what
+MediaPipe reads from each frame; **Camera Bones** rules decide which bones that reading turns.
+
+![The Config panel's Camera Pose, Camera Detect and Camera Bones checkboxes, every rule on](/img/animation/rig-camera-rule-toggles.webp)
+
+- **Face Tracker for Head** runs the Face Landmarker; off, the head is read from the ears and
+  nose. **Face Search Around Nose** looks again in a crop around the body's nose when the whole
+  frame shows no face, the case of a face small in a wide shot.
+- **Hand Tracker for Fingers** runs the Hand Landmarker. **Hand Search Around Wrists** looks
+  again in a crop around a wrist the whole frame found no hand at. **Hand Side by Nearest Wrist**
+  sides a hand by the body's wrist instead of the detector's own label.
+- **Ignore Body Outside Image** treats a body landmark placed outside the picture as not
+  detected. **Mirror Live Camera** reflects the webcam's body, hands and head to match its
+  mirrored preview. **Only While Video Plays** stops reading a paused video.
+- **Turn Hips**, **Bend Spine**, **Turn Neck and Head**, **Aim Arms**, **Aim Legs** and **Aim
+  Feet** each leave their bones at rest when off.
+- **Correct Ear and Nose Head Pitch** tips a head read from the ears back up by the 19° a level
+  gaze reads downward. **Ignore Impossible Head Turns** drops a face reading turned further from
+  the chest than a neck can turn, which a face half hidden behind an arm produced, and uses the
+  ears for that frame instead.
+- **Roll Upper Arms from Elbows**, **Roll Forearms and Hands to Palms** and **Roll Thighs from
+  Knees and Feet** each keep the limb pointing the same way when off, and only drop how it is
+  rolled about its own length.
+
+The remaining options tune the result:
 
 - **Keep Feet on Ground**, on by default, raises or lowers the whole rig so its lowest foot stays
   where it stands at rest. World landmarks are centred on the hips, so nothing in them says how
