@@ -1,6 +1,11 @@
 import * as THREE from 'three'
 import type { HandSide, QuaternionData } from '@webgamekit/rig'
-import { CAMERA_CROP_MIN_SIZE_PIXELS, CAMERA_HAND_WRIST_MATCH_DISTANCE } from './config'
+import {
+  CAMERA_CROP_MIN_SIZE_PIXELS,
+  CAMERA_HAND_FLIP_CONFIRM_READINGS,
+  CAMERA_HAND_TRACK_RESET_MILLISECONDS,
+  CAMERA_HAND_WRIST_MATCH_DISTANCE
+} from './config'
 import {
   filterCameraLandmarks,
   lowPassBlendFactor,
@@ -8,9 +13,12 @@ import {
   smoothingCutoffHertz
 } from './cameraPoseMapping'
 import { mirrorCameraHandLandmarks } from './cameraHandPoseMapping'
+import { cameraHandOrientation } from './cameraPoseRetarget'
 import type {
   CameraCropSquare,
   CameraHandLandmark,
+  CameraHandTrack,
+  CameraHandTracks,
   CameraPoseFrame,
   CameraSmoothingSettings
 } from './types'
@@ -254,5 +262,121 @@ export const smoothCameraPoseFrame = (
         settings
       ),
     timestampMilliseconds
+  }
+}
+
+const RIG_SIDES: HandSide[] = ['Left', 'Right']
+
+const toQuaternion = ({ x, y, z, w }: QuaternionData): THREE.Quaternion =>
+  new THREE.Quaternion(x, y, z, w)
+
+const acceptHandReading = (
+  landmarks: CameraHandLandmark[],
+  orientation: THREE.Quaternion,
+  timestampMilliseconds: number
+): CameraHandTrack => ({
+  landmarks,
+  orientation: { x: orientation.x, y: orientation.y, z: orientation.z, w: orientation.w },
+  acceptedAtMilliseconds: timestampMilliseconds,
+  pendingOrientation: null,
+  pendingReadings: 0
+})
+
+interface SteadiedHand {
+  landmarks: CameraHandLandmark[] | undefined
+  track: CameraHandTrack | undefined
+}
+
+/** A side with no reading this time: held while recent, and remembered a little longer to judge the next reading by. */
+const steadyMissingHand = (
+  track: CameraHandTrack | undefined,
+  age: number,
+  settings: CameraSmoothingSettings
+): SteadiedHand => {
+  if (age <= settings.handHoldMilliseconds) return { landmarks: track?.landmarks, track }
+  return {
+    landmarks: undefined,
+    track: age <= CAMERA_HAND_TRACK_RESET_MILLISECONDS ? track : undefined
+  }
+}
+
+/** How many readings in a row, this one included, agree on the turn still waiting to be confirmed. */
+const pendingTurnReadings = (
+  track: CameraHandTrack,
+  orientation: THREE.Quaternion,
+  settings: CameraSmoothingSettings
+): number =>
+  track.pendingOrientation &&
+  orientation.angleTo(toQuaternion(track.pendingOrientation)) <= settings.handFlipRadians
+    ? track.pendingReadings + 1
+    : 1
+
+/** What one side shows this reading, and what to remember about it for the next. */
+const steadyHand = (
+  track: CameraHandTrack | undefined,
+  reading: CameraHandLandmark[] | undefined,
+  timestampMilliseconds: number,
+  settings: CameraSmoothingSettings
+): SteadiedHand => {
+  const age = track ? timestampMilliseconds - track.acceptedAtMilliseconds : Infinity
+  if (!reading) return steadyMissingHand(track, age, settings)
+  const orientation = cameraHandOrientation(reading)
+  if (!orientation) return { landmarks: reading, track }
+  const accepted = {
+    landmarks: reading,
+    track: acceptHandReading(reading, orientation, timestampMilliseconds)
+  }
+  if (
+    !track ||
+    age > CAMERA_HAND_TRACK_RESET_MILLISECONDS ||
+    orientation.angleTo(toQuaternion(track.orientation)) <= settings.handFlipRadians
+  ) {
+    return accepted
+  }
+  const pendingReadings = pendingTurnReadings(track, orientation, settings)
+  if (pendingReadings >= CAMERA_HAND_FLIP_CONFIRM_READINGS) return accepted
+  const { x, y, z, w } = orientation
+  return {
+    landmarks: track.landmarks,
+    track: { ...track, pendingOrientation: { x, y, z, w }, pendingReadings }
+  }
+}
+
+/**
+ * Keep each detected hand steady against the Hand Landmarker's own misreadings, before any
+ * smoothing. A hand lost for a moment keeps its last reading for `settings.handHoldMilliseconds`
+ * rather than dropping out, and a palm turned further than `settings.handFlipRadians` from the last
+ * trusted reading is ignored until `CAMERA_HAND_FLIP_CONFIRM_READINGS` readings in a row agree on
+ * it: no wrist turns that far between two frames, while the detector does turn a palm over for a
+ * frame or two. See the camera motion retargeting journey doc for the clip this was measured on.
+ * @param tracks What each side last trusted, from the previous call; `{}` to start
+ * @param frame This reading's detection
+ * @param timestampMilliseconds When this reading was taken
+ * @param settings The Config panel's smoothing sliders
+ * @returns The frame with each hand steadied, and the tracks to hand back in next time
+ */
+export const steadyCameraHands = (
+  tracks: CameraHandTracks,
+  frame: CameraPoseFrame,
+  timestampMilliseconds: number,
+  settings: CameraSmoothingSettings
+): { frame: CameraPoseFrame; tracks: CameraHandTracks } => {
+  const steadied = RIG_SIDES.map(
+    (side) =>
+      [
+        side,
+        steadyHand(tracks[side], frame.handLandmarks[side], timestampMilliseconds, settings)
+      ] as const
+  )
+  return {
+    frame: {
+      ...frame,
+      handLandmarks: Object.fromEntries(
+        steadied.flatMap(([side, { landmarks }]) => (landmarks ? [[side, landmarks]] : []))
+      )
+    },
+    tracks: Object.fromEntries(
+      steadied.flatMap(([side, { track }]) => (track ? [[side, track]] : []))
+    )
   }
 }

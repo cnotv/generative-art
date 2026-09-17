@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getTools } from '@webgamekit/threejs'
@@ -8,16 +7,19 @@ import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import { ikFindTwoBoneChain, type TwoBoneIkChain } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle, Bone, Eye } from 'lucide-vue-next'
+import {
+  Upload,
+  Camera as CameraIcon,
+  Lightbulb,
+  Circle,
+  Bone,
+  Eye,
+  Settings,
+  Square
+} from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
-import {
-  registerViewConfig,
-  unregisterViewConfig,
-  updateViewSchema,
-  createReactiveConfig
-} from '@/stores/viewConfig'
-import { useViewPanelsStore } from '@/stores/viewPanels'
+import { createReactiveConfig } from '@/stores/viewConfig'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import {
   RIG_ANIMATOR_SETUP_CONFIG,
@@ -31,18 +33,30 @@ import {
   CAMERA_SMOOTHING_TURN_RESPONSE,
   CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
   CAMERA_BONE_SMOOTHING_MILLISECONDS,
+  CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
+  CAMERA_HAND_FLIP_DEGREES,
+  CAMERA_HAND_HOLD_MILLISECONDS,
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_TWIST_MIN_BEND_DEGREES,
   CAMERA_TWIST_FULL_BEND_DEGREES,
+  CAMERA_VIDEO_SLOWDOWN_RATIO,
+  RECORDING_SAMPLES_PER_FRAME,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
   DEFAULT_ENCLOSURE_OPACITY
 } from './config'
-import { buildRigAnimatorSchema } from './panelSchema'
+import { buildRigPanelGroups } from './panelSchema'
+import RigConfigAccordion from './RigConfigAccordion.vue'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { centerCameraOnVisibleCanvas, frameCameraOnModel } from './cameraFraming'
+import {
+  createRigGround,
+  disposeRigGround,
+  fitShadowToModel,
+  rigGroundPlacement
+} from './rigGround'
 import { estimateCameraYaw } from './cameraPoseMapping'
 import {
   selectedBodyPartGroups,
@@ -64,9 +78,6 @@ import type {
   RigAnimatorConfig
 } from './types'
 
-const route = useRoute()
-const routeName = route.name as string
-const { setViewPanels, clearViewPanels } = useViewPanelsStore()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -97,9 +108,11 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraAimArms: true,
   cameraRollUpperArms: true,
   cameraRollForearms: true,
+  cameraPalmsFromBody: false,
   cameraAimLegs: true,
   cameraRollThighs: true,
   cameraAimFeet: true,
+  cameraLimitJoints: true,
   cameraTrackFace: true,
   cameraSearchFaceAroundBody: true,
   cameraTrackHands: true,
@@ -115,11 +128,15 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraSpeedResponse: CAMERA_SMOOTHING_SPEED_RESPONSE,
   cameraTurnResponse: CAMERA_SMOOTHING_TURN_RESPONSE,
   cameraSpeedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
+  cameraHandHoldMilliseconds: CAMERA_HAND_HOLD_MILLISECONDS,
+  cameraHandFlipDegrees: CAMERA_HAND_FLIP_DEGREES,
   cameraBoneSmoothingMilliseconds: CAMERA_BONE_SMOOTHING_MILLISECONDS,
+  cameraBoneMaxTurnSpeed: CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
   cameraVisibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   cameraTwistMinBendDegrees: CAMERA_TWIST_MIN_BEND_DEGREES,
   cameraTwistFullBendDegrees: CAMERA_TWIST_FULL_BEND_DEGREES,
   cameraShowPreview: false,
+  cameraVideoSlowdownRatio: CAMERA_VIDEO_SLOWDOWN_RATIO,
   targetLeftArm: true,
   targetRightArm: true,
   targetLeftLeg: true,
@@ -145,13 +162,18 @@ const cameraPoseMappingOptions = computed(
     aimArms: reactiveConfig.value.cameraAimArms,
     rollUpperArmsFromElbows: reactiveConfig.value.cameraRollUpperArms,
     rollForearmsToPalms: reactiveConfig.value.cameraRollForearms,
+    palmsFromBodyLandmarks: reactiveConfig.value.cameraPalmsFromBody,
     aimLegs: reactiveConfig.value.cameraAimLegs,
     rollThighsFromKneesAndFeet: reactiveConfig.value.cameraRollThighs,
     aimFeet: reactiveConfig.value.cameraAimFeet,
     visibilityThreshold: reactiveConfig.value.cameraVisibilityThreshold,
     twistMinBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistMinBendDegrees),
     twistFullBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistFullBendDegrees),
-    boneSmoothingMilliseconds: reactiveConfig.value.cameraBoneSmoothingMilliseconds
+    boneSmoothingMilliseconds: reactiveConfig.value.cameraBoneSmoothingMilliseconds,
+    limitJoints: reactiveConfig.value.cameraLimitJoints,
+    maxBoneTurnRadiansPerSecond: THREE.MathUtils.degToRad(
+      reactiveConfig.value.cameraBoneMaxTurnSpeed
+    )
   })
 )
 
@@ -161,7 +183,9 @@ const cameraSmoothingSettings = computed(
     maxJump: reactiveConfig.value.cameraMaxJump,
     speedResponse: reactiveConfig.value.cameraSpeedResponse,
     turnResponse: reactiveConfig.value.cameraTurnResponse,
-    speedCutoffHertz: reactiveConfig.value.cameraSpeedCutoffHertz
+    speedCutoffHertz: reactiveConfig.value.cameraSpeedCutoffHertz,
+    handHoldMilliseconds: reactiveConfig.value.cameraHandHoldMilliseconds,
+    handFlipRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraHandFlipDegrees)
   })
 )
 
@@ -186,11 +210,16 @@ const targetBodyPartGroupLabels = computed(() =>
 )
 
 const rig = useRigAnimator(reactiveConfig)
-const showCameraCapture = ref(false)
+/** Whether the rig panel is open: the camera preview, its actions and every setting. */
+const showRigPanel = ref(false)
 const modelFileInput = ref<HTMLInputElement | null>(null)
 const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
+const cameraCaptureReference = ref<InstanceType<typeof CameraPoseCapture> | null>(null)
 const motionRecording = useRigMotionRecording({
+  now: () => cameraCaptureReference.value?.captureClockMilliseconds() ?? performance.now(),
   fps: () => reactiveConfig.value.fps,
+  samplesPerFrame: () =>
+    cameraCaptureReference.value?.captureSamplesPerFrame() ?? RECORDING_SAMPLES_PER_FRAME,
   currentFrame: () => reactiveConfig.value.frame,
   frameMax: () => rig.frameMax.value,
   setFrame: (frame) => (reactiveConfig.value.frame = frame),
@@ -199,7 +228,10 @@ const motionRecording = useRigMotionRecording({
   // sampled frames made each capture slower than the last (see captureKeyframeSilently's own
   // doc comment) and was the actual cause of the stutter recording had — not the camera feed
   // itself. stopRecordingAndCommit below pays that cost once, when the burst ends.
-  addKeyframe: () => rig.captureKeyframeSilently()
+  addKeyframe: () => rig.captureKeyframeSilently(),
+  capturePose: () => rig.capturePose(),
+  replaceTake: (fromFrame, toFrame, keyframes) =>
+    rig.replaceRecordedTake(fromFrame, toFrame, keyframes)
 })
 
 /** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
@@ -224,6 +256,25 @@ const handleSelectPreset = (value: string): void => {
 }
 
 let cameraReference: THREE.Camera | null = null
+let sceneReference: THREE.Scene | null = null
+let groundReference: THREE.Mesh | null = null
+
+/** Replace the ground with one sized to the model just loaded, and point the key light's shadow at it. */
+const placeGround = (model: THREE.Object3D): void => {
+  if (!sceneReference) return
+  if (groundReference) {
+    sceneReference.remove(groundReference)
+    disposeRigGround(groundReference)
+  }
+  const placement = rigGroundPlacement(model)
+  groundReference = placement ? createRigGround(placement) : null
+  if (!placement || !groundReference) return
+  sceneReference.add(groundReference)
+  const keyLight = sceneReference.children.find(
+    (child): child is THREE.DirectionalLight => child instanceof THREE.DirectionalLight
+  )
+  if (keyLight) fitShadowToModel(keyLight, model, placement)
+}
 let orbitReference: OrbitControls | null = null
 let hasRestoredAutosave = false
 let timelineControls: ReturnType<typeof createControls> | null = null
@@ -293,9 +344,7 @@ const updateCameraCentering = (): void => {
   ) {
     return
   }
-  // Hiding the preview shrinks the docked panel down to its action buttons, leaving the model
-  // the full canvas to sit in; only a visible preview actually covers part of the screen.
-  const isPreviewCoveringCanvas = showCameraCapture.value && reactiveConfig.value.cameraShowPreview
+  const isPreviewCoveringCanvas = showRigPanel.value
   centerCameraOnVisibleCanvas(
     activeCamera,
     canvas.value.clientWidth,
@@ -304,19 +353,31 @@ const updateCameraCentering = (): void => {
   )
 }
 
-/** Rebuilds the panel schema from the rig's current bones and auto-rig state. */
-const refreshSchema = (): void => {
-  updateViewSchema(
-    routeName,
-    buildRigAnimatorSchema(
-      rig.boneNames.value,
-      rig.needsAutoRig.value,
-      rig.positionRange.value,
-      rig.canCaptureFromCamera.value,
-      reactiveConfig.value.physicsEnabled
-    )
-  )
+/** The rig panel's settings, one accordion section each, for whatever the loaded rig supports. */
+const rigPanelGroups = computed(() =>
+  buildRigPanelGroups({
+    boneNames: rig.boneNames.value,
+    needsAutoRig: rig.needsAutoRig.value,
+    positionRange: rig.positionRange.value,
+    canCaptureFromCamera: rig.canCaptureFromCamera.value,
+    physicsEnabled: reactiveConfig.value.physicsEnabled
+  })
+)
+
+const readRigSetting = (path: string): unknown =>
+  (reactiveConfig.value as Record<string, unknown>)[path]
+
+const writeRigSetting = (path: string, value: unknown): void => {
+  reactiveConfig.value = { ...reactiveConfig.value, [path]: value }
 }
+
+const rigPanelActions: Record<string, () => void> = {
+  autoRig: () => rig.runAutoRig(),
+  resetBone: () => rig.resetSelectedBone(),
+  respawnMarbles: () => rig.rebuildMarbles()
+}
+
+const runRigPanelAction = (name: string): void => rigPanelActions[name]?.()
 
 /**
  * Closing the panel only clears the view-offset shift; it does not undo any orbit or pan the
@@ -324,7 +385,7 @@ const refreshSchema = (): void => {
  * where it started, rather than leaving it wherever the camera was last pointed.
  */
 const handleCloseCamera = (): void => {
-  showCameraCapture.value = false
+  showRigPanel.value = false
   if (motionRecording.isRecording.value) stopRecordingAndCommit()
   if (rig.model.value && cameraReference) {
     frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
@@ -347,10 +408,27 @@ const handleTogglePlayback = (): void => {
   rig.togglePlayback()
 }
 
-/** The docked camera icon opens the capture dialog, or closes it again if it is already open. */
-const toggleCameraCapture = (): void => {
-  if (showCameraCapture.value) handleCloseCamera()
-  else showCameraCapture.value = true
+/** The docked gear opens the rig panel, or closes it again, without starting the camera. */
+const toggleRigPanel = (): void => {
+  if (showRigPanel.value) handleCloseCamera()
+  else showRigPanel.value = true
+}
+
+/** The docked camera starts tracking the performer, opening the rig panel first when it is closed,
+ * or stops tracking when the camera is already running. */
+const toggleCameraTracking = async (): Promise<void> => {
+  if (!showRigPanel.value) {
+    showRigPanel.value = true
+    await nextTick()
+  }
+  cameraCaptureReference.value?.toggleCamera()
+}
+
+/** Timeline playback keeps running from wherever the playhead is moved to; a paused timeline
+ * leaves the jump to the frame watcher. */
+const moveToFrame = (frame: number): void => {
+  reactiveConfig.value.frame = frame
+  if (rig.isPlaying.value) rig.scrubToFrame(frame)
 }
 
 /** A region of the Merge Target diagram was clicked or activated by keyboard. */
@@ -375,6 +453,9 @@ const toggleMarbleFlow = (): void => {
  * (see `estimateCameraYaw`'s own doc comment for why not more than that).
  */
 const handleCameraApply = (frame: CameraPoseFrame): void => {
+  // Timeline playback poses the rig from the clip every tick; a live frame landing in between
+  // would yank it back to the camera for one frame, which reads as the model twitching.
+  if (rig.isPlaying.value) return
   rig.applyCameraPose(frame, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   const { bodyLandmarks } = frame
   if (
@@ -402,6 +483,7 @@ watch(
   () => reactiveConfig.value.model,
   async (url) => {
     await rig.loadModel(url)
+    if (rig.model.value) placeGround(rig.model.value)
     if (rig.model.value && cameraReference) {
       frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
     }
@@ -410,7 +492,6 @@ watch(
       const saved = loadRigAutosave()
       if (saved) rig.restoreAutosave(saved)
     }
-    refreshSchema()
   }
 )
 watch(
@@ -450,7 +531,7 @@ watch(
     if (!rig.isPlaying.value && !motionRecording.isRecording.value) rig.scrubToFrame(frame)
   }
 )
-watch(showCameraCapture, () => updateCameraCentering())
+watch(showRigPanel, () => updateCameraCentering())
 watch(
   () => reactiveConfig.value.cameraShowPreview,
   () => updateCameraCentering()
@@ -459,7 +540,6 @@ watch(
   () => reactiveConfig.value.physicsEnabled,
   () => {
     rig.rebuildPhysics()
-    refreshSchema()
   }
 )
 watch(
@@ -486,6 +566,7 @@ const init = async (): Promise<void> => {
   rig.setScene(scene)
   rig.setWorld(world)
   cameraReference = camera
+  sceneReference = scene
 
   const timeline = createTimelineManager()
   rig.setTimeline(timeline)
@@ -531,32 +612,10 @@ const isEditingAFormField = (): boolean => {
 
 /** Steps the current frame by a delta, clamped to the timeline's own current range. */
 const stepFrame = (delta: number): void => {
-  reactiveConfig.value.frame = Math.min(
-    Math.max(reactiveConfig.value.frame + delta, 0),
-    rig.frameMax.value
-  )
+  moveToFrame(Math.min(Math.max(reactiveConfig.value.frame + delta, 0), rig.frameMax.value))
 }
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true })
-  registerViewConfig(
-    routeName,
-    reactiveConfig,
-    buildRigAnimatorSchema([], false, rig.positionRange.value, false, false),
-    undefined,
-    {
-      autoRig: () => {
-        rig.runAutoRig()
-        refreshSchema()
-      },
-      resetBone: () => {
-        rig.resetSelectedBone()
-      },
-      respawnMarbles: () => {
-        rig.rebuildMarbles()
-      }
-    }
-  )
   await init()
   canvas.value?.addEventListener('pointerdown', onCanvasPointerDown)
   window.addEventListener('resize', updateCameraCentering)
@@ -582,8 +641,6 @@ onUnmounted(() => {
   onWindowPointerUp()
   timelineControls?.destroyControls()
   rig.clearPhysics()
-  unregisterViewConfig(routeName)
-  clearViewPanels()
   clearSceneElements()
 })
 </script>
@@ -613,16 +670,40 @@ onUnmounted(() => {
       <Bone />
     </IconButton>
     <IconButton
+      size="sm"
+      variant="outline"
+      :active="showRigPanel"
+      :title="showRigPanel ? 'Hide Rig Panel' : 'Show Rig Panel'"
+      @click="toggleRigPanel"
+    >
+      <Settings />
+    </IconButton>
+    <IconButton
       v-if="rig.canCaptureFromCamera.value"
       size="sm"
       variant="outline"
-      :title="showCameraCapture ? 'Stop Camera Capture' : 'Capture Pose from Camera'"
-      @click="toggleCameraCapture"
+      :active="cameraCaptureReference?.isCameraActive"
+      :title="
+        cameraCaptureReference?.isCameraActive ? 'Stop Camera Tracking' : 'Start Camera Tracking'
+      "
+      @click="toggleCameraTracking"
     >
       <CameraIcon />
     </IconButton>
     <IconButton
-      v-if="showCameraCapture"
+      v-if="showRigPanel && cameraCaptureReference?.canRecord"
+      size="sm"
+      variant="outline"
+      class="rig-canvas-controls__record"
+      :active="motionRecording.isRecording.value"
+      :title="motionRecording.isRecording.value ? 'Stop Recording' : 'Record Motion'"
+      @click="cameraCaptureReference?.toggleRecord()"
+    >
+      <Square v-if="motionRecording.isRecording.value" fill="currentColor" />
+      <Circle v-else fill="currentColor" />
+    </IconButton>
+    <IconButton
+      v-if="showRigPanel"
       size="sm"
       variant="outline"
       :active="reactiveConfig.cameraShowPreview"
@@ -652,7 +733,7 @@ onUnmounted(() => {
     </IconButton>
   </div>
   <MergeTargetDiagram
-    v-if="showCameraCapture"
+    v-if="showRigPanel"
     class="rig-merge-target-diagram"
     :active-groups="targetBodyPartGroups"
     @toggle-group="handleToggleBodyPartGroup"
@@ -666,7 +747,7 @@ onUnmounted(() => {
     :has-clipboard="rig.hasClipboard.value"
     :can-apply-hand-pose="rig.canApplyHandPose.value"
     :recorded-presets="rig.recordedPresets.value"
-    @update:frame="(value) => (reactiveConfig.frame = value)"
+    @update:frame="moveToFrame"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
     @delete-keyframes="rig.deleteKeyframesAt"
@@ -682,9 +763,13 @@ onUnmounted(() => {
     @export-json="rig.exportJson"
     @select-preset="handleSelectPreset"
     @reset-all="rig.resetAutosave"
+    @filter-keyframes="rig.filterKeyframes"
+    @reduce-keyframes="rig.reduceKeyframes"
   />
   <CameraPoseCapture
-    v-if="showCameraCapture"
+    v-if="showRigPanel"
+    ref="cameraCaptureReference"
+    :video-slowdown-ratio="reactiveConfig.cameraVideoSlowdownRatio"
     :smoothing-settings="cameraSmoothingSettings"
     :detection-options="cameraDetectionOptions"
     :show-preview="reactiveConfig.cameraShowPreview"
@@ -697,7 +782,14 @@ onUnmounted(() => {
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"
     @seek-frame="(frame) => (reactiveConfig.frame = frame)"
-  />
+  >
+    <RigConfigAccordion
+      :groups="rigPanelGroups"
+      :get-value="readRigSetting"
+      :on-update="writeRigSetting"
+      :on-action="runRigPanelAction"
+    />
+  </CameraPoseCapture>
 </template>
 
 <style scoped>
@@ -721,6 +813,11 @@ canvas {
   top: calc(var(--nav-height) + var(--spacing-3) + var(--btn-sm-height) + var(--spacing-3));
   left: var(--spacing-3);
   z-index: var(--z-overlay);
+}
+
+.rig-canvas-controls__record {
+  /* A solid red dot is what reads as a record control at a glance, among outline icons. */
+  color: var(--color-destructive);
 }
 
 .rig-canvas-controls__hidden-input {

@@ -15,7 +15,9 @@ import {
   FoldHorizontal,
   UnfoldHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Shrink,
+  Waves
 } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import { Select } from '@/components/ui/select'
@@ -55,6 +57,8 @@ const emit = defineEmits<{
   exportJson: []
   selectPreset: [url: string]
   resetAll: []
+  filterKeyframes: [frames: number[]]
+  reduceKeyframes: [frames: number[]]
 }>()
 
 const trackElement = ref<HTMLDivElement | null>(null)
@@ -104,6 +108,12 @@ const targetFrames = computed(() =>
     : hasKeyframeAtCurrentFrame.value
       ? [props.frame]
       : []
+)
+
+/** What Filter and Reduce act on: the keyframes in the selection when there is one, otherwise the
+ * whole clip, since both only make sense across a run of keyframes rather than a single one. */
+const cleanupFrames = computed(() =>
+  selectedKeyframeFrames.value.length > 0 ? selectedKeyframeFrames.value : props.keyframeFrames
 )
 
 const clearSelection = (): void => {
@@ -306,6 +316,22 @@ onUnmounted(stopDrag)
         @click="handleInsertFrameRange"
       >
         <UnfoldHorizontal />
+      </IconButton>
+      <IconButton
+        size="sm"
+        title="Filter the selected keyframes, or the whole clip, one pass smoother"
+        :disabled="cleanupFrames.length < 3"
+        @click="emit('filterKeyframes', cleanupFrames)"
+      >
+        <Waves />
+      </IconButton>
+      <IconButton
+        size="sm"
+        title="Halve the selected keyframes, or the whole clip's, keeping the first and last"
+        :disabled="cleanupFrames.length < 3"
+        @click="emit('reduceKeyframes', cleanupFrames)"
+      >
+        <Shrink />
       </IconButton>
       <div class="rig-timeline__scrubber">
         <div class="rig-timeline__ruler" @pointerdown="onTrackPointerDown">

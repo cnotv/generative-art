@@ -1,4 +1,5 @@
 import type * as THREE from 'three'
+import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import type {
   FaceLandmarker,
   HandLandmarker,
@@ -43,11 +44,17 @@ export interface RigAnimatorConfig {
   cameraSpeedResponse: number
   cameraTurnResponse: number
   cameraSpeedCutoffHertz: number
+  cameraHandHoldMilliseconds: number
+  cameraHandFlipDegrees: number
+  cameraPalmsFromBody: boolean
   cameraBoneSmoothingMilliseconds: number
+  cameraBoneMaxTurnSpeed: number
+  cameraLimitJoints: boolean
   cameraVisibilityThreshold: number
   cameraTwistMinBendDegrees: number
   cameraTwistFullBendDegrees: number
   cameraShowPreview: boolean
+  cameraVideoSlowdownRatio: number
   targetLeftArm: boolean
   targetRightArm: boolean
   targetLeftLeg: boolean
@@ -112,7 +119,22 @@ export interface CameraSmoothingSettings {
   turnResponse: number
   /** Cutoff, in hertz, for each landmark's speed estimate. */
   speedCutoffHertz: number
+  /** How long a hand the detector loses keeps its last reading; 0 drops it straight away. */
+  handHoldMilliseconds: number
+  /** How far a palm may turn in one reading before it must be confirmed, in radians. */
+  handFlipRadians: number
 }
+
+/** One side's last trusted hand reading, and a sharp turn still waiting to be confirmed. */
+export interface CameraHandTrack {
+  landmarks: CameraHandLandmark[]
+  orientation: QuaternionData
+  acceptedAtMilliseconds: number
+  pendingOrientation: QuaternionData | null
+  pendingReadings: number
+}
+
+export type CameraHandTracks = Partial<Record<HandSide, CameraHandTrack>>
 
 /** The Config panel's switches for how a detected frame is applied to the rig. */
 export interface CameraPoseMappingOptions {
@@ -139,6 +161,8 @@ export interface CameraPoseMappingOptions {
   rollUpperArmsFromElbows: boolean
   /** Roll each forearm, and turn the hand, to the detected palm. */
   rollForearmsToPalms: boolean
+  /** With no hand found, read the palm from the body's own wrist, pinky and index instead. */
+  palmsFromBodyLandmarks: boolean
   /** Aim the thighs at the knees and the shins at the ankles. */
   aimLegs: boolean
   /** Roll each thigh to where the kneecap and the foot point. */
@@ -153,6 +177,10 @@ export interface CameraPoseMappingOptions {
   twistFullBendRadians: number
   /** How long each bone takes to settle on a newly applied rotation; 0 turns it off. */
   boneSmoothingMilliseconds: number
+  /** Keep every joint inside a human range, see `CAMERA_JOINT_LIMITS_DEGREES`. */
+  limitJoints: boolean
+  /** The fastest a joint may turn, in radians a second; 0 turns the cap off. */
+  maxBoneTurnRadiansPerSecond: number
 }
 
 /** The Config panel's switches for how each frame is detected, before any bone is turned. */
@@ -174,6 +202,24 @@ export interface CameraDetectionOptions {
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
   detectOnlyWhilePlaying: boolean
 }
+
+/** One accordion section of the rig panel: its title and the controls inside it. */
+export interface RigPanelGroup {
+  key: string
+  label: string
+  schema: ConfigControlsSchema
+}
+
+/** Where the ground sits under a loaded model: level with its lowest point, and how big the model is. */
+export interface RigGroundPlacement {
+  center: THREE.Vector3
+  radius: number
+}
+
+/** How far one joint may turn from rest, in degrees: a ball joint's swing and roll, or a hinge's curl. */
+export type CameraJointLimitDegrees =
+  | { swing: number; twist: number }
+  | { hingeMin: number; hingeMax: number }
 
 /** One bone's local transform, kept so the next applied pose can ease away from it. */
 export interface CameraBoneTransform {

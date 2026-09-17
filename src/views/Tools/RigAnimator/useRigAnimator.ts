@@ -5,7 +5,13 @@ import { useRigCameraPose } from './useRigCameraPose'
 import { useRigHandPose } from './useRigHandPose'
 import { useRigRecordedPresets } from './useRigRecordedPresets'
 import { useRigPhysics } from './useRigPhysics'
+import { poseCapture, type Pose, type PoseKeyframe } from '@webgamekit/rig'
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
+import {
+  filterKeyframesInList,
+  reduceKeyframesInList,
+  replaceKeyframesInRange
+} from './keyframeOps'
 import type { RigAnimatorConfig } from './types'
 
 /** Composes the rig/model, keyframe, camera-pose-capture, hand-pose and physics state for the
@@ -45,6 +51,39 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
    * call `commitRecordedKeyframes` once the burst of captures ends. */
   const captureKeyframeSilently = (): void =>
     rigKeyframes.captureKeyframeSilently(rigModel.bones.value)
+
+  /** The rig's current pose, for motion recording's in-between samples. */
+  const capturePose = (): Pose => poseCapture(rigModel.bones.value)
+
+  /** Swap a finished take's live keyframes for its filtered ones, before they are committed. */
+  const replaceRecordedTake = (
+    fromFrame: number,
+    toFrame: number,
+    keyframes: PoseKeyframe[]
+  ): void => {
+    rigKeyframes.keyframes.value = replaceKeyframesInRange(
+      rigKeyframes.keyframes.value,
+      fromFrame,
+      toFrame,
+      keyframes
+    )
+  }
+
+  /** Swap in an edited keyframe list, then rebuild, persist and show the pose at the playhead. */
+  const commitEditedKeyframes = (keyframes: PoseKeyframe[]): void => {
+    if (keyframes === rigKeyframes.keyframes.value) return
+    rigKeyframes.keyframes.value = keyframes
+    rigKeyframes.commitKeyframes()
+    rigKeyframes.scrubToFrame(config.value.frame)
+  }
+
+  /** Smooth the keyframes at `frames` one pass further, see `filterKeyframesInList`. */
+  const filterKeyframes = (frames: number[]): void =>
+    commitEditedKeyframes(filterKeyframesInList(rigKeyframes.keyframes.value, frames))
+
+  /** Halve the keyframes at `frames`, see `reduceKeyframesInList`. */
+  const reduceKeyframes = (frames: number[]): void =>
+    commitEditedKeyframes(reduceKeyframesInList(rigKeyframes.keyframes.value, frames))
 
   /** Rebuild the preview clip and persist once, after a burst of `captureKeyframeSilently` calls. */
   const commitRecordedKeyframes = (): void => rigKeyframes.commitKeyframes()
@@ -89,6 +128,10 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     loadModel,
     addKeyframe,
     captureKeyframeSilently,
+    capturePose,
+    replaceRecordedTake,
+    filterKeyframes,
+    reduceKeyframes,
     commitRecordedKeyframes,
     pasteKeyframes,
     resetAutosave,

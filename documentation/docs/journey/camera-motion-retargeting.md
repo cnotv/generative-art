@@ -127,6 +127,117 @@ Nine frames of that clip are kept as a test fixture alongside the default charac
 skeleton. Every visible limb segment lands within a degree of the dancer's, the head matches the
 face reading exactly, and the hips face within a few degrees of the dancer's.
 
+## Copying exactly is not copying a body
+
+Copying every direction exactly put each segment where the landmarks said, and that was the
+problem. A recorded take of the whole clip, measured against the rig's rest pose, showed readings
+no body produces, and each one showed on the model:
+
+| Joint                          | Worst reading, copied exactly | A human joint | What it looked like                                 |
+| ------------------------------ | ----------------------------- | ------------- | --------------------------------------------------- |
+| Thigh, roll about its length   | 149°                          | about 45°     | a hand sinking into the hip, trousers back to front |
+| Forearm, roll about its length | 173°                          | about 90°     | the forearm wrung flat at the elbow                 |
+| Hand, roll against the forearm | 171°                          | about 60°     | a wrist spun round                                  |
+| Finger middle joint, sideways  | 126°                          | none, a hinge | fingers waving like tentacles                       |
+
+![The same two moments of the clip, copied exactly (first and third) and kept inside human joint ranges (second and fourth): the exact copy tears the skin at the hip and wrings a forearm flat](/img/animation/rig-camera-joint-limits.webp)
+
+None of these are depth noise that smoothing can iron out. They come from single readings that are
+wrong as a whole: a palm read back to front, a knee and a foot that disagree mid spin, a finger's
+knuckles jittering across its own width. A One Euro filter smooths each landmark, not a wrong
+answer, so they went straight through.
+
+The fix follows what every character solver does after the solve: clamp each joint to what a body
+can reach. Each bone's turn away from its own rest pose is split into a swing off its rest
+direction and a roll about its own length, and each is capped separately, since a shoulder swings
+almost anywhere yet rolls barely a quarter turn. A finger's middle and last joints keep only the
+part of their turn about the flexion axis, the same axis the hand pose presets already curl
+around, because anatomically that is all they can do. The limits are applied parent first, so a
+child bone is solved on top of its already limited parent and still reaches the detected
+direction whenever a real joint could.
+
+A range alone still lets a misreading jump from one end of it to the other in a single frame. A
+per-joint speed cap catches that: a real dancer rarely turns a joint faster than about 700° a
+second, while a flipped roll asks for several thousand. Capped, the flip is spread over a few
+readings and the next good reading mostly undoes it before it shows.
+
+## Hands that turn over
+
+Joint ranges kept a hand from spinning past what a wrist can do, but it still turned over inside
+that range, often and suddenly. There are two detections a hand could be read from, so the first
+question was which one flipped it.
+
+| Finding on the dance clip                                                                 | Left hand  | Right hand |
+| ----------------------------------------------------------------------------------------- | ---------- | ---------- |
+| Frames where the Hand Landmarker found the hand (whole frame, or a crop around the wrist) | 183 of 486 | 200 of 486 |
+| Frames where the palm fell back to BlazePose's wrist, pinky and index                     | 272        | 253        |
+| Frames with both, where the two palms disagreed by more than 90°                          | 64 of 183  | 98 of 192  |
+| Dropouts of the Hand Landmarker lasting three frames or fewer                             | 18 of 35   | 20 of 39   |
+| Consecutive Hand Landmarker readings whose palm turned more than 60°                      | 37 of 159  | 19 of 172  |
+| Consecutive Hand Landmarker readings whose pointing direction turned more than 45°        | 5 of 159   | 14 of 172  |
+
+So it was both, in different ways. BlazePose's palm is simply poor: its pinky and index points sit
+a hand's width apart and jitter by centimetres, and the hand turned over every time the capture
+switched between it and the Hand Landmarker, which on this clip was every few frames. The Hand
+Landmarker points the hand the right way almost always but misreads which way the palm faces for
+a frame or two at a time.
+
+One tempting explanation did not survive measuring. The Hand Landmarker's left or right label
+disagrees with the wrist a hand is attached to about a third of the time, and its 3D points match
+its label: the thumb sits on the side the label predicts in about nine hands out of ten. That
+suggested a hand labelled for the wrong side comes back mirrored in depth, and flipping its depth
+would fix the palm. Doing so made the hand jumpier on both sides (consecutive readings turning
+more than 60°: left 37 became 43, right 22 became 38), because the label itself flickers from
+frame to frame.
+
+What worked, measured on the whole clip against the rig's forearm and wrist:
+
+| Measure, both hands together                           | Before | Hold a lost hand, confirm a sharp turn, no BlazePose palm |
+| ------------------------------------------------------ | ------ | --------------------------------------------------------- |
+| Frames where the forearm's target turned more than 90° | 85     | 36                                                        |
+| Frames where the wrist's target turned more than 60°   | 67     | 35                                                        |
+| Frames where the wrist actually moved more than 15°    | 328    | 196                                                       |
+| Total wrist rotation over the clip                     | 10163° | 6923°                                                     |
+
+Holding the last hand reading through a short dropout did most of it, since it stops the switching.
+Ignoring a palm that turns more than 45° from the last trusted reading until three readings agree
+removed most of the single frame misreads. Two further ideas were measured and dropped: easing a
+roll that exceeds its joint range back toward neutral near a half turn removed a seam at 180° but
+turned a real palm up pose back to palm down, and splitting the palm's roll evenly between forearm
+and hand only moved the flips from one bone to the other.
+
+## How the counts were measured
+
+Every number above comes from the same 16 second, 30 frames a second dance clip, run through the
+tool's own code rather than a reimplementation of it.
+
+**Joint ranges.** The clip was uploaded in the running app and recorded with Record Motion, once
+with the joint limits and speed cap on and once with both off. Each take's keyframes were read
+back from the autosave in local storage. For every bone in every keyframe, its rotation away from
+the default character's rest pose, taken from the same skeleton the tests use, was split into a
+swing off the bone's length and a roll about it, and the worst roll or sideways finger bend over
+the take is what the first table reports. Turn per frame is the angle each bone moved between two
+keyframes divided by the frames between them.
+
+**Hands.** A live take samples only as fast as detection keeps up, a few readings a second in a
+headless browser, which hides frame to frame flips. So the detection was run frame by frame
+instead: the dev server served the tool's own detection module to a headless browser page, which
+seeked the video to each of its 486 frames in turn and ran the pose, hand and crop detectors on
+it exactly as a live capture does. The hand detector was wrapped to record, for every call,
+whether it read the whole frame or a crop, and the label and score of each hand it returned.
+Every frame's detection was saved, and a throwaway test then replayed the saved frames through
+the tool's own hand steadying, landmark smoothing, retargeting and joint speed cap onto the
+default character, 33 ms apart, reading each hand's source, the forearm and wrist rotations, and
+how far each moved between frames. A target is where retargeting put a bone before the speed cap
+eased it; a flip counts when a target turned further than the stated angle in one frame. Wrist
+rotation is the hand's turn relative to the forearm, so a whole arm swinging does not count
+against it. The before column replays the same frames with the steadying off and the BlazePose
+palm on.
+
+Neither the saved frames nor the harness are kept in the repository: the frames are several
+megabytes and the harness is a one off. Repeating the measurement means running the same two
+steps against a new clip.
+
 ## Two traps outside the mapping
 
 ![Mixamo's Y Bot posed from the same clip: an arm raised overhead and a high kick, every limb attached](/img/animation/rig-camera-ybot-retarget.webp)
@@ -145,6 +256,9 @@ is only cleared when one was actually set.
 
 ## Limits
 
+- **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest
+  pose. A contortionist is clamped, and a rig whose rest pose is not a T-pose starts its ranges
+  from a different place.
 - **Front or back.** Mid turn, the lite pose model sometimes decides the wrong side faces the
   camera for a few frames, and the rig follows it.
 - **No travel.** World landmarks are centred on the hips, so the rig turns and crouches in place

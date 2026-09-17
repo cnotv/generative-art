@@ -8,9 +8,9 @@ import {
 } from '@mediapipe/tasks-vision'
 import {
   Camera as CameraIcon,
-  Circle,
   Link as LinkIcon,
-  Square,
+  Pause,
+  Play,
   Unlink as UnlinkIcon,
   Upload,
   X as CloseIcon
@@ -25,7 +25,8 @@ import { hasCameraPoseContent } from './cameraPoseFrame'
 import {
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_PANEL_WIDTH_VW,
-  MEDIA_FILE_ACCEPT
+  MEDIA_FILE_ACCEPT,
+  RECORDING_SAMPLES_PER_FRAME
 } from './config'
 import type { CameraDetectionOptions, CameraPoseFrame, CameraSmoothingSettings } from './types'
 
@@ -42,6 +43,8 @@ const props = defineProps<{
   /** The rig timeline's current frame, for keeping an uploaded video's playback in sync with
    * it while `syncEnabled` is on. */
   frame: number
+  /** How many times slower an uploaded video plays, and how many poses a take samples per frame of it. */
+  videoSlowdownRatio: number
   /** The rig's frame rate, to convert between the timeline's frame numbers and the video
    * element's `currentTime` seconds. */
   fps: number
@@ -68,12 +71,12 @@ const detectionOptions = toRef(props, 'detectionOptions')
 const smoothingSettings = toRef(props, 'smoothingSettings')
 const camera = useCameraPoseCapture(smoothingSettings, detectionOptions)
 const photo = useCameraPhotoPose(detectionOptions)
-const uploadedVideo = useVideoPoseCapture(smoothingSettings, detectionOptions)
+const uploadedVideo = useVideoPoseCapture(
+  smoothingSettings,
+  detectionOptions,
+  computed(() => 1 / props.videoSlowdownRatio)
+)
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
-/** Whether the current mode drives the rig from a continuously updating source, the same as a
- * live webcam feed does, versus a single still photo. Both camera and an uploaded video can
- * be recorded from; a still photo cannot. */
-const isContinuousMode = computed(() => mode.value === 'camera' || mode.value === 'video')
 
 /** Picks the field from whichever source is active in the current mode. */
 const pickByMode = <T,>(cameraValue: T, videoValue: T, photoValue: T): T => {
@@ -105,6 +108,10 @@ const previewHandLandmarks = computed(() =>
 const detectedFrame = computed(() =>
   pickByMode(camera.frame.value, uploadedVideo.frame.value, photo.frame.value)
 )
+/** Mirrors the video element's own play and pause events, so the Play/Pause icon matches it
+ * however playback changed: this button, the native controls or the clip reaching its end. */
+const isVideoPlaying = ref(false)
+
 /** Whether the current source found anything to apply: a body, a hand or a face. */
 const hasDetection = computed(
   () => detectedFrame.value !== null && hasCameraPoseContent(detectedFrame.value)
@@ -183,9 +190,9 @@ watch(detectedFrame, (detected) => {
  * preview always comes on regardless of whatever the Config panel's checkbox was last left at
  * — leaving it off would run detection against the upload with nothing on screen to show for
  * it. A video plays at its own rate and samples live the exact same way the camera does,
- * useful for testing against a known performance; a photo applies once. Uploading a video
- * also starts Record Motion automatically, since scrubbing back through the timeline to redo
- * a manual start is exactly the friction this dialog exists to avoid. */
+ * useful for testing against a known performance; a photo applies once. A video does not start
+ * Record Motion on its own: it can be played and paused to watch the mapping first, and the
+ * record icon starts a take whenever it is wanted. */
 const handleMediaChange = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -196,7 +203,6 @@ const handleMediaChange = async (event: Event): Promise<void> => {
   if (file.type.startsWith('video/')) {
     mode.value = 'video'
     await uploadedVideo.loadVideo(file)
-    if (uploadedVideo.isActive.value) emit('toggleRecord')
   } else {
     uploadedVideo.stop()
     mode.value = 'photo'
@@ -205,11 +211,38 @@ const handleMediaChange = async (event: Event): Promise<void> => {
   emit('enablePreview')
 }
 
-const handleUseCamera = (): void => {
+/** Whether the live camera is tracking right now, rather than idle or showing an upload. */
+const isCameraActive = computed(() => mode.value === 'camera' && camera.isActive.value)
+
+/** Whether there is a continuous source running to record from: the live camera or a video. */
+const canRecord = computed(() =>
+  mode.value === 'video' ? uploadedVideo.isActive.value : isCameraActive.value
+)
+
+/**
+ * The camera icon: start tracking the live camera, switching away from an uploaded photo or video,
+ * or stop it when it is already tracking. Opening the panel never starts it on its own.
+ */
+const toggleCamera = (): void => {
+  // A take runs on its source's own clock; carried over to another one it would jump.
+  if (props.isRecording) emit('toggleRecord')
+  if (isCameraActive.value) {
+    camera.stop()
+    return
+  }
   photo.reset()
   uploadedVideo.stop()
   mode.value = 'camera'
   camera.start()
+}
+
+/** Starting a take on a paused video plays it too, since a take on a frame that never changes
+ * would record nothing. Stopping one leaves playback as it is. */
+const handleRecordClick = (): void => {
+  if (mode.value === 'video' && !props.isRecording && !isVideoPlaying.value) {
+    uploadedVideo.togglePlayback()
+  }
+  emit('toggleRecord')
 }
 
 /** The uploaded video reached its natural end: stop recording the same as a manual click
@@ -232,10 +265,37 @@ const handleVideoSeeked = (): void => {
   if (seekedFrame !== null) emit('seekFrame', seekedFrame)
 }
 
-onMounted(async () => {
+watch(
+  () => props.videoSlowdownRatio,
+  () => {
+    if (mode.value === 'video') uploadedVideo.applyPlaybackRate()
+  }
+)
+
+/** The clock Record Motion reads, in milliseconds: an uploaded video's own playback position, so a
+ * slowed video still records at its real speed, and wall time for the live camera. */
+const captureClockMilliseconds = (): number =>
+  mode.value === 'video' && videoReference.value
+    ? videoReference.value.currentTime * 1000
+    : performance.now()
+
+/** How many poses Record Motion samples per frame: as many as the video is slowed down, since that
+ * is how many readings detection gets of each of its frames, and a fixed rate for the camera. */
+const captureSamplesPerFrame = (): number =>
+  mode.value === 'video' ? props.videoSlowdownRatio : RECORDING_SAMPLES_PER_FRAME
+
+defineExpose({
+  captureClockMilliseconds,
+  captureSamplesPerFrame,
+  toggleCamera,
+  toggleRecord: handleRecordClick,
+  isCameraActive,
+  canRecord
+})
+
+onMounted(() => {
   camera.videoElement.value = videoReference.value
   uploadedVideo.videoElement.value = videoReference.value
-  await camera.start()
 })
 
 onUnmounted(() => {
@@ -245,14 +305,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    class="camera-pose-capture"
-    :style="{ width: showPreview ? `${CAMERA_PANEL_WIDTH_VW}vw` : 'auto' }"
-  >
+  <div class="camera-pose-capture" :style="{ width: `${CAMERA_PANEL_WIDTH_VW}vw` }">
     <IconButton
       size="sm"
       variant="ghost"
-      title="Close Camera Capture"
+      title="Close Rig Panel"
       class="camera-pose-capture__close"
       @click="emit('close')"
     >
@@ -273,6 +330,9 @@ onUnmounted(() => {
         muted
         playsinline
         :controls="mode === 'video'"
+        @play="isVideoPlaying = true"
+        @pause="isVideoPlaying = false"
+        @emptied="isVideoPlaying = false"
         @ended="handleVideoEnded"
         @seeked="handleVideoSeeked"
       ></video>
@@ -290,6 +350,9 @@ onUnmounted(() => {
     </p>
     <p v-else-if="error" class="camera-pose-capture__status camera-pose-capture__status--error">
       {{ error }}
+    </p>
+    <p v-else-if="mode === 'camera' && !camera.isActive.value" class="camera-pose-capture__status">
+      Start the camera, or upload a photo or video, to pose the model.
     </p>
     <p
       v-else-if="mode === 'camera' && camera.isActive.value && !hasDetection"
@@ -346,13 +409,23 @@ onUnmounted(() => {
         <Upload />
       </IconButton>
       <IconButton
-        v-if="mode === 'photo' || mode === 'video'"
         size="sm"
         variant="outline"
-        title="Use Camera"
-        @click="handleUseCamera"
+        :active="isCameraActive"
+        :title="isCameraActive ? 'Stop Camera' : 'Start Camera'"
+        @click="toggleCamera"
       >
         <CameraIcon />
+      </IconButton>
+      <IconButton
+        v-if="mode === 'video'"
+        size="sm"
+        variant="outline"
+        :title="isVideoPlaying ? 'Pause Video' : 'Play Video'"
+        @click="uploadedVideo.togglePlayback()"
+      >
+        <Pause v-if="isVideoPlaying" />
+        <Play v-else />
       </IconButton>
       <IconButton
         v-if="mode === 'video'"
@@ -365,19 +438,8 @@ onUnmounted(() => {
         <LinkIcon v-if="syncEnabled" />
         <UnlinkIcon v-else />
       </IconButton>
-      <IconButton
-        v-if="isContinuousMode"
-        size="sm"
-        variant="outline"
-        class="camera-pose-capture__record-toggle"
-        :active="isRecording"
-        :title="isRecording ? 'Stop Recording' : 'Record Motion'"
-        @click="emit('toggleRecord')"
-      >
-        <Square v-if="isRecording" />
-        <Circle v-else />
-      </IconButton>
     </div>
+    <slot />
   </div>
 </template>
 
@@ -386,6 +448,10 @@ onUnmounted(() => {
   position: fixed;
   top: 0;
   right: 0;
+
+  /* The panel also holds every setting; it scrolls rather than running under the rig timeline. */
+  max-height: calc(100vh - var(--rig-timeline-height));
+  overflow-y: auto;
   z-index: var(--z-overlay);
   display: flex;
   flex-direction: column;
@@ -443,6 +509,12 @@ onUnmounted(() => {
   object-fit: contain;
 }
 
+.camera-pose-capture__overlay {
+  /* The skeleton is drawn over the whole video, so without this it swallows every click meant for
+     the video's own controls: play, pause, seeking and playback speed. */
+  pointer-events: none;
+}
+
 .camera-pose-capture__status {
   margin: 0;
   font-size: var(--font-size-sm);
@@ -463,12 +535,6 @@ onUnmounted(() => {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--spacing-2);
-}
-
-/* The red icon is what makes the toggle read as a record control at a glance instead of
-   blending into the row of plain outline icons. */
-.camera-pose-capture__record-toggle {
-  color: var(--color-destructive);
 }
 
 .camera-pose-capture__hidden-input {

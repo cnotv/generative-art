@@ -1,4 +1,5 @@
-import type { Pose, PoseKeyframe } from '@webgamekit/rig'
+import * as THREE from 'three'
+import type { Pose, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
 
 /**
  * Shift every keyframe in `frames` by the same `deltaFrames`, preserving their spacing — a
@@ -119,4 +120,155 @@ export const mergeSampledKeyframesIntoScope = (
         : keyframe
     )
   }, withoutScope)
+}
+
+/**
+ * Swap every keyframe from `fromFrame` to `toFrame`, both included, for `replacements`, leaving
+ * keyframes outside that range as they were.
+ * @param keyframes The current keyframe list
+ * @param fromFrame The first frame of the range
+ * @param toFrame The last frame of the range
+ * @param replacements The keyframes to put in its place
+ * @returns The updated list
+ */
+export const replaceKeyframesInRange = (
+  keyframes: PoseKeyframe[],
+  fromFrame: number,
+  toFrame: number,
+  replacements: PoseKeyframe[]
+): PoseKeyframe[] => [
+  ...keyframes.filter((keyframe) => keyframe.frame < fromFrame || keyframe.frame > toFrame),
+  ...replacements
+]
+
+const toQuaternion = ({ x, y, z, w }: QuaternionData): THREE.Quaternion =>
+  new THREE.Quaternion(x, y, z, w)
+
+/**
+ * One rotation standing for several samples of the same bone. Three or more keep the sample
+ * closest to all the others, which drops a single misread one outright rather than averaging it
+ * in; two, too few to tell which is wrong, meet halfway.
+ */
+const filterRotationSamples = (rotations: QuaternionData[]): QuaternionData => {
+  if (rotations.length === 1) return rotations[0]
+  const quaternions = rotations.map(toQuaternion)
+  const filtered =
+    quaternions.length === 2
+      ? quaternions[0].clone().slerp(quaternions[1], 0.5)
+      : quaternions.reduce((best, candidate) => {
+          const spread = (quaternion: THREE.Quaternion): number =>
+            quaternions.reduce((sum, other) => sum + quaternion.angleTo(other), 0)
+          return spread(candidate) < spread(best) ? candidate : best
+        })
+  return { x: filtered.x, y: filtered.y, z: filtered.z, w: filtered.w }
+}
+
+/**
+ * Turn the poses Record Motion sampled between frames into one keyframe per frame. Each frame
+ * takes every sample within half a frame of it, so at two samples per frame a frame is decided by
+ * the sample on it and the two either side, see `filterRotationSamples`. A frame with no sample
+ * near it gets no keyframe and is interpolated like any other gap.
+ * @param samples Poses at fractional frames, in any order
+ * @returns One filtered keyframe per frame that had samples, in frame order
+ */
+export const filterRecordedSamples = (samples: PoseKeyframe[]): PoseKeyframe[] => {
+  const byFrame = samples.reduce((groups, sample) => {
+    const frames = Array.from(
+      { length: Math.floor(sample.frame + 0.5) - Math.ceil(sample.frame - 0.5) + 1 },
+      (_, offset) => Math.ceil(sample.frame - 0.5) + offset
+    )
+    frames.forEach((frame) => groups.set(frame, [...(groups.get(frame) ?? []), sample.pose]))
+    return groups
+  }, new Map<number, Pose[]>())
+  return [...byFrame.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([frame, poses]) => ({
+      frame,
+      pose: Object.fromEntries(
+        [...new Set(poses.flatMap((pose) => Object.keys(pose)))].map((boneName) => [
+          boneName,
+          filterRotationSamples(poses.flatMap((pose) => (pose[boneName] ? [pose[boneName]] : [])))
+        ])
+      )
+    }))
+}
+
+const toQuaternionData = ({ x, y, z, w }: THREE.Quaternion): QuaternionData => ({ x, y, z, w })
+
+/** The keyframes in `frames`, in frame order, with each one's index in that order. */
+const scopedKeyframes = (keyframes: PoseKeyframe[], frames: number[]): PoseKeyframe[] => {
+  const scope = new Set(frames)
+  return keyframes
+    .filter((keyframe) => scope.has(keyframe.frame))
+    .sort((first, second) => first.frame - second.frame)
+}
+
+/** One bone's rotation at a keyframe, filtered against the keyframes either side of it. */
+const filterBoneBetweenNeighbours = (
+  previous: QuaternionData,
+  current: QuaternionData,
+  next: QuaternionData
+): QuaternionData => {
+  const outvoted = toQuaternion(filterRotationSamples([previous, current, next]))
+  const between = toQuaternion(previous).slerp(toQuaternion(next), 0.5)
+  return toQuaternionData(between.slerp(outvoted, 0.5))
+}
+
+/**
+ * Smooth the keyframes in `frames` one pass further. Each keyframe between the first and last of
+ * them first drops a spike, keeping whichever of itself and its two neighbours is closest to the
+ * other two, then eases halfway toward the midpoint of those neighbours, which softens jitter. A
+ * steady movement is left where it is, since its middle keyframe already sits between the other
+ * two. The first and last keyframes stay put, so the clip still starts and ends where it did.
+ * @param keyframes The current keyframe list
+ * @param frames The frames of the keyframes to filter
+ * @returns The updated list, or the same list when fewer than three keyframes are in scope
+ */
+export const filterKeyframesInList = (
+  keyframes: PoseKeyframe[],
+  frames: number[]
+): PoseKeyframe[] => {
+  const scoped = scopedKeyframes(keyframes, frames)
+  if (scoped.length < 3) return keyframes
+  const filtered = new Map(
+    scoped.slice(1, -1).map((keyframe, index) => {
+      const previous = scoped[index].pose
+      const next = scoped[index + 2].pose
+      const pose = Object.fromEntries(
+        Object.entries(keyframe.pose).map(([boneName, rotation]) => [
+          boneName,
+          previous[boneName] && next[boneName]
+            ? filterBoneBetweenNeighbours(previous[boneName], rotation, next[boneName])
+            : rotation
+        ])
+      )
+      return [keyframe.frame, pose] as const
+    })
+  )
+  return keyframes.map((keyframe) => {
+    const pose = filtered.get(keyframe.frame)
+    return pose ? { ...keyframe, pose } : keyframe
+  })
+}
+
+/**
+ * Halve the keyframes in `frames`: every second one between the first and the last is removed,
+ * and interpolation fills the gap. The first and last always stay, so the clip keeps its length.
+ * @param keyframes The current keyframe list
+ * @param frames The frames of the keyframes to thin out
+ * @returns The updated list, or the same list when nothing in scope can be removed
+ */
+export const reduceKeyframesInList = (
+  keyframes: PoseKeyframe[],
+  frames: number[]
+): PoseKeyframe[] => {
+  const scoped = scopedKeyframes(keyframes, frames)
+  if (scoped.length < 3) return keyframes
+  const removed = new Set(
+    scoped
+      .slice(1, -1)
+      .filter((_, index) => index % 2 === 0)
+      .map((keyframe) => keyframe.frame)
+  )
+  return keyframes.filter((keyframe) => !removed.has(keyframe.frame))
 }

@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { SetupConfig } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
 import type { ControlMapping } from '@webgamekit/controls'
+import type { CameraJointLimitDegrees } from './types'
 
 export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xf5f0e8 },
@@ -20,6 +21,14 @@ export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   orbit: { target: new THREE.Vector3(0, 1, 0) }
 }
 
+/** A soft sand tone a shade darker than the background, so the ground reads without a hard edge. */
+export const GROUND_COLOR = 0xe6dccb
+/** How far the ground disc reaches, in the loaded model's own bounding radii. */
+export const GROUND_RADIUS_MULTIPLIER = 3
+export const GROUND_SEGMENTS = 64
+/** How wide the key light's shadow reaches around the model, in its bounding radii. */
+export const GROUND_SHADOW_SPAN_MULTIPLIER = 2
+
 export const MODEL_FILE_ACCEPT = '.fbx,.glb,.gltf'
 export const POSES_FILE_ACCEPT = 'application/json'
 export const MEDIA_FILE_ACCEPT = 'image/*,video/*'
@@ -37,6 +46,13 @@ export const BONE_MARKER_DEPTH_FALLOFF = 0.82
 export const BONE_MARKER_MIN_SCALE = 0.35
 
 export const DEFAULT_FPS = 30
+/**
+ * How many poses Record Motion samples per timeline frame from the live camera; an uploaded video
+ * samples `CAMERA_VIDEO_SLOWDOWN_RATIO` instead. The extra samples are never kept as keyframes:
+ * when the take ends, each frame's keyframe is filtered from the samples around it, so a single
+ * misread pose is outvoted by its neighbours instead of landing on the timeline.
+ */
+export const RECORDING_SAMPLES_PER_FRAME = 2
 export const DEFAULT_FRAME_MAX = 150
 /** The rig timeline's frame range never shrinks below this, dragging its resize handle in. */
 export const FRAME_MAX_MIN = 10
@@ -187,10 +203,49 @@ export const CAMERA_TWIST_MIN_BEND_DEGREES = 10
 export const CAMERA_TWIST_FULL_BEND_DEGREES = 30
 /** Range and step the Config panel's two roll cue sliders offer, in degrees. */
 export const CAMERA_TWIST_BEND_DEGREES_RANGE = { min: 0, max: 90, step: 1 }
+/**
+ * How far each joint may turn from its rest pose when camera capture drives it, in degrees, keyed
+ * by bone name without the rig prefix or side (`Finger` stands for the index, middle, ring and
+ * pinky alike). A ball joint may swing off its rest direction by `swing` and roll about its own
+ * length by `twist`. A finger's middle and last joints are hinges: they only curl about the
+ * rig's flexion axis, between `hingeMin` and `hingeMax`, so a noisy sideways reading can never
+ * bend or twist them. A bone without an entry is not limited.
+ */
+export const CAMERA_JOINT_LIMITS_DEGREES: Record<string, CameraJointLimitDegrees> = {
+  Spine: { swing: 30, twist: 20 },
+  Spine1: { swing: 30, twist: 20 },
+  Spine2: { swing: 30, twist: 20 },
+  Neck: { swing: 45, twist: 45 },
+  Head: { swing: 45, twist: 45 },
+  Arm: { swing: 180, twist: 100 },
+  ForeArm: { swing: 160, twist: 120 },
+  Hand: { swing: 85, twist: 60 },
+  UpLeg: { swing: 140, twist: 50 },
+  Leg: { swing: 160, twist: 25 },
+  Foot: { swing: 60, twist: 30 },
+  ToeBase: { swing: 50, twist: 10 },
+  Thumb1: { swing: 70, twist: 30 },
+  Thumb2: { swing: 70, twist: 10 },
+  Thumb3: { swing: 90, twist: 10 },
+  Finger1: { swing: 90, twist: 10 },
+  Finger2: { hingeMin: -10, hingeMax: 110 },
+  Finger3: { hingeMin: -10, hingeMax: 90 }
+}
+
 /** A body landmark reported less confident than this is treated as not detected. */
 export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
 /** Range and step the Config panel's landmark confidence slider offers. */
 export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0.05 }
+
+/**
+ * How many times slower an uploaded video plays while it drives the rig, and how many poses Record
+ * Motion samples per frame of it before filtering them down to one: slowed N times, detection gets
+ * about N readings of every video frame, so N samples a frame is what it can fill. Record Motion
+ * follows the video's own clock, so a take keeps the video's real timing at any ratio. 1 plays at
+ * normal speed with one sample a frame and nothing to filter.
+ */
+export const CAMERA_VIDEO_SLOWDOWN_RATIO = 2
+export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 6, step: 1 }
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
@@ -220,6 +275,33 @@ export const CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE = { min: 0.1, max: 10, step: 0.
  */
 export const CAMERA_BONE_SMOOTHING_MILLISECONDS = 0
 export const CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE = { min: 0, max: 500, step: 10 }
+/**
+ * The fastest, in degrees a second, a joint may turn while following the camera. A real movement
+ * rarely comes close; a misread frame that flips a limb or a roll half a turn does, so it is
+ * spread over several readings and mostly undone by the next good one before it shows. 0 turns
+ * the cap off.
+ */
+export const CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND = 720
+export const CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE = { min: 0, max: 3000, step: 30 }
+/**
+ * How long, in milliseconds, a hand the Hand Landmarker stops finding keeps its last reading. On
+ * the attached dance clip it lost a hand for three frames or fewer about half the time; falling
+ * back to the body's own wrist, pinky and index for those frames turned the palm by more than 90°
+ * on most of them. 0 lets a hand drop out straight away.
+ */
+export const CAMERA_HAND_HOLD_MILLISECONDS = 330
+export const CAMERA_HAND_HOLD_MILLISECONDS_RANGE = { min: 0, max: 1000, step: 10 }
+/**
+ * The furthest, in degrees, a palm may turn from the last trusted reading before the new one is
+ * taken for a misreading and ignored, until `CAMERA_HAND_FLIP_CONFIRM_READINGS` readings in a row
+ * agree on it. 180 turns the check off.
+ */
+export const CAMERA_HAND_FLIP_DEGREES = 45
+export const CAMERA_HAND_FLIP_DEGREES_RANGE = { min: 10, max: 180, step: 5 }
+/** How many readings in a row must agree before a sharply turned palm is believed. */
+export const CAMERA_HAND_FLIP_CONFIRM_READINGS = 3
+/** A trusted hand reading older than this, in milliseconds, no longer vetoes a sharply turned one. */
+export const CAMERA_HAND_TRACK_RESET_MILLISECONDS = 500
 /** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
 export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
 
