@@ -175,6 +175,18 @@ const handClosestToCropCentre = (result: HandLandmarkerResult): number | null =>
   return distances.length > 0 ? distances.indexOf(Math.min(...distances)) : null
 }
 
+/**
+ * How sure the Hand Landmarker is about the hand it found, as its handedness score. That score
+ * reads a palm's own orientation, so it is what sags exactly when a hand is about to come back
+ * turned the wrong way round; a reading below the Config panel's threshold is dropped, and the
+ * hand then holds its last trusted reading (see `steadyCameraHands`) rather than flipping.
+ * @param result One Hand Landmarker result
+ * @param index Which of its hands to score
+ * @returns The score, 0 for a hand it reported no handedness for at all
+ */
+const handConfidence = (result: HandLandmarkerResult, index: number): number =>
+  result.handedness[index]?.[0]?.score ?? 0
+
 const averageImagePoint = (points: NormalizedLandmark[]): { x: number; y: number } => ({
   x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
   y: points.reduce((sum, point) => sum + point.y, 0) / points.length
@@ -193,7 +205,9 @@ const detectHandsInWholeFrame = (
   )
   return result.worldLandmarks.flatMap((worldLandmarks, index) => {
     const side = sides[index]
-    return side ? [{ side, worldLandmarks, imageLandmarks: result.landmarks[index] }] : []
+    return side && handConfidence(result, index) >= context.options.handConfidence
+      ? [{ side, worldLandmarks, imageLandmarks: result.landmarks[index] }]
+      : []
   })
 }
 
@@ -214,7 +228,9 @@ const detectHandAroundWrist = (
   drawCrop(context, crop)
   const result = context.landmarkers.hand.detect(context.cropCanvas)
   const closest = handClosestToCropCentre(result)
-  if (closest === null) return []
+  if (closest === null || handConfidence(result, closest) < context.options.handConfidence) {
+    return []
+  }
   const { width, height } = context.frameSize
   return [
     {

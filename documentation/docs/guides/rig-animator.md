@@ -551,6 +551,17 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   landmark the pose detector places outside the image counts as out of view however confident
   it claims to be: it is a guess, so legs below a webcam framed on the upper body keep their rest
   pose instead of following it.
+- **Limb lengths.** Copied angles alone say which way a limb points, never how far it reaches: a
+  rig whose arms are longer than the performer's, relative to the body each hangs off, overshoots
+  every gesture, so a hand brought to the chin lands inside the head and two arms brought together
+  in front of the chest pass through one another. **Fit Limb Lengths to Performer**, on by default,
+  resizes each limb segment instead of bending it, to the length the performer's own measures at
+  the rig's scale, taken from the shoulder span the camera and the rig both show. Both sides always
+  take one shared scale, since the detector reads a left and a right limb of measurably different
+  lengths on the same frame and a lopsided rig is what makes two limbs cross mid turn. A limb with
+  a joint out of view keeps whatever length it was last fitted to, and the hand or foot on the end
+  keeps its own size. Recorded keyframes store rotations only, so a take recorded from a fitted rig
+  plays back at whatever length the rig carries then.
 - **Hands.** See **Fingers from the camera** above.
 
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
@@ -578,12 +589,18 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
   frame shows no face, the case of a face small in a wide shot.
 - **Hand Tracker for Fingers** runs the Hand Landmarker. **Hand Search Around Wrists** looks
   again in a crop around a wrist the whole frame found no hand at. **Hand Side by Nearest Wrist**
-  sides a hand by the body's wrist instead of the detector's own label.
+  sides a hand by the body's wrist instead of the detector's own label. **Hand Confidence Needed**,
+  0.7 by default, drops a hand the detector is less sure of than that: its score reads a palm's own
+  orientation, so it sags exactly when a hand is about to come back turned the wrong way round, and
+  the dropped frame then holds the last trusted reading instead (see **Hold a Lost Hand** below).
+  Raise it to trim more of a capture where a hand keeps flipping; lower it when hands stop being
+  picked up at all.
 - **Ignore Body Outside Image** treats a body landmark placed outside the picture as not
   detected. **Mirror Live Camera** reflects the webcam's body, hands and head to match its
   mirrored preview. **Only While Video Plays** stops reading a paused video.
 - **Turn Hips**, **Bend Spine**, **Turn Neck and Head**, **Aim Arms**, **Aim Legs** and **Aim
-  Feet** each leave their bones at rest when off.
+  Feet** each leave their bones at rest when off. **Fit Limb Lengths to Performer** puts every
+  limb back to its own rest length when off, see **Limb lengths** above.
 - **Correct Ear and Nose Head Pitch** tips a head read from the ears back up by the 19° a level
   gaze reads downward. **Ignore Impossible Head Turns** drops a face reading turned further from
   the chest than a neck can turn, which a face half hidden behind an arm produced, and uses the
@@ -673,6 +690,16 @@ movement by eye:
 | Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest       |
 | Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                          |
 | Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                              |
+
+**Hold Undetected Landmarks**, on by default, keeps every landmark the detector stops seeing at the
+position it was last detected in, carried along by whichever joint above it is still detected: a
+wrist that drops out travels with its elbow, and an elbow gone too with its shoulder. Nothing is
+ever replaced by a default or a rest pose, only by the last thing actually detected, so a limb the
+camera cannot make out right now keeps the pose it was really in instead of snapping back to rest.
+The same applies to a face the tracker misses, which keeps its last rotation, and to a hand missing
+for longer than **Hold a Lost Hand** covers. Turn it off to have an undetected limb fall back to the
+rest pose, as it used to. A landmark never yet detected has nothing to hold, so legs below a webcam
+framed on the upper body still stay at rest.
 
 **Bones Settle** works on the result rather than the landmarks: each bone eases from where the
 last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,

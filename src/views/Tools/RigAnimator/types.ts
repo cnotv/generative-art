@@ -46,7 +46,10 @@ export interface RigAnimatorConfig {
   cameraSpeedCutoffHertz: number
   cameraHandHoldMilliseconds: number
   cameraHandFlipDegrees: number
+  cameraHandConfidence: number
   cameraPalmsFromBody: boolean
+  cameraFitLimbLengths: boolean
+  cameraHoldUndetected: boolean
   cameraBoneSmoothingMilliseconds: number
   cameraBoneMaxTurnSpeed: number
   cameraLimitJoints: boolean
@@ -123,6 +126,10 @@ export interface CameraSmoothingSettings {
   handHoldMilliseconds: number
   /** How far a palm may turn in one reading before it must be confirmed, in radians. */
   handFlipRadians: number
+  /** How confident a body landmark must be to count as detected at all. */
+  visibilityThreshold: number
+  /** Keep a landmark that drops below that confidence at its last detected position. */
+  holdUndetectedLandmarks: boolean
 }
 
 /** One side's last trusted hand reading, and a sharp turn still waiting to be confirmed. */
@@ -163,6 +170,8 @@ export interface CameraPoseMappingOptions {
   rollForearmsToPalms: boolean
   /** With no hand found, read the palm from the body's own wrist, pinky and index instead. */
   palmsFromBodyLandmarks: boolean
+  /** Resize each pair of limbs to the length the performer's own limbs measure. */
+  fitLimbLengths: boolean
   /** Aim the thighs at the knees and the shins at the ankles. */
   aimLegs: boolean
   /** Roll each thigh to where the kneecap and the foot point. */
@@ -197,6 +206,8 @@ export interface CameraDetectionOptions {
   sideHandsByNearestWrist: boolean
   /** Treat body landmarks placed outside the image as not detected. */
   ignoreLandmarksOutsideImage: boolean
+  /** How sure the hand detector must be about a hand before its fingers drive anything. */
+  handConfidence: number
   /** Mirror the live camera, body, hands and head, to match its mirrored preview. */
   mirrorLiveCamera: boolean
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
@@ -231,6 +242,12 @@ export interface CameraBoneTransform {
 export interface CameraRetargetRest {
   worldQuaternions: Map<string, THREE.Quaternion>
   worldPositions: Map<string, THREE.Vector3>
+}
+
+/** One limb's own length, as the camera measured it and as the rig carries it at rest. */
+export interface LimbLengths {
+  observed: number
+  rest: number
 }
 
 /** A square region of a source image, in pixels, that a close-range detector is re-run on. */
