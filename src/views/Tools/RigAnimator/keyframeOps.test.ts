@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import type { PoseKeyframe } from '@webgamekit/rig'
 import {
+  filterKeyframesInList,
   filterRecordedSamples,
+  reduceKeyframesInList,
   replaceKeyframesInRange,
   moveKeyframesInList,
   removeFrameRangeFromList,
@@ -302,5 +304,89 @@ describe('filterRecordedSamples', () => {
 
     // Assert
     expect(angleOf(frameZero)).toBeCloseTo(10)
+  })
+})
+
+describe('filterKeyframesInList', () => {
+  const turned = (degrees: number) => {
+    const { x, y, z, w } = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      THREE.MathUtils.degToRad(degrees)
+    )
+    return { mixamorigHips: { x, y, z, w } }
+  }
+  const degreesAt = (keyframes: PoseKeyframe[], frame: number): number => {
+    const { x, y, z, w } = keyframes.find((keyframe) => keyframe.frame === frame)!.pose
+      .mixamorigHips
+    return THREE.MathUtils.radToDeg(
+      new THREE.Quaternion(x, y, z, w).angleTo(new THREE.Quaternion())
+    )
+  }
+
+  it.each([
+    ['drops a spike between two steady keyframes', [10, 170, 12], 11, 3],
+    ['leaves a steady movement where it is', [0, 10, 20], 10, 0.5],
+    ['pulls a wobble back between its neighbours', [0, 14, 4], 3, 0.5]
+  ])('%s', (_, degrees, expectedMiddle, tolerance) => {
+    // Arrange
+    const keyframes = degrees.map((angle, frame) => ({ frame, pose: turned(angle) }))
+
+    // Act
+    const filtered = filterKeyframesInList(keyframes, [0, 1, 2])
+
+    // Assert
+    expect(Math.abs(degreesAt(filtered, 1) - expectedMiddle)).toBeLessThan(tolerance)
+    expect(degreesAt(filtered, 0)).toBeCloseTo(degrees[0])
+    expect(degreesAt(filtered, 2)).toBeCloseTo(degrees[2])
+  })
+
+  it('leaves keyframes outside the chosen frames untouched', () => {
+    // Arrange
+    const keyframes = [10, 170, 12, 170].map((angle, frame) => ({ frame, pose: turned(angle) }))
+
+    // Act
+    const filtered = filterKeyframesInList(keyframes, [0, 1, 2])
+
+    // Assert
+    expect(degreesAt(filtered, 3)).toBeCloseTo(170)
+  })
+})
+
+describe('reduceKeyframesInList', () => {
+  const pose = { mixamorigHips: { x: 0, y: 0, z: 0, w: 1 } }
+
+  it.each([
+    [
+      [0, 1, 2, 3, 4],
+      [0, 2, 4]
+    ],
+    [
+      [0, 1, 2, 3, 4, 5],
+      [0, 2, 4, 5]
+    ],
+    [
+      [0, 5],
+      [0, 5]
+    ]
+  ])('thins %j out to %j, always keeping the first and last', (frames, expected) => {
+    // Arrange
+    const keyframes = frames.map((frame) => ({ frame, pose }))
+
+    // Act
+    const reduced = reduceKeyframesInList(keyframes, frames)
+
+    // Assert
+    expect(reduced.map(({ frame }) => frame)).toEqual(expected)
+  })
+
+  it('only thins the chosen frames', () => {
+    // Arrange
+    const keyframes = [0, 1, 2, 3, 4, 5, 6].map((frame) => ({ frame, pose }))
+
+    // Act
+    const reduced = reduceKeyframesInList(keyframes, [0, 1, 2, 3])
+
+    // Assert
+    expect(reduced.map(({ frame }) => frame)).toEqual([0, 2, 3, 4, 5, 6])
   })
 })

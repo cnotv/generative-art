@@ -1,4 +1,5 @@
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
+import type { RigPanelGroup } from './types'
 import {
   POSITION_STEP_FRACTION,
   ROTATION_CONTROL,
@@ -19,73 +20,24 @@ import {
   ENCLOSURE_SIZE_RANGE
 } from './config'
 
-/** The Camera Smoothing sliders, the same for every rig, split out to keep the schema builder short. */
-const cameraSmoothingControls: ConfigControlsSchema = {
-  cameraSmoothingMilliseconds: {
-    ...CAMERA_SMOOTHING_MILLISECONDS_RANGE,
-    label: 'Camera Smoothing: Landmarks Held Still (ms)',
-    sectionStart: true
-  },
-  cameraSpeedResponse: {
-    ...CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE,
-    label: 'Camera Smoothing: Let Go on Fast Moves'
-  },
-  cameraSpeedCutoffHertz: {
-    ...CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
-    label: 'Camera Smoothing: Speed Sensitivity (Hz)'
-  },
-  cameraTurnResponse: {
-    ...CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
-    label: 'Camera Smoothing: Let Go on Fast Head Turns'
-  },
-  cameraMaxJump: {
-    ...CAMERA_MAX_JUMP_RANGE,
-    label: 'Camera Smoothing: Max Jump per Frame (m)'
-  },
-  cameraBoneSmoothingMilliseconds: {
-    ...CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
-    label: 'Camera Smoothing: Bones Settle (ms)'
-  },
-  cameraBoneMaxTurnSpeed: {
-    ...CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
-    label: 'Camera Smoothing: Max Joint Speed (°/s)'
-  },
-  cameraHandHoldMilliseconds: {
-    ...CAMERA_HAND_HOLD_MILLISECONDS_RANGE,
-    label: 'Camera Smoothing: Hold a Lost Hand (ms)'
-  },
-  cameraHandFlipDegrees: {
-    ...CAMERA_HAND_FLIP_DEGREES_RANGE,
-    label: 'Camera Smoothing: Palm Turn to Confirm (°)'
-  },
-  cameraVisibilityThreshold: {
-    ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
-    label: 'Camera Smoothing: Landmark Confidence Needed'
-  },
-  cameraTwistMinBendDegrees: {
-    ...CAMERA_TWIST_BEND_DEGREES_RANGE,
-    label: 'Camera Smoothing: Roll Starts at Bend (°)'
-  },
-  cameraTwistFullBendDegrees: {
-    ...CAMERA_TWIST_BEND_DEGREES_RANGE,
-    label: 'Camera Smoothing: Roll Full at Bend (°)'
-  }
+/** Which parts of the rig panel make sense for the rig loaded right now. */
+interface RigPanelAvailability {
+  boneNames: string[]
+  needsAutoRig: boolean
+  positionRange: number
+  canCaptureFromCamera: boolean
+  physicsEnabled: boolean
 }
 
-/** Rebuilt whenever the bone list or the auto-rig availability changes, since those decide
- * which rows even make sense to show. Playback, keyframes and import/export live on the
- * dedicated rig timeline instead of in this panel. */
-export const buildRigAnimatorSchema = (
-  boneNames: string[],
-  needsAutoRig: boolean,
-  positionRange: number,
-  canCaptureFromCamera: boolean,
-  physicsEnabled: boolean
-): ConfigControlsSchema => ({
+const boneControls = ({
+  boneNames,
+  needsAutoRig,
+  positionRange
+}: RigPanelAvailability): ConfigControlsSchema => ({
   ...(needsAutoRig ? { autoRig: { callback: 'autoRig', label: 'Auto-rig as Humanoid' } } : {}),
   ...(boneNames.length > 0
     ? {
-        selectedBone: { options: boneNames, label: 'Bone', sectionStart: true },
+        selectedBone: { options: boneNames, label: 'Bone' },
         boneRotation: ROTATION_CONTROL,
         bonePosition: {
           label: 'Bone Position',
@@ -101,92 +53,119 @@ export const buildRigAnimatorSchema = (
         resetBone: { callback: 'resetBone', label: 'Reset Bone to Rest Pose' },
         showBoneMarkers: { checkbox: true, label: 'Show Bone Markers' }
       }
-    : {}),
-  ...(canCaptureFromCamera
-    ? {
-        cameraGroundFeet: {
-          checkbox: true,
-          label: 'Camera Pose: Keep Feet on Ground',
-          sectionStart: true
-        },
-        cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
-        cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
-        cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
-        cameraVideoSlowdownRatio: {
-          ...CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE,
-          label: 'Camera Pose: Video Slowdown Ratio'
-        },
-        ...cameraSmoothingControls,
-        cameraTrackFace: {
-          checkbox: true,
-          label: 'Camera Detect: Face Tracker for Head',
-          sectionStart: true
-        },
-        cameraSearchFaceAroundBody: {
-          checkbox: true,
-          label: 'Camera Detect: Face Search Around Nose'
-        },
-        cameraTrackHands: { checkbox: true, label: 'Camera Detect: Hand Tracker for Fingers' },
-        cameraSearchHandsAroundWrists: {
-          checkbox: true,
-          label: 'Camera Detect: Hand Search Around Wrists'
-        },
-        cameraSideHandsByWrist: {
-          checkbox: true,
-          label: 'Camera Detect: Hand Side by Nearest Wrist'
-        },
-        cameraIgnoreOutsideImage: {
-          checkbox: true,
-          label: 'Camera Detect: Ignore Body Outside Image'
-        },
-        cameraMirrorLive: { checkbox: true, label: 'Camera Detect: Mirror Live Camera' },
-        cameraDetectOnlyWhilePlaying: {
-          checkbox: true,
-          label: 'Camera Detect: Only While Video Plays'
-        },
-        cameraTurnHips: { checkbox: true, label: 'Camera Bones: Turn Hips', sectionStart: true },
-        cameraBendSpine: { checkbox: true, label: 'Camera Bones: Bend Spine' },
-        cameraTurnHead: { checkbox: true, label: 'Camera Bones: Turn Neck and Head' },
-        cameraCorrectHeadPitch: {
-          checkbox: true,
-          label: 'Camera Bones: Correct Ear and Nose Head Pitch'
-        },
-        cameraLimitHeadTurn: {
-          checkbox: true,
-          label: 'Camera Bones: Ignore Impossible Head Turns'
-        },
-        cameraAimArms: { checkbox: true, label: 'Camera Bones: Aim Arms' },
-        cameraRollUpperArms: { checkbox: true, label: 'Camera Bones: Roll Upper Arms from Elbows' },
-        cameraRollForearms: {
-          checkbox: true,
-          label: 'Camera Bones: Roll Forearms and Hands to Palms'
-        },
-        cameraPalmsFromBody: {
-          checkbox: true,
-          label: 'Camera Bones: Palms from Body When No Hand Found'
-        },
-        cameraAimLegs: { checkbox: true, label: 'Camera Bones: Aim Legs' },
-        cameraRollThighs: {
-          checkbox: true,
-          label: 'Camera Bones: Roll Thighs from Knees and Feet'
-        },
-        cameraAimFeet: { checkbox: true, label: 'Camera Bones: Aim Feet' },
-        cameraLimitJoints: { checkbox: true, label: 'Camera Bones: Keep Joints in Human Range' }
-      }
-    : {}),
-  physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },
+    : {})
+})
+
+const cameraPoseControls: ConfigControlsSchema = {
+  cameraGroundFeet: { checkbox: true, label: 'Keep Feet on Ground' },
+  cameraUseDepth: { checkbox: true, label: 'Use Depth (Z Axis)' },
+  cameraUseViewpoint: { checkbox: true, label: 'Match Camera Angle to Photo' },
+  cameraShowPreview: { checkbox: true, label: 'Show Camera Preview' },
+  cameraVideoSlowdownRatio: { ...CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE, label: 'Video Slowdown Ratio' }
+}
+
+const cameraSmoothingControls: ConfigControlsSchema = {
+  cameraSmoothingMilliseconds: {
+    ...CAMERA_SMOOTHING_MILLISECONDS_RANGE,
+    label: 'Landmarks Held Still (ms)'
+  },
+  cameraSpeedResponse: { ...CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE, label: 'Let Go on Fast Moves' },
+  cameraSpeedCutoffHertz: {
+    ...CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
+    label: 'Speed Sensitivity (Hz)'
+  },
+  cameraTurnResponse: {
+    ...CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
+    label: 'Let Go on Fast Head Turns'
+  },
+  cameraMaxJump: { ...CAMERA_MAX_JUMP_RANGE, label: 'Max Jump per Frame (m)' },
+  cameraBoneSmoothingMilliseconds: {
+    ...CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
+    label: 'Bones Settle (ms)'
+  },
+  cameraBoneMaxTurnSpeed: {
+    ...CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
+    label: 'Max Joint Speed (°/s)'
+  },
+  cameraHandHoldMilliseconds: {
+    ...CAMERA_HAND_HOLD_MILLISECONDS_RANGE,
+    label: 'Hold a Lost Hand (ms)'
+  },
+  cameraHandFlipDegrees: { ...CAMERA_HAND_FLIP_DEGREES_RANGE, label: 'Palm Turn to Confirm (°)' },
+  cameraVisibilityThreshold: {
+    ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
+    label: 'Landmark Confidence Needed'
+  },
+  cameraTwistMinBendDegrees: {
+    ...CAMERA_TWIST_BEND_DEGREES_RANGE,
+    label: 'Roll Starts at Bend (°)'
+  },
+  cameraTwistFullBendDegrees: { ...CAMERA_TWIST_BEND_DEGREES_RANGE, label: 'Roll Full at Bend (°)' }
+}
+
+const cameraDetectControls: ConfigControlsSchema = {
+  cameraTrackFace: { checkbox: true, label: 'Face Tracker for Head' },
+  cameraSearchFaceAroundBody: { checkbox: true, label: 'Face Search Around Nose' },
+  cameraTrackHands: { checkbox: true, label: 'Hand Tracker for Fingers' },
+  cameraSearchHandsAroundWrists: { checkbox: true, label: 'Hand Search Around Wrists' },
+  cameraSideHandsByWrist: { checkbox: true, label: 'Hand Side by Nearest Wrist' },
+  cameraIgnoreOutsideImage: { checkbox: true, label: 'Ignore Body Outside Image' },
+  cameraMirrorLive: { checkbox: true, label: 'Mirror Live Camera' },
+  cameraDetectOnlyWhilePlaying: { checkbox: true, label: 'Only While Video Plays' }
+}
+
+const cameraBoneControls: ConfigControlsSchema = {
+  cameraTurnHips: { checkbox: true, label: 'Turn Hips' },
+  cameraBendSpine: { checkbox: true, label: 'Bend Spine' },
+  cameraTurnHead: { checkbox: true, label: 'Turn Neck and Head' },
+  cameraCorrectHeadPitch: { checkbox: true, label: 'Correct Ear and Nose Head Pitch' },
+  cameraLimitHeadTurn: { checkbox: true, label: 'Ignore Impossible Head Turns' },
+  cameraAimArms: { checkbox: true, label: 'Aim Arms' },
+  cameraRollUpperArms: { checkbox: true, label: 'Roll Upper Arms from Elbows' },
+  cameraRollForearms: { checkbox: true, label: 'Roll Forearms and Hands to Palms' },
+  cameraPalmsFromBody: { checkbox: true, label: 'Palms from Body When No Hand Found' },
+  cameraAimLegs: { checkbox: true, label: 'Aim Legs' },
+  cameraRollThighs: { checkbox: true, label: 'Roll Thighs from Knees and Feet' },
+  cameraAimFeet: { checkbox: true, label: 'Aim Feet' },
+  cameraLimitJoints: { checkbox: true, label: 'Keep Joints in Human Range' }
+}
+
+const physicsControls = (physicsEnabled: boolean): ConfigControlsSchema => ({
+  physicsEnabled: { checkbox: true, label: 'Simulate' },
   ...(physicsEnabled
     ? {
-        marbleFlowEnabled: { checkbox: true, label: 'Physics: Spawn Marbles' },
-        marbleSpawnInterval: {
-          ...MARBLE_SPAWN_INTERVAL_RANGE,
-          label: 'Physics: Marble Flow (Frames)'
-        },
-        marbleTextures: { checkbox: true, label: 'Physics: Marble Textures' },
-        respawnMarbles: { callback: 'respawnMarbles', label: 'Physics: Reset Marbles' },
-        enclosureSize: { ...ENCLOSURE_SIZE_RANGE, label: 'Physics: Wall Size' },
-        enclosureOpacity: { ...ENCLOSURE_OPACITY_RANGE, label: 'Physics: Wall Opacity' }
+        marbleFlowEnabled: { checkbox: true, label: 'Spawn Marbles' },
+        marbleSpawnInterval: { ...MARBLE_SPAWN_INTERVAL_RANGE, label: 'Marble Flow (Frames)' },
+        marbleTextures: { checkbox: true, label: 'Marble Textures' },
+        respawnMarbles: { callback: 'respawnMarbles', label: 'Reset Marbles' },
+        enclosureSize: { ...ENCLOSURE_SIZE_RANGE, label: 'Wall Size' },
+        enclosureOpacity: { ...ENCLOSURE_OPACITY_RANGE, label: 'Wall Opacity' }
       }
-    : {}),
-  fps: { min: 1, max: 60, step: 1, label: 'FPS', sectionStart: true }
+    : {})
 })
+
+/**
+ * The rig panel's settings, one accordion section each, rebuilt whenever the bone list, the
+ * auto-rig availability, camera capture readiness or physics changes, since those decide which
+ * rows make sense to show. Playback, keyframes and import/export live on the rig timeline instead.
+ * @param availability What the loaded rig supports right now
+ * @returns The sections, in panel order, leaving out any with nothing to show
+ */
+export const buildRigPanelGroups = (availability: RigPanelAvailability): RigPanelGroup[] =>
+  [
+    { key: 'bone', label: 'Bone', schema: boneControls(availability) },
+    ...(availability.canCaptureFromCamera
+      ? [
+          { key: 'cameraPose', label: 'Camera Pose', schema: cameraPoseControls },
+          { key: 'cameraSmoothing', label: 'Camera Smoothing', schema: cameraSmoothingControls },
+          { key: 'cameraDetect', label: 'Camera Detect', schema: cameraDetectControls },
+          { key: 'cameraBones', label: 'Camera Bones', schema: cameraBoneControls }
+        ]
+      : []),
+    { key: 'physics', label: 'Physics', schema: physicsControls(availability.physicsEnabled) },
+    {
+      key: 'timeline',
+      label: 'Timeline',
+      schema: { fps: { min: 1, max: 60, step: 1, label: 'FPS' } }
+    }
+  ].filter((group) => Object.keys(group.schema).length > 0)

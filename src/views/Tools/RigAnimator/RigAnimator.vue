@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getTools } from '@webgamekit/threejs'
@@ -8,16 +7,19 @@ import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { createControls } from '@webgamekit/controls'
 import { ikFindTwoBoneChain, type TwoBoneIkChain } from '@webgamekit/rig'
-import { Upload, Camera as CameraIcon, Lightbulb, Circle, Bone, Eye } from 'lucide-vue-next'
+import {
+  Upload,
+  Camera as CameraIcon,
+  Lightbulb,
+  Circle,
+  Bone,
+  Eye,
+  Settings,
+  Square
+} from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
-import {
-  registerViewConfig,
-  unregisterViewConfig,
-  updateViewSchema,
-  createReactiveConfig
-} from '@/stores/viewConfig'
-import { useViewPanelsStore } from '@/stores/viewPanels'
+import { createReactiveConfig } from '@/stores/viewConfig'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import {
   RIG_ANIMATOR_SETUP_CONFIG,
@@ -44,7 +46,8 @@ import {
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
   DEFAULT_ENCLOSURE_OPACITY
 } from './config'
-import { buildRigAnimatorSchema } from './panelSchema'
+import { buildRigPanelGroups } from './panelSchema'
+import RigConfigAccordion from './RigConfigAccordion.vue'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { centerCameraOnVisibleCanvas, frameCameraOnModel } from './cameraFraming'
@@ -75,9 +78,6 @@ import type {
   RigAnimatorConfig
 } from './types'
 
-const route = useRoute()
-const routeName = route.name as string
-const { setViewPanels, clearViewPanels } = useViewPanelsStore()
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -210,7 +210,8 @@ const targetBodyPartGroupLabels = computed(() =>
 )
 
 const rig = useRigAnimator(reactiveConfig)
-const showCameraCapture = ref(false)
+/** Whether the rig panel is open: the camera preview, its actions and every setting. */
+const showRigPanel = ref(false)
 const modelFileInput = ref<HTMLInputElement | null>(null)
 const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
 const cameraCaptureReference = ref<InstanceType<typeof CameraPoseCapture> | null>(null)
@@ -343,9 +344,7 @@ const updateCameraCentering = (): void => {
   ) {
     return
   }
-  // Hiding the preview shrinks the docked panel down to its action buttons, leaving the model
-  // the full canvas to sit in; only a visible preview actually covers part of the screen.
-  const isPreviewCoveringCanvas = showCameraCapture.value && reactiveConfig.value.cameraShowPreview
+  const isPreviewCoveringCanvas = showRigPanel.value
   centerCameraOnVisibleCanvas(
     activeCamera,
     canvas.value.clientWidth,
@@ -354,19 +353,31 @@ const updateCameraCentering = (): void => {
   )
 }
 
-/** Rebuilds the panel schema from the rig's current bones and auto-rig state. */
-const refreshSchema = (): void => {
-  updateViewSchema(
-    routeName,
-    buildRigAnimatorSchema(
-      rig.boneNames.value,
-      rig.needsAutoRig.value,
-      rig.positionRange.value,
-      rig.canCaptureFromCamera.value,
-      reactiveConfig.value.physicsEnabled
-    )
-  )
+/** The rig panel's settings, one accordion section each, for whatever the loaded rig supports. */
+const rigPanelGroups = computed(() =>
+  buildRigPanelGroups({
+    boneNames: rig.boneNames.value,
+    needsAutoRig: rig.needsAutoRig.value,
+    positionRange: rig.positionRange.value,
+    canCaptureFromCamera: rig.canCaptureFromCamera.value,
+    physicsEnabled: reactiveConfig.value.physicsEnabled
+  })
+)
+
+const readRigSetting = (path: string): unknown =>
+  (reactiveConfig.value as Record<string, unknown>)[path]
+
+const writeRigSetting = (path: string, value: unknown): void => {
+  reactiveConfig.value = { ...reactiveConfig.value, [path]: value }
 }
+
+const rigPanelActions: Record<string, () => void> = {
+  autoRig: () => rig.runAutoRig(),
+  resetBone: () => rig.resetSelectedBone(),
+  respawnMarbles: () => rig.rebuildMarbles()
+}
+
+const runRigPanelAction = (name: string): void => rigPanelActions[name]?.()
 
 /**
  * Closing the panel only clears the view-offset shift; it does not undo any orbit or pan the
@@ -374,7 +385,7 @@ const refreshSchema = (): void => {
  * where it started, rather than leaving it wherever the camera was last pointed.
  */
 const handleCloseCamera = (): void => {
-  showCameraCapture.value = false
+  showRigPanel.value = false
   if (motionRecording.isRecording.value) stopRecordingAndCommit()
   if (rig.model.value && cameraReference) {
     frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
@@ -397,10 +408,27 @@ const handleTogglePlayback = (): void => {
   rig.togglePlayback()
 }
 
-/** The docked camera icon opens the capture dialog, or closes it again if it is already open. */
-const toggleCameraCapture = (): void => {
-  if (showCameraCapture.value) handleCloseCamera()
-  else showCameraCapture.value = true
+/** The docked gear opens the rig panel, or closes it again, without starting the camera. */
+const toggleRigPanel = (): void => {
+  if (showRigPanel.value) handleCloseCamera()
+  else showRigPanel.value = true
+}
+
+/** The docked camera starts tracking the performer, opening the rig panel first when it is closed,
+ * or stops tracking when the camera is already running. */
+const toggleCameraTracking = async (): Promise<void> => {
+  if (!showRigPanel.value) {
+    showRigPanel.value = true
+    await nextTick()
+  }
+  cameraCaptureReference.value?.toggleCamera()
+}
+
+/** Timeline playback keeps running from wherever the playhead is moved to; a paused timeline
+ * leaves the jump to the frame watcher. */
+const moveToFrame = (frame: number): void => {
+  reactiveConfig.value.frame = frame
+  if (rig.isPlaying.value) rig.scrubToFrame(frame)
 }
 
 /** A region of the Merge Target diagram was clicked or activated by keyboard. */
@@ -464,7 +492,6 @@ watch(
       const saved = loadRigAutosave()
       if (saved) rig.restoreAutosave(saved)
     }
-    refreshSchema()
   }
 )
 watch(
@@ -504,7 +531,7 @@ watch(
     if (!rig.isPlaying.value && !motionRecording.isRecording.value) rig.scrubToFrame(frame)
   }
 )
-watch(showCameraCapture, () => updateCameraCentering())
+watch(showRigPanel, () => updateCameraCentering())
 watch(
   () => reactiveConfig.value.cameraShowPreview,
   () => updateCameraCentering()
@@ -513,7 +540,6 @@ watch(
   () => reactiveConfig.value.physicsEnabled,
   () => {
     rig.rebuildPhysics()
-    refreshSchema()
   }
 )
 watch(
@@ -586,32 +612,10 @@ const isEditingAFormField = (): boolean => {
 
 /** Steps the current frame by a delta, clamped to the timeline's own current range. */
 const stepFrame = (delta: number): void => {
-  reactiveConfig.value.frame = Math.min(
-    Math.max(reactiveConfig.value.frame + delta, 0),
-    rig.frameMax.value
-  )
+  moveToFrame(Math.min(Math.max(reactiveConfig.value.frame + delta, 0), rig.frameMax.value))
 }
 
 onMounted(async () => {
-  setViewPanels({ showConfig: true })
-  registerViewConfig(
-    routeName,
-    reactiveConfig,
-    buildRigAnimatorSchema([], false, rig.positionRange.value, false, false),
-    undefined,
-    {
-      autoRig: () => {
-        rig.runAutoRig()
-        refreshSchema()
-      },
-      resetBone: () => {
-        rig.resetSelectedBone()
-      },
-      respawnMarbles: () => {
-        rig.rebuildMarbles()
-      }
-    }
-  )
   await init()
   canvas.value?.addEventListener('pointerdown', onCanvasPointerDown)
   window.addEventListener('resize', updateCameraCentering)
@@ -637,8 +641,6 @@ onUnmounted(() => {
   onWindowPointerUp()
   timelineControls?.destroyControls()
   rig.clearPhysics()
-  unregisterViewConfig(routeName)
-  clearViewPanels()
   clearSceneElements()
 })
 </script>
@@ -668,16 +670,40 @@ onUnmounted(() => {
       <Bone />
     </IconButton>
     <IconButton
+      size="sm"
+      variant="outline"
+      :active="showRigPanel"
+      :title="showRigPanel ? 'Hide Rig Panel' : 'Show Rig Panel'"
+      @click="toggleRigPanel"
+    >
+      <Settings />
+    </IconButton>
+    <IconButton
       v-if="rig.canCaptureFromCamera.value"
       size="sm"
       variant="outline"
-      :title="showCameraCapture ? 'Stop Camera Capture' : 'Capture Pose from Camera'"
-      @click="toggleCameraCapture"
+      :active="cameraCaptureReference?.isCameraActive"
+      :title="
+        cameraCaptureReference?.isCameraActive ? 'Stop Camera Tracking' : 'Start Camera Tracking'
+      "
+      @click="toggleCameraTracking"
     >
       <CameraIcon />
     </IconButton>
     <IconButton
-      v-if="showCameraCapture"
+      v-if="showRigPanel && cameraCaptureReference?.canRecord"
+      size="sm"
+      variant="outline"
+      class="rig-canvas-controls__record"
+      :active="motionRecording.isRecording.value"
+      :title="motionRecording.isRecording.value ? 'Stop Recording' : 'Record Motion'"
+      @click="cameraCaptureReference?.toggleRecord()"
+    >
+      <Square v-if="motionRecording.isRecording.value" fill="currentColor" />
+      <Circle v-else fill="currentColor" />
+    </IconButton>
+    <IconButton
+      v-if="showRigPanel"
       size="sm"
       variant="outline"
       :active="reactiveConfig.cameraShowPreview"
@@ -707,7 +733,7 @@ onUnmounted(() => {
     </IconButton>
   </div>
   <MergeTargetDiagram
-    v-if="showCameraCapture"
+    v-if="showRigPanel"
     class="rig-merge-target-diagram"
     :active-groups="targetBodyPartGroups"
     @toggle-group="handleToggleBodyPartGroup"
@@ -721,7 +747,7 @@ onUnmounted(() => {
     :has-clipboard="rig.hasClipboard.value"
     :can-apply-hand-pose="rig.canApplyHandPose.value"
     :recorded-presets="rig.recordedPresets.value"
-    @update:frame="(value) => (reactiveConfig.frame = value)"
+    @update:frame="moveToFrame"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
     @delete-keyframes="rig.deleteKeyframesAt"
@@ -737,9 +763,11 @@ onUnmounted(() => {
     @export-json="rig.exportJson"
     @select-preset="handleSelectPreset"
     @reset-all="rig.resetAutosave"
+    @filter-keyframes="rig.filterKeyframes"
+    @reduce-keyframes="rig.reduceKeyframes"
   />
   <CameraPoseCapture
-    v-if="showCameraCapture"
+    v-if="showRigPanel"
     ref="cameraCaptureReference"
     :video-slowdown-ratio="reactiveConfig.cameraVideoSlowdownRatio"
     :smoothing-settings="cameraSmoothingSettings"
@@ -754,7 +782,14 @@ onUnmounted(() => {
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"
     @seek-frame="(frame) => (reactiveConfig.frame = frame)"
-  />
+  >
+    <RigConfigAccordion
+      :groups="rigPanelGroups"
+      :get-value="readRigSetting"
+      :on-update="writeRigSetting"
+      :on-action="runRigPanelAction"
+    />
+  </CameraPoseCapture>
 </template>
 
 <style scoped>
@@ -778,6 +813,11 @@ canvas {
   top: calc(var(--nav-height) + var(--spacing-3) + var(--btn-sm-height) + var(--spacing-3));
   left: var(--spacing-3);
   z-index: var(--z-overlay);
+}
+
+.rig-canvas-controls__record {
+  /* A solid red dot is what reads as a record control at a glance, among outline icons. */
+  color: var(--color-destructive);
 }
 
 .rig-canvas-controls__hidden-input {

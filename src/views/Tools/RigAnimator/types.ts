@@ -1,4 +1,5 @@
 import type * as THREE from 'three'
+import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import type {
   FaceLandmarker,
   HandLandmarker,
@@ -200,6 +201,13 @@ export interface CameraDetectionOptions {
   mirrorLiveCamera: boolean
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
   detectOnlyWhilePlaying: boolean
+}
+
+/** One accordion section of the rig panel: its title and the controls inside it. */
+export interface RigPanelGroup {
+  key: string
+  label: string
+  schema: ConfigControlsSchema
 }
 
 /** Where the ground sits under a loaded model: level with its lowest point, and how big the model is. */

@@ -14,7 +14,7 @@ exist, so two poses are already a movement.
 ## Source files
 
 - `src/views/Tools/RigAnimator/RigAnimator.vue`: the view (scene setup, pointer picking and
-  dragging, wiring the rig timeline and the Config panel schema to the composables below,
+  dragging, wiring the rig timeline and the rig panel's settings to the composables below,
   keyboard/gamepad frame shortcuts via `@webgamekit/controls`)
 - `src/views/Tools/RigAnimator/useRigModel.ts`: the loaded model, its rig, its bone markers,
   its rest poses and the selected bone
@@ -60,7 +60,9 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/cameraFraming.ts` (+ `.test.ts`): framing the camera to whatever
   scale the uploaded model happens to use, and to a detected photo's own viewing angle
 - `src/views/Tools/RigAnimator/export.ts`: the GLB/JSON export and JSON import file handling
-- `src/views/Tools/RigAnimator/panelSchema.ts`: the Config panel schema (upload, auto-rig,
+- `src/views/Tools/RigAnimator/RigConfigAccordion.vue`: the rig panel's settings, one collapsed
+  accordion section per group, rendered with the shared `ConfigControls`
+- `src/views/Tools/RigAnimator/panelSchema.ts`: the rig panel's setting groups (upload, auto-rig,
   bone selection and pose fields), rebuilt whenever the bone list or the auto-rig availability
   changes
 - `src/views/Tools/RigAnimator/cameraPoseMapping.ts` (+ `.test.ts`): body landmark helpers:
@@ -121,7 +123,7 @@ exist, so two poses are already a movement.
 ## Uploading a model
 
 The view opens with a default character already loaded, so there is something to pose before
-uploading anything. **Upload Model**, docked on the canvas itself rather than in the Config
+uploading anything. **Upload Model**, docked on the canvas itself rather than in the rig
 panel, replaces it with any FBX, GLB or GLTF. If it already carries a skeleton (a Mixamo export,
 a rigged glTF character), the bone list appears immediately. The camera re-frames to whatever
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
@@ -136,14 +138,18 @@ height while the camera drives the rig.
 
 ![The default character in its rest pose standing on the sand coloured ground disc, its shadow cast behind it](/img/animation/rig-ground.webp)
 
-A third docked button, Physics, sits beside these two. Once it is on, a fourth joins it, Marble
-Flow, which starts and stops the drip; dropping one on demand is a touch, not a button, covered
-in its own section below along with Physics. Two more appear only when they apply: Bone
-Markers, once the model carries a rig, shows or hides the markers described next, and Camera
-Preview, while camera capture is open, shows or hides that panel's video preview. Each flips the
-same setting as its Config panel checkbox, so the two places always agree.
+The other docked buttons, left to right: **Bone Markers**, once the model carries a rig, shows
+or hides the markers described next. **Show Rig Panel**, a gear, opens and closes the rig panel
+described under **Capturing a pose from the camera**, which also holds every setting. **Start
+Camera Tracking** opens that panel if it is closed and starts following the webcam, or stops
+it. **Record Motion**, a solid red dot, appears once the panel has a live camera or a video to
+record from, see **Recording motion** below. **Camera Preview**, while the panel is open, shows
+or hides its video preview. **Physics** turns the simulation on, and once it is on **Marble
+Flow** starts and stops the drip; dropping one on demand is a touch, not a button, covered in
+its own section below. Each toggle flips the same setting as its checkbox in the rig panel, so
+the two places always agree.
 
-![Upload Model, Bone Markers, Capture Pose from Camera, Camera Preview and Physics docked at the top left of the canvas while camera capture is open, with the smaller bone markers showing](/img/animation/rig-canvas-controls.webp)
+![Upload Model, Bone Markers, the rig panel gear, Start Camera Tracking, the red Record Motion dot, Camera Preview and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
@@ -153,7 +159,7 @@ fingertip further down the chain. A marker is drawn small so it does not hide th
 clicks wider than it looks: a pointer ray picks it anywhere within
 `BONE_MARKER_HIT_RADIUS_MULTIPLIER` drawn radii of its centre. Across a hand those enlarged areas
 overlap, so the marker whose centre the ray passes closest to wins, rather than whichever one
-sits nearer the camera. Clicking a marker, or picking a name from the Config panel's **Bone**
+sits nearer the camera. Clicking a marker, or picking a name from the rig panel's **Bone**
 dropdown, selects it: the marker turns rose, every other one stays the default periwinkle.
 **Show Bone Markers**, in the same panel or on the docked Bone Markers button, hides them all for
 a clean view of the model itself; picking a bone by clicking its marker is unavailable while they
@@ -174,7 +180,7 @@ Rotating and moving both work two ways, kept in sync with each other:
   what that does. The orbit camera steps aside for the duration of the drag, and the motion
   always tracks the cursor 1:1 on a plane facing the camera, rather than jumping according to
   how foreshortened a world axis looks from that angle.
-- **Type into the Bone Rotation / Bone Position fields** in the Config panel, ranged to
+- **Type into the Bone Rotation / Bone Position fields** in the rig panel, ranged to
   whatever scale the loaded rig happens to be.
 
 Either one updates the model live and the other's fields immediately, so a pose is built by eye
@@ -236,12 +242,12 @@ bone or any keyframe already captured.
 ## The rig timeline
 
 Frame scheduling, keyframes and every way an animation enters or leaves the tool live on one
-dedicated bar docked along the bottom of the view, not in the Config panel and not on the
+dedicated bar docked along the bottom of the view, not in the rig panel and not on the
 app's shared Timeline panel (built for generic scheduled actions, not pose keyframes). The main
 row holds transport and editing; a second row, collapsed by default, holds **Hand Pose** and
 **Presets** — see **A second row for Hand Pose and Presets** below.
 
-![The rig timeline: Play/Add/Delete/Copy/Paste, the ruler and draggable/resizable track with its keyframe markers, a bundled preset picker, and icon-only import/export/reset](/img/animation/rig-timeline.webp)
+![The rig timeline after a recorded take: Play, Add, Delete, Copy, Paste, Remove and Insert Frames, Filter and Reduce, the ruler and track full of keyframe markers, and icon-only import, export and reset](/img/animation/rig-timeline.webp)
 
 - **Play/Pause** and **Add keyframe** act on the current frame.
 - **Delete** and **Copy** act on the current selection when one covers any keyframes (see
@@ -249,6 +255,13 @@ row holds transport and editing; a second row, collapsed by default, holds **Han
   keyframe(s) starting at the current frame, replacing any keyframe already there, and applies
   the pose landing on the current frame to the live rig immediately, the same as scrubbing onto
   an existing keyframe would.
+- **Filter** (the wave icon) smooths the selected keyframes, or the whole clip when nothing is
+  selected, one pass further each press. Every keyframe between the first and last of them drops
+  a spike, keeping whichever of itself and its two neighbours is closest to the other two, then
+  eases halfway toward the midpoint of those neighbours, which softens jitter; a steady movement
+  stays where it is, and the first and last keyframes never move. **Reduce** (the shrink icon)
+  halves the same keyframes each press, removing every second one between the first and last so
+  interpolation fills the gaps. Both need at least three keyframes to act on.
 - **Remove Frames** and **Insert Frames** act on the current selection only (both disabled with
   none active) and change the timeline's own length, unlike Delete: **Remove Frames** cuts the
   selected range out entirely and shifts everything after it back to close the gap, shrinking
@@ -260,7 +273,8 @@ row holds transport and editing; a second row, collapsed by default, holds **Han
   further apart for a longer one). Clicking or dragging the ruler behaves exactly like the track
   below it does — see the next two bullets.
 - **The track** is the frame axis. A plain click scrubs the playhead there, same as it always
-  has; click-and-drag instead grows a range selection live from where the drag started to
+  has, and while the animation is playing (not recording) playback carries on from the frame
+  clicked instead of snapping back; click-and-drag instead grows a range selection live from where the drag started to
   wherever it ends, released, shaded across the track behind the keyframe markers so they stay
   visible on top of it — see **Selecting a range of frames** below. Each keyframe still shows as
   a small diamond you can drag to reposition it, dropping onto an already-occupied frame
@@ -361,7 +375,7 @@ measured, is in [Copying a Performer onto a Rig](/docs/journey/camera-motion-ret
 
 ## Auto-rig for a model with no skeleton
 
-A model with meshes but no skeleton shows **Auto-rig as Humanoid** in the Config panel instead
+A model with meshes but no skeleton shows **Auto-rig as Humanoid** in the rig panel instead
 of a bone list. It generates a canonical Mixamo-named bone hierarchy sized from the model's own
 bounding box, then binds each mesh to it by walking the mesh's own surface out from each bone
 (a graph search, not a straight line through the model), so a narrow gap the skin doesn't
@@ -375,11 +389,16 @@ out whether the fit works for that particular mesh.
 
 Once the rig has every bone the mapping cannot do without (`mixamorigHips` and both arms and
 forearms; the spine, neck, head, legs, fingers and toes are driven whenever the rig has them),
-**Capture Pose from Camera**, docked on the canvas next to Upload Model, opens a compact panel
-docked at the top right of the screen: the 3D view stays fully visible and interactive beside
-it, so you can watch the rig mirror you live instead of only seeing a preview of the camera
-feed. Its controls are icons: an X at the top closes it, and the action row under the feed holds
-upload, camera, sync and record. The panel shows a mirrored webcam feed with a live skeleton
+the rig panel captures from the camera. It docks at the top right of the screen: the 3D view
+stays fully visible and interactive beside it, so you can watch the rig mirror you live instead
+of only seeing a preview of the camera feed. The gear on the canvas opens it without starting
+anything; **Start Camera Tracking** on the canvas, or the camera icon inside the panel, starts
+the webcam, and a second press stops it. Opening the panel never turns the camera on by itself.
+Its controls are icons: an X at the top closes it, and the action row under the feed holds
+upload, camera, and for a video play and sync. Below them sit every setting of the tool, one
+accordion section each (Bone, Camera Pose, Camera Smoothing, Camera Detect, Camera Bones,
+Physics and Timeline), all collapsed when the panel opens, and the panel scrolls when an open
+section runs past the rig timeline. The panel shows a mirrored webcam feed with a live skeleton
 overlay from
 MediaPipe's Pose Landmarker. The overlay only draws a landmark MediaPipe is actually confident
 about: one it isn't, typically a body part out of frame, still gets a guessed position
@@ -387,14 +406,14 @@ internally, and drawing that would show a confident-looking line to something th
 there.
 
 The model re-centers within the part of the canvas the panel leaves visible rather than sitting
-off-center against the panel's edge, without the 3D canvas itself ever resizing: showing the
-preview shifts the camera's own view offset, the same technique used for tiled or multi-window
-rendering, so the model appears centered in whatever is actually visible. Hiding the preview or
-closing the panel clears it, and restores the camera's aspect ratio in the same step: setting the
+off-center against the panel's edge, without the 3D canvas itself ever resizing: opening the
+panel shifts the camera's own view offset, the same technique used for tiled or multi-window
+rendering, so the model appears centered in whatever is actually visible. Closing the panel
+clears it, and restores the camera's aspect ratio in the same step: setting the
 offset replaces that aspect with the wider virtual frame's own, and clearing it does not put it
 back, which left the model squashed to half its width.
 
-![The compact camera panel docked at the top right beside the still-interactive 3D view: the mirrored preview, the posing scope and status lines, the upload and record icons, and the close X at its top](/img/animation/rig-camera-split-screen.webp)
+![The rig panel docked at the top right beside the still-interactive 3D view: an uploaded video's preview, the posing scope and status lines, the action icons and the collapsed setting sections, with the red record dot on the canvas](/img/animation/rig-camera-split-screen.webp)
 
 Every detected frame applies straight to the rig, live, the moment it arrives: there is no
 separate "capture" click. This is what makes the split screen actually prove the mapping
@@ -405,15 +424,15 @@ current pose happens to be to the animation, the same as it always has.
 ### Recording motion instead of posing one keyframe at a time
 
 Every detected frame already applies live to the rig, but committing it to the timeline
-normally still takes a manual **Add Keyframe** click per pose. **Record Motion**, the red circle
-icon in the camera panel's action row, turns a live performance into an authored clip automatically
+normally still takes a manual **Add Keyframe** click per pose. **Record Motion**, the solid red
+dot docked on the canvas while the rig panel has a live camera or a video running, turns a live performance into an authored clip automatically
 instead: while it is on, every applied camera frame samples the rig's current pose onto the
 timeline at whatever frame real elapsed time has reached, at the panel's own FPS setting, so
 scrubbing the timeline afterward plays back the performance the same way any hand-authored
 clip does. The visible frame range grows to keep up with a long take rather than cutting it
 off, the same way the timeline's own resize handle only ever extends to fit real content.
-**Stop Recording**, the same toggle's second click once its icon has turned into a square, ends
-the take; closing the camera panel or switching to an uploaded photo stops it too, since a still
+**Stop Recording**, the same toggle's second click once its dot has turned into a square, ends
+the take; closing the rig panel, stopping the camera or switching to an uploaded photo stops it too, since a still
 photo has nothing to keep sampling. Recording works the same way against an uploaded video, see
 below; only a still photo cannot be recorded from.
 
@@ -425,7 +444,7 @@ filtered from every sample within half a frame of it. With three samples or more
 the rotation closest to all the others, so a misread pose is dropped outright instead of landing
 on the timeline; with only two they are averaged, and a single sample is kept as it is.
 
-![The camera panel mid-recording: the record toggle showing its red square stop icon beside the upload icon, with the close X at the top of the panel](/img/animation/rig-record-motion.webp)
+![The canvas buttons mid-recording: the record toggle has turned into a solid red square, between the camera and Camera Preview buttons](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
 either one stops the other first rather than letting them fight over it. For the same reason a
@@ -462,11 +481,10 @@ the video too, and the take ends on its own once the video reaches its natural e
 manual **Stop Recording** click would. It plays once rather than looping specifically so that end
 has something to trigger on. Detection only runs while the video actually plays:
 pausing it stops posing the model and stops a take sampling the same frozen frame, and the
-status line says detection is paused until playback resumes. The camera is always live, and a
-photo is read once. Either kind stays available once something is already
-loaded, so picking a different file never needs switching back to the camera first, and **Use
-Camera**, a camera icon that joins the action row once an upload is showing, switches back from
-either. A photo or video is shown as it is, not mirrored, since
+status line says detection is paused until playback resumes. The camera runs from the moment it
+is started until it is stopped, and a photo is read once. Either kind stays available once
+something is already loaded, so picking a different file never needs switching back to the
+camera first, and the camera icon in the action row switches back from either. A photo or video is shown as it is, not mirrored, since
 neither is a self-view the way a live webcam feed is, and the detected pose maps onto the rig
 unmirrored too, matching what the upload actually shows. Uploading either always turns **Show
 Camera Preview** on too, regardless of whatever it was last left at: the whole point of picking
@@ -546,11 +564,11 @@ vertices bound to it, and the model came apart at every joint.
 
 ### Switching each rule on and off
 
-Every rule the capture follows has its own checkbox in the Config panel, all on by default, so a
+Every rule the capture follows has its own checkbox in the rig panel, all on by default, so a
 pose that reads wrong can be taken apart one rule at a time. **Camera Detect** rules decide what
 MediaPipe reads from each frame; **Camera Bones** rules decide which bones that reading turns.
 
-![The Config panel's Camera Pose, Camera Detect and Camera Bones checkboxes, every rule on](/img/animation/rig-camera-rule-toggles.webp)
+![The rig panel with its Camera Pose, Camera Detect and Camera Bones sections expanded, every rule on except the opt in ones](/img/animation/rig-camera-rule-toggles.webp)
 
 - **Face Tracker for Head** runs the Face Landmarker; off, the head is read from the ears and
   nose. **Face Search Around Nose** looks again in a crop around the body's nose when the whole
@@ -626,17 +644,17 @@ A live camera detection runs roughly every frame, and MediaPipe's own per-frame 
 most visible on depth, reads as jiggle if applied to the rig straight. Every landmark, body and
 hands alike, and the head's rotation pass through a One Euro filter before they drive anything:
 a smoothing whose strength follows how fast each landmark moves. Held still, where jiggle shows
-most, a landmark is smoothed over the full time set in the Config panel; moving fast, where lag
+most, a landmark is smoothed over the full time set in the rig panel; moving fast, where lag
 shows most, it is let through close to as detected. A fixed blend per frame could only trade one
 for the other. The filter also works from the time between readings rather than per frame, so
 the same setting feels the same whether detection manages fifteen readings a second or sixty. A
 photo is a single detection with nothing to smooth against, so this only affects the camera and
 an uploaded video.
 
-Every knob behind that trade sits under **Camera Smoothing** in the Config panel, to tune jerky
+Every knob behind that trade sits under **Camera Smoothing** in the rig panel, to tune jerky
 movement by eye:
 
-![The Config panel's Camera Smoothing sliders at their defaults](/img/animation/rig-camera-smoothing-sliders.webp)
+![The rig panel's Camera Smoothing section expanded, its sliders at their defaults](/img/animation/rig-camera-smoothing-sliders.webp)
 
 | Slider                     | Default | Raise it when                                                              |
 | -------------------------- | ------- | -------------------------------------------------------------------------- |
@@ -679,8 +697,8 @@ rotation or a Config value never gets hijacked by the arrow keys moving the curs
 Every source that can drive the rig — a camera or photo capture, a bundled preset, a
 Record Motion take — is scoped by the **Merge Target** diagram, a small stick figure with five
 clickable regions, Left Arm, Right Arm, Left Leg, Right Leg and Spine / Head (the torso, neck
-and head, plus the root bone), all active by default. It only shows up while the camera capture
-dialog is open, docked on the canvas next to it, since that is the one place scoping a source
+and head, plus the root bone), all active by default. It only shows up while the rig panel
+is open, docked on the canvas next to it, since that is the one place scoping a source
 actually matters. Clicking a region, or focusing it with Tab and pressing Enter or Space,
 toggles that group on or off; an active region is bright green, an inactive one red — the same
 strong go/no-go pair the performance overlay already uses for good/bad, rather than this
@@ -731,11 +749,11 @@ not the autosave.
 
 ## Dropping marbles on the pose
 
-**Physics**, docked on the canvas next to Upload Model and Capture Pose from Camera, turns the
+**Physics**, docked on the canvas with the other buttons, turns the
 posed rig into something other objects can hit. It is a way to see a pose as a physical shape
 rather than a silhouette: a cupped hand catches marbles, a flat one does not, and playing the
-timeline back sweeps them around as the limbs move through them. It mirrors the Config panel's
-own **Physics: Simulate** checkbox, the same toggle either way.
+timeline back sweeps them around as the limbs move through them. It mirrors the rig panel's
+own **Simulate** checkbox under Physics, the same toggle either way.
 
 ![The rig in its rest pose with physics on: a cone-shaded lamp hanging close against its right side and a touch-sensor cube further out past its left hand](/img/animation/rig-physics-lamp-cube.webp)
 
