@@ -1,4 +1,5 @@
-import type { Pose, PoseKeyframe } from '@webgamekit/rig'
+import * as THREE from 'three'
+import type { Pose, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
 
 /**
  * Shift every keyframe in `frames` by the same `deltaFrames`, preserving their spacing — a
@@ -119,4 +120,75 @@ export const mergeSampledKeyframesIntoScope = (
         : keyframe
     )
   }, withoutScope)
+}
+
+/**
+ * Swap every keyframe from `fromFrame` to `toFrame`, both included, for `replacements`, leaving
+ * keyframes outside that range as they were.
+ * @param keyframes The current keyframe list
+ * @param fromFrame The first frame of the range
+ * @param toFrame The last frame of the range
+ * @param replacements The keyframes to put in its place
+ * @returns The updated list
+ */
+export const replaceKeyframesInRange = (
+  keyframes: PoseKeyframe[],
+  fromFrame: number,
+  toFrame: number,
+  replacements: PoseKeyframe[]
+): PoseKeyframe[] => [
+  ...keyframes.filter((keyframe) => keyframe.frame < fromFrame || keyframe.frame > toFrame),
+  ...replacements
+]
+
+const toQuaternion = ({ x, y, z, w }: QuaternionData): THREE.Quaternion =>
+  new THREE.Quaternion(x, y, z, w)
+
+/**
+ * One rotation standing for several samples of the same bone. Three or more keep the sample
+ * closest to all the others, which drops a single misread one outright rather than averaging it
+ * in; two, too few to tell which is wrong, meet halfway.
+ */
+const filterRotationSamples = (rotations: QuaternionData[]): QuaternionData => {
+  if (rotations.length === 1) return rotations[0]
+  const quaternions = rotations.map(toQuaternion)
+  const filtered =
+    quaternions.length === 2
+      ? quaternions[0].clone().slerp(quaternions[1], 0.5)
+      : quaternions.reduce((best, candidate) => {
+          const spread = (quaternion: THREE.Quaternion): number =>
+            quaternions.reduce((sum, other) => sum + quaternion.angleTo(other), 0)
+          return spread(candidate) < spread(best) ? candidate : best
+        })
+  return { x: filtered.x, y: filtered.y, z: filtered.z, w: filtered.w }
+}
+
+/**
+ * Turn the poses Record Motion sampled between frames into one keyframe per frame. Each frame
+ * takes every sample within half a frame of it, so at two samples per frame a frame is decided by
+ * the sample on it and the two either side, see `filterRotationSamples`. A frame with no sample
+ * near it gets no keyframe and is interpolated like any other gap.
+ * @param samples Poses at fractional frames, in any order
+ * @returns One filtered keyframe per frame that had samples, in frame order
+ */
+export const filterRecordedSamples = (samples: PoseKeyframe[]): PoseKeyframe[] => {
+  const byFrame = samples.reduce((groups, sample) => {
+    const frames = Array.from(
+      { length: Math.floor(sample.frame + 0.5) - Math.ceil(sample.frame - 0.5) + 1 },
+      (_, offset) => Math.ceil(sample.frame - 0.5) + offset
+    )
+    frames.forEach((frame) => groups.set(frame, [...(groups.get(frame) ?? []), sample.pose]))
+    return groups
+  }, new Map<number, Pose[]>())
+  return [...byFrame.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([frame, poses]) => ({
+      frame,
+      pose: Object.fromEntries(
+        [...new Set(poses.flatMap((pose) => Object.keys(pose)))].map((boneName) => [
+          boneName,
+          filterRotationSamples(poses.flatMap((pose) => (pose[boneName] ? [pose[boneName]] : [])))
+        ])
+      )
+    }))
 }

@@ -46,6 +46,12 @@ export const BONE_MARKER_DEPTH_FALLOFF = 0.82
 export const BONE_MARKER_MIN_SCALE = 0.35
 
 export const DEFAULT_FPS = 30
+/**
+ * How many poses Record Motion samples per timeline frame. The extra samples are never kept as
+ * keyframes: when the take ends, each frame's keyframe is filtered from the samples around it, so
+ * a single misread pose is outvoted by its neighbours instead of landing on the timeline.
+ */
+export const RECORDING_SAMPLES_PER_FRAME = 2
 export const DEFAULT_FRAME_MAX = 150
 /** The rig timeline's frame range never shrinks below this, dragging its resize handle in. */
 export const FRAME_MAX_MIN = 10

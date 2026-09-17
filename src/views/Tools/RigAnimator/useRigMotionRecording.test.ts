@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { PoseKeyframe } from '@webgamekit/rig'
 import { useRigMotionRecording } from './useRigMotionRecording'
 
 describe('useRigMotionRecording', () => {
@@ -17,15 +18,23 @@ describe('useRigMotionRecording', () => {
     const frame = { value: 0 }
     const frameMaxState = { value: frameMax }
     const addKeyframeCalls: number[] = []
+    const sampledAt: number[] = []
+    const replacedTakes: { fromFrame: number; toFrame: number; keyframes: PoseKeyframe[] }[] = []
     const recorder = useRigMotionRecording({
       fps: () => fps,
       currentFrame: () => frame.value,
       frameMax: () => frameMaxState.value,
       setFrame: (next) => (frame.value = next),
       setFrameMax: (next) => (frameMaxState.value = next),
-      addKeyframe: () => addKeyframeCalls.push(frame.value)
+      addKeyframe: () => addKeyframeCalls.push(frame.value),
+      capturePose: () => {
+        sampledAt.push(nowMs)
+        return { mixamorigHips: { x: 0, y: 0, z: 0, w: 1 } }
+      },
+      replaceTake: (fromFrame, toFrame, keyframes) =>
+        replacedTakes.push({ fromFrame, toFrame, keyframes })
     })
-    return { recorder, frame, frameMaxState, addKeyframeCalls }
+    return { recorder, frame, frameMaxState, addKeyframeCalls, sampledAt, replacedTakes }
   }
 
   it('does nothing while not recording', () => {
@@ -100,6 +109,43 @@ describe('useRigMotionRecording', () => {
 
     expect(frame.value).toBe(6)
     expect(addKeyframeCalls).toEqual([5, 6])
+  })
+
+  it('samples the pose twice per frame while keyframing once per frame', () => {
+    const { recorder, addKeyframeCalls, sampledAt } = buildRecorder(30)
+    recorder.startRecording()
+    ;[0.5, 1, 1.5, 2].forEach((frames) => {
+      nowMs = (frames * 1000) / 30
+      recorder.recordFrameIfActive()
+    })
+
+    expect(sampledAt).toHaveLength(5)
+    expect(addKeyframeCalls).toEqual([0, 1, 2])
+  })
+
+  it('replaces the take with one filtered keyframe per frame when it stops', () => {
+    const { recorder, replacedTakes } = buildRecorder(30)
+    recorder.startRecording()
+    ;[0.5, 1, 1.5, 2].forEach((frames) => {
+      nowMs = (frames * 1000) / 30
+      recorder.recordFrameIfActive()
+    })
+
+    recorder.stopRecording()
+
+    expect(replacedTakes).toHaveLength(1)
+    expect(replacedTakes[0].fromFrame).toBe(0)
+    expect(replacedTakes[0].toFrame).toBe(2)
+    expect(replacedTakes[0].keyframes.map(({ frame }) => frame)).toEqual([0, 1, 2])
+  })
+
+  it('leaves the timeline alone when a take stops before any time passed', () => {
+    const { recorder, replacedTakes } = buildRecorder(30)
+    recorder.startRecording()
+
+    recorder.stopRecording()
+
+    expect(replacedTakes).toEqual([])
   })
 
   it('stops sampling once stopped', () => {

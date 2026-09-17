@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import * as THREE from 'three'
 import type { PoseKeyframe } from '@webgamekit/rig'
 import {
+  filterRecordedSamples,
+  replaceKeyframesInRange,
   moveKeyframesInList,
   removeFrameRangeFromList,
   insertFrameRangeIntoList,
@@ -213,5 +216,77 @@ describe('mergeSampledKeyframesIntoScope', () => {
     )
 
     expect(reshoot).toEqual([{ frame: 3, pose: { leftArm: { x: 1, y: 0, z: 0, w: 0 } } }])
+  })
+})
+
+describe('replaceKeyframesInRange', () => {
+  it('swaps only the keyframes inside the range, both ends included', () => {
+    // Arrange
+    const pose = { mixamorigHips: { x: 0, y: 0, z: 0, w: 1 } }
+    const keyframes = [0, 2, 3, 5, 8].map((frame) => ({ frame, pose }))
+    const replacements = [{ frame: 4, pose }]
+
+    // Act
+    const result = replaceKeyframesInRange(keyframes, 2, 5, replacements)
+
+    // Assert
+    expect(result.map(({ frame }) => frame).sort((a, b) => a - b)).toEqual([0, 4, 8])
+  })
+})
+
+describe('filterRecordedSamples', () => {
+  const turned = (degrees: number) => {
+    const { x, y, z, w } = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      THREE.MathUtils.degToRad(degrees)
+    )
+    return { mixamorigHips: { x, y, z, w } }
+  }
+  const angleOf = (keyframe: PoseKeyframe): number => {
+    const { x, y, z, w } = keyframe.pose.mixamorigHips
+    return THREE.MathUtils.radToDeg(
+      new THREE.Quaternion(x, y, z, w).angleTo(new THREE.Quaternion())
+    )
+  }
+
+  it('keeps one keyframe per whole frame from samples taken twice a frame', () => {
+    // Arrange
+    const samples = [0, 0.5, 1, 1.5, 2].map((frame) => ({ frame, pose: turned(10 * frame) }))
+
+    // Act
+    const keyframes = filterRecordedSamples(samples)
+
+    // Assert
+    expect(keyframes.map(({ frame }) => frame)).toEqual([0, 1, 2])
+  })
+
+  it('drops a single misread sample outvoted by the samples either side of it', () => {
+    // Arrange: frame 1 itself read turned half round, its half-frame neighbours agree on 10°.
+    const samples = [
+      { frame: 0.5, pose: turned(10) },
+      { frame: 1, pose: turned(180) },
+      { frame: 1.5, pose: turned(12) }
+    ]
+
+    // Act
+    const [, frameOne] = filterRecordedSamples(samples)
+
+    // Assert
+    expect(frameOne.frame).toBe(1)
+    expect(angleOf(frameOne)).toBeLessThan(15)
+  })
+
+  it('meets two samples halfway when there are too few to outvote either', () => {
+    // Arrange
+    const samples = [
+      { frame: 0, pose: turned(0) },
+      { frame: 0.5, pose: turned(20) }
+    ]
+
+    // Act
+    const [frameZero] = filterRecordedSamples(samples)
+
+    // Assert
+    expect(angleOf(frameZero)).toBeCloseTo(10)
   })
 })

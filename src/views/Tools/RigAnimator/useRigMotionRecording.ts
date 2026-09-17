@@ -1,4 +1,7 @@
 import { ref } from 'vue'
+import type { Pose, PoseKeyframe } from '@webgamekit/rig'
+import { RECORDING_SAMPLES_PER_FRAME } from './config'
+import { filterRecordedSamples } from './keyframeOps'
 
 /** Reads and writes the rig timeline state a live-motion recording drives, kept as plain
  * accessors rather than direct refs so the composable never assumes which reactive source
@@ -10,6 +13,10 @@ export interface RigMotionRecordingDependencies {
   setFrame: (frame: number) => void
   setFrameMax: (frameMax: number) => void
   addKeyframe: () => void
+  /** The rig's pose right now, sampled `RECORDING_SAMPLES_PER_FRAME` times a frame. */
+  capturePose: () => Pose
+  /** Swap the take's keyframes, `fromFrame` to `toFrame`, for the ones filtered from its samples. */
+  replaceTake: (fromFrame: number, toFrame: number, keyframes: PoseKeyframe[]) => void
 }
 
 /**
@@ -24,6 +31,10 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   const capturedFrameCount = ref(0)
   let anchorFrame = 0
   let anchorTimeMs = 0
+  let lastSampleStep = 0
+  // Appended to in place: a long take gathers thousands of samples, and copying the whole list for
+  // each one would make every sample slower than the last.
+  const samples: PoseKeyframe[] = []
 
   /** Arm recording from whatever frame the playhead currently sits on. */
   const startRecording = (): void => {
@@ -31,6 +42,8 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     capturedFrameCount.value = 0
     anchorFrame = deps.currentFrame()
     anchorTimeMs = performance.now()
+    lastSampleStep = 0
+    samples.splice(0, samples.length, { frame: anchorFrame, pose: deps.capturePose() })
     // recordFrameIfActive only ever captures a frame strictly past this one (its own guard
     // below skips anything <= currentFrame, and currentFrame is this very frame until real
     // time advances past it) — so without this, the anchor frame is left holding whatever
@@ -41,12 +54,32 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     deps.addKeyframe()
   }
 
+  /** Stop, and replace the keyframes the take laid down live with ones filtered from all its
+   * samples, see `filterRecordedSamples`. */
   const stopRecording = (): void => {
+    if (!isRecording.value) return
     isRecording.value = false
+    // A last sample half a frame past the playhead would otherwise add a keyframe beyond the take.
+    const lastFrame = deps.currentFrame()
+    const filtered = filterRecordedSamples(samples).filter(({ frame }) => frame <= lastFrame)
+    if (capturedFrameCount.value > 0) deps.replaceTake(anchorFrame, lastFrame, filtered)
+    samples.splice(0, samples.length)
+  }
+
+  const sampleIfDue = (elapsedSeconds: number): void => {
+    const step = Math.round(elapsedSeconds * deps.fps() * RECORDING_SAMPLES_PER_FRAME)
+    if (step <= lastSampleStep) return
+    lastSampleStep = step
+    samples.push({
+      frame: anchorFrame + step / RECORDING_SAMPLES_PER_FRAME,
+      pose: deps.capturePose()
+    })
   }
 
   /**
-   * Call once per applied camera frame. A no-op while not recording, and while real elapsed
+   * Call once per applied camera frame. Samples the pose whenever real time has reached a new
+   * sample step, `RECORDING_SAMPLES_PER_FRAME` of them a frame. A no-op while not recording, and
+   * otherwise lays down a live keyframe only while real elapsed
    * time has not yet reached a new integer frame (a live detection typically runs faster than
    * the timeline's own fps, so most calls land within the same frame as the last one). Growing
    * the visible frame range as recording runs past it keeps a long take from being silently cut
@@ -55,6 +88,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   const recordFrameIfActive = (): void => {
     if (!isRecording.value) return
     const elapsedSeconds = (performance.now() - anchorTimeMs) / 1000
+    sampleIfDue(elapsedSeconds)
     const nextFrame = anchorFrame + Math.round(elapsedSeconds * deps.fps())
     if (nextFrame <= deps.currentFrame()) return
     if (nextFrame > deps.frameMax()) deps.setFrameMax(nextFrame)

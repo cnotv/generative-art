@@ -220,7 +220,10 @@ const motionRecording = useRigMotionRecording({
   // sampled frames made each capture slower than the last (see captureKeyframeSilently's own
   // doc comment) and was the actual cause of the stutter recording had — not the camera feed
   // itself. stopRecordingAndCommit below pays that cost once, when the burst ends.
-  addKeyframe: () => rig.captureKeyframeSilently()
+  addKeyframe: () => rig.captureKeyframeSilently(),
+  capturePose: () => rig.capturePose(),
+  replaceTake: (fromFrame, toFrame, keyframes) =>
+    rig.replaceRecordedTake(fromFrame, toFrame, keyframes)
 })
 
 /** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
