@@ -915,6 +915,74 @@ describe('fitting limb lengths to the performer', () => {
     expect(armLength(unfitted, 'Left')).toBeCloseTo(restArmLength, 5)
   })
 
+  it('measures the length once and keeps it however the readings change after', () => {
+    // Arrange: the same rig posed twice, the arms read 15% longer the second time.
+    const bones = buildMixamoRig()
+    const rest = captureCameraRetargetRest(bones)
+    const allBoneNames = new Set(bones.map((bone) => bone.name))
+    const apply = (bodyLandmarks: CameraLandmark[]): void => {
+      const frame: CameraPoseFrame = { bodyLandmarks, handLandmarks: {}, headRotation: null }
+      applyCameraPoseFrame(
+        bones,
+        rest,
+        frame,
+        FIT_ON,
+        cameraFrameDrivenBoneNames(frame, allBoneNames)
+      )
+    }
+    const arm = bones.find((bone) => bone.name === 'mixamorigLeftArm')!
+    const longerArms = {
+      13: [0.51, -0.5, 0],
+      14: [-0.51, -0.5, 0],
+      15: [0.8, -0.5, 0],
+      16: [-0.8, -0.5, 0]
+    } satisfies Record<number, [number, number, number]>
+
+    // Act
+    apply(buildBodyLandmarks())
+    const firstScale = arm.scale.x
+    apply(buildBodyLandmarks(longerArms))
+
+    // Assert
+    expect(firstScale).toBeLessThan(1)
+    expect(arm.scale.x).toBe(firstScale)
+  })
+
+  it('measures a fresh length after the fit is switched off and on again', () => {
+    // Arrange
+    const bones = buildMixamoRig()
+    const rest = captureCameraRetargetRest(bones)
+    const allBoneNames = new Set(bones.map((bone) => bone.name))
+    const apply = (bodyLandmarks: CameraLandmark[], options = FIT_ON): void => {
+      const frame: CameraPoseFrame = { bodyLandmarks, handLandmarks: {}, headRotation: null }
+      applyCameraPoseFrame(
+        bones,
+        rest,
+        frame,
+        options,
+        cameraFrameDrivenBoneNames(frame, allBoneNames)
+      )
+    }
+    const arm = bones.find((bone) => bone.name === 'mixamorigLeftArm')!
+    const shorterArms = {
+      13: [0.33, -0.5, 0],
+      14: [-0.33, -0.5, 0],
+      15: [0.48, -0.5, 0],
+      16: [-0.48, -0.5, 0]
+    } satisfies Record<number, [number, number, number]>
+
+    // Act
+    apply(buildBodyLandmarks())
+    const firstScale = arm.scale.x
+    apply(buildBodyLandmarks(), buildMappingOptions({ fitLimbLengths: false }))
+    const restScale = arm.scale.x
+    apply(buildBodyLandmarks(shorterArms))
+
+    // Assert
+    expect(restScale).toBe(1)
+    expect(arm.scale.x).toBeLessThan(firstScale)
+  })
+
   it('holds the last fitted length for a limb whose joints leave the frame', () => {
     // Arrange: the same rig posed twice, the second time with the left wrist not detected.
     const bones = buildMixamoRig()
