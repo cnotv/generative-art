@@ -31,6 +31,7 @@ import {
   CAMERA_SMOOTHING_TURN_RESPONSE,
   CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
   CAMERA_BONE_SMOOTHING_MILLISECONDS,
+  CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_TWIST_MIN_BEND_DEGREES,
   CAMERA_TWIST_FULL_BEND_DEGREES,
@@ -100,6 +101,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraAimLegs: true,
   cameraRollThighs: true,
   cameraAimFeet: true,
+  cameraLimitJoints: true,
   cameraTrackFace: true,
   cameraSearchFaceAroundBody: true,
   cameraTrackHands: true,
@@ -116,6 +118,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraTurnResponse: CAMERA_SMOOTHING_TURN_RESPONSE,
   cameraSpeedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
   cameraBoneSmoothingMilliseconds: CAMERA_BONE_SMOOTHING_MILLISECONDS,
+  cameraBoneMaxTurnSpeed: CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
   cameraVisibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   cameraTwistMinBendDegrees: CAMERA_TWIST_MIN_BEND_DEGREES,
   cameraTwistFullBendDegrees: CAMERA_TWIST_FULL_BEND_DEGREES,
@@ -151,7 +154,11 @@ const cameraPoseMappingOptions = computed(
     visibilityThreshold: reactiveConfig.value.cameraVisibilityThreshold,
     twistMinBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistMinBendDegrees),
     twistFullBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistFullBendDegrees),
-    boneSmoothingMilliseconds: reactiveConfig.value.cameraBoneSmoothingMilliseconds
+    boneSmoothingMilliseconds: reactiveConfig.value.cameraBoneSmoothingMilliseconds,
+    limitJoints: reactiveConfig.value.cameraLimitJoints,
+    maxBoneTurnRadiansPerSecond: THREE.MathUtils.degToRad(
+      reactiveConfig.value.cameraBoneMaxTurnSpeed
+    )
   })
 )
 
@@ -375,6 +382,9 @@ const toggleMarbleFlow = (): void => {
  * (see `estimateCameraYaw`'s own doc comment for why not more than that).
  */
 const handleCameraApply = (frame: CameraPoseFrame): void => {
+  // Timeline playback poses the rig from the clip every tick; a live frame landing in between
+  // would yank it back to the camera for one frame, which reads as the model twitching.
+  if (rig.isPlaying.value) return
   rig.applyCameraPose(frame, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
   const { bodyLandmarks } = frame
   if (

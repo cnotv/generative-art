@@ -3,6 +3,7 @@ import type * as THREE from 'three'
 import {
   CAMERA_POSE_REQUIRED_BONES,
   applyCameraPoseFrame,
+  cameraBoneMaxTurnRadians,
   cameraBoneSmoothingShare,
   cameraFrameDrivenBoneNames,
   captureBoneTransforms,
@@ -49,8 +50,8 @@ export const useRigCameraPose = (
    * (see `boneBodyPartGroup`): a bone outside every selected group is left exactly as it was,
    * whether that is an earlier capture, a preset, or a manual edit, so a capture can be re-shot
    * for just one limb without disturbing whatever the rest of the rig already carries.
-   * With bone smoothing on, each driven bone then eases from where the previous frame left it
-   * toward its new rotation, see `cameraBoneSmoothingShare`.
+   * With bone smoothing or the joint speed cap on, each driven bone then eases from where the
+   * previous frame left it toward its new rotation, see `easeBonesFromTransforms`.
    * @param frame The detected body, hands and head, from `CameraPoseCapture`
    * @param options Which rules to apply and how, see `CameraPoseMappingOptions`
    * @param targetGroups Which body-part groups this capture is allowed to touch
@@ -68,7 +69,7 @@ export const useRigCameraPose = (
       boneNamesInGroups(bones.value, targetGroups)
     )
     const previousTransforms =
-      options.boneSmoothingMilliseconds > 0
+      options.boneSmoothingMilliseconds > 0 || options.maxBoneTurnRadiansPerSecond > 0
         ? captureBoneTransforms(bones.value, drivenBoneNames)
         : new Map()
     resetAllBonesToRest(
@@ -83,7 +84,8 @@ export const useRigCameraPose = (
     easeBonesFromTransforms(
       bones.value,
       previousTransforms,
-      cameraBoneSmoothingShare(options.boneSmoothingMilliseconds, elapsedSeconds)
+      cameraBoneSmoothingShare(options.boneSmoothingMilliseconds, elapsedSeconds),
+      cameraBoneMaxTurnRadians(options.maxBoneTurnRadiansPerSecond, elapsedSeconds)
     )
   }
 

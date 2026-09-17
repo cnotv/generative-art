@@ -316,7 +316,10 @@ Camera capture and Upload Photo/Video also run MediaPipe's Hand Landmarker along
 Landmarker, so the fingers follow the real hand instead of only these canned presets. Every
 finger joint turns to point where the detected one points, which carries curl, spread and the
 thumb's reach across the palm alike, and the hand itself turns to the detected palm. This rides
-along on the same live application the body does, with no separate button.
+along on the same live application the body does, with no separate button. A finger's middle and
+last joints are hinges, though: they only curl, about the same axis the Hand Pose presets curl
+them around, so a reading that bends one sideways or backward lands as a plain curl instead of a
+finger bending like a tentacle. See **Keep Joints in Human Range** below.
 
 A hand the Hand Landmarker finds on the whole frame takes priority over anything the body
 detector suggests about it. Its side comes from the body's nearer visible wrist, since on a
@@ -389,7 +392,10 @@ below; only a still photo cannot be recorded from.
 ![The camera panel mid-recording: the record toggle showing its red square stop icon beside the upload icon, with the close X at the top of the panel](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
-either one stops the other first rather than letting them fight over it. While recording, the
+either one stops the other first rather than letting them fight over it. For the same reason a
+live frame is not applied while the timeline plays: the clip poses the rig every tick, and a
+camera frame landing in between yanked it back to the live pose for a frame, which read as the
+model twitching. While recording, the
 preview clip is not rebuilt or scrubbed on every sampled frame either — only once, when the
 take ends — since rebuilding it from the whole keyframe list on every one of several samples a
 second made each capture slower than the last and read as the model stuttering, even though
@@ -410,11 +416,14 @@ working camera. A photo runs the same Pose Landmarker in its image mode and feed
 through the exact same mapping, applying it once as soon as a person is found. A video instead
 plays through once at its own rate and runs the exact same live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
-continuously the same way a webcam does — Record Motion works against it exactly as it does
-against the camera, and starts automatically: uploading a video begins a take as soon as
-playback starts, and the take ends on its own once the video reaches its natural end, the same
-as a manual **Stop Recording** click would. It plays once rather than looping specifically so
-that end has something to trigger on. Detection only runs while the video actually plays:
+continuously the same way a webcam does. Playing it never records anything by itself: **Play
+Video** / **Pause Video**, a play icon that joins the action row once a video is loaded, plays and
+pauses the clip on its own, without starting a take or moving the timeline, so the mapping can be
+watched first, and it stays on the action row even while the preview is hidden. Record Motion
+then works against it exactly as it does against the camera: clicking it on a paused video plays
+the video too, and the take ends on its own once the video reaches its natural end, the same as a
+manual **Stop Recording** click would. It plays once rather than looping specifically so that end
+has something to trigger on. Detection only runs while the video actually plays:
 pausing it stops posing the model and stops a take sampling the same frozen frame, and the
 status line says detection is paused until playback resumes. The camera is always live, and a
 photo is read once. Either kind stays available once something is already
@@ -524,6 +533,17 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
 - **Roll Upper Arms from Elbows**, **Roll Forearms and Hands to Palms** and **Roll Thighs from
   Knees and Feet** each keep the limb pointing the same way when off, and only drop how it is
   rolled about its own length.
+- **Keep Joints in Human Range**, on by default, keeps every joint the capture turns inside the
+  range a body can reach, measured from the rig's own rest pose: how far each one may swing off
+  its rest direction and how far it may roll about its own length, from a few degrees for a
+  finger's roll to a full turn for a shoulder's swing. A finger's middle and last joints only
+  curl. The values are `CAMERA_JOINT_LIMITS_DEGREES` in `config.ts`. Without it the detector's
+  misreadings go straight through: on the attached dance clip a thigh rolled 149°, a forearm
+  173° and a finger joint bent 126° sideways, which tore the skin at the hip and wrung the
+  forearm flat. Off, every segment points exactly where the landmarks say, however far past a
+  joint that is. Each joint is limited on top of its already limited parent, so the bone below
+  still reaches the detected direction whenever a human joint could. With the hips out of frame
+  the spine's own roll limit also caps how far the chest turns, about 60°.
 
 The remaining options tune the result:
 
@@ -578,6 +598,7 @@ movement by eye:
 | Let Go on Fast Head Turns  | 2       | head turns trail behind; lower it when the head shakes                    |
 | Max Jump per Frame (m)     | 0.15    | real fast moves get held back; lower it when single frames snap           |
 | Bones Settle (ms)          | 0       | limbs snap between poses, dropping out to rest or flipping their roll     |
+| Max Joint Speed (°/s)      | 720     | real fast moves lag; lower it when a limb still flips for a frame         |
 | Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest      |
 | Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                         |
 | Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                             |
@@ -585,7 +606,11 @@ movement by eye:
 **Bones Settle** works on the result rather than the landmarks: each bone eases from where the
 last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,
 such as a limb whose landmarks drop out falling back to rest. A pose applied after more than half
-a second lands whole, so a new photo or a resumed video is not blended from a stale pose. Max Jump
+a second lands whole, so a new photo or a resumed video is not blended from a stale pose. **Max
+Joint Speed** caps how fast any bone may turn between two readings. A misread frame flipping a
+forearm's roll half a turn asks for thousands of degrees a second, far past any dancer, so it is
+spread over several readings instead and mostly undone by the next good reading before it shows;
+0 turns the cap off. Max Jump
 clamps how far a landmark may move in a single reading, so a genuine fast movement still gets
 there, just over a couple of extra readings instead of one.
 

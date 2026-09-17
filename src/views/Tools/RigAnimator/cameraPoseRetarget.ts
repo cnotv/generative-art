@@ -5,7 +5,8 @@ import {
   CAMERA_HEAD_PITCH_OFFSET_RADIANS,
   CAMERA_NECK_TURN_SHARE,
   CAMERA_PELVIS_LEAN_SHARE,
-  CAMERA_BONE_SMOOTHING_RESET_SECONDS
+  CAMERA_BONE_SMOOTHING_RESET_SECONDS,
+  CAMERA_JOINT_LIMITS_DEGREES
 } from './config'
 import {
   CAMERA_LANDMARK_INDEX,
@@ -15,6 +16,7 @@ import {
 import type {
   CameraBoneTransform,
   CameraHandLandmark,
+  CameraJointLimitDegrees,
   CameraLandmark,
   CameraPoseFrame,
   CameraPoseMappingOptions,
@@ -30,6 +32,10 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0)
 /** The Face Landmarker's identity pose looks along +z with the subject's left along +x. */
 const CANONICAL_FACE_FORWARD = new THREE.Vector3(0, 0, 1)
 const CANONICAL_FACE_LATERAL = new THREE.Vector3(1, 0, 0)
+/** Every bone of a Mixamo rig runs along its own local +y and curls a finger about its local +x. */
+const BONE_LENGTH_AXIS = new THREE.Vector3(0, 1, 0)
+const FINGER_FLEXION_AXIS = new THREE.Vector3(1, 0, 0)
+const JOINT_LIMITS = new Map(Object.entries(CAMERA_JOINT_LIMITS_DEGREES))
 
 /** Every bone the body mapping cannot work without; spine, neck, fingers and toes are used when present. */
 export const CAMERA_POSE_REQUIRED_BONES = [
@@ -209,21 +215,40 @@ export const cameraBoneSmoothingShare = (
     : lowPassBlendFactor(smoothingCutoffHertz(smoothingMilliseconds), elapsedSeconds)
 
 /**
- * Ease each snapshotted bone from where it was toward the pose just applied to it.
+ * The furthest each bone may turn this frame under the joint speed cap. Like bone smoothing, a pose
+ * applied long enough ago is not held back at all.
+ * @param maxRadiansPerSecond The cap; 0 turns it off
+ * @param elapsedSeconds Time since the previous pose was applied
+ * @returns The largest turn allowed, in radians, or Infinity for no cap
+ */
+export const cameraBoneMaxTurnRadians = (
+  maxRadiansPerSecond: number,
+  elapsedSeconds: number
+): number =>
+  maxRadiansPerSecond <= 0 || elapsedSeconds > CAMERA_BONE_SMOOTHING_RESET_SECONDS
+    ? Infinity
+    : maxRadiansPerSecond * elapsedSeconds
+
+/**
+ * Ease each snapshotted bone from where it was toward the pose just applied to it, turning it no
+ * further than `maxTurnRadians`: a single misread frame that flips a limb then only nudges it.
  * @param bones The rig's bones, already posed
  * @param previous The transforms from before the pose, from `captureBoneTransforms`
  * @param share How much of the new pose to take, from `cameraBoneSmoothingShare`
+ * @param maxTurnRadians The largest turn allowed, from `cameraBoneMaxTurnRadians`
  */
 export const easeBonesFromTransforms = (
   bones: THREE.Bone[],
   previous: Map<string, CameraBoneTransform>,
-  share: number
+  share: number,
+  maxTurnRadians: number
 ): void => {
-  if (share >= 1) return
+  if (share >= 1 && maxTurnRadians === Infinity) return
   bones.forEach((bone) => {
     const before = previous.get(bone.name)
     if (!before) return
-    bone.quaternion.copy(before.quaternion.clone().slerp(bone.quaternion, share))
+    const eased = before.quaternion.clone().slerp(bone.quaternion, share)
+    bone.quaternion.copy(before.quaternion.clone().rotateTowards(eased, maxTurnRadians))
     bone.position.copy(before.position.clone().lerp(bone.position, share))
   })
 }
@@ -277,10 +302,97 @@ const frameChange = (observed: SegmentFrame, rest: SegmentFrame): THREE.Quaterni
   return observedRotation && restRotation ? observedRotation.multiply(restRotation.invert()) : null
 }
 
-const setBoneWorldQuaternion = (bone: THREE.Bone, worldQuaternion: THREE.Quaternion): void => {
+/**
+ * Split a rotation into its turn about `unitAxis`, as a signed angle, and the swing left over, so
+ * that `swing * twist` rebuilds it.
+ */
+const splitSwingTwist = (
+  rotation: THREE.Quaternion,
+  unitAxis: THREE.Vector3
+): { swing: THREE.Quaternion; twistAngle: number } => {
+  // The same rotation has two quaternions; the one with w >= 0 keeps the angle within ±180°.
+  const hemisphere = rotation.w < 0 ? -1 : 1
+  const along = new THREE.Vector3(rotation.x, rotation.y, rotation.z).dot(unitAxis) * hemisphere
+  const twistAngle = 2 * Math.atan2(along, rotation.w * hemisphere)
+  const twist = new THREE.Quaternion().setFromAxisAngle(unitAxis, twistAngle)
+  return { swing: rotation.clone().multiply(twist.invert()), twistAngle }
+}
+
+const limitSwingTwist = (
+  fromRest: THREE.Quaternion,
+  limit: { swing: number; twist: number }
+): THREE.Quaternion => {
+  const { swing, twistAngle } = splitSwingTwist(fromRest, BONE_LENGTH_AXIS)
+  const swingAngle = 2 * Math.acos(Math.min(1, Math.abs(swing.w)))
+  const maxSwing = THREE.MathUtils.degToRad(limit.swing)
+  const maxTwist = THREE.MathUtils.degToRad(limit.twist)
+  const limitedSwing =
+    swingAngle > maxSwing ? new THREE.Quaternion().slerp(swing, maxSwing / swingAngle) : swing
+  return limitedSwing.multiply(
+    new THREE.Quaternion().setFromAxisAngle(
+      BONE_LENGTH_AXIS,
+      THREE.MathUtils.clamp(twistAngle, -maxTwist, maxTwist)
+    )
+  )
+}
+
+const limitHinge = (
+  fromRest: THREE.Quaternion,
+  limit: { hingeMin: number; hingeMax: number }
+): THREE.Quaternion => {
+  const { twistAngle: curl } = splitSwingTwist(fromRest, FINGER_FLEXION_AXIS)
+  return new THREE.Quaternion().setFromAxisAngle(
+    FINGER_FLEXION_AXIS,
+    THREE.MathUtils.clamp(
+      curl,
+      THREE.MathUtils.degToRad(limit.hingeMin),
+      THREE.MathUtils.degToRad(limit.hingeMax)
+    )
+  )
+}
+
+/** Which `CAMERA_JOINT_LIMITS_DEGREES` entry a bone takes. */
+const jointLimitFor = (boneName: string): CameraJointLimitDegrees | undefined =>
+  JOINT_LIMITS.get(
+    boneName
+      .replace(/^mixamorig(?:Left|Right)?/, '')
+      .replace(/^Hand(?:Index|Middle|Ring|Pinky)(\d)$/, 'Finger$1')
+      .replace(/^HandThumb(\d)$/, 'Thumb$1')
+  )
+
+/**
+ * Pull a bone's local rotation back inside the range a human joint can reach, measured from the
+ * bone's own rest pose. Detection noise, a landmark swapped for its neighbour or a palm read back
+ * to front otherwise turns a thigh or a forearm further round than any body can, or bends a finger
+ * sideways at a joint that only curls.
+ */
+const limitJoint = (
+  context: RetargetContext,
+  bone: THREE.Bone,
+  local: THREE.Quaternion
+): THREE.Quaternion => {
+  const limit = jointLimitFor(bone.name)
+  const restWorld = context.rest.worldQuaternions.get(bone.name)
+  const parentRestWorld = context.rest.worldQuaternions.get(bone.parent?.name ?? '')
+  if (!context.options.limitJoints || !limit || !restWorld || !parentRestWorld) return local
+  const restLocal = parentRestWorld.clone().invert().multiply(restWorld)
+  const fromRest = restLocal.clone().invert().multiply(local)
+  return restLocal.multiply(
+    'hingeMin' in limit ? limitHinge(fromRest, limit) : limitSwingTwist(fromRest, limit)
+  )
+}
+
+/** Every driven bone is set through here, parents first, so each child is limited on top of an already limited parent. */
+const setBoneWorldQuaternion = (
+  context: RetargetContext,
+  bone: THREE.Bone,
+  worldQuaternion: THREE.Quaternion
+): void => {
   const parentWorldQuaternion =
     bone.parent?.getWorldQuaternion(new THREE.Quaternion()) ?? new THREE.Quaternion()
-  bone.quaternion.copy(parentWorldQuaternion.invert().multiply(worldQuaternion))
+  bone.quaternion.copy(
+    limitJoint(context, bone, parentWorldQuaternion.invert().multiply(worldQuaternion))
+  )
 }
 
 const drivenBone = (
@@ -301,7 +413,9 @@ const rotateFromRest = (
   change: THREE.Quaternion
 ): void => {
   const driven = drivenBone(context, boneName)
-  if (driven) setBoneWorldQuaternion(driven.bone, change.clone().multiply(driven.restQuaternion))
+  if (driven) {
+    setBoneWorldQuaternion(context, driven.bone, change.clone().multiply(driven.restQuaternion))
+  }
 }
 
 /** Roll a world-space change about `unitAxis` until the twist cue's rest direction meets the observed one. */
@@ -351,7 +465,7 @@ const aimBone = (
     .setFromUnitVectors(restAim.applyQuaternion(restToCurrent), target)
     .multiply(restToCurrent)
   const turned = twist ? rollToward(swung, target, twist) : swung
-  setBoneWorldQuaternion(driven.bone, turned.multiply(driven.restQuaternion))
+  setBoneWorldQuaternion(context, driven.bone, turned.multiply(driven.restQuaternion))
   return true
 }
 

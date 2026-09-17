@@ -7,6 +7,7 @@ import {
   CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
   CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
   CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
+  CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
   CAMERA_VISIBILITY_THRESHOLD_RANGE,
   CAMERA_TWIST_BEND_DEGREES_RANGE,
   CAMERA_MAX_JUMP_RANGE,
@@ -80,6 +81,10 @@ export const buildRigAnimatorSchema = (
           ...CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
           label: 'Camera Smoothing: Bones Settle (ms)'
         },
+        cameraBoneMaxTurnSpeed: {
+          ...CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
+          label: 'Camera Smoothing: Max Joint Speed (°/s)'
+        },
         cameraVisibilityThreshold: {
           ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
           label: 'Camera Smoothing: Landmark Confidence Needed'
@@ -141,7 +146,8 @@ export const buildRigAnimatorSchema = (
           checkbox: true,
           label: 'Camera Bones: Roll Thighs from Knees and Feet'
         },
-        cameraAimFeet: { checkbox: true, label: 'Camera Bones: Aim Feet' }
+        cameraAimFeet: { checkbox: true, label: 'Camera Bones: Aim Feet' },
+        cameraLimitJoints: { checkbox: true, label: 'Camera Bones: Keep Joints in Human Range' }
       }
     : {}),
   physicsEnabled: { checkbox: true, label: 'Physics: Simulate', sectionStart: true },

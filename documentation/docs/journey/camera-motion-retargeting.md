@@ -127,6 +127,40 @@ Nine frames of that clip are kept as a test fixture alongside the default charac
 skeleton. Every visible limb segment lands within a degree of the dancer's, the head matches the
 face reading exactly, and the hips face within a few degrees of the dancer's.
 
+## Copying exactly is not copying a body
+
+Copying every direction exactly put each segment where the landmarks said, and that was the
+problem. A recorded take of the whole clip, measured against the rig's rest pose, showed readings
+no body produces, and each one showed on the model:
+
+| Joint                          | Worst reading, copied exactly | A human joint | What it looked like                                 |
+| ------------------------------ | ----------------------------- | ------------- | --------------------------------------------------- |
+| Thigh, roll about its length   | 149°                          | about 45°     | a hand sinking into the hip, trousers back to front |
+| Forearm, roll about its length | 173°                          | about 90°     | the forearm wrung flat at the elbow                 |
+| Hand, roll against the forearm | 171°                          | about 60°     | a wrist spun round                                  |
+| Finger middle joint, sideways  | 126°                          | none, a hinge | fingers waving like tentacles                       |
+
+![The same two moments of the clip, copied exactly (first and third) and kept inside human joint ranges (second and fourth): the exact copy tears the skin at the hip and wrings a forearm flat](/img/animation/rig-camera-joint-limits.webp)
+
+None of these are depth noise that smoothing can iron out. They come from single readings that are
+wrong as a whole: a palm read back to front, a knee and a foot that disagree mid spin, a finger's
+knuckles jittering across its own width. A One Euro filter smooths each landmark, not a wrong
+answer, so they went straight through.
+
+The fix follows what every character solver does after the solve: clamp each joint to what a body
+can reach. Each bone's turn away from its own rest pose is split into a swing off its rest
+direction and a roll about its own length, and each is capped separately, since a shoulder swings
+almost anywhere yet rolls barely a quarter turn. A finger's middle and last joints keep only the
+part of their turn about the flexion axis, the same axis the hand pose presets already curl
+around, because anatomically that is all they can do. The limits are applied parent first, so a
+child bone is solved on top of its already limited parent and still reaches the detected
+direction whenever a real joint could.
+
+A range alone still lets a misreading jump from one end of it to the other in a single frame. A
+per-joint speed cap catches that: a real dancer rarely turns a joint faster than about 700° a
+second, while a flipped roll asks for several thousand. Capped, the flip is spread over a few
+readings and the next good reading mostly undoes it before it shows.
+
 ## Two traps outside the mapping
 
 ![Mixamo's Y Bot posed from the same clip: an arm raised overhead and a high kick, every limb attached](/img/animation/rig-camera-ybot-retarget.webp)
@@ -145,6 +179,9 @@ is only cleared when one was actually set.
 
 ## Limits
 
+- **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest
+  pose. A contortionist is clamped, and a rig whose rest pose is not a T-pose starts its ranges
+  from a different place.
 - **Front or back.** Mid turn, the lite pose model sometimes decides the wrong side faces the
   camera for a few frames, and the rig follows it.
 - **No travel.** World landmarks are centred on the hips, so the rig turns and crouches in place

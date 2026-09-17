@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { SetupConfig } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
 import type { ControlMapping } from '@webgamekit/controls'
+import type { CameraJointLimitDegrees } from './types'
 
 export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xf5f0e8 },
@@ -187,6 +188,35 @@ export const CAMERA_TWIST_MIN_BEND_DEGREES = 10
 export const CAMERA_TWIST_FULL_BEND_DEGREES = 30
 /** Range and step the Config panel's two roll cue sliders offer, in degrees. */
 export const CAMERA_TWIST_BEND_DEGREES_RANGE = { min: 0, max: 90, step: 1 }
+/**
+ * How far each joint may turn from its rest pose when camera capture drives it, in degrees, keyed
+ * by bone name without the rig prefix or side (`Finger` stands for the index, middle, ring and
+ * pinky alike). A ball joint may swing off its rest direction by `swing` and roll about its own
+ * length by `twist`. A finger's middle and last joints are hinges: they only curl about the
+ * rig's flexion axis, between `hingeMin` and `hingeMax`, so a noisy sideways reading can never
+ * bend or twist them. A bone without an entry is not limited.
+ */
+export const CAMERA_JOINT_LIMITS_DEGREES: Record<string, CameraJointLimitDegrees> = {
+  Spine: { swing: 30, twist: 20 },
+  Spine1: { swing: 30, twist: 20 },
+  Spine2: { swing: 30, twist: 20 },
+  Neck: { swing: 45, twist: 45 },
+  Head: { swing: 45, twist: 45 },
+  Arm: { swing: 180, twist: 100 },
+  ForeArm: { swing: 160, twist: 120 },
+  Hand: { swing: 85, twist: 60 },
+  UpLeg: { swing: 140, twist: 50 },
+  Leg: { swing: 160, twist: 25 },
+  Foot: { swing: 60, twist: 30 },
+  ToeBase: { swing: 50, twist: 10 },
+  Thumb1: { swing: 70, twist: 30 },
+  Thumb2: { swing: 70, twist: 10 },
+  Thumb3: { swing: 90, twist: 10 },
+  Finger1: { swing: 90, twist: 10 },
+  Finger2: { hingeMin: -10, hingeMax: 110 },
+  Finger3: { hingeMin: -10, hingeMax: 90 }
+}
+
 /** A body landmark reported less confident than this is treated as not detected. */
 export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
 /** Range and step the Config panel's landmark confidence slider offers. */
@@ -220,6 +250,14 @@ export const CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE = { min: 0.1, max: 10, step: 0.
  */
 export const CAMERA_BONE_SMOOTHING_MILLISECONDS = 0
 export const CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE = { min: 0, max: 500, step: 10 }
+/**
+ * The fastest, in degrees a second, a joint may turn while following the camera. A real movement
+ * rarely comes close; a misread frame that flips a limb or a roll half a turn does, so it is
+ * spread over several readings and mostly undone by the next good one before it shows. 0 turns
+ * the cap off.
+ */
+export const CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND = 720
+export const CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE = { min: 0, max: 3000, step: 30 }
 /** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
 export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
 

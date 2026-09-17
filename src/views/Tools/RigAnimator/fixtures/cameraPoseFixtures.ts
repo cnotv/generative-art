@@ -42,6 +42,8 @@ export const buildMappingOptions = (
   twistMinBendRadians: THREE.MathUtils.degToRad(CAMERA_TWIST_MIN_BEND_DEGREES),
   twistFullBendRadians: THREE.MathUtils.degToRad(CAMERA_TWIST_FULL_BEND_DEGREES),
   boneSmoothingMilliseconds: 0,
+  limitJoints: true,
+  maxBoneTurnRadiansPerSecond: 0,
   ...overrides
 })
 

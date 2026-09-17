@@ -10,6 +10,8 @@ import {
   Camera as CameraIcon,
   Circle,
   Link as LinkIcon,
+  Pause,
+  Play,
   Square,
   Unlink as UnlinkIcon,
   Upload,
@@ -105,6 +107,10 @@ const previewHandLandmarks = computed(() =>
 const detectedFrame = computed(() =>
   pickByMode(camera.frame.value, uploadedVideo.frame.value, photo.frame.value)
 )
+/** Mirrors the video element's own play and pause events, so the Play/Pause icon matches it
+ * however playback changed: this button, the native controls or the clip reaching its end. */
+const isVideoPlaying = ref(false)
+
 /** Whether the current source found anything to apply: a body, a hand or a face. */
 const hasDetection = computed(
   () => detectedFrame.value !== null && hasCameraPoseContent(detectedFrame.value)
@@ -183,9 +189,9 @@ watch(detectedFrame, (detected) => {
  * preview always comes on regardless of whatever the Config panel's checkbox was last left at
  * — leaving it off would run detection against the upload with nothing on screen to show for
  * it. A video plays at its own rate and samples live the exact same way the camera does,
- * useful for testing against a known performance; a photo applies once. Uploading a video
- * also starts Record Motion automatically, since scrubbing back through the timeline to redo
- * a manual start is exactly the friction this dialog exists to avoid. */
+ * useful for testing against a known performance; a photo applies once. A video does not start
+ * Record Motion on its own: it can be played and paused to watch the mapping first, and the
+ * record icon starts a take whenever it is wanted. */
 const handleMediaChange = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -196,7 +202,6 @@ const handleMediaChange = async (event: Event): Promise<void> => {
   if (file.type.startsWith('video/')) {
     mode.value = 'video'
     await uploadedVideo.loadVideo(file)
-    if (uploadedVideo.isActive.value) emit('toggleRecord')
   } else {
     uploadedVideo.stop()
     mode.value = 'photo'
@@ -210,6 +215,15 @@ const handleUseCamera = (): void => {
   uploadedVideo.stop()
   mode.value = 'camera'
   camera.start()
+}
+
+/** Starting a take on a paused video plays it too, since a take on a frame that never changes
+ * would record nothing. Stopping one leaves playback as it is. */
+const handleRecordClick = (): void => {
+  if (mode.value === 'video' && !props.isRecording && !isVideoPlaying.value) {
+    uploadedVideo.togglePlayback()
+  }
+  emit('toggleRecord')
 }
 
 /** The uploaded video reached its natural end: stop recording the same as a manual click
@@ -273,6 +287,9 @@ onUnmounted(() => {
         muted
         playsinline
         :controls="mode === 'video'"
+        @play="isVideoPlaying = true"
+        @pause="isVideoPlaying = false"
+        @emptied="isVideoPlaying = false"
         @ended="handleVideoEnded"
         @seeked="handleVideoSeeked"
       ></video>
@@ -358,6 +375,16 @@ onUnmounted(() => {
         v-if="mode === 'video'"
         size="sm"
         variant="outline"
+        :title="isVideoPlaying ? 'Pause Video' : 'Play Video'"
+        @click="uploadedVideo.togglePlayback()"
+      >
+        <Pause v-if="isVideoPlaying" />
+        <Play v-else />
+      </IconButton>
+      <IconButton
+        v-if="mode === 'video'"
+        size="sm"
+        variant="outline"
         :active="syncEnabled"
         :title="syncEnabled ? 'Unsync Timeline from Video' : 'Sync Timeline to Video'"
         @click="syncEnabled = !syncEnabled"
@@ -372,7 +399,7 @@ onUnmounted(() => {
         class="camera-pose-capture__record-toggle"
         :active="isRecording"
         :title="isRecording ? 'Stop Recording' : 'Record Motion'"
-        @click="emit('toggleRecord')"
+        @click="handleRecordClick"
       >
         <Square v-if="isRecording" />
         <Circle v-else />

@@ -44,6 +44,8 @@ export interface RigAnimatorConfig {
   cameraTurnResponse: number
   cameraSpeedCutoffHertz: number
   cameraBoneSmoothingMilliseconds: number
+  cameraBoneMaxTurnSpeed: number
+  cameraLimitJoints: boolean
   cameraVisibilityThreshold: number
   cameraTwistMinBendDegrees: number
   cameraTwistFullBendDegrees: number
@@ -153,6 +155,10 @@ export interface CameraPoseMappingOptions {
   twistFullBendRadians: number
   /** How long each bone takes to settle on a newly applied rotation; 0 turns it off. */
   boneSmoothingMilliseconds: number
+  /** Keep every joint inside a human range, see `CAMERA_JOINT_LIMITS_DEGREES`. */
+  limitJoints: boolean
+  /** The fastest a joint may turn, in radians a second; 0 turns the cap off. */
+  maxBoneTurnRadiansPerSecond: number
 }
 
 /** The Config panel's switches for how each frame is detected, before any bone is turned. */
@@ -174,6 +180,11 @@ export interface CameraDetectionOptions {
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
   detectOnlyWhilePlaying: boolean
 }
+
+/** How far one joint may turn from rest, in degrees: a ball joint's swing and roll, or a hinge's curl. */
+export type CameraJointLimitDegrees =
+  | { swing: number; twist: number }
+  | { hingeMin: number; hingeMax: number }
 
 /** One bone's local transform, kept so the next applied pose can ease away from it. */
 export interface CameraBoneTransform {

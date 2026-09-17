@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
 import {
   applyCameraPoseFrame,
+  cameraBoneMaxTurnRadians,
   cameraBoneSmoothingShare,
   cameraFrameDrivenBoneNames,
   captureBoneTransforms,
@@ -18,9 +19,12 @@ import {
   buildMixamoRig
 } from './fixtures/cameraPoseFixtures'
 import danceClip from './fixtures/danceClipFrames.json'
+import { CAMERA_JOINT_LIMITS_DEGREES } from './config'
 import type { CameraLandmark, CameraPoseFrame } from './types'
 
 const DEFAULT_OPTIONS = buildMappingOptions()
+/** Copies the detection exactly, however far past a human joint it reads. */
+const UNLIMITED_OPTIONS = buildMappingOptions({ limitJoints: false })
 const WORLD_UP = new THREE.Vector3(0, 1, 0)
 
 const poseRig = (frame: Partial<CameraPoseFrame>, options = DEFAULT_OPTIONS) => {
@@ -77,6 +81,16 @@ const facing = (turn: THREE.Quaternion): THREE.Vector3 =>
 
 const pitchDegrees = (direction: THREE.Vector3): number =>
   THREE.MathUtils.radToDeg(Math.asin(direction.y))
+
+/** A bone's local turn from its rest pose, in the hemisphere with w >= 0. */
+const localTurnFromRest = (bone: THREE.Bone, restBone: THREE.Bone): THREE.Quaternion => {
+  const turn = restBone.quaternion.clone().invert().multiply(bone.quaternion)
+  return turn.w < 0 ? new THREE.Quaternion(-turn.x, -turn.y, -turn.z, -turn.w) : turn
+}
+
+/** How far a local turn rolls about an axis, in degrees. */
+const degreesAbout = (turn: THREE.Quaternion, axis: 'x' | 'y'): number =>
+  THREE.MathUtils.radToDeg(2 * Math.atan2(turn[axis], turn.w))
 
 const yawDegrees = (direction: THREE.Vector3): number =>
   THREE.MathUtils.radToDeg(Math.atan2(direction.x, direction.z))
@@ -262,6 +276,31 @@ describe('applyCameraPoseFrame', () => {
       }
     )
 
+    it('curls a finger’s middle and last joints only about their hinge, never sideways', () => {
+      // Arrange: the index finger's last two joints read bent sideways, across the palm's width.
+      const handLandmarks = buildHandLandmarks('Left', 'fist').map((landmark, index) =>
+        index === 7 || index === 8 ? { ...landmark, z: landmark.z - 0.015 * (index - 6) } : landmark
+      )
+      const restRig = buildMixamoRig()
+
+      // Act
+      const limited = poseRig({ handLandmarks: { Left: handLandmarks } })
+      const unlimited = poseRig({ handLandmarks: { Left: handLandmarks } }, UNLIMITED_OPTIONS)
+
+      // Assert
+      const sideways = (rig: ReturnType<typeof poseRig>, name: string): number => {
+        const turn = localTurnFromRest(
+          rig.bone(name),
+          restRig.find((candidate) => candidate.name === name)!
+        )
+        return Math.hypot(turn.y, turn.z)
+      }
+      ;['mixamorigLeftHandIndex2', 'mixamorigLeftHandIndex3'].forEach((name) => {
+        expect(sideways(limited, name)).toBeLessThan(1e-6)
+      })
+      expect(sideways(unlimited, 'mixamorigLeftHandIndex2')).toBeGreaterThan(0.01)
+    })
+
     it('leaves the arm alone when only a hand is in view', () => {
       // Arrange, Act
       const { bone } = poseRig({ handLandmarks: { Left: buildHandLandmarks('Left', 'fist') } })
@@ -391,7 +430,7 @@ describe('applyCameraPoseFrame', () => {
     }))
 
     it.each(frames)(
-      'points every visible limb segment where the dancer does at $time s',
+      'points every visible limb segment where the dancer does at $time s, with joint limits off',
       ({ poseFrame }) => {
         // Arrange
         const landmarks = poseFrame.bodyLandmarks
@@ -400,7 +439,7 @@ describe('applyCameraPoseFrame', () => {
         )
 
         // Act
-        const { segment } = poseRig(poseFrame)
+        const { segment } = poseRig(poseFrame, UNLIMITED_OPTIONS)
 
         // Assert
         expect(visibleSegments.length).toBeGreaterThan(0)
@@ -443,13 +482,13 @@ describe('applyCameraPoseFrame', () => {
     })
 
     it.each(frames.filter(({ poseFrame }) => Object.keys(poseFrame.handLandmarks).length > 0))(
-      "bends the detected fingers where the dancer's point at $time s",
+      "bends the detected fingers where the dancer's point at $time s, with joint limits off",
       ({ poseFrame }) => {
         // Arrange
         const [side, handLandmarks] = Object.entries(poseFrame.handLandmarks)[0]
 
         // Act
-        const { segment } = poseRig(poseFrame)
+        const { segment } = poseRig(poseFrame, UNLIMITED_OPTIONS)
 
         // Assert
         ;[
@@ -466,6 +505,59 @@ describe('applyCameraPoseFrame', () => {
         })
       }
     )
+
+    it.each(frames)('keeps every joint inside its human range at $time s', ({ poseFrame }) => {
+      // Arrange
+      const restRig = buildMixamoRig()
+      const limbRolls = [
+        ['LeftUpLeg', 'UpLeg'],
+        ['RightUpLeg', 'UpLeg'],
+        ['LeftForeArm', 'ForeArm'],
+        ['RightForeArm', 'ForeArm'],
+        ['LeftHand', 'Hand'],
+        ['RightHand', 'Hand']
+      ] as const
+      const fingerHinges = ['Left', 'Right'].flatMap((side) =>
+        ['Index', 'Middle', 'Ring', 'Pinky'].flatMap((finger) =>
+          [2, 3].map((joint) => `${side}Hand${finger}${joint}`)
+        )
+      )
+
+      // Act
+      const { bone } = poseRig(poseFrame)
+
+      // Assert
+      const turn = (name: string): THREE.Quaternion =>
+        localTurnFromRest(
+          bone(`mixamorig${name}`),
+          restRig.find((candidate) => candidate.name === `mixamorig${name}`)!
+        )
+      limbRolls.forEach(([name, joint]) => {
+        const limit = CAMERA_JOINT_LIMITS_DEGREES[joint]
+        const maxTwist = 'twist' in limit ? limit.twist : 0
+        expect(Math.abs(degreesAbout(turn(name), 'y'))).toBeLessThanOrEqual(maxTwist + 0.5)
+      })
+      fingerHinges.forEach((name) => {
+        expect(Math.abs(turn(name).y)).toBeLessThan(1e-6)
+        expect(Math.abs(turn(name).z)).toBeLessThan(1e-6)
+      })
+    })
+
+    it('rolls a thigh read twisted past a human hip only as far as a hip turns', () => {
+      // Arrange: at 5 s the detection has both thighs rolled more than 100° from rest.
+      const { poseFrame } = frames.find(({ time }) => time === 5)!
+      const restThigh = buildMixamoRig().find(({ name }) => name === 'mixamorigRightUpLeg')!
+
+      // Act
+      const limited = poseRig(poseFrame).bone('mixamorigRightUpLeg')
+      const unlimited = poseRig(poseFrame, UNLIMITED_OPTIONS).bone('mixamorigRightUpLeg')
+
+      // Assert
+      const roll = (thigh: THREE.Bone): number =>
+        Math.abs(degreesAbout(localTurnFromRest(thigh, restThigh), 'y'))
+      expect(roll(unlimited)).toBeGreaterThan(90)
+      expect(roll(limited)).toBeLessThanOrEqual(50.5)
+    })
   })
 })
 
@@ -545,7 +637,7 @@ describe('each bone rule switches off on its own', () => {
         bodyLandmarks: buildBodyLandmarks(),
         headRotation: { x: flipped.x, y: flipped.y, z: flipped.z, w: flipped.w }
       },
-      buildMappingOptions({ limitHeadTurn })
+      buildMappingOptions({ limitHeadTurn, limitJoints: false })
     )
 
     // Assert
@@ -640,10 +732,31 @@ describe('bone smoothing', () => {
     bone.quaternion.copy(turned)
 
     // Act
-    easeBonesFromTransforms([bone], before, 0.5)
+    easeBonesFromTransforms([bone], before, 0.5, Infinity)
 
     // Assert
     expect(bone.quaternion.angleTo(before.get(bone.name)!.quaternion)).toBeCloseTo(0.5)
+  })
+
+  it.each([
+    ['no cap when it is off', 0, 1 / 30, Infinity],
+    ['no cap when the last pose was applied long ago', Math.PI * 4, 2, Infinity],
+    ['the speed times the time since the last pose', Math.PI * 4, 1 / 30, (Math.PI * 4) / 30]
+  ])('allows %s', (_, maxRadiansPerSecond, elapsedSeconds, expected) => {
+    expect(cameraBoneMaxTurnRadians(maxRadiansPerSecond, elapsedSeconds)).toBeCloseTo(expected)
+  })
+
+  it('turns a bone that flipped half round in one reading no further than the cap', () => {
+    // Arrange
+    const [bone] = buildMixamoRig()
+    const before = captureBoneTransforms([bone], new Set([bone.name]))
+    bone.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(WORLD_UP, Math.PI))
+
+    // Act
+    easeBonesFromTransforms([bone], before, 1, 0.4)
+
+    // Assert
+    expect(bone.quaternion.angleTo(before.get(bone.name)!.quaternion)).toBeCloseTo(0.4)
   })
 })
 

@@ -53,6 +53,15 @@ export const useVideoPoseCapture = (
     }
   }
 
+  /** Play or pause the loaded video on its own, without touching Record Motion or the timeline.
+   * Playing a video that already reached its end starts it over. */
+  const togglePlayback = async (): Promise<void> => {
+    const video = videoElement.value
+    if (!video || !isActive.value) return
+    if (video.paused) await video.play()
+    else video.pause()
+  }
+
   /** Stop playback and detection, and release the file. Safe to call even if a video was never
    * loaded. */
   const stop = (): void => {
@@ -76,6 +85,7 @@ export const useVideoPoseCapture = (
     error,
     ...detection,
     loadVideo,
+    togglePlayback,
     stop
   }
 }
