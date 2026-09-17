@@ -37,7 +37,8 @@ import {
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_TWIST_MIN_BEND_DEGREES,
   CAMERA_TWIST_FULL_BEND_DEGREES,
-  CAMERA_VIDEO_SPEED,
+  CAMERA_VIDEO_SLOWDOWN_RATIO,
+  RECORDING_SAMPLES_PER_FRAME,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
@@ -135,7 +136,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraTwistMinBendDegrees: CAMERA_TWIST_MIN_BEND_DEGREES,
   cameraTwistFullBendDegrees: CAMERA_TWIST_FULL_BEND_DEGREES,
   cameraShowPreview: false,
-  cameraVideoSpeed: CAMERA_VIDEO_SPEED,
+  cameraVideoSlowdownRatio: CAMERA_VIDEO_SLOWDOWN_RATIO,
   targetLeftArm: true,
   targetRightArm: true,
   targetLeftLeg: true,
@@ -216,6 +217,8 @@ const cameraCaptureReference = ref<InstanceType<typeof CameraPoseCapture> | null
 const motionRecording = useRigMotionRecording({
   now: () => cameraCaptureReference.value?.captureClockMilliseconds() ?? performance.now(),
   fps: () => reactiveConfig.value.fps,
+  samplesPerFrame: () =>
+    cameraCaptureReference.value?.captureSamplesPerFrame() ?? RECORDING_SAMPLES_PER_FRAME,
   currentFrame: () => reactiveConfig.value.frame,
   frameMax: () => rig.frameMax.value,
   setFrame: (frame) => (reactiveConfig.value.frame = frame),
@@ -738,7 +741,7 @@ onUnmounted(() => {
   <CameraPoseCapture
     v-if="showCameraCapture"
     ref="cameraCaptureReference"
-    :video-speed="reactiveConfig.cameraVideoSpeed"
+    :video-slowdown-ratio="reactiveConfig.cameraVideoSlowdownRatio"
     :smoothing-settings="cameraSmoothingSettings"
     :detection-options="cameraDetectionOptions"
     :show-preview="reactiveConfig.cameraShowPreview"

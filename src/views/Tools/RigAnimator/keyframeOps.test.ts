@@ -276,6 +276,20 @@ describe('filterRecordedSamples', () => {
     expect(angleOf(frameOne)).toBeLessThan(15)
   })
 
+  it('outvotes a misread sample among the five a frame gathers at four samples per frame', () => {
+    // Arrange
+    const samples = [0.5, 0.75, 1, 1.25, 1.5].map((frame) => ({
+      frame,
+      pose: turned(frame === 1.25 ? 170 : 10 + frame)
+    }))
+
+    // Act
+    const frameOne = filterRecordedSamples(samples).find(({ frame }) => frame === 1)!
+
+    // Assert
+    expect(angleOf(frameOne)).toBeLessThan(15)
+  })
+
   it('meets two samples halfway when there are too few to outvote either', () => {
     // Arrange
     const samples = [

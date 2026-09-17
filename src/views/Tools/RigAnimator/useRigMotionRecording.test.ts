@@ -14,7 +14,7 @@ describe('useRigMotionRecording', () => {
     vi.restoreAllMocks()
   })
 
-  const buildRecorder = (fps = 30, frameMax = 150) => {
+  const buildRecorder = (fps = 30, frameMax = 150, samplesPerFrame = 2) => {
     const frame = { value: 0 }
     const frameMaxState = { value: frameMax }
     const addKeyframeCalls: number[] = []
@@ -23,6 +23,7 @@ describe('useRigMotionRecording', () => {
     const recorder = useRigMotionRecording({
       now: () => nowMs,
       fps: () => fps,
+      samplesPerFrame: () => samplesPerFrame,
       currentFrame: () => frame.value,
       frameMax: () => frameMaxState.value,
       setFrame: (next) => (frame.value = next),
@@ -123,6 +124,25 @@ describe('useRigMotionRecording', () => {
     expect(sampledAt).toHaveLength(5)
     expect(addKeyframeCalls).toEqual([0, 1, 2])
   })
+
+  it.each([
+    [1, 3],
+    [4, 9]
+  ])(
+    'samples %i poses per frame when asked to, still keyframing once a frame',
+    (samplesPerFrame, expectedSamples) => {
+      const { recorder, addKeyframeCalls, sampledAt } = buildRecorder(30, 150, samplesPerFrame)
+      recorder.startRecording()
+
+      Array.from({ length: 8 }, (_, index) => (index + 1) / 4).forEach((frames) => {
+        nowMs = (frames * 1000) / 30
+        recorder.recordFrameIfActive()
+      })
+
+      expect(sampledAt).toHaveLength(expectedSamples)
+      expect(addKeyframeCalls).toEqual([0, 1, 2])
+    }
+  )
 
   it('replaces the take with one filtered keyframe per frame when it stops', () => {
     const { recorder, replacedTakes } = buildRecorder(30)

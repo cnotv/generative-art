@@ -47,9 +47,10 @@ export const BONE_MARKER_MIN_SCALE = 0.35
 
 export const DEFAULT_FPS = 30
 /**
- * How many poses Record Motion samples per timeline frame. The extra samples are never kept as
- * keyframes: when the take ends, each frame's keyframe is filtered from the samples around it, so
- * a single misread pose is outvoted by its neighbours instead of landing on the timeline.
+ * How many poses Record Motion samples per timeline frame from the live camera; an uploaded video
+ * samples `CAMERA_VIDEO_SLOWDOWN_RATIO` instead. The extra samples are never kept as keyframes:
+ * when the take ends, each frame's keyframe is filtered from the samples around it, so a single
+ * misread pose is outvoted by its neighbours instead of landing on the timeline.
  */
 export const RECORDING_SAMPLES_PER_FRAME = 2
 export const DEFAULT_FRAME_MAX = 150
@@ -237,12 +238,14 @@ export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
 export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0.05 }
 
 /**
- * How fast an uploaded video plays while it drives the rig, as a share of its own speed. Slower
- * gives the detectors more readings of every movement, and Record Motion follows the video's own
- * clock, so a take keeps the video's real timing whatever the speed.
+ * How many times slower an uploaded video plays while it drives the rig, and how many poses Record
+ * Motion samples per frame of it before filtering them down to one: slowed N times, detection gets
+ * about N readings of every video frame, so N samples a frame is what it can fill. Record Motion
+ * follows the video's own clock, so a take keeps the video's real timing at any ratio. 1 plays at
+ * normal speed with one sample a frame and nothing to filter.
  */
-export const CAMERA_VIDEO_SPEED = 0.5
-export const CAMERA_VIDEO_SPEED_RANGE = { min: 0.1, max: 1, step: 0.05 }
+export const CAMERA_VIDEO_SLOWDOWN_RATIO = 2
+export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 6, step: 1 }
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */

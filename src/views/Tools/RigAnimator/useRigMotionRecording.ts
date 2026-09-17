@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import type { Pose, PoseKeyframe } from '@webgamekit/rig'
-import { RECORDING_SAMPLES_PER_FRAME } from './config'
 import { filterRecordedSamples } from './keyframeOps'
 
 /** Reads and writes the rig timeline state a live-motion recording drives, kept as plain
@@ -11,12 +10,14 @@ export interface RigMotionRecordingDependencies {
    * uploaded clip, so a video slowed down still records at its real speed. */
   now: () => number
   fps: () => number
+  /** How many poses to sample per frame, read once as each take starts. */
+  samplesPerFrame: () => number
   currentFrame: () => number
   frameMax: () => number
   setFrame: (frame: number) => void
   setFrameMax: (frameMax: number) => void
   addKeyframe: () => void
-  /** The rig's pose right now, sampled `RECORDING_SAMPLES_PER_FRAME` times a frame. */
+  /** The rig's pose right now, sampled `samplesPerFrame` times a frame. */
   capturePose: () => Pose
   /** Swap the take's keyframes, `fromFrame` to `toFrame`, for the ones filtered from its samples. */
   replaceTake: (fromFrame: number, toFrame: number, keyframes: PoseKeyframe[]) => void
@@ -35,6 +36,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   let anchorFrame = 0
   let anchorTimeMs = 0
   let lastSampleStep = 0
+  let samplesPerFrame = 1
   // Appended to in place: a long take gathers thousands of samples, and copying the whole list for
   // each one would make every sample slower than the last.
   const samples: PoseKeyframe[] = []
@@ -46,6 +48,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     anchorFrame = deps.currentFrame()
     anchorTimeMs = deps.now()
     lastSampleStep = 0
+    samplesPerFrame = Math.max(1, Math.round(deps.samplesPerFrame()))
     samples.splice(0, samples.length, { frame: anchorFrame, pose: deps.capturePose() })
     // recordFrameIfActive only ever captures a frame strictly past this one (its own guard
     // below skips anything <= currentFrame, and currentFrame is this very frame until real
@@ -70,18 +73,18 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   }
 
   const sampleIfDue = (elapsedSeconds: number): void => {
-    const step = Math.round(elapsedSeconds * deps.fps() * RECORDING_SAMPLES_PER_FRAME)
+    const step = Math.round(elapsedSeconds * deps.fps() * samplesPerFrame)
     if (step <= lastSampleStep) return
     lastSampleStep = step
     samples.push({
-      frame: anchorFrame + step / RECORDING_SAMPLES_PER_FRAME,
+      frame: anchorFrame + step / samplesPerFrame,
       pose: deps.capturePose()
     })
   }
 
   /**
    * Call once per applied camera frame. Samples the pose whenever real time has reached a new
-   * sample step, `RECORDING_SAMPLES_PER_FRAME` of them a frame. A no-op while not recording, and
+   * sample step, `samplesPerFrame` of them a frame. A no-op while not recording, and
    * otherwise lays down a live keyframe only while real elapsed
    * time has not yet reached a new integer frame (a live detection typically runs faster than
    * the timeline's own fps, so most calls land within the same frame as the last one). Growing

@@ -27,7 +27,8 @@ import { hasCameraPoseContent } from './cameraPoseFrame'
 import {
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_PANEL_WIDTH_VW,
-  MEDIA_FILE_ACCEPT
+  MEDIA_FILE_ACCEPT,
+  RECORDING_SAMPLES_PER_FRAME
 } from './config'
 import type { CameraDetectionOptions, CameraPoseFrame, CameraSmoothingSettings } from './types'
 
@@ -44,8 +45,8 @@ const props = defineProps<{
   /** The rig timeline's current frame, for keeping an uploaded video's playback in sync with
    * it while `syncEnabled` is on. */
   frame: number
-  /** How fast an uploaded video plays, as a share of its own speed. */
-  videoSpeed: number
+  /** How many times slower an uploaded video plays, and how many poses a take samples per frame of it. */
+  videoSlowdownRatio: number
   /** The rig's frame rate, to convert between the timeline's frame numbers and the video
    * element's `currentTime` seconds. */
   fps: number
@@ -75,7 +76,7 @@ const photo = useCameraPhotoPose(detectionOptions)
 const uploadedVideo = useVideoPoseCapture(
   smoothingSettings,
   detectionOptions,
-  toRef(props, 'videoSpeed')
+  computed(() => 1 / props.videoSlowdownRatio)
 )
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 /** Whether the current mode drives the rig from a continuously updating source, the same as a
@@ -255,7 +256,7 @@ const handleVideoSeeked = (): void => {
 }
 
 watch(
-  () => props.videoSpeed,
+  () => props.videoSlowdownRatio,
   () => {
     if (mode.value === 'video') uploadedVideo.applyPlaybackRate()
   }
@@ -268,7 +269,12 @@ const captureClockMilliseconds = (): number =>
     ? videoReference.value.currentTime * 1000
     : performance.now()
 
-defineExpose({ captureClockMilliseconds })
+/** How many poses Record Motion samples per frame: as many as the video is slowed down, since that
+ * is how many readings detection gets of each of its frames, and a fixed rate for the camera. */
+const captureSamplesPerFrame = (): number =>
+  mode.value === 'video' ? props.videoSlowdownRatio : RECORDING_SAMPLES_PER_FRAME
+
+defineExpose({ captureClockMilliseconds, captureSamplesPerFrame })
 
 onMounted(async () => {
   camera.videoElement.value = videoReference.value

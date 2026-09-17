@@ -417,12 +417,13 @@ the take; closing the camera panel or switching to an uploaded photo stops it to
 photo has nothing to keep sampling. Recording works the same way against an uploaded video, see
 below; only a still photo cannot be recorded from.
 
-A take samples the rig's pose twice per timeline frame (`RECORDING_SAMPLES_PER_FRAME`), as often as
-detection keeps up. The keyframes that appear while recording are only a live preview: when the
-take ends, before it is saved, they are replaced by one keyframe per frame filtered from every
-sample within half a frame of it. With three samples, the one on the frame and one either side,
-each bone keeps the rotation closest to the other two, so a single misread pose is dropped
-outright instead of landing on the timeline; with only two they are averaged.
+A take samples the rig's pose several times per timeline frame, as often as detection keeps up:
+twice from the live camera (`RECORDING_SAMPLES_PER_FRAME`), and as many times as **Video Slowdown
+Ratio** from an uploaded video. The keyframes that appear while recording are only a live
+preview: when the take ends, before it is saved, they are replaced by one keyframe per frame
+filtered from every sample within half a frame of it. With three samples or more, each bone keeps
+the rotation closest to all the others, so a misread pose is dropped outright instead of landing
+on the timeline; with only two they are averaged, and a single sample is kept as it is.
 
 ![The camera panel mid-recording: the record toggle showing its red square stop icon beside the upload icon, with the close X at the top of the panel](/img/animation/rig-record-motion.webp)
 
@@ -449,7 +450,7 @@ file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays through once at **Video Speed**, half its own speed by default, and runs the exact same
+plays through once, slowed down by **Video Slowdown Ratio**, twice by default, and runs the exact same
 live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
 continuously the same way a webcam does. Playing it never records anything by itself: **Play
@@ -605,11 +606,14 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Video Speed**, 0.5 by default, plays an uploaded video slower than its own speed so the
-  detectors read every movement more often. Record Motion times a video take by the video's own
-  position rather than the clock on the wall, so the recorded clip keeps the video's real timing
-  at any speed. The smoothing times above still run on the wall clock, so at half speed they act
-  on half as much of the video.
+- **Video Slowdown Ratio**, 2 by default, from 1 to 6, sets two things at once for an uploaded
+  video: how many times slower it plays, and how many poses Record Motion samples per frame of it
+  before filtering them down to one keyframe. The two go together because a video slowed N times
+  gives detection about N readings of each of its frames. Record Motion times a video take by the
+  video's own position rather than the clock on the wall, so the recorded clip keeps the video's
+  real timing at any ratio. 1 plays at normal speed with one sample a frame and nothing to filter.
+  The smoothing times above still run on the wall clock, so at a ratio of 2 they act on half as
+  much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
