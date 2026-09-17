@@ -48,7 +48,9 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/presets.ts`: the bundled example animations, and sampling one
   into a sparse set of pose keyframes
 - `src/views/Tools/RigAnimator/useRigMotionRecording.ts`: the frame-timing logic behind
-  **Record Motion** — when real elapsed time has reached a new frame to sample
+  **Record Motion**: when the capture's clock has reached a new frame or sample, and swapping the
+  take for filtered keyframes when it ends (the filter itself is `filterRecordedSamples` in
+  `keyframeOps.ts`)
 - `src/views/Tools/RigAnimator/useRigRecordedPresets.ts`: session-only presets built from a
   finished Record Motion take, offered in the same **Presets** picker as the bundled clips
 - `src/views/Tools/RigAnimator/RigTimeline.vue`: the dedicated panel for playback, keyframes,
@@ -415,6 +417,13 @@ the take; closing the camera panel or switching to an uploaded photo stops it to
 photo has nothing to keep sampling. Recording works the same way against an uploaded video, see
 below; only a still photo cannot be recorded from.
 
+A take samples the rig's pose twice per timeline frame (`RECORDING_SAMPLES_PER_FRAME`), as often as
+detection keeps up. The keyframes that appear while recording are only a live preview: when the
+take ends, before it is saved, they are replaced by one keyframe per frame filtered from every
+sample within half a frame of it. With three samples, the one on the frame and one either side,
+each bone keeps the rotation closest to the other two, so a single misread pose is dropped
+outright instead of landing on the timeline; with only two they are averaged.
+
 ![The camera panel mid-recording: the record toggle showing its red square stop icon beside the upload icon, with the close X at the top of the panel](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
@@ -440,7 +449,8 @@ file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays through once at its own rate and runs the exact same live VIDEO-mode detection loop the
+plays through once at **Video Speed**, half its own speed by default, and runs the exact same
+live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
 continuously the same way a webcam does. Playing it never records anything by itself: **Play
 Video** / **Pause Video**, a play icon that joins the action row once a video is loaded, plays and
@@ -595,6 +605,11 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
+- **Video Speed**, 0.5 by default, plays an uploaded video slower than its own speed so the
+  detectors read every movement more often. Record Motion times a video take by the video's own
+  position rather than the clock on the wall, so the recorded clip keeps the video's real timing
+  at any speed. The smoothing times above still run on the wall clock, so at half speed they act
+  on half as much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
   full canvas to sit in, while the feed keeps being read and applied to the rig exactly the
