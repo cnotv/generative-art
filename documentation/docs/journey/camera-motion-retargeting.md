@@ -161,6 +161,60 @@ per-joint speed cap catches that: a real dancer rarely turns a joint faster than
 second, while a flipped roll asks for several thousand. Capped, the flip is spread over a few
 readings and the next good reading mostly undoes it before it shows.
 
+## Proportions the angles cannot carry
+
+Copying angles alone is what lets any rig follow any performer, and it is also what stops a
+gesture landing anywhere in particular. An angle says which way a limb points, never how far it
+reaches, so the reach comes out as whatever the rig's own limbs measure. The bundled character's
+arms are 2.24 shoulder spans long; the performer's are 1.44 of theirs, 55% shorter for the same
+body. Every arm gesture therefore overshoots by about half an arm: a hand brought to the chin
+arrives past the far side of the head, and two hands brought together in front of the chest cross
+straight through one another.
+
+Going back to positions is not the answer, for the same reason the first mapping was abandoned.
+Placing that hand where the performer holds it, at 0.65 of the rig's own reach, folds the elbow
+100° off straight. A performer holding both arms straight out would be copied as a rig standing
+with both elbows bent at a right angle.
+
+So the limb is resized rather than bent. Each segment is scaled to the length the performer's own
+measures at the rig's scale, and a bone's scale carries everything below it, so the lower segment
+only makes up the difference from the upper one's and the hand or foot on the end divides it back
+out and keeps its own size. Every direction the retargeting produced stays exactly as it was, and
+the reach comes out right: a T-pose is still straight, and the hand that was crossing the face
+lands where the performer holds it.
+
+| What the rig copies                     | Where the hand lands, off a chin touch of 11.9 units of reach |
+| --------------------------------------- | ------------------------------------------------------------- |
+| Angles only, the rig's own limb lengths | 8.0 out                                                       |
+| Angles, one scale for the whole limb    | 3.0 out                                                       |
+| Angles, each segment scaled on its own  | 0.0004 out                                                    |
+
+Two details matter more than the scaling itself. The scale between the two bodies has to come from
+one measure of the same thing on both, and the shoulder span is the only good candidate: it is a
+real distance in three dimensions in MediaPipe's world landmarks, so it holds however far away or
+however turned the subject stands, where any image-space measure shrinks with distance. And both
+sides of a pair always take one shared scale, pooled from whichever sides are measurable, because
+the detector reads a left and a right limb of measurably different lengths on the same frame;
+fitting each side to its own reading leaves the rig lopsided, which is itself a reason two limbs
+pass through one another halfway through a turn.
+
+A limb with a joint out of view keeps whatever length it was last fitted to, the same rule the
+landmarks themselves now follow.
+
+## Holding what the detector loses
+
+A landmark below the confidence threshold used to count as nothing at all, which takes its bone
+back to the rest pose: a wrist lost for a few frames snapped the arm down to the rig's rest pose
+and back, which reads as a twitch nobody performed. The last real detection is a far better guess
+than the rest pose, so an undetected landmark is now held where it was last detected instead.
+
+Held in place is not quite enough either, since the body it belongs to keeps moving. Each landmark
+is carried along by the nearest joint above it that is still detected, walking up the chain until
+one is found: a wrist travels with its elbow, an elbow with its shoulder, and a shoulder with its
+hip. Only the offset moves; the held pose itself is untouched. A landmark never yet detected has
+nothing to hold, so legs below a webcam framed on the upper body still stay at rest rather than
+inventing a pose.
+
 ## Hands that turn over
 
 Joint ranges kept a hand from spinning past what a wrist can do, but it still turned over inside
@@ -259,6 +313,13 @@ is only cleared when one was actually set.
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest
   pose. A contortionist is clamped, and a rig whose rest pose is not a T-pose starts its ranges
   from a different place.
+- **A fitted limb is not recorded.** Keyframes store rotations only, so the limb lengths a capture
+  fitted live only on the rig itself: a take replayed on an unfitted rig overshoots again.
+- **A held landmark never expires.** A limb that leaves the frame and does not come back keeps its
+  last detected pose for as long as the capture runs.
+- **A fitted length outlives the capture.** The scales stay on the bones once capture stops, which
+  is what makes them a calibration rather than a per-frame effect; the physics capsules, built once
+  from the bones they wrap, keep their unfitted lengths until physics is toggled again.
 - **Front or back.** Mid turn, the lite pose model sometimes decides the wrong side faces the
   camera for a few frames, and the rig follows it.
 - **No travel.** World landmarks are centred on the hips, so the rig turns and crouches in place

@@ -818,3 +818,131 @@ describe('cameraFrameDrivenBoneNames', () => {
     expect([...driven].sort()).toEqual([...expected].sort())
   })
 })
+
+describe('fitting limb lengths to the performer', () => {
+  const FIT_ON = buildMappingOptions({ fitLimbLengths: true })
+  const armLength = (rig: ReturnType<typeof poseRig>, side: string): number =>
+    rig.position(`${side}Arm`).distanceTo(rig.position(`${side}ForeArm`)) +
+    rig.position(`${side}ForeArm`).distanceTo(rig.position(`${side}Hand`))
+  const landmarkDistance = (landmarks: CameraLandmark[], from: number, to: number): number =>
+    Math.hypot(
+      landmarks[to].x - landmarks[from].x,
+      landmarks[to].y - landmarks[from].y,
+      landmarks[to].z - landmarks[from].z
+    )
+
+  it('brings a rig arm to the length the performer’s own arm measures', () => {
+    // Arrange
+    const bodyLandmarks = buildBodyLandmarks()
+    const observedArm =
+      landmarkDistance(bodyLandmarks, 11, 13) + landmarkDistance(bodyLandmarks, 13, 15)
+    const unfitted = poseRig({ bodyLandmarks }, buildMappingOptions({ fitLimbLengths: false }))
+    const restShoulderSpan = unfitted.position('LeftArm').distanceTo(unfitted.position('RightArm'))
+    const bodyScale = restShoulderSpan / landmarkDistance(bodyLandmarks, 11, 12)
+
+    // Act
+    const fitted = poseRig({ bodyLandmarks }, FIT_ON)
+
+    // Assert
+    expect(armLength(unfitted, 'Left')).toBeGreaterThan(observedArm * bodyScale)
+    expect(armLength(fitted, 'Left')).toBeCloseTo(observedArm * bodyScale, 1)
+  })
+
+  it('lands a hand brought to the chin where the performer holds it, not past the head', () => {
+    // Arrange: both wrists up by the chin, the reach where the rig's longer arms overshoot.
+    const chinTouch = {
+      13: [0.3, -0.45, -0.2],
+      14: [-0.3, -0.45, -0.2],
+      15: [0.06, -0.56, -0.16],
+      16: [-0.06, -0.56, -0.16]
+    } satisfies Record<number, [number, number, number]>
+    const bodyLandmarks = buildBodyLandmarks(chinTouch)
+    const unfitted = poseRig({ bodyLandmarks }, buildMappingOptions({ fitLimbLengths: false }))
+    const restShoulderSpan = unfitted.position('LeftArm').distanceTo(unfitted.position('RightArm'))
+    const bodyScale = restShoulderSpan / landmarkDistance(bodyLandmarks, 11, 12)
+    // Where the performer holds their wrist, measured off their shoulder at the rig's own scale.
+    const held = unfitted
+      .position('LeftArm')
+      .add(
+        new THREE.Vector3(
+          bodyLandmarks[15].x - bodyLandmarks[11].x,
+          -(bodyLandmarks[15].y - bodyLandmarks[11].y),
+          -(bodyLandmarks[15].z - bodyLandmarks[11].z)
+        ).multiplyScalar(bodyScale)
+      )
+    const reach = landmarkDistance(bodyLandmarks, 11, 15) * bodyScale
+
+    // Act
+    const fitted = poseRig({ bodyLandmarks }, FIT_ON)
+
+    // Assert
+    expect(fitted.position('LeftHand').distanceTo(held)).toBeLessThan(reach * 0.05)
+    expect(unfitted.position('LeftHand').distanceTo(held)).toBeGreaterThan(reach * 0.5)
+  })
+
+  it('gives both arms the same length when the camera reads one longer than the other', () => {
+    // Arrange: the left arm read about 15% longer than the right one.
+    const lopsided = { 15: [0.78, -0.5, 0], 16: [-0.7, -0.5, 0] } satisfies Record<
+      number,
+      [number, number, number]
+    >
+
+    // Act
+    const fitted = poseRig({ bodyLandmarks: buildBodyLandmarks(lopsided) }, FIT_ON)
+    const left = armLength(fitted, 'Left')
+    const right = armLength(fitted, 'Right')
+
+    // Assert
+    expect(Math.abs(left - right) / left).toBeLessThan(0.001)
+  })
+
+  it('leaves a limb at its rest length with the fit switched off', () => {
+    // Arrange
+    const bones = buildMixamoRig()
+    const restWorld = (name: string): THREE.Vector3 =>
+      bones.find((bone) => bone.name === `mixamorig${name}`)!.getWorldPosition(new THREE.Vector3())
+    const restArmLength =
+      restWorld('LeftArm').distanceTo(restWorld('LeftForeArm')) +
+      restWorld('LeftForeArm').distanceTo(restWorld('LeftHand'))
+
+    // Act
+    const unfitted = poseRig(
+      { bodyLandmarks: buildBodyLandmarks() },
+      buildMappingOptions({ fitLimbLengths: false })
+    )
+
+    // Assert
+    expect(armLength(unfitted, 'Left')).toBeCloseTo(restArmLength, 5)
+  })
+
+  it('holds the last fitted length for a limb whose joints leave the frame', () => {
+    // Arrange: the same rig posed twice, the second time with the left wrist not detected.
+    const bones = buildMixamoRig()
+    const rest = captureCameraRetargetRest(bones)
+    const allBoneNames = new Set(bones.map((bone) => bone.name))
+    const apply = (bodyLandmarks: CameraLandmark[]): void => {
+      const frame: CameraPoseFrame = { bodyLandmarks, handLandmarks: {}, headRotation: null }
+      applyCameraPoseFrame(
+        bones,
+        rest,
+        frame,
+        FIT_ON,
+        cameraFrameDrivenBoneNames(frame, allBoneNames)
+      )
+    }
+    const arm = bones.find((bone) => bone.name === 'mixamorigLeftArm')!
+
+    // Act
+    apply(buildBodyLandmarks())
+    const fittedScale = arm.scale.x
+    apply(
+      buildBodyLandmarks().map((landmark, index) =>
+        index === 15 || index === 16 ? { ...landmark, visibility: 0 } : landmark
+      )
+    )
+
+    // Assert
+    expect(fittedScale).toBeLessThan(1)
+    expect(arm.scale.x).toBe(fittedScale)
+  })
+})

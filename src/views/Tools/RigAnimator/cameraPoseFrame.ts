@@ -7,6 +7,7 @@ import {
   CAMERA_HAND_WRIST_MATCH_DISTANCE
 } from './config'
 import {
+  CAMERA_LANDMARK_INDEX,
   filterCameraLandmarks,
   lowPassBlendFactor,
   mirrorCameraLandmarks,
@@ -19,6 +20,7 @@ import type {
   CameraHandLandmark,
   CameraHandTrack,
   CameraHandTracks,
+  CameraLandmark,
   CameraPoseFrame,
   CameraSmoothingSettings
 } from './types'
@@ -199,6 +201,115 @@ export const smoothHeadRotation = (
     smoothingCutoffHertz(settings.smoothingMilliseconds) + settings.turnResponse * turnSpeed
   const blended = from.slerp(to, lowPassBlendFactor(cutoffHertz, elapsedSeconds))
   return { x: blended.x, y: blended.y, z: blended.z, w: blended.w }
+}
+
+/**
+ * The landmark each one hangs off, toward the hips: the joint it is carried around by. A landmark
+ * the detector loses is held where it was last seen, shifted by however far this joint has moved
+ * since, so an arm the camera stops seeing travels with the shoulder it hangs from instead of
+ * staying behind in midair. Both hips are left out, being what world landmarks are centred on.
+ */
+const LANDMARK_ANCHOR: Record<number, number> = {
+  [CAMERA_LANDMARK_INDEX.nose]: CAMERA_LANDMARK_INDEX.leftShoulder,
+  [CAMERA_LANDMARK_INDEX.leftEar]: CAMERA_LANDMARK_INDEX.leftShoulder,
+  [CAMERA_LANDMARK_INDEX.rightEar]: CAMERA_LANDMARK_INDEX.rightShoulder,
+  [CAMERA_LANDMARK_INDEX.leftShoulder]: CAMERA_LANDMARK_INDEX.leftHip,
+  [CAMERA_LANDMARK_INDEX.rightShoulder]: CAMERA_LANDMARK_INDEX.rightHip,
+  [CAMERA_LANDMARK_INDEX.leftElbow]: CAMERA_LANDMARK_INDEX.leftShoulder,
+  [CAMERA_LANDMARK_INDEX.rightElbow]: CAMERA_LANDMARK_INDEX.rightShoulder,
+  [CAMERA_LANDMARK_INDEX.leftWrist]: CAMERA_LANDMARK_INDEX.leftElbow,
+  [CAMERA_LANDMARK_INDEX.rightWrist]: CAMERA_LANDMARK_INDEX.rightElbow,
+  [CAMERA_LANDMARK_INDEX.leftPinky]: CAMERA_LANDMARK_INDEX.leftWrist,
+  [CAMERA_LANDMARK_INDEX.rightPinky]: CAMERA_LANDMARK_INDEX.rightWrist,
+  [CAMERA_LANDMARK_INDEX.leftIndex]: CAMERA_LANDMARK_INDEX.leftWrist,
+  [CAMERA_LANDMARK_INDEX.rightIndex]: CAMERA_LANDMARK_INDEX.rightWrist,
+  [CAMERA_LANDMARK_INDEX.leftKnee]: CAMERA_LANDMARK_INDEX.leftHip,
+  [CAMERA_LANDMARK_INDEX.rightKnee]: CAMERA_LANDMARK_INDEX.rightHip,
+  [CAMERA_LANDMARK_INDEX.leftAnkle]: CAMERA_LANDMARK_INDEX.leftKnee,
+  [CAMERA_LANDMARK_INDEX.rightAnkle]: CAMERA_LANDMARK_INDEX.rightKnee,
+  [CAMERA_LANDMARK_INDEX.leftHeel]: CAMERA_LANDMARK_INDEX.leftAnkle,
+  [CAMERA_LANDMARK_INDEX.rightHeel]: CAMERA_LANDMARK_INDEX.rightAnkle,
+  [CAMERA_LANDMARK_INDEX.leftFootIndex]: CAMERA_LANDMARK_INDEX.leftAnkle,
+  [CAMERA_LANDMARK_INDEX.rightFootIndex]: CAMERA_LANDMARK_INDEX.rightAnkle
+}
+
+const NO_SHIFT = { x: 0, y: 0, z: 0 }
+
+const isDetected = (
+  landmark: CameraLandmark | undefined,
+  visibilityThreshold: number
+): landmark is CameraLandmark =>
+  landmark !== undefined && landmark.visibility >= visibilityThreshold
+
+/**
+ * How far the nearest joint above a landmark has moved since the last reading, walking up the
+ * anchor chain past any joint that is itself undetected in either reading.
+ */
+const anchorShift = (
+  previous: CameraLandmark[],
+  next: CameraLandmark[],
+  index: number,
+  visibilityThreshold: number
+): { x: number; y: number; z: number } => {
+  const anchor = LANDMARK_ANCHOR[index]
+  if (anchor === undefined) return NO_SHIFT
+  const from = previous[anchor]
+  const to = next[anchor]
+  return isDetected(from, visibilityThreshold) && isDetected(to, visibilityThreshold)
+    ? { x: to.x - from.x, y: to.y - from.y, z: to.z - from.z }
+    : anchorShift(previous, next, anchor, visibilityThreshold)
+}
+
+/**
+ * Keep every landmark the detector has stopped seeing at the position it was last seen in, carried
+ * along by whichever joint above it is still detected (see `LANDMARK_ANCHOR`). Left to drop out,
+ * a landmark takes its bone back to the rest pose, which snaps a limb the camera simply cannot
+ * make out right now to a pose nobody performed; a held one keeps the last pose that was really
+ * detected and follows the body around while it waits to be seen again.
+ * @param previous The previous reading's landmarks
+ * @param next This reading's landmarks
+ * @param visibilityThreshold How confident a landmark must be to count as detected
+ * @returns This reading's landmarks, with every undetected one held and shifted
+ */
+export const holdUndetectedLandmarks = (
+  previous: CameraLandmark[],
+  next: CameraLandmark[],
+  visibilityThreshold: number
+): CameraLandmark[] =>
+  next.map((landmark, index) => {
+    const held = previous[index]
+    if (isDetected(landmark, visibilityThreshold) || !isDetected(held, visibilityThreshold)) {
+      return landmark
+    }
+    const shift = anchorShift(previous, next, index, visibilityThreshold)
+    return { ...held, x: held.x + shift.x, y: held.y + shift.y, z: held.z + shift.z }
+  })
+
+/**
+ * Hold everything this reading has lost at what the last one found: undetected body landmarks
+ * through `holdUndetectedLandmarks`, a face the tracker missed at its last rotation, and a hand
+ * it missed for longer than `steadyCameraHands` holds one. Nothing is ever replaced by a default
+ * or a rest pose, only by the last thing actually detected.
+ * @param previous The previous smoothed frame, or null for a first reading
+ * @param next This reading's detection
+ * @param visibilityThreshold How confident a body landmark must be to count as detected
+ * @returns The frame with every lost part held
+ */
+export const holdUndetectedCameraPoseFrame = (
+  previous: CameraPoseFrame | null,
+  next: CameraPoseFrame,
+  visibilityThreshold: number
+): CameraPoseFrame => {
+  if (!previous) return next
+  return {
+    ...next,
+    bodyLandmarks:
+      previous.bodyLandmarks && next.bodyLandmarks
+        ? holdUndetectedLandmarks(previous.bodyLandmarks, next.bodyLandmarks, visibilityThreshold)
+        : next.bodyLandmarks,
+    handLandmarks: { ...previous.handLandmarks, ...next.handLandmarks },
+    headRotation: next.headRotation ?? previous.headRotation
+  }
 }
 
 /**
