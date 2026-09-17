@@ -44,6 +44,8 @@ const props = defineProps<{
   /** The rig timeline's current frame, for keeping an uploaded video's playback in sync with
    * it while `syncEnabled` is on. */
   frame: number
+  /** How fast an uploaded video plays, as a share of its own speed. */
+  videoSpeed: number
   /** The rig's frame rate, to convert between the timeline's frame numbers and the video
    * element's `currentTime` seconds. */
   fps: number
@@ -70,7 +72,11 @@ const detectionOptions = toRef(props, 'detectionOptions')
 const smoothingSettings = toRef(props, 'smoothingSettings')
 const camera = useCameraPoseCapture(smoothingSettings, detectionOptions)
 const photo = useCameraPhotoPose(detectionOptions)
-const uploadedVideo = useVideoPoseCapture(smoothingSettings, detectionOptions)
+const uploadedVideo = useVideoPoseCapture(
+  smoothingSettings,
+  detectionOptions,
+  toRef(props, 'videoSpeed')
+)
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 /** Whether the current mode drives the rig from a continuously updating source, the same as a
  * live webcam feed does, versus a single still photo. Both camera and an uploaded video can
@@ -211,6 +217,8 @@ const handleMediaChange = async (event: Event): Promise<void> => {
 }
 
 const handleUseCamera = (): void => {
+  // A take runs on the video's own clock; carried over to the camera's it would jump.
+  if (props.isRecording) emit('toggleRecord')
   photo.reset()
   uploadedVideo.stop()
   mode.value = 'camera'
@@ -245,6 +253,22 @@ const handleVideoSeeked = (): void => {
   const seekedFrame = resolveSeekedFrame()
   if (seekedFrame !== null) emit('seekFrame', seekedFrame)
 }
+
+watch(
+  () => props.videoSpeed,
+  () => {
+    if (mode.value === 'video') uploadedVideo.applyPlaybackRate()
+  }
+)
+
+/** The clock Record Motion reads, in milliseconds: an uploaded video's own playback position, so a
+ * slowed video still records at its real speed, and wall time for the live camera. */
+const captureClockMilliseconds = (): number =>
+  mode.value === 'video' && videoReference.value
+    ? videoReference.value.currentTime * 1000
+    : performance.now()
+
+defineExpose({ captureClockMilliseconds })
 
 onMounted(async () => {
   camera.videoElement.value = videoReference.value

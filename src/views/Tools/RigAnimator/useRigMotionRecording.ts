@@ -7,6 +7,9 @@ import { filterRecordedSamples } from './keyframeOps'
  * accessors rather than direct refs so the composable never assumes which reactive source
  * (the panel's config, the rig's own keyframe state) each one actually comes from. */
 export interface RigMotionRecordingDependencies {
+  /** The capture's own clock, in milliseconds: wall time for a webcam, the video's own time for an
+   * uploaded clip, so a video slowed down still records at its real speed. */
+  now: () => number
   fps: () => number
   currentFrame: () => number
   frameMax: () => number
@@ -41,7 +44,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     isRecording.value = true
     capturedFrameCount.value = 0
     anchorFrame = deps.currentFrame()
-    anchorTimeMs = performance.now()
+    anchorTimeMs = deps.now()
     lastSampleStep = 0
     samples.splice(0, samples.length, { frame: anchorFrame, pose: deps.capturePose() })
     // recordFrameIfActive only ever captures a frame strictly past this one (its own guard
@@ -87,7 +90,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
    */
   const recordFrameIfActive = (): void => {
     if (!isRecording.value) return
-    const elapsedSeconds = (performance.now() - anchorTimeMs) / 1000
+    const elapsedSeconds = (deps.now() - anchorTimeMs) / 1000
     sampleIfDue(elapsedSeconds)
     const nextFrame = anchorFrame + Math.round(elapsedSeconds * deps.fps())
     if (nextFrame <= deps.currentFrame()) return

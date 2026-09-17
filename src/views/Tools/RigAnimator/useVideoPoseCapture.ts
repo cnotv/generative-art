@@ -12,7 +12,8 @@ import type { CameraDetectionOptions, CameraSmoothingSettings } from './types'
  */
 export const useVideoPoseCapture = (
   smoothingSettings: Ref<CameraSmoothingSettings>,
-  detectionOptions: Ref<CameraDetectionOptions>
+  detectionOptions: Ref<CameraDetectionOptions>,
+  playbackRate: Ref<number>
 ) => {
   const videoElement = shallowRef<HTMLVideoElement | null>(null)
   const isActive = ref(false)
@@ -42,6 +43,7 @@ export const useVideoPoseCapture = (
       objectUrl = URL.createObjectURL(file)
       videoElement.value.src = objectUrl
       videoElement.value.loop = false
+      applyPlaybackRate()
       await videoElement.value.play()
       await detection.startDetectionLoop()
       isActive.value = true
@@ -51,6 +53,14 @@ export const useVideoPoseCapture = (
     } finally {
       isLoading.value = false
     }
+  }
+
+  /** Play the loaded video at the Config panel's speed. Loading a new file resets an element's
+   * rate to its default, so both are set. */
+  const applyPlaybackRate = (): void => {
+    if (!videoElement.value) return
+    videoElement.value.defaultPlaybackRate = playbackRate.value
+    videoElement.value.playbackRate = playbackRate.value
   }
 
   /** Play or pause the loaded video on its own, without touching Record Motion or the timeline.
@@ -86,6 +96,7 @@ export const useVideoPoseCapture = (
     ...detection,
     loadVideo,
     togglePlayback,
+    applyPlaybackRate,
     stop
   }
 }

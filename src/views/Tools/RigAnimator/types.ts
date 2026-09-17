@@ -53,6 +53,7 @@ export interface RigAnimatorConfig {
   cameraTwistMinBendDegrees: number
   cameraTwistFullBendDegrees: number
   cameraShowPreview: boolean
+  cameraVideoSpeed: number
   targetLeftArm: boolean
   targetRightArm: boolean
   targetLeftLeg: boolean

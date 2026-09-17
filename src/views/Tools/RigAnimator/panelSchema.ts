@@ -12,6 +12,7 @@ import {
   CAMERA_HAND_HOLD_MILLISECONDS_RANGE,
   CAMERA_VISIBILITY_THRESHOLD_RANGE,
   CAMERA_TWIST_BEND_DEGREES_RANGE,
+  CAMERA_VIDEO_SPEED_RANGE,
   CAMERA_MAX_JUMP_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
   ENCLOSURE_OPACITY_RANGE,
@@ -111,6 +112,7 @@ export const buildRigAnimatorSchema = (
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
         cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
         cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
+        cameraVideoSpeed: { ...CAMERA_VIDEO_SPEED_RANGE, label: 'Camera Pose: Video Speed' },
         ...cameraSmoothingControls,
         cameraTrackFace: {
           checkbox: true,

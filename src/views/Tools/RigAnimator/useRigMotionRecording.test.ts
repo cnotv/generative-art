@@ -21,6 +21,7 @@ describe('useRigMotionRecording', () => {
     const sampledAt: number[] = []
     const replacedTakes: { fromFrame: number; toFrame: number; keyframes: PoseKeyframe[] }[] = []
     const recorder = useRigMotionRecording({
+      now: () => nowMs,
       fps: () => fps,
       currentFrame: () => frame.value,
       frameMax: () => frameMaxState.value,

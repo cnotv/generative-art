@@ -236,6 +236,14 @@ export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
 /** Range and step the Config panel's landmark confidence slider offers. */
 export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0.05 }
 
+/**
+ * How fast an uploaded video plays while it drives the rig, as a share of its own speed. Slower
+ * gives the detectors more readings of every movement, and Record Motion follows the video's own
+ * clock, so a take keeps the video's real timing whatever the speed.
+ */
+export const CAMERA_VIDEO_SPEED = 0.5
+export const CAMERA_VIDEO_SPEED_RANGE = { min: 0.1, max: 1, step: 0.05 }
+
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
 export const CAMERA_PANEL_WIDTH_VW = 30
