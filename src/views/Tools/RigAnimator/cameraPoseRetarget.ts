@@ -900,6 +900,16 @@ const scaleLimb = (
     drivenBone(context, sideBone(side, extremityPart))?.bone.scale.setScalar(1 / lowerScale)
   })
 
+/**
+ * Whether this pair already carries a fitted length. A bone's own scale is where the fit is kept,
+ * so it is also what says the fit has happened: nothing else has to be remembered between frames.
+ */
+const limbFitted = (context: RetargetContext, limb: FittedLimb): boolean =>
+  RIG_SIDES.some((side) => {
+    const scale = drivenBone(context, sideBone(side, limb.parts[0]))?.bone.scale.x
+    return scale !== undefined && scale !== 1
+  })
+
 const fitLimb = (context: RetargetContext, limb: FittedLimb, point: BodyPointReader): void => {
   const { bodyScale } = context
   if (bodyScale === null) return
@@ -923,14 +933,22 @@ const fitLimb = (context: RetargetContext, limb: FittedLimb, point: BodyPointRea
  * hangs off, otherwise overshoots every gesture: a hand brought to the chin lands inside the head,
  * and two arms brought together in front of the chest pass through one another.
  *
- * A limb with a joint out of view keeps whatever length it was last fitted to, and with the fit
- * switched off every limb goes back to its own rest length. See `limbFitScale` for why both sides
- * of a pair always take one shared scale, and why a limb is resized rather than bent to reach.
+ * A performer's proportions do not change while they are being filmed, so each pair is measured
+ * once, on the first frame showing a whole limb, and then left alone. Re-measuring every frame
+ * would hand the detector's own reading-to-reading noise a way to make a limb breathe in and out,
+ * and a limb crossing behind the body would shorten it to whatever its foreshortened reading says.
+ * Switching the fit off puts every limb back to its own rest length, which is also how to have the
+ * next frame measure a fresh one. See `limbFitScale` for why both sides of a pair always take one
+ * shared scale, and why a limb is resized rather than bent to reach.
  */
 const fitLimbLengths = (context: RetargetContext, point: BodyPointReader): void =>
-  FITTED_LIMBS.forEach((limb) =>
-    context.options.fitLimbLengths ? fitLimb(context, limb, point) : scaleLimb(context, limb, 1, 1)
-  )
+  FITTED_LIMBS.forEach((limb) => {
+    if (!context.options.fitLimbLengths) {
+      scaleLimb(context, limb, 1, 1)
+      return
+    }
+    if (!limbFitted(context, limb)) fitLimb(context, limb, point)
+  })
 
 /**
  * Lift or lower the whole rig so its lowest foot sits where it does at rest. World landmarks are

@@ -555,10 +555,14 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   resizes each limb segment instead of bending it, to the length the performer's own measures at
   the rig's scale, taken from the shoulder span the camera and the rig both show. Both sides always
   take one shared scale, since the detector reads a left and a right limb of measurably different
-  lengths on the same frame and a lopsided rig is what makes two limbs cross mid turn. A limb with
-  a joint out of view keeps whatever length it was last fitted to, and the hand or foot on the end
-  keeps its own size. Recorded keyframes store rotations only, so a take recorded from a fitted rig
-  plays back at whatever length the rig carries then.
+  lengths on the same frame and a lopsided rig is what makes two limbs cross mid turn. Each pair is
+  measured once, on the first frame that shows a whole limb, and then left alone: a performer's
+  proportions do not change while they are being filmed, and re-measuring every frame would let the
+  detector's own noise make a limb breathe in and out, or shorten one crossing behind the body to
+  its foreshortened reading. Switching the toggle off puts every limb back to its rest length, which
+  is also how to measure a fresh fit, for a different performer or a rig loaded since. The hand or
+  foot on the end keeps its own size. Recorded keyframes store rotations only, so a take recorded
+  from a fitted rig plays back at whatever length the rig carries then.
 - **Hands.** See **Fingers from the camera** above.
 
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the

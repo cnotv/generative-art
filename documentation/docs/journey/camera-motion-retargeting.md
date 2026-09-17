@@ -198,8 +198,13 @@ the detector reads a left and a right limb of measurably different lengths on th
 fitting each side to its own reading leaves the rig lopsided, which is itself a reason two limbs
 pass through one another halfway through a turn.
 
-A limb with a joint out of view keeps whatever length it was last fitted to, the same rule the
-landmarks themselves now follow.
+The fit is a calibration, not an effect: a performer's proportions hold still while they are
+being filmed, so each pair is measured once, on the first frame that shows a whole limb, and then
+left alone. Measuring every frame gives the detector's own reading-to-reading noise a way to make
+a limb breathe in and out, and shortens a limb crossing behind the body to whatever its
+foreshortened reading says. Switching the fit off puts every limb back to its rest length, which
+is also how a fresh fit is measured; the scale sitting on the bone is what says the fit has
+already happened, so nothing has to be remembered between frames.
 
 ## Holding what the detector loses
 
