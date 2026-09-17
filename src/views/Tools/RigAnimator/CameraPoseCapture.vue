@@ -500,6 +500,12 @@ onUnmounted(() => {
   object-fit: contain;
 }
 
+.camera-pose-capture__overlay {
+  /* The skeleton is drawn over the whole video, so without this it swallows every click meant for
+     the video's own controls: play, pause, seeking and playback speed. */
+  pointer-events: none;
+}
+
 .camera-pose-capture__status {
   margin: 0;
   font-size: var(--font-size-sm);

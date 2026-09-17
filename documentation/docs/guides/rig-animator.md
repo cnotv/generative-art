@@ -473,7 +473,7 @@ Camera Preview** on too, regardless of whatever it was last left at: the whole p
 one is to look at it and its detected pose together, and running detection against an upload
 with the preview still hidden would show nothing for it.
 
-An uploaded video also gets its own native scrub bar, and a **Sync Timeline to Video** link icon
+An uploaded video also gets its own native controls (play, pause, seeking and playback speed, all clickable through the skeleton overlay drawn on top of them), and a **Sync Timeline to Video** link icon
 toggle next to Record Motion, on by default; it shows a broken link while off. With sync on, dragging the rig timeline's own playhead
 seeks the video to match, and scrubbing the video's native controls moves the timeline's frame
 back the same way — the two stay locked together in both directions, so comparing a specific
