@@ -32,6 +32,8 @@ import {
   CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
   CAMERA_BONE_SMOOTHING_MILLISECONDS,
   CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
+  CAMERA_HAND_FLIP_DEGREES,
+  CAMERA_HAND_HOLD_MILLISECONDS,
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_TWIST_MIN_BEND_DEGREES,
   CAMERA_TWIST_FULL_BEND_DEGREES,
@@ -44,6 +46,12 @@ import { buildRigAnimatorSchema } from './panelSchema'
 import { useRigAnimator } from './useRigAnimator'
 import { useRigMotionRecording } from './useRigMotionRecording'
 import { centerCameraOnVisibleCanvas, frameCameraOnModel } from './cameraFraming'
+import {
+  createRigGround,
+  disposeRigGround,
+  fitShadowToModel,
+  rigGroundPlacement
+} from './rigGround'
 import { estimateCameraYaw } from './cameraPoseMapping'
 import {
   selectedBodyPartGroups,
@@ -98,6 +106,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraAimArms: true,
   cameraRollUpperArms: true,
   cameraRollForearms: true,
+  cameraPalmsFromBody: false,
   cameraAimLegs: true,
   cameraRollThighs: true,
   cameraAimFeet: true,
@@ -117,6 +126,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraSpeedResponse: CAMERA_SMOOTHING_SPEED_RESPONSE,
   cameraTurnResponse: CAMERA_SMOOTHING_TURN_RESPONSE,
   cameraSpeedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
+  cameraHandHoldMilliseconds: CAMERA_HAND_HOLD_MILLISECONDS,
+  cameraHandFlipDegrees: CAMERA_HAND_FLIP_DEGREES,
   cameraBoneSmoothingMilliseconds: CAMERA_BONE_SMOOTHING_MILLISECONDS,
   cameraBoneMaxTurnSpeed: CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
   cameraVisibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
@@ -148,6 +159,7 @@ const cameraPoseMappingOptions = computed(
     aimArms: reactiveConfig.value.cameraAimArms,
     rollUpperArmsFromElbows: reactiveConfig.value.cameraRollUpperArms,
     rollForearmsToPalms: reactiveConfig.value.cameraRollForearms,
+    palmsFromBodyLandmarks: reactiveConfig.value.cameraPalmsFromBody,
     aimLegs: reactiveConfig.value.cameraAimLegs,
     rollThighsFromKneesAndFeet: reactiveConfig.value.cameraRollThighs,
     aimFeet: reactiveConfig.value.cameraAimFeet,
@@ -168,7 +180,9 @@ const cameraSmoothingSettings = computed(
     maxJump: reactiveConfig.value.cameraMaxJump,
     speedResponse: reactiveConfig.value.cameraSpeedResponse,
     turnResponse: reactiveConfig.value.cameraTurnResponse,
-    speedCutoffHertz: reactiveConfig.value.cameraSpeedCutoffHertz
+    speedCutoffHertz: reactiveConfig.value.cameraSpeedCutoffHertz,
+    handHoldMilliseconds: reactiveConfig.value.cameraHandHoldMilliseconds,
+    handFlipRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraHandFlipDegrees)
   })
 )
 
@@ -231,6 +245,25 @@ const handleSelectPreset = (value: string): void => {
 }
 
 let cameraReference: THREE.Camera | null = null
+let sceneReference: THREE.Scene | null = null
+let groundReference: THREE.Mesh | null = null
+
+/** Replace the ground with one sized to the model just loaded, and point the key light's shadow at it. */
+const placeGround = (model: THREE.Object3D): void => {
+  if (!sceneReference) return
+  if (groundReference) {
+    sceneReference.remove(groundReference)
+    disposeRigGround(groundReference)
+  }
+  const placement = rigGroundPlacement(model)
+  groundReference = placement ? createRigGround(placement) : null
+  if (!placement || !groundReference) return
+  sceneReference.add(groundReference)
+  const keyLight = sceneReference.children.find(
+    (child): child is THREE.DirectionalLight => child instanceof THREE.DirectionalLight
+  )
+  if (keyLight) fitShadowToModel(keyLight, model, placement)
+}
 let orbitReference: OrbitControls | null = null
 let hasRestoredAutosave = false
 let timelineControls: ReturnType<typeof createControls> | null = null
@@ -412,6 +445,7 @@ watch(
   () => reactiveConfig.value.model,
   async (url) => {
     await rig.loadModel(url)
+    if (rig.model.value) placeGround(rig.model.value)
     if (rig.model.value && cameraReference) {
       frameCameraOnModel(cameraReference, orbitReference, rig.model.value)
     }
@@ -496,6 +530,7 @@ const init = async (): Promise<void> => {
   rig.setScene(scene)
   rig.setWorld(world)
   cameraReference = camera
+  sceneReference = scene
 
   const timeline = createTimelineManager()
   rig.setTimeline(timeline)

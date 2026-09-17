@@ -638,6 +638,15 @@ const handFrameFromLandmarks = (landmarks: CameraHandLandmark[]): SegmentFrame =
   }
 }
 
+/**
+ * Which way a detected hand is turned, from its wrist, middle knuckle, index knuckle and pinky
+ * knuckle, in scene axes.
+ * @param landmarks The Hand Landmarker's 21 world landmarks
+ * @returns The hand's orientation, or null when those knuckles collapse onto one line
+ */
+export const cameraHandOrientation = (landmarks: CameraHandLandmark[]): THREE.Quaternion | null =>
+  frameRotation(handFrameFromLandmarks(landmarks))
+
 const handFrameFromBody = (
   point: BodyPointReader,
   indices: (typeof ARM_LANDMARKS)[HandSide]
@@ -654,6 +663,23 @@ const restHandFrame = (rest: CameraRetargetRest, side: HandSide): SegmentFrame |
   const primary = restDirection(rest, sideBone(side, 'Hand'), sideBone(side, 'HandMiddle1'))
   const lateral = restDirection(rest, sideBone(side, 'HandPinky1'), sideBone(side, 'HandIndex1'))
   return primary && lateral ? { primary, lateral } : null
+}
+
+/**
+ * Which way the palm faces, from the Hand Landmarker. BlazePose's own pinky and index sit a hand's
+ * width apart and jitter by centimetres, so a palm read from them disagreed with the Hand
+ * Landmarker's by more than 90° on about half the frames of the attached clip, and switching
+ * between the two turned the hand over every time; they are only read when asked for.
+ */
+const observePalm = (
+  context: RetargetContext,
+  point: BodyPointReader,
+  indices: (typeof ARM_LANDMARKS)[HandSide],
+  handLandmarks: CameraHandLandmark[] | undefined
+): SegmentFrame | null => {
+  if (!context.options.rollForearmsToPalms) return null
+  if (handLandmarks) return handFrameFromLandmarks(handLandmarks)
+  return context.options.palmsFromBodyLandmarks ? handFrameFromBody(point, indices) : null
 }
 
 /**
@@ -686,11 +712,7 @@ const applyArm = (
       : undefined
   aimBone(context, sideBone(side, 'Arm'), sideBone(side, 'ForeArm'), upper, elbowTwist)
   if (!lower) return
-  const observedHand = !context.options.rollForearmsToPalms
-    ? null
-    : handLandmarks
-      ? handFrameFromLandmarks(handLandmarks)
-      : handFrameFromBody(point, indices)
+  const observedHand = observePalm(context, point, indices, handLandmarks)
   const restHand = restHandFrame(context.rest, side)
   const forearmTwist =
     observedHand && restHand

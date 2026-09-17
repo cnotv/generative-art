@@ -43,6 +43,9 @@ export interface RigAnimatorConfig {
   cameraSpeedResponse: number
   cameraTurnResponse: number
   cameraSpeedCutoffHertz: number
+  cameraHandHoldMilliseconds: number
+  cameraHandFlipDegrees: number
+  cameraPalmsFromBody: boolean
   cameraBoneSmoothingMilliseconds: number
   cameraBoneMaxTurnSpeed: number
   cameraLimitJoints: boolean
@@ -114,7 +117,22 @@ export interface CameraSmoothingSettings {
   turnResponse: number
   /** Cutoff, in hertz, for each landmark's speed estimate. */
   speedCutoffHertz: number
+  /** How long a hand the detector loses keeps its last reading; 0 drops it straight away. */
+  handHoldMilliseconds: number
+  /** How far a palm may turn in one reading before it must be confirmed, in radians. */
+  handFlipRadians: number
 }
+
+/** One side's last trusted hand reading, and a sharp turn still waiting to be confirmed. */
+export interface CameraHandTrack {
+  landmarks: CameraHandLandmark[]
+  orientation: QuaternionData
+  acceptedAtMilliseconds: number
+  pendingOrientation: QuaternionData | null
+  pendingReadings: number
+}
+
+export type CameraHandTracks = Partial<Record<HandSide, CameraHandTrack>>
 
 /** The Config panel's switches for how a detected frame is applied to the rig. */
 export interface CameraPoseMappingOptions {
@@ -141,6 +159,8 @@ export interface CameraPoseMappingOptions {
   rollUpperArmsFromElbows: boolean
   /** Roll each forearm, and turn the hand, to the detected palm. */
   rollForearmsToPalms: boolean
+  /** With no hand found, read the palm from the body's own wrist, pinky and index instead. */
+  palmsFromBodyLandmarks: boolean
   /** Aim the thighs at the knees and the shins at the ankles. */
   aimLegs: boolean
   /** Roll each thigh to where the kneecap and the foot point. */
@@ -179,6 +199,12 @@ export interface CameraDetectionOptions {
   mirrorLiveCamera: boolean
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
   detectOnlyWhilePlaying: boolean
+}
+
+/** Where the ground sits under a loaded model: level with its lowest point, and how big the model is. */
+export interface RigGroundPlacement {
+  center: THREE.Vector3
+  radius: number
 }
 
 /** How far one joint may turn from rest, in degrees: a ball joint's swing and roll, or a hinge's curl. */

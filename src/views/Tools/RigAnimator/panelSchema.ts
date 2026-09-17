@@ -8,6 +8,8 @@ import {
   CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
   CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
   CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
+  CAMERA_HAND_FLIP_DEGREES_RANGE,
+  CAMERA_HAND_HOLD_MILLISECONDS_RANGE,
   CAMERA_VISIBILITY_THRESHOLD_RANGE,
   CAMERA_TWIST_BEND_DEGREES_RANGE,
   CAMERA_MAX_JUMP_RANGE,
@@ -15,6 +17,59 @@ import {
   ENCLOSURE_OPACITY_RANGE,
   ENCLOSURE_SIZE_RANGE
 } from './config'
+
+/** The Camera Smoothing sliders, the same for every rig, split out to keep the schema builder short. */
+const cameraSmoothingControls: ConfigControlsSchema = {
+  cameraSmoothingMilliseconds: {
+    ...CAMERA_SMOOTHING_MILLISECONDS_RANGE,
+    label: 'Camera Smoothing: Landmarks Held Still (ms)',
+    sectionStart: true
+  },
+  cameraSpeedResponse: {
+    ...CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE,
+    label: 'Camera Smoothing: Let Go on Fast Moves'
+  },
+  cameraSpeedCutoffHertz: {
+    ...CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
+    label: 'Camera Smoothing: Speed Sensitivity (Hz)'
+  },
+  cameraTurnResponse: {
+    ...CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
+    label: 'Camera Smoothing: Let Go on Fast Head Turns'
+  },
+  cameraMaxJump: {
+    ...CAMERA_MAX_JUMP_RANGE,
+    label: 'Camera Smoothing: Max Jump per Frame (m)'
+  },
+  cameraBoneSmoothingMilliseconds: {
+    ...CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
+    label: 'Camera Smoothing: Bones Settle (ms)'
+  },
+  cameraBoneMaxTurnSpeed: {
+    ...CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
+    label: 'Camera Smoothing: Max Joint Speed (°/s)'
+  },
+  cameraHandHoldMilliseconds: {
+    ...CAMERA_HAND_HOLD_MILLISECONDS_RANGE,
+    label: 'Camera Smoothing: Hold a Lost Hand (ms)'
+  },
+  cameraHandFlipDegrees: {
+    ...CAMERA_HAND_FLIP_DEGREES_RANGE,
+    label: 'Camera Smoothing: Palm Turn to Confirm (°)'
+  },
+  cameraVisibilityThreshold: {
+    ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
+    label: 'Camera Smoothing: Landmark Confidence Needed'
+  },
+  cameraTwistMinBendDegrees: {
+    ...CAMERA_TWIST_BEND_DEGREES_RANGE,
+    label: 'Camera Smoothing: Roll Starts at Bend (°)'
+  },
+  cameraTwistFullBendDegrees: {
+    ...CAMERA_TWIST_BEND_DEGREES_RANGE,
+    label: 'Camera Smoothing: Roll Full at Bend (°)'
+  }
+}
 
 /** Rebuilt whenever the bone list or the auto-rig availability changes, since those decide
  * which rows even make sense to show. Playback, keyframes and import/export live on the
@@ -56,47 +111,7 @@ export const buildRigAnimatorSchema = (
         cameraUseDepth: { checkbox: true, label: 'Camera Pose: Use Depth (Z Axis)' },
         cameraUseViewpoint: { checkbox: true, label: 'Camera Pose: Match Camera Angle to Photo' },
         cameraShowPreview: { checkbox: true, label: 'Camera Pose: Show Camera Preview' },
-        cameraSmoothingMilliseconds: {
-          ...CAMERA_SMOOTHING_MILLISECONDS_RANGE,
-          label: 'Camera Smoothing: Landmarks Held Still (ms)',
-          sectionStart: true
-        },
-        cameraSpeedResponse: {
-          ...CAMERA_SMOOTHING_SPEED_RESPONSE_RANGE,
-          label: 'Camera Smoothing: Let Go on Fast Moves'
-        },
-        cameraSpeedCutoffHertz: {
-          ...CAMERA_SMOOTHING_SPEED_CUTOFF_RANGE,
-          label: 'Camera Smoothing: Speed Sensitivity (Hz)'
-        },
-        cameraTurnResponse: {
-          ...CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
-          label: 'Camera Smoothing: Let Go on Fast Head Turns'
-        },
-        cameraMaxJump: {
-          ...CAMERA_MAX_JUMP_RANGE,
-          label: 'Camera Smoothing: Max Jump per Frame (m)'
-        },
-        cameraBoneSmoothingMilliseconds: {
-          ...CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
-          label: 'Camera Smoothing: Bones Settle (ms)'
-        },
-        cameraBoneMaxTurnSpeed: {
-          ...CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
-          label: 'Camera Smoothing: Max Joint Speed (°/s)'
-        },
-        cameraVisibilityThreshold: {
-          ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
-          label: 'Camera Smoothing: Landmark Confidence Needed'
-        },
-        cameraTwistMinBendDegrees: {
-          ...CAMERA_TWIST_BEND_DEGREES_RANGE,
-          label: 'Camera Smoothing: Roll Starts at Bend (°)'
-        },
-        cameraTwistFullBendDegrees: {
-          ...CAMERA_TWIST_BEND_DEGREES_RANGE,
-          label: 'Camera Smoothing: Roll Full at Bend (°)'
-        },
+        ...cameraSmoothingControls,
         cameraTrackFace: {
           checkbox: true,
           label: 'Camera Detect: Face Tracker for Head',
@@ -140,6 +155,10 @@ export const buildRigAnimatorSchema = (
         cameraRollForearms: {
           checkbox: true,
           label: 'Camera Bones: Roll Forearms and Hands to Palms'
+        },
+        cameraPalmsFromBody: {
+          checkbox: true,
+          label: 'Camera Bones: Palms from Body When No Hand Found'
         },
         cameraAimLegs: { checkbox: true, label: 'Camera Bones: Aim Legs' },
         cameraRollThighs: {

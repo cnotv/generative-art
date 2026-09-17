@@ -613,15 +613,34 @@ describe('each bone rule switches off on its own', () => {
     ['rollForearmsToPalms', 'LeftForeArm', 'LeftHand'],
     ['rollThighsFromKneesAndFeet', 'LeftUpLeg', 'LeftLeg']
   ] as const)('changes only the roll, not the aim, of %s when it is off', (rule, from, to) => {
-    // Arrange, Act
-    const on = poseRig(ACTIVE_FRAME, buildMappingOptions())
-    const off = poseRig(ACTIVE_FRAME, buildMappingOptions({ [rule]: false }))
+    // Arrange: the frame has no hand, so the palm comes from the body's own landmarks.
+    const withBodyPalms = { palmsFromBodyLandmarks: true }
+
+    // Act
+    const on = poseRig(ACTIVE_FRAME, buildMappingOptions(withBodyPalms))
+    const off = poseRig(ACTIVE_FRAME, buildMappingOptions({ ...withBodyPalms, [rule]: false }))
 
     // Assert
     expect(degreesBetween(on.segment(from, to), off.segment(from, to))).toBeLessThan(1)
     expect(
       on.bone(`mixamorig${from}`).quaternion.angleTo(off.bone(`mixamorig${from}`).quaternion)
     ).toBeGreaterThan(0.01)
+  })
+
+  it('turns the forearm and hand only to a palm the Hand Landmarker found, unless palms from body is on', () => {
+    // Arrange: ACTIVE_FRAME has no hand, only the body's own wrist, pinky and index.
+    const noPalmRoll = buildMappingOptions({ rollForearmsToPalms: false })
+
+    // Act
+    const handOnly = poseRig(ACTIVE_FRAME, buildMappingOptions())
+    const fromBody = poseRig(ACTIVE_FRAME, buildMappingOptions({ palmsFromBodyLandmarks: true }))
+    const unrolled = poseRig(ACTIVE_FRAME, noPalmRoll)
+
+    // Assert
+    const turn = (rig: ReturnType<typeof poseRig>): THREE.Quaternion =>
+      rig.bone('mixamorigLeftHand').getWorldQuaternion(new THREE.Quaternion())
+    expect(turn(handOnly).angleTo(turn(unrolled))).toBeLessThan(1e-6)
+    expect(turn(fromBody).angleTo(turn(unrolled))).toBeGreaterThan(0.01)
   })
 
   it.each([

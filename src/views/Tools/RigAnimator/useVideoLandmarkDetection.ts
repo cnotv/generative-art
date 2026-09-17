@@ -6,9 +6,10 @@ import {
   createCameraLandmarkers,
   detectCameraPose
 } from './cameraPoseDetection'
-import { mirrorCameraPoseFrame, smoothCameraPoseFrame } from './cameraPoseFrame'
+import { mirrorCameraPoseFrame, smoothCameraPoseFrame, steadyCameraHands } from './cameraPoseFrame'
 import type {
   CameraDetectionOptions,
+  CameraHandTracks,
   CameraLandmarkers,
   CameraPoseFrame,
   CameraSmoothingSettings
@@ -49,6 +50,7 @@ export const useVideoLandmarkDetection = ({
 
   let landmarkers: CameraLandmarkers | null = null
   let animationFrame: number | null = null
+  let handTracks: CameraHandTracks = {}
 
   const detectFrame = (): void => {
     const video = videoElement.value
@@ -74,9 +76,16 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value =
       detection.previewHandLandmarks.length > 0 ? detection.previewHandLandmarks : null
     const orientedFrame = mirror() ? mirrorCameraPoseFrame(detection.frame) : detection.frame
+    const steadied = steadyCameraHands(
+      handTracks,
+      orientedFrame,
+      timestamp,
+      smoothingSettings.value
+    )
+    handTracks = steadied.tracks
     frame.value = smoothCameraPoseFrame(
       frame.value,
-      orientedFrame,
+      steadied.frame,
       timestamp,
       smoothingSettings.value
     )
@@ -96,6 +105,7 @@ export const useVideoLandmarkDetection = ({
     animationFrame = null
     closeCameraLandmarkers(landmarkers)
     landmarkers = null
+    handTracks = {}
     isDetecting.value = false
     previewLandmarks.value = null
     previewHandLandmarks.value = null

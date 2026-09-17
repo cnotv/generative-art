@@ -10,15 +10,20 @@ import {
   mirrorCameraPoseFrame,
   mirrorHeadRotation,
   smoothCameraPoseFrame,
-  smoothHeadRotation
+  smoothHeadRotation,
+  steadyCameraHands
 } from './cameraPoseFrame'
-import { CAMERA_CROP_MIN_SIZE_PIXELS } from './config'
+import {
+  CAMERA_CROP_MIN_SIZE_PIXELS,
+  CAMERA_HAND_FLIP_CONFIRM_READINGS,
+  CAMERA_HAND_TRACK_RESET_MILLISECONDS
+} from './config'
 import {
   buildBodyLandmarks,
   buildHandLandmarks,
   buildSmoothingSettings
 } from './fixtures/cameraPoseFixtures'
-import type { CameraPoseFrame } from './types'
+import type { CameraHandLandmark, CameraHandTracks, CameraPoseFrame } from './types'
 
 const EMPTY_FRAME: CameraPoseFrame = { bodyLandmarks: null, handLandmarks: {}, headRotation: null }
 
@@ -307,5 +312,90 @@ describe('smoothCameraPoseFrame', () => {
 
     // Assert
     expect(smoothed.bodyLandmarks).toBeNull()
+  })
+})
+
+describe('steadyCameraHands', () => {
+  const SETTINGS = buildSmoothingSettings({
+    handHoldMilliseconds: 300,
+    handFlipRadians: THREE.MathUtils.degToRad(45)
+  })
+  const OPEN_HAND = buildHandLandmarks('Left', 'open')
+  /** The open hand rolled about the fingers' own length, which runs along x. */
+  const rolled = (degrees: number): CameraHandLandmark[] => {
+    const turn = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1, 0, 0),
+      THREE.MathUtils.degToRad(degrees)
+    )
+    return OPEN_HAND.map(({ x, y, z }) => {
+      const point = new THREE.Vector3(x, y, z).applyQuaternion(turn)
+      return { x: point.x, y: point.y, z: point.z }
+    })
+  }
+  const withHand = (landmarks?: CameraHandLandmark[]): CameraPoseFrame => ({
+    ...EMPTY_FRAME,
+    handLandmarks: landmarks ? { Left: landmarks } : {}
+  })
+  /** Feed readings 33 ms apart, returning what each one let through. */
+  const feed = (
+    readings: (CameraHandLandmark[] | undefined)[],
+    startTracks: CameraHandTracks = {}
+  ) =>
+    readings.reduce<{ tracks: CameraHandTracks; shown: (CameraHandLandmark[] | undefined)[] }>(
+      ({ tracks, shown }, reading, index) => {
+        const steadied = steadyCameraHands(tracks, withHand(reading), index * 33, SETTINGS)
+        return { tracks: steadied.tracks, shown: [...shown, steadied.frame.handLandmarks.Left] }
+      },
+      { tracks: startTracks, shown: [] }
+    ).shown
+
+  it.each([
+    ['a moment', 5, true],
+    ['longer than the hold', 12, false]
+  ])('keeps the last reading of a hand lost for %s: %s', (_, missingReadings, kept) => {
+    // Arrange
+    const readings = [OPEN_HAND, ...Array.from({ length: missingReadings }, () => undefined)]
+
+    // Act
+    const shown = feed(readings)
+
+    // Assert
+    expect(shown.at(-1)).toEqual(kept ? OPEN_HAND : undefined)
+  })
+
+  it('takes a palm turned less than the flip limit straight away', () => {
+    // Arrange, Act
+    const shown = feed([OPEN_HAND, rolled(30)])
+
+    // Assert
+    expect(shown[1]).toEqual(rolled(30))
+  })
+
+  it('ignores a palm turned over until enough readings in a row agree on it', () => {
+    // Arrange
+    const flipped = Array.from({ length: CAMERA_HAND_FLIP_CONFIRM_READINGS }, () => rolled(170))
+
+    // Act
+    const shown = feed([OPEN_HAND, ...flipped])
+
+    // Assert
+    shown.slice(1, -1).forEach((reading) => expect(reading).toEqual(OPEN_HAND))
+    expect(shown.at(-1)).toEqual(rolled(170))
+  })
+
+  it('takes a palm turned over at once when the last trusted reading is too old to judge by', () => {
+    // Arrange
+    const { tracks } = steadyCameraHands({}, withHand(OPEN_HAND), 0, SETTINGS)
+
+    // Act
+    const { frame } = steadyCameraHands(
+      tracks,
+      withHand(rolled(170)),
+      CAMERA_HAND_TRACK_RESET_MILLISECONDS + 1,
+      SETTINGS
+    )
+
+    // Assert
+    expect(frame.handLandmarks.Left).toEqual(rolled(170))
   })
 })

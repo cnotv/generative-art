@@ -53,6 +53,8 @@ exist, so two poses are already a movement.
   finished Record Motion take, offered in the same **Presets** picker as the bundled clips
 - `src/views/Tools/RigAnimator/RigTimeline.vue`: the dedicated panel for playback, keyframes,
   the frame axis, presets, import and export (see below)
+- `src/views/Tools/RigAnimator/rigGround.ts` (+ `.test.ts`): the ground disc under the loaded
+  model and the key light's shadow fitted to it
 - `src/views/Tools/RigAnimator/cameraFraming.ts` (+ `.test.ts`): framing the camera to whatever
   scale the uploaded model happens to use, and to a detected photo's own viewing angle
 - `src/views/Tools/RigAnimator/export.ts`: the GLB/JSON export and JSON import file handling
@@ -65,8 +67,9 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/cameraHandPoseMapping.ts` (+ `.test.ts`): hand landmark helpers:
   mirroring a detected hand onto the other side, and MediaPipe's handedness label to a side
 - `src/views/Tools/RigAnimator/cameraPoseFrame.ts` (+ `.test.ts`): one detected frame of body,
-  hands and head together: mirroring and smoothing it as a whole, the face matrix read into a
-  head rotation, and the crop geometry the face and hand detectors run on
+  hands and head together: mirroring and smoothing it as a whole, holding each hand steady
+  against the detector's own misreadings, the face matrix read into a head rotation, and the crop
+  geometry the face and hand detectors run on
 - `src/views/Tools/RigAnimator/cameraPoseDetection.ts`: loading the pose, hand and face
   detectors, and running the hand and face ones on crops around the detected body
 - `src/views/Tools/RigAnimator/cameraPoseRetarget.ts` (+ `.test.ts`): turning every bone of the
@@ -121,6 +124,15 @@ panel, replaces it with any FBX, GLB or GLTF. If it already carries a skeleton (
 a rigged glTF character), the bone list appears immediately. The camera re-frames to whatever
 scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
 typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
+
+The model stands on a ground disc placed level with its lowest point as loaded, the soles of its
+feet in the rest pose, and sized to the model for the same reason. The scene's key light keeps its
+direction but has its shadow camera fitted to the model too: its default one is a few units wide,
+which a model in centimetres never falls inside, so without refitting it there was no shadow to
+show where the feet meet the floor. **Keep Feet on Ground** holds the lowest foot at that same
+height while the camera drives the rig.
+
+![The default character in its rest pose standing on the sand coloured ground disc, its shadow cast behind it](/img/animation/rig-ground.webp)
 
 A third docked button, Physics, sits beside these two. Once it is on, a fourth joins it, Marble
 Flow, which starts and stops the drip; dropping one on demand is a touch, not a button, covered
@@ -331,6 +343,20 @@ is small in a wide shot. A frame showing a hand but no body curls only that hand
 leaves the rest of the rig exactly as it was, rather than snapping a body the camera is simply
 not showing back to rest.
 
+The Hand Landmarker is also the only source for which way a palm faces. BlazePose reports a
+pinky and an index point of its own, but they sit a hand's width apart and jitter by centimetres,
+and a palm read from them disagreed with the Hand Landmarker's by more than 90° on about half the
+frames of the attached dance clip. Switching between the two whenever the hand detector lost the
+hand turned the rig's hand over each time. With no hand found, the forearm and hand now keep the
+roll the upper arm gives them; **Palms from Body When No Hand Found** brings the old fallback back.
+
+The hand detector still misreads a palm for a frame or two, so each hand is steadied before any
+smoothing. A hand it loses keeps its last reading for **Hold a Lost Hand**, 330 ms by default,
+instead of dropping out. A palm turned more than **Palm Turn to Confirm**, 45° by default, from the
+last reading it trusted is ignored until three readings in a row agree on it: no wrist turns that
+far between two frames, while the detector does. How much each of these helped, and how it was
+measured, is in [Copying a Performer onto a Rig](/docs/journey/camera-motion-retargeting).
+
 ## Auto-rig for a model with no skeleton
 
 A model with meshes but no skeleton shows **Auto-rig as Humanoid** in the Config panel instead
@@ -533,6 +559,9 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
 - **Roll Upper Arms from Elbows**, **Roll Forearms and Hands to Palms** and **Roll Thighs from
   Knees and Feet** each keep the limb pointing the same way when off, and only drop how it is
   rolled about its own length.
+- **Palms from Body When No Hand Found**, off by default, reads the palm from BlazePose's own
+  wrist, pinky and index whenever the Hand Landmarker found no hand, as the capture used to. See
+  **Fingers from the camera** for why it is off.
 - **Keep Joints in Human Range**, on by default, keeps every joint the capture turns inside the
   range a body can reach, measured from the rig's own rest pose: how far each one may swing off
   its rest direction and how far it may roll about its own length, from a few degrees for a
@@ -590,18 +619,20 @@ movement by eye:
 
 ![The Config panel's Camera Smoothing sliders at their defaults](/img/animation/rig-camera-smoothing-sliders.webp)
 
-| Slider                     | Default | Raise it when                                                             |
-| -------------------------- | ------- | ------------------------------------------------------------------------- |
-| Landmarks Held Still (ms)  | 150     | a pose held still still jiggles; 0 turns landmark smoothing off           |
-| Let Go on Fast Moves       | 12      | fast moves trail behind; lower it when fast moves look shaky              |
-| Speed Sensitivity (Hz)     | 1       | the start of a fast move lags; lower it when noise reads as sudden motion |
-| Let Go on Fast Head Turns  | 2       | head turns trail behind; lower it when the head shakes                    |
-| Max Jump per Frame (m)     | 0.15    | real fast moves get held back; lower it when single frames snap           |
-| Bones Settle (ms)          | 0       | limbs snap between poses, dropping out to rest or flipping their roll     |
-| Max Joint Speed (°/s)      | 720     | real fast moves lag; lower it when a limb still flips for a frame         |
-| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest      |
-| Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                         |
-| Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                             |
+| Slider                     | Default | Raise it when                                                              |
+| -------------------------- | ------- | -------------------------------------------------------------------------- |
+| Landmarks Held Still (ms)  | 150     | a pose held still still jiggles; 0 turns landmark smoothing off            |
+| Let Go on Fast Moves       | 12      | fast moves trail behind; lower it when fast moves look shaky               |
+| Speed Sensitivity (Hz)     | 1       | the start of a fast move lags; lower it when noise reads as sudden motion  |
+| Let Go on Fast Head Turns  | 2       | head turns trail behind; lower it when the head shakes                     |
+| Max Jump per Frame (m)     | 0.15    | real fast moves get held back; lower it when single frames snap            |
+| Bones Settle (ms)          | 0       | limbs snap between poses, dropping out to rest or flipping their roll      |
+| Max Joint Speed (°/s)      | 720     | real fast moves lag; lower it when a limb still flips for a frame          |
+| Hold a Lost Hand (ms)      | 330     | a hand drops out and back; lower it when a hand lingers after leaving      |
+| Palm Turn to Confirm (°)   | 45      | a real quick wrist turn lags; lower it when a palm still flips; 180 is off |
+| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest       |
+| Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                          |
+| Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                              |
 
 **Bones Settle** works on the result rather than the landmarks: each bone eases from where the
 last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,

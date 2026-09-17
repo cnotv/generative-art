@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
 import skeleton from './mixamoCharacterSkeleton.json'
 import {
+  CAMERA_HAND_FLIP_DEGREES,
+  CAMERA_HAND_HOLD_MILLISECONDS,
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_SMOOTHING_MILLISECONDS,
   CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
@@ -35,6 +37,7 @@ export const buildMappingOptions = (
   aimArms: true,
   rollUpperArmsFromElbows: true,
   rollForearmsToPalms: true,
+  palmsFromBodyLandmarks: false,
   aimLegs: true,
   rollThighsFromKneesAndFeet: true,
   aimFeet: true,
@@ -60,6 +63,8 @@ export const buildSmoothingSettings = (
   speedResponse: CAMERA_SMOOTHING_SPEED_RESPONSE,
   turnResponse: CAMERA_SMOOTHING_TURN_RESPONSE,
   speedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
+  handHoldMilliseconds: CAMERA_HAND_HOLD_MILLISECONDS,
+  handFlipRadians: THREE.MathUtils.degToRad(CAMERA_HAND_FLIP_DEGREES),
   ...overrides
 })
 

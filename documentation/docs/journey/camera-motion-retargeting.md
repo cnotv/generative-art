@@ -161,6 +161,83 @@ per-joint speed cap catches that: a real dancer rarely turns a joint faster than
 second, while a flipped roll asks for several thousand. Capped, the flip is spread over a few
 readings and the next good reading mostly undoes it before it shows.
 
+## Hands that turn over
+
+Joint ranges kept a hand from spinning past what a wrist can do, but it still turned over inside
+that range, often and suddenly. There are two detections a hand could be read from, so the first
+question was which one flipped it.
+
+| Finding on the dance clip                                                                 | Left hand  | Right hand |
+| ----------------------------------------------------------------------------------------- | ---------- | ---------- |
+| Frames where the Hand Landmarker found the hand (whole frame, or a crop around the wrist) | 183 of 486 | 200 of 486 |
+| Frames where the palm fell back to BlazePose's wrist, pinky and index                     | 272        | 253        |
+| Frames with both, where the two palms disagreed by more than 90°                          | 64 of 183  | 98 of 192  |
+| Dropouts of the Hand Landmarker lasting three frames or fewer                             | 18 of 35   | 20 of 39   |
+| Consecutive Hand Landmarker readings whose palm turned more than 60°                      | 37 of 159  | 19 of 172  |
+| Consecutive Hand Landmarker readings whose pointing direction turned more than 45°        | 5 of 159   | 14 of 172  |
+
+So it was both, in different ways. BlazePose's palm is simply poor: its pinky and index points sit
+a hand's width apart and jitter by centimetres, and the hand turned over every time the capture
+switched between it and the Hand Landmarker, which on this clip was every few frames. The Hand
+Landmarker points the hand the right way almost always but misreads which way the palm faces for
+a frame or two at a time.
+
+One tempting explanation did not survive measuring. The Hand Landmarker's left or right label
+disagrees with the wrist a hand is attached to about a third of the time, and its 3D points match
+its label: the thumb sits on the side the label predicts in about nine hands out of ten. That
+suggested a hand labelled for the wrong side comes back mirrored in depth, and flipping its depth
+would fix the palm. Doing so made the hand jumpier on both sides (consecutive readings turning
+more than 60°: left 37 became 43, right 22 became 38), because the label itself flickers from
+frame to frame.
+
+What worked, measured on the whole clip against the rig's forearm and wrist:
+
+| Measure, both hands together                           | Before | Hold a lost hand, confirm a sharp turn, no BlazePose palm |
+| ------------------------------------------------------ | ------ | --------------------------------------------------------- |
+| Frames where the forearm's target turned more than 90° | 85     | 36                                                        |
+| Frames where the wrist's target turned more than 60°   | 67     | 35                                                        |
+| Frames where the wrist actually moved more than 15°    | 328    | 196                                                       |
+| Total wrist rotation over the clip                     | 10163° | 6923°                                                     |
+
+Holding the last hand reading through a short dropout did most of it, since it stops the switching.
+Ignoring a palm that turns more than 45° from the last trusted reading until three readings agree
+removed most of the single frame misreads. Two further ideas were measured and dropped: easing a
+roll that exceeds its joint range back toward neutral near a half turn removed a seam at 180° but
+turned a real palm up pose back to palm down, and splitting the palm's roll evenly between forearm
+and hand only moved the flips from one bone to the other.
+
+## How the counts were measured
+
+Every number above comes from the same 16 second, 30 frames a second dance clip, run through the
+tool's own code rather than a reimplementation of it.
+
+**Joint ranges.** The clip was uploaded in the running app and recorded with Record Motion, once
+with the joint limits and speed cap on and once with both off. Each take's keyframes were read
+back from the autosave in local storage. For every bone in every keyframe, its rotation away from
+the default character's rest pose, taken from the same skeleton the tests use, was split into a
+swing off the bone's length and a roll about it, and the worst roll or sideways finger bend over
+the take is what the first table reports. Turn per frame is the angle each bone moved between two
+keyframes divided by the frames between them.
+
+**Hands.** A live take samples only as fast as detection keeps up, a few readings a second in a
+headless browser, which hides frame to frame flips. So the detection was run frame by frame
+instead: the dev server served the tool's own detection module to a headless browser page, which
+seeked the video to each of its 486 frames in turn and ran the pose, hand and crop detectors on
+it exactly as a live capture does. The hand detector was wrapped to record, for every call,
+whether it read the whole frame or a crop, and the label and score of each hand it returned.
+Every frame's detection was saved, and a throwaway test then replayed the saved frames through
+the tool's own hand steadying, landmark smoothing, retargeting and joint speed cap onto the
+default character, 33 ms apart, reading each hand's source, the forearm and wrist rotations, and
+how far each moved between frames. A target is where retargeting put a bone before the speed cap
+eased it; a flip counts when a target turned further than the stated angle in one frame. Wrist
+rotation is the hand's turn relative to the forearm, so a whole arm swinging does not count
+against it. The before column replays the same frames with the steadying off and the BlazePose
+palm on.
+
+Neither the saved frames nor the harness are kept in the repository: the frames are several
+megabytes and the harness is a one off. Repeating the measurement means running the same two
+steps against a new clip.
+
 ## Two traps outside the mapping
 
 ![Mixamo's Y Bot posed from the same clip: an arm raised overhead and a high kick, every limb attached](/img/animation/rig-camera-ybot-retarget.webp)

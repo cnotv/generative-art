@@ -21,6 +21,14 @@ export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   orbit: { target: new THREE.Vector3(0, 1, 0) }
 }
 
+/** A soft sand tone a shade darker than the background, so the ground reads without a hard edge. */
+export const GROUND_COLOR = 0xe6dccb
+/** How far the ground disc reaches, in the loaded model's own bounding radii. */
+export const GROUND_RADIUS_MULTIPLIER = 3
+export const GROUND_SEGMENTS = 64
+/** How wide the key light's shadow reaches around the model, in its bounding radii. */
+export const GROUND_SHADOW_SPAN_MULTIPLIER = 2
+
 export const MODEL_FILE_ACCEPT = '.fbx,.glb,.gltf'
 export const POSES_FILE_ACCEPT = 'application/json'
 export const MEDIA_FILE_ACCEPT = 'image/*,video/*'
@@ -258,6 +266,25 @@ export const CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE = { min: 0, max: 500, step
  */
 export const CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND = 720
 export const CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE = { min: 0, max: 3000, step: 30 }
+/**
+ * How long, in milliseconds, a hand the Hand Landmarker stops finding keeps its last reading. On
+ * the attached dance clip it lost a hand for three frames or fewer about half the time; falling
+ * back to the body's own wrist, pinky and index for those frames turned the palm by more than 90°
+ * on most of them. 0 lets a hand drop out straight away.
+ */
+export const CAMERA_HAND_HOLD_MILLISECONDS = 330
+export const CAMERA_HAND_HOLD_MILLISECONDS_RANGE = { min: 0, max: 1000, step: 10 }
+/**
+ * The furthest, in degrees, a palm may turn from the last trusted reading before the new one is
+ * taken for a misreading and ignored, until `CAMERA_HAND_FLIP_CONFIRM_READINGS` readings in a row
+ * agree on it. 180 turns the check off.
+ */
+export const CAMERA_HAND_FLIP_DEGREES = 45
+export const CAMERA_HAND_FLIP_DEGREES_RANGE = { min: 10, max: 180, step: 5 }
+/** How many readings in a row must agree before a sharply turned palm is believed. */
+export const CAMERA_HAND_FLIP_CONFIRM_READINGS = 3
+/** A trusted hand reading older than this, in milliseconds, no longer vetoes a sharply turned one. */
+export const CAMERA_HAND_TRACK_RESET_MILLISECONDS = 500
 /** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
 export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
 
