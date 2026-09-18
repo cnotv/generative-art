@@ -6,7 +6,12 @@ import {
   createCameraLandmarkers,
   detectCameraPose
 } from './cameraPoseDetection'
-import { mirrorCameraPoseFrame, smoothCameraPoseFrame, steadyCameraHands } from './cameraPoseFrame'
+import {
+  holdUndetectedCameraPoseFrame,
+  mirrorCameraPoseFrame,
+  smoothCameraPoseFrame,
+  steadyCameraHands
+} from './cameraPoseFrame'
 import type {
   CameraDetectionOptions,
   CameraHandTracks,
@@ -76,19 +81,13 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks.value =
       detection.previewHandLandmarks.length > 0 ? detection.previewHandLandmarks : null
     const orientedFrame = mirror() ? mirrorCameraPoseFrame(detection.frame) : detection.frame
-    const steadied = steadyCameraHands(
-      handTracks,
-      orientedFrame,
-      timestamp,
-      smoothingSettings.value
-    )
+    const settings = smoothingSettings.value
+    const steadied = steadyCameraHands(handTracks, orientedFrame, timestamp, settings)
     handTracks = steadied.tracks
-    frame.value = smoothCameraPoseFrame(
-      frame.value,
-      steadied.frame,
-      timestamp,
-      smoothingSettings.value
-    )
+    const heldFrame = settings.holdUndetectedLandmarks
+      ? holdUndetectedCameraPoseFrame(frame.value, steadied.frame, settings.visibilityThreshold)
+      : steadied.frame
+    frame.value = smoothCameraPoseFrame(frame.value, heldFrame, timestamp, settings)
   }
 
   /** Load the detectors and start the loop against whatever the video element is already

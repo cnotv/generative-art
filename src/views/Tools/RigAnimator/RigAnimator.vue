@@ -37,6 +37,7 @@ import {
   CAMERA_HAND_FLIP_DEGREES,
   CAMERA_HAND_HOLD_MILLISECONDS,
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  CAMERA_HAND_CONFIDENCE,
   CAMERA_TWIST_MIN_BEND_DEGREES,
   CAMERA_TWIST_FULL_BEND_DEGREES,
   CAMERA_VIDEO_SLOWDOWN_RATIO,
@@ -109,6 +110,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraRollUpperArms: true,
   cameraRollForearms: true,
   cameraPalmsFromBody: false,
+  cameraFitLimbLengths: true,
+  cameraHoldUndetected: true,
   cameraAimLegs: true,
   cameraRollThighs: true,
   cameraAimFeet: true,
@@ -130,6 +133,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraSpeedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
   cameraHandHoldMilliseconds: CAMERA_HAND_HOLD_MILLISECONDS,
   cameraHandFlipDegrees: CAMERA_HAND_FLIP_DEGREES,
+  cameraHandConfidence: CAMERA_HAND_CONFIDENCE,
   cameraBoneSmoothingMilliseconds: CAMERA_BONE_SMOOTHING_MILLISECONDS,
   cameraBoneMaxTurnSpeed: CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
   cameraVisibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
@@ -163,6 +167,7 @@ const cameraPoseMappingOptions = computed(
     rollUpperArmsFromElbows: reactiveConfig.value.cameraRollUpperArms,
     rollForearmsToPalms: reactiveConfig.value.cameraRollForearms,
     palmsFromBodyLandmarks: reactiveConfig.value.cameraPalmsFromBody,
+    fitLimbLengths: reactiveConfig.value.cameraFitLimbLengths,
     aimLegs: reactiveConfig.value.cameraAimLegs,
     rollThighsFromKneesAndFeet: reactiveConfig.value.cameraRollThighs,
     aimFeet: reactiveConfig.value.cameraAimFeet,
@@ -185,7 +190,9 @@ const cameraSmoothingSettings = computed(
     turnResponse: reactiveConfig.value.cameraTurnResponse,
     speedCutoffHertz: reactiveConfig.value.cameraSpeedCutoffHertz,
     handHoldMilliseconds: reactiveConfig.value.cameraHandHoldMilliseconds,
-    handFlipRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraHandFlipDegrees)
+    handFlipRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraHandFlipDegrees),
+    visibilityThreshold: reactiveConfig.value.cameraVisibilityThreshold,
+    holdUndetectedLandmarks: reactiveConfig.value.cameraHoldUndetected
   })
 )
 
@@ -197,6 +204,7 @@ const cameraDetectionOptions = computed(
     searchHandsAroundWrists: reactiveConfig.value.cameraSearchHandsAroundWrists,
     sideHandsByNearestWrist: reactiveConfig.value.cameraSideHandsByWrist,
     ignoreLandmarksOutsideImage: reactiveConfig.value.cameraIgnoreOutsideImage,
+    handConfidence: reactiveConfig.value.cameraHandConfidence,
     mirrorLiveCamera: reactiveConfig.value.cameraMirrorLive,
     detectOnlyWhilePlaying: reactiveConfig.value.cameraDetectOnlyWhilePlaying
   })

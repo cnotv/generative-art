@@ -7,6 +7,8 @@ import {
   cropSquareAroundLandmark,
   faceMatrixToHeadRotation,
   hasCameraPoseContent,
+  holdUndetectedCameraPoseFrame,
+  holdUndetectedLandmarks,
   mirrorCameraPoseFrame,
   mirrorHeadRotation,
   smoothCameraPoseFrame,
@@ -23,7 +25,7 @@ import {
   buildHandLandmarks,
   buildSmoothingSettings
 } from './fixtures/cameraPoseFixtures'
-import type { CameraHandLandmark, CameraHandTracks, CameraPoseFrame } from './types'
+import type { CameraHandLandmark, CameraHandTracks, CameraLandmark, CameraPoseFrame } from './types'
 
 const EMPTY_FRAME: CameraPoseFrame = { bodyLandmarks: null, handLandmarks: {}, headRotation: null }
 
@@ -397,5 +399,129 @@ describe('steadyCameraHands', () => {
 
     // Assert
     expect(frame.handLandmarks.Left).toEqual(rolled(170))
+  })
+})
+
+describe('holdUndetectedLandmarks', () => {
+  const THRESHOLD = 0.5
+  const LEFT_ELBOW = 13
+  const LEFT_WRIST = 15
+  const hide = (landmarks: CameraLandmark[], indexes: number[]): CameraLandmark[] =>
+    landmarks.map((landmark, index) =>
+      indexes.includes(index) ? { ...landmark, visibility: 0 } : landmark
+    )
+  const shift = (landmarks: CameraLandmark[], indexes: number[], by: number): CameraLandmark[] =>
+    landmarks.map((landmark, index) =>
+      indexes.includes(index) ? { ...landmark, x: landmark.x + by } : landmark
+    )
+
+  it('keeps a landmark that drops out where it was last detected', () => {
+    // Arrange
+    const previous = buildBodyLandmarks()
+    const next = hide(previous, [LEFT_WRIST])
+
+    // Act
+    const held = holdUndetectedLandmarks(previous, next, THRESHOLD)
+
+    // Assert
+    expect(held[LEFT_WRIST].x).toBeCloseTo(previous[LEFT_WRIST].x)
+    expect(held[LEFT_WRIST].visibility).toBeGreaterThanOrEqual(THRESHOLD)
+  })
+
+  it('carries a held landmark along with the joint it hangs off', () => {
+    // Arrange: the wrist drops out while the elbow it hangs off moves 0.2 to the side.
+    const previous = buildBodyLandmarks()
+    const next = hide(shift(previous, [LEFT_ELBOW], 0.2), [LEFT_WRIST])
+
+    // Act
+    const held = holdUndetectedLandmarks(previous, next, THRESHOLD)
+
+    // Assert
+    expect(held[LEFT_WRIST].x).toBeCloseTo(previous[LEFT_WRIST].x + 0.2)
+  })
+
+  it('walks further up the chain when the joint it hangs off is undetected too', () => {
+    // Arrange: elbow and wrist both gone, the shoulder above them moved 0.2 to the side.
+    const previous = buildBodyLandmarks()
+    const next = hide(shift(previous, [11], 0.2), [LEFT_ELBOW, LEFT_WRIST])
+
+    // Act
+    const held = holdUndetectedLandmarks(previous, next, THRESHOLD)
+
+    // Assert
+    expect(held[LEFT_ELBOW].x).toBeCloseTo(previous[LEFT_ELBOW].x + 0.2)
+    expect(held[LEFT_WRIST].x).toBeCloseTo(previous[LEFT_WRIST].x + 0.2)
+  })
+
+  it('takes a detected landmark as read, however far it has moved', () => {
+    // Arrange
+    const previous = buildBodyLandmarks()
+    const next = shift(previous, [LEFT_WRIST], 0.4)
+
+    // Act
+    const held = holdUndetectedLandmarks(previous, next, THRESHOLD)
+
+    // Assert
+    expect(held[LEFT_WRIST].x).toBeCloseTo(previous[LEFT_WRIST].x + 0.4)
+  })
+
+  it('has nothing to hold for a landmark that was never detected', () => {
+    // Arrange
+    const previous = hide(buildBodyLandmarks(), [LEFT_WRIST])
+    const next = hide(buildBodyLandmarks(), [LEFT_WRIST])
+
+    // Act
+    const held = holdUndetectedLandmarks(previous, next, THRESHOLD)
+
+    // Assert
+    expect(held[LEFT_WRIST].visibility).toBe(0)
+  })
+})
+
+describe('holdUndetectedCameraPoseFrame', () => {
+  const previousFrame: CameraPoseFrame = {
+    bodyLandmarks: buildBodyLandmarks(),
+    handLandmarks: { Left: buildHandLandmarks('Left', 'fist') },
+    headRotation: quaternionData(new THREE.Vector3(0, 1, 0), 0.3)
+  }
+
+  it('holds a hand and a head the detector lost this reading', () => {
+    // Arrange
+    const next: CameraPoseFrame = {
+      bodyLandmarks: buildBodyLandmarks(),
+      handLandmarks: {},
+      headRotation: null
+    }
+
+    // Act
+    const held = holdUndetectedCameraPoseFrame(previousFrame, next, 0.5)
+
+    // Assert
+    expect(held.handLandmarks.Left).toBe(previousFrame.handLandmarks.Left)
+    expect(held.headRotation).toBe(previousFrame.headRotation)
+  })
+
+  it('takes this reading over the held one wherever it found something', () => {
+    // Arrange
+    const next: CameraPoseFrame = {
+      bodyLandmarks: buildBodyLandmarks(),
+      handLandmarks: { Left: buildHandLandmarks('Left', 'open') },
+      headRotation: quaternionData(new THREE.Vector3(0, 1, 0), -0.3)
+    }
+
+    // Act
+    const held = holdUndetectedCameraPoseFrame(previousFrame, next, 0.5)
+
+    // Assert
+    expect(held.handLandmarks.Left).toBe(next.handLandmarks.Left)
+    expect(held.headRotation).toBe(next.headRotation)
+  })
+
+  it('has nothing to hold on a first reading', () => {
+    // Arrange, Act
+    const held = holdUndetectedCameraPoseFrame(null, EMPTY_FRAME, 0.5)
+
+    // Assert
+    expect(held).toBe(EMPTY_FRAME)
   })
 })

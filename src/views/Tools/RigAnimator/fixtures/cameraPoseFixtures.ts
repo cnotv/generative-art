@@ -38,6 +38,7 @@ export const buildMappingOptions = (
   rollUpperArmsFromElbows: true,
   rollForearmsToPalms: true,
   palmsFromBodyLandmarks: false,
+  fitLimbLengths: false,
   aimLegs: true,
   rollThighsFromKneesAndFeet: true,
   aimFeet: true,
@@ -65,6 +66,8 @@ export const buildSmoothingSettings = (
   speedCutoffHertz: CAMERA_SMOOTHING_SPEED_CUTOFF_HERTZ,
   handHoldMilliseconds: CAMERA_HAND_HOLD_MILLISECONDS,
   handFlipRadians: THREE.MathUtils.degToRad(CAMERA_HAND_FLIP_DEGREES),
+  visibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  holdUndetectedLandmarks: false,
   ...overrides
 })
 

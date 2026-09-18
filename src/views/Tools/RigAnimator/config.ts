@@ -236,6 +236,18 @@ export const CAMERA_JOINT_LIMITS_DEGREES: Record<string, CameraJointLimitDegrees
 export const CAMERA_LANDMARK_VISIBILITY_THRESHOLD = 0.5
 /** Range and step the Config panel's landmark confidence slider offers. */
 export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0.05 }
+/**
+ * How sure the Hand Landmarker has to be about which hand it found before that hand drives any
+ * finger. Its handedness score reads a palm's own orientation, so it is the score that sags
+ * exactly when a hand is about to read as flipped round, which is what makes a rig hand snap
+ * back and forth between two orientations frame after frame.
+ */
+export const CAMERA_HAND_CONFIDENCE = 0.7
+/** Range and step the Config panel's hand confidence slider offers. */
+export const CAMERA_HAND_CONFIDENCE_RANGE = { min: 0.05, max: 0.99, step: 0.01 }
+/** The shortest and longest a fitted limb may come out, as a multiple of its own rest length. */
+export const CAMERA_LIMB_FIT_MIN_SCALE = 0.5
+export const CAMERA_LIMB_FIT_MAX_SCALE = 2
 
 /**
  * How many times slower an uploaded video plays while it drives the rig, and how many poses Record

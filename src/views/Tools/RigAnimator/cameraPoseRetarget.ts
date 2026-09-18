@@ -13,6 +13,7 @@ import {
   lowPassBlendFactor,
   smoothingCutoffHertz
 } from './cameraPoseMapping'
+import { limbFitScale } from './cameraLimbFit'
 import type {
   CameraBoneTransform,
   CameraHandLandmark,
@@ -20,7 +21,8 @@ import type {
   CameraLandmark,
   CameraPoseFrame,
   CameraPoseMappingOptions,
-  CameraRetargetRest
+  CameraRetargetRest,
+  LimbLengths
 } from './types'
 
 const HIPS = 'mixamorigHips'
@@ -114,6 +116,16 @@ interface RetargetContext {
   /** The rig's own left, and the way it faces, at rest. */
   restLateral: THREE.Vector3
   restForward: THREE.Vector3
+  /** The rig's own shoulder span over the detected one, making rig and camera lengths comparable. */
+  bodyScale: number | null
+}
+
+/** One pair of limbs whose length is fitted: the bones carrying it, and the landmarks measuring it. */
+interface FittedLimb {
+  /** The limb's three joints, root first, without the rig prefix or side. */
+  parts: readonly [string, string, string]
+  /** The same three joints as body landmarks, in the same order. */
+  landmarks: (side: HandSide) => readonly number[]
 }
 
 /** Two directions that fix an orientation: one a segment runs along, one it leans toward. */
@@ -824,6 +836,120 @@ const applyLeg = (context: RetargetContext, side: HandSide, point: BodyPointRead
   return thighDriven
 }
 
+const FITTED_LIMBS: readonly FittedLimb[] = [
+  {
+    parts: ['Arm', 'ForeArm', 'Hand'],
+    landmarks: (side) => [
+      ARM_LANDMARKS[side].shoulder,
+      ARM_LANDMARKS[side].elbow,
+      ARM_LANDMARKS[side].wrist
+    ]
+  },
+  {
+    parts: ['UpLeg', 'Leg', 'Foot'],
+    landmarks: (side) => [
+      LEG_LANDMARKS[side].hip,
+      LEG_LANDMARKS[side].knee,
+      LEG_LANDMARKS[side].ankle
+    ]
+  }
+]
+
+/** Upper segment first, lower second, the order a limb's own two segments are measured in. */
+const LIMB_SEGMENTS = [0, 1]
+
+/** One side's two segments, as the camera measures them and as the rig carries them at rest, or
+ * null with any of the limb's three joints out of view. */
+const measureLimb = (
+  context: RetargetContext,
+  limb: FittedLimb,
+  side: HandSide,
+  point: BodyPointReader
+): LimbLengths[] | null => {
+  const observed = limb.landmarks(side).flatMap((index) => {
+    const position = point(index)
+    return position ? [position] : []
+  })
+  const rest = limb.parts.flatMap((part) => {
+    const position = context.rest.worldPositions.get(sideBone(side, part))
+    return position ? [position] : []
+  })
+  if (observed.length < limb.parts.length || rest.length < limb.parts.length) return null
+  return LIMB_SEGMENTS.map((segment) => ({
+    observed: observed[segment].distanceTo(observed[segment + 1]),
+    rest: rest[segment].distanceTo(rest[segment + 1])
+  }))
+}
+
+/**
+ * Resize both of a pair's limbs, each segment to the same multiple of its own rest length. A
+ * bone's scale carries everything below it, so the lower segment's own scale only has to make up
+ * the difference from the upper one's, and the hand or foot on the end divides the lower one back
+ * out: a shortened arm then does not come with a doll's hand.
+ */
+const scaleLimb = (
+  context: RetargetContext,
+  limb: FittedLimb,
+  upperScale: number,
+  lowerScale: number
+): void =>
+  RIG_SIDES.forEach((side) => {
+    const [rootPart, midPart, extremityPart] = limb.parts
+    drivenBone(context, sideBone(side, rootPart))?.bone.scale.setScalar(upperScale)
+    drivenBone(context, sideBone(side, midPart))?.bone.scale.setScalar(lowerScale / upperScale)
+    drivenBone(context, sideBone(side, extremityPart))?.bone.scale.setScalar(1 / lowerScale)
+  })
+
+/**
+ * Whether this pair already carries a fitted length. A bone's own scale is where the fit is kept,
+ * so it is also what says the fit has happened: nothing else has to be remembered between frames.
+ */
+const limbFitted = (context: RetargetContext, limb: FittedLimb): boolean =>
+  RIG_SIDES.some((side) => {
+    const scale = drivenBone(context, sideBone(side, limb.parts[0]))?.bone.scale.x
+    return scale !== undefined && scale !== 1
+  })
+
+const fitLimb = (context: RetargetContext, limb: FittedLimb, point: BodyPointReader): void => {
+  const { bodyScale } = context
+  if (bodyScale === null) return
+  const measured = RIG_SIDES.flatMap((side) => {
+    const segments = measureLimb(context, limb, side, point)
+    return segments ? [segments] : []
+  })
+  const [upperScale, lowerScale] = LIMB_SEGMENTS.map((segment) =>
+    limbFitScale(
+      measured.map((segments) => segments[segment]),
+      bodyScale
+    )
+  )
+  if (upperScale === null || lowerScale === null) return
+  scaleLimb(context, limb, upperScale, lowerScale)
+}
+
+/**
+ * Resize every limb to what the performer's own limbs measure, so copied joint angles reach where
+ * the performer reaches. A rig with longer arms than the performer's, relative to the body each
+ * hangs off, otherwise overshoots every gesture: a hand brought to the chin lands inside the head,
+ * and two arms brought together in front of the chest pass through one another.
+ *
+ * A performer's proportions do not change while they are being filmed, so each pair is measured
+ * once, on the first frame showing a whole limb, and then left alone. Re-measuring every frame
+ * would hand the detector's own reading-to-reading noise a way to make a limb breathe in and out,
+ * and a limb crossing behind the body would shorten it to whatever its foreshortened reading says.
+ * Switching the fit off puts every limb back to its own rest length, which is also how to have the
+ * next frame measure a fresh one. See `limbFitScale` for why both sides of a pair always take one
+ * shared scale, and why a limb is resized rather than bent to reach.
+ */
+const fitLimbLengths = (context: RetargetContext, point: BodyPointReader): void =>
+  FITTED_LIMBS.forEach((limb) => {
+    if (!context.options.fitLimbLengths) {
+      scaleLimb(context, limb, 1, 1)
+      return
+    }
+    if (!limbFitted(context, limb)) fitLimb(context, limb, point)
+  })
+
 /**
  * Lift or lower the whole rig so its lowest foot sits where it does at rest. World landmarks are
  * centred on the hips, so nothing in them says how high the body is: without this a crouch folds
@@ -849,11 +975,25 @@ const groundFeet = (context: RetargetContext): void => {
   )
 }
 
+/**
+ * The rig's own shoulder span over the detected one. World landmarks are metres of a real body and
+ * a rig is in whatever units it was authored in, so nothing can be compared between the two until
+ * one measure of the same thing is taken from both. The shoulder span is that measure: a real
+ * distance in three dimensions, so it holds however far away or however turned the subject stands.
+ */
+const observeBodyScale = (restShoulderSpan: number, point: BodyPointReader): number | null => {
+  const leftShoulder = point(CAMERA_LANDMARK_INDEX.leftShoulder)
+  const rightShoulder = point(CAMERA_LANDMARK_INDEX.rightShoulder)
+  const observedSpan = leftShoulder && rightShoulder ? leftShoulder.distanceTo(rightShoulder) : 0
+  return observedSpan > 0 ? restShoulderSpan / observedSpan : null
+}
+
 const createRetargetContext = (
   bones: THREE.Bone[],
   rest: CameraRetargetRest,
   drivenBoneNames: Set<string>,
-  options: CameraPoseMappingOptions
+  options: CameraPoseMappingOptions,
+  point: BodyPointReader
 ): RetargetContext | null => {
   const restLeftArm = rest.worldPositions.get('mixamorigLeftArm')
   const restRightArm = rest.worldPositions.get('mixamorigRightArm')
@@ -865,7 +1005,8 @@ const createRetargetContext = (
     drivenBoneNames,
     options,
     restLateral,
-    restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize()
+    restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize(),
+    bodyScale: observeBodyScale(restLeftArm.distanceTo(restRightArm), point)
   }
 }
 
@@ -875,7 +1016,9 @@ const createRetargetContext = (
  * where the detected shoulders, hips and face do, and fingers bend joint by joint. Only directions
  * are copied, so a rig whose proportions differ from the performer's still stretches fully
  * straight in a T-pose and reaches overhead in a stretch. Parents are posed before children, so
- * each bone only adds its own turn on top of what the bone above it already did.
+ * each bone only adds its own turn on top of what the bone above it already did. What the
+ * directions alone cannot carry, how far a gesture actually reaches, comes from resizing the limbs
+ * to the performer's own instead, see `fitLimbLengths`.
  * @param bones The rig's bones, with every bone in `drivenBoneNames` already reset to rest
  * @param rest The rig's rest pose, from `captureCameraRetargetRest`
  * @param frame What the camera found this frame, oriented and smoothed
@@ -889,9 +1032,10 @@ export const applyCameraPoseFrame = (
   options: CameraPoseMappingOptions,
   drivenBoneNames: Set<string>
 ): void => {
-  const context = createRetargetContext(bones, rest, drivenBoneNames, options)
-  if (!context) return
   const point = readBodyPoints(frame.bodyLandmarks, options)
+  const context = createRetargetContext(bones, rest, drivenBoneNames, options, point)
+  if (!context) return
+  fitLimbLengths(context, point)
   const torso = observeTorso(context, point)
   if (torso) applyTorso(context, torso)
   const chest = torso?.chest ?? new THREE.Quaternion()

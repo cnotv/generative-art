@@ -9,6 +9,7 @@ import {
   CAMERA_SMOOTHING_TURN_RESPONSE_RANGE,
   CAMERA_BONE_SMOOTHING_MILLISECONDS_RANGE,
   CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND_RANGE,
+  CAMERA_HAND_CONFIDENCE_RANGE,
   CAMERA_HAND_FLIP_DEGREES_RANGE,
   CAMERA_HAND_HOLD_MILLISECONDS_RANGE,
   CAMERA_VISIBILITY_THRESHOLD_RANGE,
@@ -96,6 +97,7 @@ const cameraSmoothingControls: ConfigControlsSchema = {
     ...CAMERA_VISIBILITY_THRESHOLD_RANGE,
     label: 'Landmark Confidence Needed'
   },
+  cameraHoldUndetected: { checkbox: true, label: 'Hold Undetected Landmarks' },
   cameraTwistMinBendDegrees: {
     ...CAMERA_TWIST_BEND_DEGREES_RANGE,
     label: 'Roll Starts at Bend (°)'
@@ -109,6 +111,7 @@ const cameraDetectControls: ConfigControlsSchema = {
   cameraTrackHands: { checkbox: true, label: 'Hand Tracker for Fingers' },
   cameraSearchHandsAroundWrists: { checkbox: true, label: 'Hand Search Around Wrists' },
   cameraSideHandsByWrist: { checkbox: true, label: 'Hand Side by Nearest Wrist' },
+  cameraHandConfidence: { ...CAMERA_HAND_CONFIDENCE_RANGE, label: 'Hand Confidence Needed' },
   cameraIgnoreOutsideImage: { checkbox: true, label: 'Ignore Body Outside Image' },
   cameraMirrorLive: { checkbox: true, label: 'Mirror Live Camera' },
   cameraDetectOnlyWhilePlaying: { checkbox: true, label: 'Only While Video Plays' }
@@ -120,6 +123,7 @@ const cameraBoneControls: ConfigControlsSchema = {
   cameraTurnHead: { checkbox: true, label: 'Turn Neck and Head' },
   cameraCorrectHeadPitch: { checkbox: true, label: 'Correct Ear and Nose Head Pitch' },
   cameraLimitHeadTurn: { checkbox: true, label: 'Ignore Impossible Head Turns' },
+  cameraFitLimbLengths: { checkbox: true, label: 'Fit Limb Lengths to Performer' },
   cameraAimArms: { checkbox: true, label: 'Aim Arms' },
   cameraRollUpperArms: { checkbox: true, label: 'Roll Upper Arms from Elbows' },
   cameraRollForearms: { checkbox: true, label: 'Roll Forearms and Hands to Palms' },
