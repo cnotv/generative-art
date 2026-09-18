@@ -563,6 +563,9 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   is also how to measure a fresh fit, for a different performer or a rig loaded since. The hand or
   foot on the end keeps its own size. Recorded keyframes store rotations only, so a take recorded
   from a fitted rig plays back at whatever length the rig carries then.
+
+  ![The same detected pose of both hands brought up to the chin, applied twice: unfitted on the left, where the character's longer arms carry both hands past each other across the face, and fitted on the right, where each hand stops at the chin and the whole character stands at the performer's own proportions](/img/animation/rig-camera-limb-fit.webp)
+
 - **Hands.** See **Fingers from the camera** above.
 
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
