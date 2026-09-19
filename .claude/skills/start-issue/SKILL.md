@@ -64,6 +64,11 @@ Using this shape:
 
 Brief explanation of the chosen approach.
 
+### Demo
+
+For a change with a visible outcome, the scenes the demo video will show, one per claim: the
+route, what changes in the UI, and what the clip proves. Recorded with `record-demo`.
+
 ### Questions
 
 - [ ] Anything that needs clarifying

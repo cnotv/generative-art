@@ -96,7 +96,8 @@ Two sections need care:
 material, a camera, a panel, a layout — a reviewer should not have to check out the branch and
 run the app to find out what it looks like.
 
-- **Stills** for a state or a comparison, **video** when the point is motion.
+- **Stills** for a state or a comparison, **video** when the point is motion. A feature driven
+  through the UI is filmed with the `record-demo` procedure, from the plan's Demo section.
 - Capture from the running app, never a mock-up. The recipe — driving the app, waiting long
   enough for a 3D scene to exist, trimming a recording — is in
   `documentation/docs/guides/capturing-documentation-media.md`.

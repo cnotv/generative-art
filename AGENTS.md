@@ -87,8 +87,7 @@ Either way: a fresh branch off main every time, never the current branch, never 
 
 ## Where output goes
 
-Documentation is Docusaurus, in `documentation/`. Never create a standalone markdown file
-elsewhere in the repo.
+Documentation is Docusaurus, in `documentation/`, never a standalone markdown file elsewhere.
 
 Every explanation has one home. Write it there; everywhere else links to it.
 
@@ -146,3 +145,4 @@ Skills in `.claude/skills/<name>/SKILL.md`, as plain markdown any agent can read
 | `sync-docs`     | you changed a file that a tutorial documents                                              |
 | `finish-change` | before claiming work is complete                                                          |
 | `open-pr`       | the work is validated and ready to ship, or a pull request was explicitly requested       |
+| `record-demo`   | a visible feature is ready to show, or a demo, video or before and after was asked for    |
