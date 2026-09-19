@@ -8,7 +8,8 @@ Anything with a visual outcome is documented with a picture of it, not a descrip
 to produce one from the running app, so the picture is the real thing rather than a mock-up.
 
 :::note Source files
-`.claude/rules/docs.md`, `.claude/skills/verify/SKILL.md`, `documentation/static/`
+`.claude/rules/docs.md`, `.claude/skills/verify/SKILL.md`, `.claude/skills/record-demo/SKILL.md`,
+`scripts/record-demo.mjs`, `documentation/static/`
 :::
 
 ## Before anything, run the app on a known port
@@ -181,6 +182,77 @@ Embed it with a `<video>` tag, and put a description inside the tag for anyone w
 The same clip belongs in the pull request that changed the thing it shows.
 [Showing a video in a pull request](./videos-in-pull-requests.md) covers that, and why GitHub
 needs an `.mp4` rather than the `.webm` written here.
+
+## A feature demo from a scene file
+
+When the thing to show is a feature being used, sliders moved, a model downloaded and loaded
+somewhere else, script it as a scene file rather than by hand. `scripts/record-demo.mjs` plays
+each scene in its own recorded browser, keeps the stretch between its marks, speeds it up, and
+joins the scenes into one short summary. The `record-demo` procedure covers when to use it and
+where the result goes; this is the file it reads.
+
+```bash
+node scripts/record-demo.mjs /tmp/demo/shorter-limbs.scenes.json
+```
+
+```json
+{
+  "baseUrl": "http://localhost:5317",
+  "output": ".",
+  "summary": "shorter-limbs",
+  "compare": ["before", "after"],
+  "scenes": [
+    {
+      "name": "edit",
+      "caption": "Model Editor: every limb at 75%",
+      "route": "/tools/ModelEditor?config=true",
+      "speed": 4,
+      "steps": [
+        { "wait": 9000 },
+        { "mark": "start" },
+        { "config": "Upper Arms > Length", "to": 0.75, "over": 600 },
+        { "mark": "end" },
+        { "download": { "role": "button", "name": "Download Model" }, "saveAs": "copy.glb" }
+      ]
+    }
+  ]
+}
+```
+
+| Field      | Meaning                                                                           |
+| ---------- | --------------------------------------------------------------------------------- |
+| `baseUrl`  | The running app, on the port it was started with                                  |
+| `output`   | Where clips are written; like every path in the file, relative to the file itself |
+| `summary`  | File name of the joined clips, written as both `.mp4` and `.webm`                 |
+| `compare`  | Two scene names, left then right, to play side by side in `<summary>-compare.mp4` |
+| `viewport` | Browser size and clip size, `{ "width": 1100, "height": 720 }` unless set         |
+| `speed`    | Per scene: how many times faster the kept stretch plays, 1 unless set             |
+| `caption`  | Per scene: a label drawn over the page for the whole recording                    |
+
+| Step                                     | Does                                                                   |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| `{ "wait": 9000 }`                       | Waits, in milliseconds; a 3D view needs about nine seconds to load     |
+| `{ "mark": "start" }`, `"end"`           | Where the kept stretch begins and ends; the whole recording if unset   |
+| `{ "config": "Section > Control", ... }` | Glides a Config panel field `to` a value `over` some milliseconds      |
+| `{ "click": target }`                    | A real click, on a CSS selector or `{ "role", "name" }`                |
+| `{ "select": "Presets", "option": … }`   | Opens the select whose trigger shows that text and picks the option    |
+| `{ "upload": file, "into": selector }`   | Sets a file input; `into` defaults to the first file input on the page |
+| `{ "download": target, "saveAs": file }` | Clicks the target and saves whatever it downloads                      |
+| `{ "caption": "text" }`                  | Replaces the caption partway through a scene                           |
+| `{ "wheel": -1800, "at": [x, y] }`       | Scrolls the mouse wheel over a point, one notch per hundred            |
+| `{ "drag": [[x, y], [x, y]], "button" }` | Drags between two points; `"right"` pans an orbit camera               |
+
+Wheel and drag take viewport pixels. They are how a scene frames a detail the view shows too small
+by default: pan the detail to the orbit centre with a right drag, zoom in with the wheel, then pan
+it clear of the panel.
+
+A `{ "role", "name" }` target matches the accessible name exactly, and an icon-only button's
+name is its `title`, so the Rig Animator timeline's play button is
+`{ "role": "button", "name": "Play" }`. Clicks are real pointer clicks, since this repo's select
+component opens on a pointer press and ignores a scripted `click()`.
+
+Many ffmpeg builds leave out the `drawtext` filter, so captions are drawn into the page while it
+records rather than burned in afterwards.
 
 ## Checking it before committing
 
