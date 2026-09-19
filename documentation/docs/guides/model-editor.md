@@ -25,6 +25,12 @@ The default model loads on arrival; the upload button at the top left of the can
 ![A character's head before the face sliders move](/img/model-editor/face-rest.webp)
 ![The same head with larger eyes, a fuller nose pushed slightly forward, and a wider mouth](/img/model-editor/face-edited.webp)
 
+<video controls loop muted playsinline width="720" src="/video/model-editor/face-uploads-download.webm">
+  A close-up of a character's face while its eyes, nose, mouth and cheeks grow. A character uploaded
+  with no skeleton is auto-rigged and its arms, legs, head and eyes resized. The downloaded file is
+  then loaded again and appears with every edit in place while all the sliders read one.
+</video>
+
 ![The Face group of the Config panel, each feature's Size, Height and Depth reading the values that produced the head above](/img/model-editor/face-panel.webp)
 
 ## From the editor to an animation
