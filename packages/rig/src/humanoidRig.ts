@@ -291,6 +291,17 @@ const weighByStraightLineDistance = (
   }
 }
 
+/** Store each vertex's two bones and their weights as the attributes a SkinnedMesh reads. */
+const writeSkinAttributes = (
+  geometry: THREE.BufferGeometry,
+  perVertexWeights: VertexWeights[]
+): void => {
+  const skinIndices = perVertexWeights.flatMap(({ indices }) => [indices[0], indices[1], 0, 0])
+  const skinWeights = perVertexWeights.flatMap(({ weights }) => [weights[0], weights[1], 0, 0])
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4))
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4))
+}
+
 /**
  * Bind every vertex in a geometry to its two nearest bones, following the mesh's own surface
  * rather than a straight line through it, so a mesh that was never skinned can be posed by a
@@ -316,9 +327,26 @@ export const rigAutoSkinMesh = (geometry: THREE.BufferGeometry, bones: THREE.Bon
       : weighByStraightLineDistance(point, segments)
   )
 
-  const skinIndices = perVertexWeights.flatMap(({ indices }) => [indices[0], indices[1], 0, 0])
-  const skinWeights = perVertexWeights.flatMap(({ weights }) => [weights[0], weights[1], 0, 0])
+  writeSkinAttributes(geometry, perVertexWeights)
+}
 
-  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4))
-  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4))
+/**
+ * Bind every vertex to its two nearest bones in a straight line, in a single pass. The surface
+ * search in `rigAutoSkinMesh` keeps neighbouring limbs apart but its cost grows with the square
+ * of the vertex count, which puts a dense character minutes away; this one stays linear, at the
+ * price of letting weight bleed across a narrow gap such as an armpit.
+ * @param geometry The geometry to skin in place, adding skinIndex and skinWeight attributes
+ * @param bones The skeleton's bones, in skeleton order, with up-to-date world matrices
+ * @returns Nothing; the attributes are added to the geometry
+ */
+export const rigAutoSkinMeshByDistance = (
+  geometry: THREE.BufferGeometry,
+  bones: THREE.Bone[]
+): void => {
+  const segments = buildBoneSegments(bones)
+  const position = geometry.attributes.position
+  const perVertexWeights = Array.from({ length: position.count }, (_, index) =>
+    weighByStraightLineDistance(new THREE.Vector3().fromBufferAttribute(position, index), segments)
+  )
+  writeSkinAttributes(geometry, perVertexWeights)
 }

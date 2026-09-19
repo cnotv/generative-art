@@ -4,8 +4,10 @@ import {
   rigFindUnskinnedMeshes,
   rigGenerateHumanoidSkeleton,
   rigAutoSkinMesh,
+  rigAutoSkinMeshByDistance,
   HUMANOID_BONE_HIERARCHY
 } from '@webgamekit/rig'
+import { AUTO_SKIN_SURFACE_VERTEX_LIMIT } from './config'
 
 /** Where each canonical humanoid bone belongs in the Bone dropdown, core skeleton first. */
 const BONE_DISPLAY_ORDER = new Map(
@@ -84,9 +86,99 @@ export const disposeModel = (model: THREE.Object3D): void => {
   })
 }
 
+/** Swap each triangle's last two corners, turning its front face to the other side. */
+const flipTriangleWinding = (geometry: THREE.BufferGeometry): void => {
+  const index = geometry.index
+  if (!index) return
+  Array.from({ length: Math.floor(index.count / 3) }, (_, face) => face * 3).forEach((corner) => {
+    const second = index.getX(corner + 1)
+    index.setX(corner + 1, index.getX(corner + 2))
+    index.setX(corner + 2, second)
+  })
+}
+
+/**
+ * A copy of a mesh's geometry with every transform between it and the model baked in, so its
+ * vertices and the generated bones share one space. A mirrored transform turns the triangles
+ * inside out once it is baked, so their winding is turned back.
+ * ponytail: only indexed geometry is turned back; a mirrored flat (unindexed) mesh stays inside
+ * out, which needs its position triples swapped instead if one ever turns up.
+ */
+const geometryInModelSpace = (mesh: THREE.Mesh, model: THREE.Object3D): THREE.BufferGeometry => {
+  const meshToModel = model.matrixWorld.clone().invert().multiply(mesh.matrixWorld)
+  const geometry = mesh.geometry.clone().applyMatrix4(meshToModel)
+  if (meshToModel.determinant() < 0) flipTriangleWinding(geometry)
+  geometry.computeBoundingBox()
+  return geometry
+}
+
+const positionsOf = (geometry: THREE.BufferGeometry): number[] => {
+  const position = geometry.attributes.position
+  return Array.from({ length: position.count }, (_, index) => [
+    position.getX(index),
+    position.getY(index),
+    position.getZ(index)
+  ]).flat()
+}
+
+const triangleCornersOf = (geometry: THREE.BufferGeometry): number[] =>
+  geometry.index
+    ? [...geometry.index.array]
+    : Array.from({ length: geometry.attributes.position.count }, (_, index) => index)
+
+/**
+ * Skin every geometry as parts of one surface rather than each on its own. Skinned one at a time,
+ * a figure built from separate parts (a sphere for a head, a box for a torso) seeds every bone
+ * inside every part, so the head sphere is carved up between the neck, the shoulders and the
+ * spine instead of following the head. As one surface each bone seeds once, where it truly
+ * sits nearest, and a part no seed reaches falls back to the bones nearest it in a straight line.
+ * Past a vertex budget the surface search would hold the page for minutes, so a dense model is
+ * bound by straight-line distance alone.
+ */
+const skinAsOneSurface = (geometries: THREE.BufferGeometry[], bones: THREE.Bone[]): void => {
+  const vertexCounts = geometries.map((geometry) => geometry.attributes.position.count)
+  const offsets = vertexCounts.map((_, index) =>
+    vertexCounts.slice(0, index).reduce((total, count) => total + count, 0)
+  )
+  const surface = new THREE.BufferGeometry()
+  surface.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(geometries.flatMap(positionsOf), 3)
+  )
+  surface.setIndex(
+    geometries.flatMap((geometry, index) =>
+      triangleCornersOf(geometry).map((corner) => corner + offsets[index])
+    )
+  )
+  const skinSurface =
+    surface.attributes.position.count > AUTO_SKIN_SURFACE_VERTEX_LIMIT
+      ? rigAutoSkinMeshByDistance
+      : rigAutoSkinMesh
+  skinSurface(surface, bones)
+
+  const { skinIndex, skinWeight } = surface.attributes
+  geometries.forEach((geometry, index) => {
+    const range: [number, number] = [offsets[index] * 4, (offsets[index] + vertexCounts[index]) * 4]
+    geometry.setAttribute(
+      'skinIndex',
+      new THREE.Uint16BufferAttribute(skinIndex.array.slice(...range), 4)
+    )
+    geometry.setAttribute(
+      'skinWeight',
+      new THREE.Float32BufferAttribute(skinWeight.array.slice(...range), 4)
+    )
+  })
+  surface.dispose()
+}
+
 /**
  * Generate a humanoid skeleton fit to the model and auto-skin every unrigged mesh to it,
- * replacing each with a bound SkinnedMesh.
+ * replacing each with a bound SkinnedMesh hung straight off the model.
+ *
+ * Everything is worked out in the model's own space. A mesh nested under an offset or scaled
+ * node (a leg under its hip group, a whole figure scaled up a hundredfold) otherwise has its
+ * vertices measured in one space and the bones placed in another, and every vertex binds to
+ * whichever bone happens to sit nearest in the wrong one.
  * @param model The model to rig, mutated in place
  * @returns The newly skinned meshes, or null when the model had nothing left to rig
  */
@@ -94,19 +186,30 @@ export const generateAutoRig = (model: THREE.Object3D): THREE.SkinnedMesh[] | nu
   const unskinnedMeshes = rigFindUnskinnedMeshes(model)
   if (unskinnedMeshes.length === 0) return null
 
-  const box = new THREE.Box3().setFromObject(model)
+  model.updateMatrixWorld(true)
+  const geometries = unskinnedMeshes.map((mesh) => geometryInModelSpace(mesh, model))
+  const box = geometries.reduce(
+    (union, geometry) => (geometry.boundingBox ? union.union(geometry.boundingBox) : union),
+    new THREE.Box3()
+  )
+  // Skinned before the root joins the model, while each bone's world position is still its
+  // position in model space, the space the geometry was just baked into.
   const { root, bones, skeleton } = rigGenerateHumanoidSkeleton(box)
+  skinAsOneSurface(geometries, bones)
   model.add(root)
 
-  return unskinnedMeshes.map((mesh) => {
-    rigAutoSkinMesh(mesh.geometry, bones)
-    const replacement = new THREE.SkinnedMesh(mesh.geometry, mesh.material)
-    replacement.position.copy(mesh.position)
-    replacement.rotation.copy(mesh.rotation)
-    replacement.scale.copy(mesh.scale)
-    replacement.bind(skeleton)
-    mesh.parent?.add(replacement)
-    mesh.parent?.remove(mesh)
+  const replacements = unskinnedMeshes.map((mesh, index) => {
+    const replacement = Object.assign(new THREE.SkinnedMesh(geometries[index], mesh.material), {
+      name: mesh.name,
+      castShadow: mesh.castShadow,
+      receiveShadow: mesh.receiveShadow
+    })
+    model.add(replacement)
+    mesh.removeFromParent()
     return replacement
   })
+  model.updateMatrixWorld(true)
+  replacements.forEach((replacement) => replacement.bind(skeleton))
+  new Set(unskinnedMeshes.map((mesh) => mesh.geometry)).forEach((geometry) => geometry.dispose())
+  return replacements
 }

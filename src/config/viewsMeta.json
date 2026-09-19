@@ -128,8 +128,8 @@
   "Mixamo Playground": {
     "description": "Test and preview Mixamo character animations in 3D."
   },
-  "Model Loader": {
-    "description": "Drag-and-drop 3D model loader supporting GLB, GLTF, FBX formats."
+  "Model Editor": {
+    "description": "Reshape any humanoid model, rigged or not: resize every body part and facial feature, then download the result as a GLB."
   },
   "Rig Animator": {
     "description": "Upload a rigged or plain model, pose its skeleton, and interpolate between poses to export a standalone animation."

@@ -29,6 +29,13 @@ export const GROUND_SEGMENTS = 64
 /** How wide the key light's shadow reaches around the model, in its bounding radii. */
 export const GROUND_SHADOW_SPAN_MULTIPLIER = 2
 
+/**
+ * The most vertices an auto-rig binds by walking the mesh's surface. That search grows with the
+ * square of the vertex count, about seven seconds at five thousand, so anything denser is bound
+ * by straight-line distance instead, which takes a fraction of a second at any size.
+ */
+export const AUTO_SKIN_SURFACE_VERTEX_LIMIT = 3000
+
 export const MODEL_FILE_ACCEPT = '.fbx,.glb,.gltf'
 export const POSES_FILE_ACCEPT = 'application/json'
 export const MEDIA_FILE_ACCEPT = 'image/*,video/*'

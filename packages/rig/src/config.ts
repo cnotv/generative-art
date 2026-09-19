@@ -43,6 +43,13 @@ export const HUMANOID_BONE_HIERARCHY: HumanoidBoneDefinition[] = [
     spreadFraction: 0
   },
   {
+    name: 'mixamorigHeadTop_End',
+    parent: 'mixamorigHead',
+    heightFraction: 1,
+    side: 'center',
+    spreadFraction: 0
+  },
+  {
     name: 'mixamorigLeftShoulder',
     parent: 'mixamorigSpine2',
     heightFraction: 0.78,
