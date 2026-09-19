@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { applyPartScales, createPartScales, measureRigBones, partsInRig } from './bodyParts'
+import {
+  applyPartScales,
+  canonicalBoneName,
+  collectRigBones,
+  createPartScales,
+  measureRigBones,
+  partsInRig
+} from './bodyParts'
 import type { ModelEditorPartName } from './types'
 
 const createBone = (name: string, offset: [number, number, number]): THREE.Bone => {
@@ -31,6 +38,33 @@ const scaleOf = (bones: THREE.Bone[], name: string): [number, number, number] =>
   return bone ? [bone.scale.x, bone.scale.y, bone.scale.z] : [0, 0, 0]
 }
 
+describe('canonicalBoneName', () => {
+  it.each([
+    ['mixamorigHips', 'mixamorigHips'],
+    ['mixamorig1Hips', 'mixamorigHips'],
+    ['mixamorig:LeftArm', 'mixamorigLeftArm'],
+    ['mixamorig12:LeftArm', 'mixamorigLeftArm'],
+    ['Bip01_Head', 'Bip01_Head']
+  ])('reads %s as %s', (name, expected) => {
+    expect(canonicalBoneName(name)).toBe(expected)
+  })
+})
+
+describe('collectRigBones', () => {
+  it('finds every bone in the model once, as the copy that moves it', () => {
+    const model = new THREE.Group()
+    const [arm, foreArm] = createArmRig()
+    const foreArmCopy = createBone('mixamorigLeftForeArm', [0, 0, 0])
+    foreArm.add(foreArmCopy)
+    model.add(arm)
+
+    const bones = collectRigBones(model)
+
+    expect(bones).toHaveLength(4)
+    expect(bones).not.toContain(foreArmCopy)
+  })
+})
+
 describe('partsInRig', () => {
   it('keeps only the regions the loaded rig has bones for, in panel order', () => {
     const bones = createArmRig()
@@ -38,6 +72,12 @@ describe('partsInRig', () => {
     const parts = partsInRig(bones.map((bone) => bone.name))
 
     expect(parts.map((part) => part.name)).toEqual(['upperArms', 'forearms', 'hands'])
+  })
+
+  it('matches a rig whose Mixamo prefix was renumbered on re-import', () => {
+    const parts = partsInRig(['mixamorig1LeftArm', 'mixamorig1LeftForeArm'])
+
+    expect(parts.map((part) => part.name)).toEqual(['upperArms', 'forearms'])
   })
 
   it('offers nothing for a rig named by some other convention', () => {
@@ -54,6 +94,16 @@ describe('measureRigBones', () => {
     const rig = measureRigBones(bones)
 
     expect(rig.map((rest) => rest.lengthAxis)).toEqual(['y', 'y', 'y', 'y'])
+  })
+
+  it('reads a bone at the end of its chain along the way it came from its parent', () => {
+    const foreArm = createBone('mixamorigLeftForeArm', [0, 0, 0])
+    const hand = createBone('mixamorigLeftHand', [2, 0, 0])
+    foreArm.add(hand)
+
+    const [, handRest] = measureRigBones([foreArm, hand])
+
+    expect(handRest.lengthAxis).toBe('x')
   })
 
   it('matches each bone to the region that covers it, and leaves the rest unassigned', () => {
@@ -122,6 +172,18 @@ describe('applyPartScales', () => {
 
     const handPosition = bones[2].getWorldPosition(new THREE.Vector3())
     expect(handPosition.y).toBeCloseTo(6)
+  })
+
+  it('lets a bone no region covers grow with the region above it', () => {
+    const bones = createArmRig()
+    const rig = measureRigBones(bones)
+    const parts = createPartScales()
+    parts.hands = { length: 1, size: 2 }
+
+    applyPartScales(rig, parts)
+
+    expect(scaleOf(bones, 'mixamorigLeftHand')).toEqual([2, 1, 2])
+    expect(scaleOf(bones, 'mixamorigLeftHandMiddle1')).toEqual([1, 1, 1])
   })
 
   it('offsets from the rig own rest scale rather than overwriting it', () => {

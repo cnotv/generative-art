@@ -129,7 +129,7 @@
     "description": "Test and preview Mixamo character animations in 3D."
   },
   "Model Editor": {
-    "description": "Load a rigged model and reshape it: length and size sliders for every humanoid body part."
+    "description": "Reshape any humanoid model, rigged or not: resize every body part and facial feature, then download the result as a GLB."
   },
   "Rig Animator": {
     "description": "Upload a rigged or plain model, pose its skeleton, and interpolate between poses to export a standalone animation."

@@ -6,7 +6,6 @@ import { useRoute } from 'vue-router'
 import { getTools } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
-import { rigFindSkinnedMesh } from '@webgamekit/rig'
 import { Upload } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
@@ -18,20 +17,33 @@ import {
 } from '@/stores/viewConfig'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import { useViewPanelsStore } from '@/stores/viewPanels'
-import {
-  disposeModel,
-  loadModelFile,
-  resolveHierarchyBones
-} from '@/views/Tools/RigAnimator/rigModel'
+import { disposeModel, generateAutoRig, loadModelFile } from '@/views/Tools/RigAnimator/rigModel'
 import { frameCameraOnModel } from '@/views/Tools/RigAnimator/cameraFraming'
-import { applyPartScales, createPartScales, measureRigBones, partsInRig } from './bodyParts'
+import { exportModelAsGlb } from '@/views/Tools/RigAnimator/export'
+import {
+  applyPartScales,
+  collectRigBones,
+  createPartScales,
+  measureRigBones,
+  partsInRig
+} from './bodyParts'
+import { applyFaceFeatures, createFaceSettings, featuresInFace, measureFace } from './faceFeatures'
 import {
   DEFAULT_MODEL_PATH,
+  EXPORT_FILENAME_SUFFIX,
+  FACE_OFFSET_CONTROL,
+  FACE_SIZE_CONTROL,
   MODEL_EDITOR_SETUP_CONFIG,
   MODEL_FILE_ACCEPT,
   PART_SCALE_CONTROL
 } from './config'
-import type { ModelEditorBoneRest, ModelEditorPart } from './types'
+import type {
+  FaceFeatureName,
+  FaceMeshRig,
+  ModelEditorBoneRest,
+  ModelEditorConfig,
+  ModelEditorPart
+} from './types'
 
 const route = useRoute()
 const { setViewPanels, clearViewPanels } = useViewPanelsStore()
@@ -49,30 +61,73 @@ const handleProgress = (progress: LoadProgress): void => {
 
 const modelUrl = ref(DEFAULT_MODEL_PATH)
 const availableParts = ref<ModelEditorPart[]>([])
-const reactiveConfig = createReactiveConfig(createPartScales())
+const availableFeatures = ref<FaceFeatureName[]>([])
+const createEditorConfig = (): ModelEditorConfig => ({
+  body: createPartScales(),
+  face: createFaceSettings()
+})
+const reactiveConfig = createReactiveConfig(createEditorConfig())
 
 let sceneReference: THREE.Scene | null = null
 let cameraReference: THREE.Camera | null = null
 let orbitReference: OrbitControls | null = null
 let model: THREE.Object3D | null = null
 let rigBones: ModelEditorBoneRest[] = []
+let faceRig: FaceMeshRig[] = []
 
 /**
- * Only the regions the loaded rig actually has bones for get controls, so a model rigged to
- * another convention shows an empty panel rather than sliders that move nothing.
+ * Only what the loaded model can actually be edited by gets controls: a rig named by another
+ * convention shows no body group, and a model with no head bone shows no face group, rather
+ * than sliders that move nothing.
  */
 const configSchema = computed<ConfigControlsSchema>(() => ({
-  resetParts: { callback: 'resetParts', label: 'Reset Proportions' },
-  ...Object.fromEntries(
-    availableParts.value.map((part) => [
-      part.name,
-      { length: PART_SCALE_CONTROL, size: PART_SCALE_CONTROL }
-    ])
-  )
+  resetProportions: { callback: 'resetProportions', label: 'Reset Proportions' },
+  downloadModel: { callback: 'downloadModel', label: 'Download Model' },
+  ...(availableParts.value.length > 0 && {
+    body: Object.fromEntries(
+      availableParts.value.map((part) => [
+        part.name,
+        { length: PART_SCALE_CONTROL, size: PART_SCALE_CONTROL }
+      ])
+    )
+  }),
+  ...(availableFeatures.value.length > 0 && {
+    face: Object.fromEntries(
+      availableFeatures.value.map((feature) => [
+        feature,
+        { size: FACE_SIZE_CONTROL, height: FACE_OFFSET_CONTROL, depth: FACE_OFFSET_CONTROL }
+      ])
+    )
+  })
 }))
 
-const resetParts = (): void => {
-  reactiveConfig.value = createPartScales()
+const resetProportions = (): void => {
+  reactiveConfig.value = createEditorConfig()
+}
+
+/** The loaded file's own name without its extension, from a path or a tagged blob URL. */
+const modelFileStem = (url: string): string =>
+  (url.split('#').pop() ?? url)
+    .split('/')
+    .pop()
+    ?.replace(/\.[^.]+$/, '') || 'model'
+
+const downloadModel = async (): Promise<void> => {
+  if (model)
+    await exportModelAsGlb(model, `${modelFileStem(modelUrl.value)}${EXPORT_FILENAME_SUFFIX}`)
+}
+
+/**
+ * Give the model a humanoid skeleton when it arrives without one, so a plain uploaded mesh gets
+ * the same sliders as a rigged character, then measure its bones and its face once, at rest.
+ */
+const prepareModel = (loaded: THREE.Object3D): void => {
+  if (collectRigBones(loaded).length === 0) generateAutoRig(loaded)
+  const bones = collectRigBones(loaded)
+  rigBones = measureRigBones(bones)
+  availableParts.value = partsInRig(bones.map((bone) => bone.name))
+  faceRig = measureFace(loaded, bones)
+  availableFeatures.value = featuresInFace(faceRig)
 }
 
 const loadModel = async (url: string): Promise<void> => {
@@ -81,20 +136,24 @@ const loadModel = async (url: string): Promise<void> => {
     sceneReference.remove(model)
     disposeModel(model)
   }
-
-  model = await loadModelFile(url)
-  sceneReference.add(model)
-  // Marker-free measuring still reads local offsets, but the camera framing below reads world
-  // bounds, which are stale until the freshly added model has had its matrices updated once.
-  model.updateMatrixWorld(true)
-
-  const skinnedMesh = rigFindSkinnedMesh(model)
-  const bones = skinnedMesh ? resolveHierarchyBones(skinnedMesh.skeleton.bones) : []
-  rigBones = measureRigBones(bones)
-  availableParts.value = partsInRig(bones.map((bone) => bone.name))
-  resetParts()
-
-  if (cameraReference) frameCameraOnModel(cameraReference, orbitReference, model)
+  model = null
+  loadingVisible.value = true
+  loadingStage.value = 'Loading model'
+  try {
+    const loaded = await loadModelFile(url)
+    sceneReference.add(loaded)
+    model = loaded
+    loaded.updateMatrixWorld(true)
+    loadingStage.value = 'Measuring rig'
+    // Rigging and measuring run in one synchronous stretch, so the overlay gets a frame to show
+    // before a large mesh holds the page.
+    await new Promise(requestAnimationFrame)
+    prepareModel(loaded)
+    resetProportions()
+    if (cameraReference) frameCameraOnModel(cameraReference, orbitReference, loaded)
+  } finally {
+    loadingVisible.value = false
+  }
 }
 
 const handleModelFileChange = (event: Event): void => {
@@ -109,9 +168,16 @@ const handleModelFileChange = (event: Event): void => {
 watch(modelUrl, (url) => loadModel(url))
 watch(configSchema, (schema) => updateViewSchema(route.name as string, schema))
 watch(
-  reactiveConfig,
-  (parts) => {
-    if (rigBones.length > 0) applyPartScales(rigBones, parts)
+  () => reactiveConfig.value.body,
+  (body) => {
+    if (rigBones.length > 0) applyPartScales(rigBones, body)
+  },
+  { deep: true }
+)
+watch(
+  () => reactiveConfig.value.face,
+  (face) => {
+    if (faceRig.length > 0) applyFaceFeatures(faceRig, face)
   },
   { deep: true }
 )
@@ -139,7 +205,8 @@ const init = async (): Promise<void> => {
 onMounted(async () => {
   setViewPanels({ showConfig: true })
   registerViewConfig(route.name as string, reactiveConfig, configSchema.value, undefined, {
-    resetParts
+    resetProportions,
+    downloadModel
   })
   await init()
 })
