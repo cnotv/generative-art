@@ -551,24 +551,13 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   landmark the pose detector places outside the image counts as out of view however confident
   it claims to be: it is a guess, so legs below a webcam framed on the upper body keep their rest
   pose instead of following it.
-- **Limb lengths.** Copied angles alone say which way a limb points, never how far it reaches: a
-  rig whose arms are longer than the performer's, relative to the body each hangs off, overshoots
-  every gesture, so a hand brought to the chin lands inside the head and two arms brought together
-  in front of the chest pass through one another. **Fit Limb Lengths to Performer**, on by default,
-  resizes each limb segment instead of bending it, to the length the performer's own measures at
-  the rig's scale, taken from the shoulder span the camera and the rig both show. Both sides always
-  take one shared scale, since the detector reads a left and a right limb of measurably different
-  lengths on the same frame and a lopsided rig is what makes two limbs cross mid turn. Each pair is
-  measured once, on the first frame that shows a whole limb, and then left alone: a performer's
-  proportions do not change while they are being filmed, and re-measuring every frame would let the
-  detector's own noise make a limb breathe in and out, or shorten one crossing behind the body to
-  its foreshortened reading. Switching the toggle off puts every limb back to its rest length, which
-  is also how to measure a fresh fit, for a different performer or a rig loaded since. The hand or
-  foot on the end keeps its own size. Recorded keyframes store rotations only, so a take recorded
-  from a fitted rig plays back at whatever length the rig carries then.
-
-  ![The same detected pose of both hands brought up to the chin, applied twice: unfitted on the left, where the character's longer arms carry both hands past each other across the face, and fitted on the right, where each hand stops at the chin and the whole character stands at the performer's own proportions](/img/animation/rig-camera-limb-fit.webp)
-
+- **Limb lengths.** Copied angles alone say which way a limb points, never how far it reaches, so
+  **Fit Limb Lengths to Performer** resizes each limb segment to the performer's own length at the
+  rig's scale, measured from the shoulder span both bodies show. Both sides of a pair take one
+  shared scale, the pair is measured once on the first frame that shows a whole limb, and the hand
+  or foot on the end keeps its own size. See **When the capture does not look like you** below for
+  what it looks like and when to switch it off. Recorded keyframes store rotations only, so a take
+  recorded from a fitted rig plays back at whatever length the rig carries then.
 - **Hands.** See **Fingers from the camera** above.
 
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
@@ -596,12 +585,8 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
   frame shows no face, the case of a face small in a wide shot.
 - **Hand Tracker for Fingers** runs the Hand Landmarker. **Hand Search Around Wrists** looks
   again in a crop around a wrist the whole frame found no hand at. **Hand Side by Nearest Wrist**
-  sides a hand by the body's wrist instead of the detector's own label. **Hand Confidence Needed**,
-  0.7 by default, drops a hand the detector is less sure of than that: its score reads a palm's own
-  orientation, so it sags exactly when a hand is about to come back turned the wrong way round, and
-  the dropped frame then holds the last trusted reading instead (see **Hold a Lost Hand** below).
-  Raise it to trim more of a capture where a hand keeps flipping; lower it when hands stop being
-  picked up at all.
+  sides a hand by the body's wrist instead of the detector's own label. **Hand Confidence Needed**
+  skips a hand the detector is unsure of; see **When the capture does not look like you** below.
 - **Ignore Body Outside Image** treats a body landmark placed outside the picture as not
   detected. **Mirror Live Camera** reflects the webcam's body, hands and head to match its
   mirrored preview. **Only While Video Plays** stops reading a paused video.
@@ -698,15 +683,9 @@ movement by eye:
 | Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                          |
 | Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                              |
 
-**Hold Undetected Landmarks**, on by default, keeps every landmark the detector stops seeing at the
-position it was last detected in, carried along by whichever joint above it is still detected: a
-wrist that drops out travels with its elbow, and an elbow gone too with its shoulder. Nothing is
-ever replaced by a default or a rest pose, only by the last thing actually detected, so a limb the
-camera cannot make out right now keeps the pose it was really in instead of snapping back to rest.
-The same applies to a face the tracker misses, which keeps its last rotation, and to a hand missing
-for longer than **Hold a Lost Hand** covers. Turn it off to have an undetected limb fall back to the
-rest pose, as it used to. A landmark never yet detected has nothing to hold, so legs below a webcam
-framed on the upper body still stay at rest.
+**Hold Undetected Landmarks**, on by default, keeps a landmark the detector loses at its last
+detected position instead of dropping its bone back to rest; see **When the capture does not look
+like you** below.
 
 **Bones Settle** works on the result rather than the landmarks: each bone eases from where the
 last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,
@@ -718,6 +697,66 @@ spread over several readings instead and mostly undone by the next good reading 
 0 turns the cap off. Max Jump
 clamps how far a landmark may move in a single reading, so a genuine fast movement still gets
 there, just over a couple of extra readings instead of one.
+
+### When the capture does not look like you
+
+Three settings handle the three ways a capture most often goes wrong on a model built differently
+from the person in front of the camera. All three are on by default. This is how to tell which
+one to reach for, and what each one looks like doing its job.
+
+**Before starting**, stand so both arms, and the legs if they are in shot, are fully in view for
+the first second. That first frame is when the performer's proportions are measured.
+
+| What goes wrong                                    | Setting                       | Section          |
+| -------------------------------------------------- | ----------------------------- | ---------------- |
+| Hands cross the face, arms pass through each other | Fit Limb Lengths to Performer | Camera Bones     |
+| A hand keeps turning over                          | Hand Confidence Needed        | Camera Detect    |
+| A limb snaps back when it leaves view              | Hold Undetected Landmarks     | Camera Smoothing |
+
+#### Hands cross the face
+
+![The same pose of both hands brought up to the chin, applied twice: with the fit off on the left, the character's longer arms carry both hands past each other across the face; with it on, on the right, each hand stops at the chin and the whole character stands at the performer's own proportions](/img/animation/rig-camera-limb-fit.webp)
+
+The retargeting copies angles, and an angle says which way an arm points but not how far it
+reaches. A model whose arms are longer than the performer's, for the same body, overshoots every
+gesture: the default character's arms are 2.24 shoulder spans long against a person's 1.44, so a
+hand brought to the chin ends up across the face, and two hands meeting in front of the chest
+pass through each other.
+
+![The Camera Bones section of the rig panel, Fit Limb Lengths to Performer ticked](/img/animation/rig-camera-panel-fit.webp)
+
+**Fit Limb Lengths to Performer** resizes the model's arms and legs to the performer's own
+proportions, so every gesture lands where the performer's does. Expect the model to change shape:
+a character drawn with long limbs stands shorter, as the right half of the picture shows. The fit
+is measured once, so it never pulses with the detector's noise; to measure again, for another
+performer or a model loaded since, switch it off and on while the new performer is in full view.
+Switch it off for good to keep the character's own proportions and accept the reach.
+
+#### A hand keeps turning over
+
+![The Camera Detect section of the rig panel, the Hand Confidence Needed slider at 0.7](/img/animation/rig-camera-panel-hand-confidence.webp)
+
+The Hand Landmarker scores how sure it is of every hand it finds, and that score drops exactly
+when a palm is about to be read back to front. **Hand Confidence Needed**, 0.7 by default, skips
+every reading scored below it, and the hand keeps its last trusted pose meanwhile. Raise it a step
+at a time, 0.8 then 0.9, while a hand still flips; lower it if the fingers freeze because hands
+stop being picked up at all. It works alongside two sliders under **Camera Smoothing**: it drops
+the readings the detector itself doubts, **Palm Turn to Confirm** catches the confident ones that
+still turn further than a wrist can, and **Hold a Lost Hand** covers the gap either leaves.
+
+#### A limb snaps back when it leaves view
+
+![Three moments of the same capture: the left arm detected overhead; the arm lost from view with the hold off, snapped back to the rest pose; and the arm lost with the hold on, still raised where it was last seen](/img/animation/rig-camera-hold-landmarks.webp)
+
+![The Camera Smoothing section of the rig panel, Hold Undetected Landmarks ticked](/img/animation/rig-camera-panel-hold.webp)
+
+**Hold Undetected Landmarks** keeps a joint the camera loses where it was last seen instead of
+dropping it back to the rest pose, and carries it along with the nearest joint above it that is
+still in view: a lost wrist moves with its elbow, a lost elbow with its shoulder. A held limb
+stays held for as long as the capture runs, so switch it off if limbs leaving the shot should
+return to rest. **Landmark Confidence Needed** decides what counts as lost: raise it to hold more
+of the weak readings, lower it to trust them instead. A joint never detected at all has nothing to
+hold, so legs below a webcam framed on the upper body still stay at rest.
 
 ### Frame shortcuts
 
