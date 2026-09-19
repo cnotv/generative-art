@@ -1,6 +1,8 @@
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import type { RigPanelGroup } from './types'
 import {
+  BONE_MAPPING_PATH_PREFIX,
+  RIG_BONE_SLOTS,
   POSITION_STEP_FRACTION,
   ROTATION_CONTROL,
   CAMERA_SMOOTHING_MILLISECONDS_RANGE,
@@ -55,6 +57,30 @@ const boneControls = ({
       }
     : {})
 })
+
+/**
+ * Which bone of this rig plays each canonical role the camera mapping drives. Every role is a
+ * dropdown of the rig's own bone names, so a rig that names nothing the way Mixamo does can still
+ * be captured onto; the two controls above them are the faster paths to the same thing, one
+ * guessing the lot from the names and one taking whichever bone was last clicked in the viewport.
+ */
+const boneMappingControls = ({ boneNames }: RigPanelAvailability): ConfigControlsSchema =>
+  boneNames.length === 0
+    ? {}
+    : {
+        autoMapBones: { callback: 'autoMapBones', label: 'Guess Mapping from Names' },
+        boneMappingSlot: {
+          options: RIG_BONE_SLOTS.map((slot) => ({ value: slot.canonical, label: slot.label })),
+          label: 'Role for the Selected Bone'
+        },
+        assignSelectedBone: { callback: 'assignSelectedBone', label: 'Assign Selected Bone' },
+        ...Object.fromEntries(
+          RIG_BONE_SLOTS.map((slot) => [
+            `${BONE_MAPPING_PATH_PREFIX}${slot.canonical}`,
+            { options: boneNames, label: slot.label }
+          ])
+        )
+      }
 
 const cameraPoseControls: ConfigControlsSchema = {
   cameraGroundFeet: { checkbox: true, label: 'Keep Feet on Ground' },
@@ -154,6 +180,7 @@ const physicsControls = (physicsEnabled: boolean): ConfigControlsSchema => ({
 export const buildRigPanelGroups = (availability: RigPanelAvailability): RigPanelGroup[] =>
   [
     { key: 'bone', label: 'Bone', schema: boneControls(availability) },
+    { key: 'boneMapping', label: 'Bone Mapping', schema: boneMappingControls(availability) },
     ...(availability.canCaptureFromCamera
       ? [
           { key: 'cameraPose', label: 'Camera Pose', schema: cameraPoseControls },

@@ -139,8 +139,10 @@ height while the camera drives the rig.
 ![The default character in its rest pose standing on the sand coloured ground disc, its shadow cast behind it](/img/animation/rig-ground.webp)
 
 The other docked buttons, left to right: **Bone Markers**, once the model carries a rig, shows
-or hides the markers described next. **Show Rig Panel**, a gear, opens and closes the rig panel
-described under **Capturing a pose from the camera**, which also holds every setting. **Start
+or hides the markers described next. **Map Bones and Check Them** opens the mapping work
+described under **Mapping a rig that names its bones differently**. **Show Rig Panel**, a gear,
+opens and closes the rig panel described under **Capturing a pose from the camera**, which also
+holds every setting. **Start
 Camera Tracking** opens that panel if it is closed and starts following the webcam, or stops
 it. **Record Motion**, a solid red dot, appears once the panel has a live camera or a video to
 record from, see **Recording motion** below. **Camera Preview**, while the panel is open, shows
@@ -149,7 +151,7 @@ Flow** starts and stops the drip; dropping one on demand is a touch, not a butto
 its own section below. Each toggle flips the same setting as its checkbox in the rig panel, so
 the two places always agree.
 
-![Upload Model, Bone Markers, the rig panel gear, Start Camera Tracking, the red Record Motion dot, Camera Preview and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
+![Upload Model, Bone Markers, Map Bones and Check Them, the rig panel gear, Start Camera Tracking, Camera Preview and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
@@ -388,10 +390,51 @@ is in [Auto-rigging an upload](/docs/journey/auto-rigging-uploads). There is no 
 humanoid: the button is offered whenever a skeleton is missing, and posing it is how you find
 out whether the fit works for that particular mesh.
 
+## Mapping a rig that names its bones differently
+
+The camera mapping asks for bones by canonical, Mixamo-style name: `mixamorigLeftForeArm` and
+the rest. A rig exported from anywhere else calls the same bones something else, and nothing the
+camera reads reaches any of them. **Map Bones and Check Them** on the canvas is where that is
+fixed: it turns the bone markers on, opens the rig panel and starts the crossing check, all at
+once, because mapping is done by looking at the rig rather than by reading a list.
+
+**Bone Mapping** in the panel holds one dropdown per role, nineteen of them: the hips, the neck
+and head, and a shoulder, upper arm, forearm, hand, thigh, shin, foot and toes for each side.
+Every rig is guessed as it loads, from the bone names alone, so a Mixamo rig arrives already
+mapped to itself and one named `upperarm_l`, `lowerarm_l`, `hand_l` arrives mapped as well: a
+role matches on name fragments, the more specific fragment winning, so `upperarm` claims the
+bone that a bare `arm` would also have matched. **Guess Mapping from Names** runs that same
+guess again.
+
+A wrong guess is corrected either from the list or from the model: click the bone in the 3D
+view, pick its role under **Role for the Selected Bone**, and press **Assign Selected Bone**.
+The dropdowns and the viewport always agree, since both are writing the one mapping.
+
+Fingers and toes have no role of their own. They are found by name beneath the mapped hand and
+foot, so a rig that names them the Mixamo way curls its fingers from the camera and one that
+does not leaves them at rest while the rest of the body still follows.
+
+### Watching for limbs that cross
+
+A mapping with two roles the wrong way round rarely looks wrong at rest. It looks wrong in
+motion: the hands swap sides and cross each other, or one comes up over the face. While the
+mode is on, the hands, forearms and feet are watched against each other and against the head on
+every frame, and any pair that comes closer than a twentieth of the rig's own spread is named at
+the top of the canvas. It runs over whatever is posing the rig at the time, a live capture, a
+recorded take played back, or a bone dragged by hand, which is what makes it a check of the
+mapping rather than of one still pose.
+
+It is a hint, not a verdict. Hands genuinely clasped together report too, and that is the
+intended trade: a threshold tight enough never to report a real pose would also miss the
+mapping errors it exists to catch.
+
+![The Bone Mapping section listing each role against the rig's own bone names, beside the model with a hand pulled up to its face and Hand R meets Head named at the top of the canvas](/img/animation/rig-bone-mapping.webp)
+
 ## Capturing a pose from the camera
 
 Once the rig has every bone the mapping cannot do without (`mixamorigHips` and both arms and
-forearms; the spine, neck, head, legs, fingers and toes are driven whenever the rig has them),
+forearms, or whatever this rig maps those roles to; the spine, neck, head, legs, fingers and
+toes are driven whenever the rig has them),
 the rig panel captures from the camera. It docks at the top right of the screen: the 3D view
 stays fully visible and interactive beside it, so you can watch the rig mirror you live instead
 of only seeing a preview of the camera feed. The gear on the canvas opens it without starting

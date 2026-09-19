@@ -254,6 +254,36 @@ empty stream reloads the element even when it held none, rewinding and pausing t
 Record Motion kept sampling a frozen frame. The start now notices it was cancelled, and a stream
 is only cleared when one was actually set.
 
+## Names as the interface
+
+Every rule above addresses a bone by a canonical, Mixamo-style name. That is an interface, not a
+fact about the rig in front of it, and any other exporter breaks it: the mapping reads a
+perfectly good skeleton and finds nothing to turn.
+
+Two ways out present themselves. One is to teach every rule the rig's own names, which spreads a
+lookup through every line that mentions a bone and grows with each new rule. The other is to
+rename once, at the boundary: a table saying which bone plays each of nineteen roles, applied as
+the pose begins, so the bones, the rest pose and the list of drivable bones all arrive keyed by
+the names the rules already ask for. The rules stay written against the interface, and the table
+is the only place a rig's own naming is known.
+
+Two places still hold a bone rather than a name it was found by: the joint limits, which read
+their range off the name, and the walk up the spine, which stops when it reaches the hips. Both
+translate back through the same table, which is why a remapped rig is still held inside human
+joint ranges rather than quietly losing that check.
+
+Filling the table by hand for nineteen roles is tedious enough to be worth guessing, and guessing
+from names alone is unreliable enough to be worth correcting. So the table is guessed on load and
+editable after: the guess matches name fragments, the most specific one winning, and where two
+bones match equally the plainer name takes it, which is what keeps a thigh out of the shin's
+role. Correcting it is a click on the bone in the viewport and a role to give it, because the
+error being fixed is a visual one.
+
+That error has a shape worth naming: a mapping with two roles swapped looks fine at rest and
+wrong only in motion, when the hands cross each other or come up over the face. A distance check
+between the hands, the forearms, the feet and the head, running on every frame of whatever is
+posing the rig, catches it while the capture is still running instead of at the end of a take.
+
 ## Limits
 
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest
@@ -267,3 +297,5 @@ is only cleared when one was actually set.
 - **No shrug.** Nothing in the landmarks separates a raised clavicle from a tilted chest.
 - **No expressions.** The bundled models carry no face blend shapes, so the face drives the head's
   rotation only.
+- **Fingers keep their canonical names.** The nineteen roles stop at the hand and the foot, so a
+  remapped rig curls its fingers only where they are already named the Mixamo way beneath it.

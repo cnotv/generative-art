@@ -11,20 +11,33 @@ import {
   easeBonesFromTransforms
 } from './cameraPoseRetarget'
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
-import type { CameraPoseFrame, CameraPoseMappingOptions, CameraRetargetRest } from './types'
+import { resolveBoneName } from './boneMapping'
+import type {
+  CameraPoseFrame,
+  CameraPoseMappingOptions,
+  CameraRetargetRest,
+  RigBoneMapping
+} from './types'
 
 /**
  * Owns the camera-pose-capture readiness check and applies a detected frame to the rig, split out
  * of `useRigModel` to stay under its function-length lint cap.
  * @param bones The rig's current bones
  * @param resetAllBonesToRest Snaps every bone not excluded back to its loaded rest transform
+ * @param boneMapping Which bone plays each canonical role, from the Bone Mapping panel
  */
 export const useRigCameraPose = (
   bones: Ref<THREE.Bone[]>,
-  resetAllBonesToRest: (excludeBoneNames?: Set<string>) => void
+  resetAllBonesToRest: (excludeBoneNames?: Set<string>) => void,
+  boneMapping: Ref<RigBoneMapping>
 ) => {
+  /** Readiness is asked of the mapped bones, so a rig naming its own bones some other way can
+   * still capture once its arms and hips are mapped. */
   const canCaptureFromCamera = computed(() =>
-    CAMERA_POSE_REQUIRED_BONES.every((name) => bones.value.some((bone) => bone.name === name))
+    CAMERA_POSE_REQUIRED_BONES.every((canonical) => {
+      const name = resolveBoneName(boneMapping.value, canonical)
+      return bones.value.some((bone) => bone.name === name)
+    })
   )
 
   let retargetRest: CameraRetargetRest | null = null
@@ -66,7 +79,8 @@ export const useRigCameraPose = (
     if (!retargetRest) return
     const drivenBoneNames = cameraFrameDrivenBoneNames(
       frame,
-      boneNamesInGroups(bones.value, targetGroups)
+      boneNamesInGroups(bones.value, targetGroups),
+      boneMapping.value
     )
     const previousTransforms =
       options.boneSmoothingMilliseconds > 0 || options.maxBoneTurnRadiansPerSecond > 0
@@ -75,7 +89,12 @@ export const useRigCameraPose = (
     resetAllBonesToRest(
       new Set(bones.value.map((bone) => bone.name).filter((name) => !drivenBoneNames.has(name)))
     )
-    applyCameraPoseFrame(bones.value, retargetRest, frame, options, drivenBoneNames)
+    applyCameraPoseFrame(
+      { bones: bones.value, rest: retargetRest, mapping: boneMapping.value },
+      frame,
+      options,
+      drivenBoneNames
+    )
     const elapsedSeconds =
       lastAppliedAtMilliseconds === null
         ? Infinity

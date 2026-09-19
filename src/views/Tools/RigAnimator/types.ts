@@ -12,6 +12,8 @@ export interface RigAnimatorConfig {
   model: string
   poses: string
   selectedBone: string
+  /** The canonical role the Bone Mapping panel assigns the selected bone to. */
+  boneMappingSlot: string
   boneRotation: { x: number; y: number; z: number }
   bonePosition: { x: number; y: number; z: number }
   frame: number
@@ -203,6 +205,22 @@ export interface CameraDetectionOptions {
   detectOnlyWhilePlaying: boolean
 }
 
+/**
+ * Which bone of the loaded rig plays each canonical humanoid role, keyed by the canonical
+ * (Mixamo) name the camera retargeting asks for. A rig that already carries those names maps
+ * each one to itself; any other rig maps them to whatever its own bones are called.
+ */
+export type RigBoneMapping = Record<string, string>
+
+/** One canonical role the camera mapping drives, and how to spot it among a rig's own bone names. */
+export interface RigBoneSlot {
+  canonical: string
+  label: string
+  side: 'left' | 'right' | 'center'
+  /** Name fragments that identify this role; the longest one a bone matches wins. */
+  match: string[]
+}
+
 /** One accordion section of the rig panel: its title and the controls inside it. */
 export interface RigPanelGroup {
   key: string
@@ -231,6 +249,14 @@ export interface CameraBoneTransform {
 export interface CameraRetargetRest {
   worldQuaternions: Map<string, THREE.Quaternion>
   worldPositions: Map<string, THREE.Vector3>
+}
+
+/** The rig a detected frame is applied to: its bones, the rest pose they are turned from, and
+ * which of them plays each canonical role. */
+export interface CameraRetargetRig {
+  bones: THREE.Bone[]
+  rest: CameraRetargetRest
+  mapping: RigBoneMapping
 }
 
 /** A square region of a source image, in pixels, that a close-range detector is re-run on. */

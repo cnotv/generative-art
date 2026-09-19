@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import type { SetupConfig } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
 import type { ControlMapping } from '@webgamekit/controls'
-import type { CameraJointLimitDegrees } from './types'
+import type { CameraJointLimitDegrees, RigBoneSlot } from './types'
 
 export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: 0xf5f0e8 },
@@ -51,6 +51,117 @@ export const BONE_MARKER_COLOR_SELECTED = 0xf0a8a0
 export const BONE_MARKER_DEPTH_FALLOFF = 0.82
 /** A marker never shrinks past this fraction of its rig's base size, however deep the chain. */
 export const BONE_MARKER_MIN_SCALE = 0.35
+
+/** Prefix that routes a Bone Mapping panel field to the mapping rather than to a config field. */
+export const BONE_MAPPING_PATH_PREFIX = 'boneMap.'
+
+/**
+ * Every canonical role the camera retargeting drives by name, in panel order, with the name
+ * fragments that identify it in a rig that names its bones differently. Fingers and toes are
+ * left out: they are found by walking down from the hand and foot, so mapping those two is
+ * enough, and listing forty finger joints would bury the nineteen that matter.
+ *
+ * The more specific fragment wins, so `upperarm` claims a bone that `arm` would also match;
+ * where two bones match the same fragment the plainer name wins, which is what keeps `leftLeg`
+ * out of the slot `leftUpLeg` already fills.
+ */
+export const RIG_BONE_SLOTS: RigBoneSlot[] = [
+  { canonical: 'mixamorigHips', label: 'Hips', side: 'center', match: ['hips', 'pelvis', 'hip'] },
+  { canonical: 'mixamorigNeck', label: 'Neck', side: 'center', match: ['neck'] },
+  { canonical: 'mixamorigHead', label: 'Head', side: 'center', match: ['head', 'skull'] },
+  {
+    canonical: 'mixamorigLeftShoulder',
+    label: 'Shoulder L',
+    side: 'left',
+    match: ['shoulder', 'clavicle']
+  },
+  { canonical: 'mixamorigLeftArm', label: 'Upper Arm L', side: 'left', match: ['upperarm', 'arm'] },
+  {
+    canonical: 'mixamorigLeftForeArm',
+    label: 'Forearm L',
+    side: 'left',
+    match: ['forearm', 'lowerarm', 'elbow']
+  },
+  { canonical: 'mixamorigLeftHand', label: 'Hand L', side: 'left', match: ['hand', 'wrist'] },
+  {
+    canonical: 'mixamorigLeftUpLeg',
+    label: 'Thigh L',
+    side: 'left',
+    match: ['upleg', 'upperleg', 'thigh']
+  },
+  {
+    canonical: 'mixamorigLeftLeg',
+    label: 'Shin L',
+    side: 'left',
+    match: ['lowerleg', 'shin', 'calf', 'leg']
+  },
+  { canonical: 'mixamorigLeftFoot', label: 'Foot L', side: 'left', match: ['foot', 'ankle'] },
+  {
+    canonical: 'mixamorigLeftToeBase',
+    label: 'Toes L',
+    side: 'left',
+    match: ['toebase', 'toe', 'ball']
+  },
+  {
+    canonical: 'mixamorigRightShoulder',
+    label: 'Shoulder R',
+    side: 'right',
+    match: ['shoulder', 'clavicle']
+  },
+  {
+    canonical: 'mixamorigRightArm',
+    label: 'Upper Arm R',
+    side: 'right',
+    match: ['upperarm', 'arm']
+  },
+  {
+    canonical: 'mixamorigRightForeArm',
+    label: 'Forearm R',
+    side: 'right',
+    match: ['forearm', 'lowerarm', 'elbow']
+  },
+  { canonical: 'mixamorigRightHand', label: 'Hand R', side: 'right', match: ['hand', 'wrist'] },
+  {
+    canonical: 'mixamorigRightUpLeg',
+    label: 'Thigh R',
+    side: 'right',
+    match: ['upleg', 'upperleg', 'thigh']
+  },
+  {
+    canonical: 'mixamorigRightLeg',
+    label: 'Shin R',
+    side: 'right',
+    match: ['lowerleg', 'shin', 'calf', 'leg']
+  },
+  { canonical: 'mixamorigRightFoot', label: 'Foot R', side: 'right', match: ['foot', 'ankle'] },
+  {
+    canonical: 'mixamorigRightToeBase',
+    label: 'Toes R',
+    side: 'right',
+    match: ['toebase', 'toe', 'ball']
+  }
+]
+
+/**
+ * The bone pairs the crossing check watches while a capture or a playback runs: the ones a
+ * mapping that has two slots the wrong way round drives into each other, rather than every
+ * pair in the rig. Hands crossing each other or reaching the head is what a swapped left and
+ * right looks like from the front, which is the angle a capture is usually judged from.
+ */
+export const RIG_BONE_CROSSING_PAIRS: [string, string][] = [
+  ['mixamorigLeftHand', 'mixamorigRightHand'],
+  ['mixamorigLeftHand', 'mixamorigHead'],
+  ['mixamorigRightHand', 'mixamorigHead'],
+  ['mixamorigLeftForeArm', 'mixamorigRightForeArm'],
+  ['mixamorigLeftFoot', 'mixamorigRightFoot']
+]
+
+/**
+ * How close two watched bones come, as a fraction of the rig's own spread, before the check
+ * calls them crossed. Deliberately near enough that hands genuinely clasped together also
+ * report: the check is a hint about a mapping, not a verdict on a pose.
+ */
+export const BONE_CROSSING_DISTANCE_FRACTION = 0.05
 
 export const DEFAULT_FPS = 30
 /**

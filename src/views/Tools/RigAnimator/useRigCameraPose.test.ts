@@ -3,6 +3,7 @@ import { shallowRef } from 'vue'
 import * as THREE from 'three'
 import { useRigCameraPose } from './useRigCameraPose'
 import { captureRestPoses, resetAllBonesToRest } from './boneDragTarget'
+import { guessBoneMapping } from './boneMapping'
 import { RIG_BODY_PART_GROUPS, type RigBodyPartGroup } from './bodyPartGroups'
 import {
   buildBodyLandmarks,
@@ -20,8 +21,10 @@ const EMPTY_FRAME: CameraPoseFrame = { bodyLandmarks: null, handLandmarks: {}, h
 const buildWiredRig = () => {
   const bones = buildMixamoRig()
   const restPoses = captureRestPoses(bones)
-  const rig = useRigCameraPose(shallowRef(bones), (exclude) =>
-    resetAllBonesToRest(bones, restPoses, exclude)
+  const rig = useRigCameraPose(
+    shallowRef(bones),
+    (exclude) => resetAllBonesToRest(bones, restPoses, exclude),
+    shallowRef(guessBoneMapping(bones.map((bone) => bone.name)))
   )
   const bone = (name: string): THREE.Bone => bones.find((candidate) => candidate.name === name)!
   return { ...rig, bone, restPoses }

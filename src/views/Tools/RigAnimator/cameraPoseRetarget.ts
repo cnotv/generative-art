@@ -13,6 +13,7 @@ import {
   lowPassBlendFactor,
   smoothingCutoffHertz
 } from './cameraPoseMapping'
+import { boneNameCanonicalizer, resolveBoneName } from './boneMapping'
 import type {
   CameraBoneTransform,
   CameraHandLandmark,
@@ -20,7 +21,9 @@ import type {
   CameraLandmark,
   CameraPoseFrame,
   CameraPoseMappingOptions,
-  CameraRetargetRest
+  CameraRetargetRest,
+  CameraRetargetRig,
+  RigBoneMapping
 } from './types'
 
 const HIPS = 'mixamorigHips'
@@ -107,10 +110,13 @@ const FOOT_BONE_NAMES = [
 ]
 
 interface RetargetContext {
+  /** Keyed by canonical name, whatever the rig calls its own bones; see `boneNameCanonicalizer`. */
   bonesByName: Map<string, THREE.Bone>
   rest: CameraRetargetRest
   drivenBoneNames: Set<string>
   options: CameraPoseMappingOptions
+  /** A bone's canonical name, for the few places holding a bone rather than the name it was found by. */
+  canonicalOf: (name: string) => string
   /** The rig's own left, and the way it faces, at rest. */
   restLateral: THREE.Vector3
   restForward: THREE.Vector3
@@ -161,20 +167,22 @@ export const captureCameraRetargetRest = (bones: THREE.Bone[]): CameraRetargetRe
  * pose the camera simply is not showing right now back to rest.
  * @param frame What the camera found this frame
  * @param boneNamesInScope The bones the Merge Target selection allows touching
+ * @param mapping Which bone plays each canonical role, from the Bone Mapping panel
  * @returns The bones to reset and drive this frame
  */
 export const cameraFrameDrivenBoneNames = (
   frame: CameraPoseFrame,
-  boneNamesInScope: Set<string>
+  boneNamesInScope: Set<string>,
+  mapping: RigBoneMapping
 ): Set<string> => {
   if (frame.bodyLandmarks) return boneNamesInScope
   const handNames = RIG_SIDES.filter((side) => frame.handLandmarks[side]).map((side) =>
-    sideBone(side, 'Hand')
+    resolveBoneName(mapping, sideBone(side, 'Hand'))
   )
   const isFinger = (name: string): boolean =>
     handNames.some((handName) => name.startsWith(handName) && name !== handName)
-  const isHead = (name: string): boolean =>
-    frame.headRotation !== null && (name === NECK || name === HEAD)
+  const headNames = [resolveBoneName(mapping, NECK), resolveBoneName(mapping, HEAD)]
+  const isHead = (name: string): boolean => frame.headRotation !== null && headNames.includes(name)
   return new Set([...boneNamesInScope].filter((name) => isFinger(name) || isHead(name)))
 }
 
@@ -371,9 +379,11 @@ const limitJoint = (
   bone: THREE.Bone,
   local: THREE.Quaternion
 ): THREE.Quaternion => {
-  const limit = jointLimitFor(bone.name)
-  const restWorld = context.rest.worldQuaternions.get(bone.name)
-  const parentRestWorld = context.rest.worldQuaternions.get(bone.parent?.name ?? '')
+  const limit = jointLimitFor(context.canonicalOf(bone.name))
+  const restWorld = context.rest.worldQuaternions.get(context.canonicalOf(bone.name))
+  const parentRestWorld = context.rest.worldQuaternions.get(
+    context.canonicalOf(bone.parent?.name ?? '')
+  )
   if (!context.options.limitJoints || !limit || !restWorld || !parentRestWorld) return local
   const restLocal = parentRestWorld.clone().invert().multiply(restWorld)
   const fromRest = restLocal.clone().invert().multiply(local)
@@ -536,8 +546,11 @@ const observeTorso = (context: RetargetContext, point: BodyPointReader): TorsoRo
 const spineBoneNames = (context: RetargetContext): string[] => {
   const top = (context.bonesByName.get(NECK) ?? context.bonesByName.get('mixamorigLeftShoulder'))
     ?.parent
-  const collect = (node: THREE.Object3D | null | undefined): string[] =>
-    node instanceof THREE.Bone && node.name !== HIPS ? [...collect(node.parent), node.name] : []
+  const collect = (node: THREE.Object3D | null | undefined): string[] => {
+    if (!(node instanceof THREE.Bone)) return []
+    const canonical = context.canonicalOf(node.name)
+    return canonical === HIPS ? [] : [...collect(node.parent), canonical]
+  }
   return collect(top)
 }
 
@@ -735,6 +748,10 @@ const applyArm = (
  * the detected palm and re-expressed relative to wherever the rig's own hand is right now, so a
  * hand filmed on its own, with no arm in view to place it, still curls and spreads its fingers
  * correctly on a rig whose arm stays at rest.
+ *
+ * ponytail: finger bones are addressed by canonical name and have no panel slot of their own, so a
+ * rig mapped bone by bone curls fingers only where it already names them the Mixamo way under its
+ * mapped hand; read them from the hand's own children if a rig ever needs it.
  */
 const applyFingers = (
   context: RetargetContext,
@@ -849,21 +866,36 @@ const groundFeet = (context: RetargetContext): void => {
   )
 }
 
+/**
+ * Everything the mapping reads, keyed by the canonical names it asks for. A rig whose bones are
+ * named some other way is rekeyed once here, through its panel mapping, rather than every lookup
+ * below having to know that this rig calls its forearm `lowerarm_l`.
+ */
 const createRetargetContext = (
-  bones: THREE.Bone[],
-  rest: CameraRetargetRest,
+  { bones, rest, mapping }: CameraRetargetRig,
   drivenBoneNames: Set<string>,
   options: CameraPoseMappingOptions
 ): RetargetContext | null => {
-  const restLeftArm = rest.worldPositions.get('mixamorigLeftArm')
-  const restRightArm = rest.worldPositions.get('mixamorigRightArm')
+  const renameTo = boneNameCanonicalizer(mapping)
+  const canonicalOf = renameTo ?? ((name: string): string => name)
+  const rekeyed = <T>(source: Map<string, T>): Map<string, T> =>
+    renameTo ? new Map([...source].map(([name, value]) => [canonicalOf(name), value])) : source
+  const canonicalRest = renameTo
+    ? {
+        worldQuaternions: rekeyed(rest.worldQuaternions),
+        worldPositions: rekeyed(rest.worldPositions)
+      }
+    : rest
+  const restLeftArm = canonicalRest.worldPositions.get('mixamorigLeftArm')
+  const restRightArm = canonicalRest.worldPositions.get('mixamorigRightArm')
   if (!restLeftArm || !restRightArm) return null
   const restLateral = restLeftArm.clone().sub(restRightArm).normalize()
   return {
-    bonesByName: new Map(bones.map((bone) => [bone.name, bone])),
-    rest,
-    drivenBoneNames,
+    bonesByName: new Map(bones.map((bone) => [canonicalOf(bone.name), bone])),
+    rest: canonicalRest,
+    drivenBoneNames: renameTo ? new Set([...drivenBoneNames].map(canonicalOf)) : drivenBoneNames,
     options,
+    canonicalOf,
     restLateral,
     restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize()
   }
@@ -876,20 +908,19 @@ const createRetargetContext = (
  * are copied, so a rig whose proportions differ from the performer's still stretches fully
  * straight in a T-pose and reaches overhead in a stretch. Parents are posed before children, so
  * each bone only adds its own turn on top of what the bone above it already did.
- * @param bones The rig's bones, with every bone in `drivenBoneNames` already reset to rest
- * @param rest The rig's rest pose, from `captureCameraRetargetRest`
+ * @param rig The bones with every one in `drivenBoneNames` already reset to rest, their rest pose
+ *   from `captureCameraRetargetRest`, and which bone plays each canonical role
  * @param frame What the camera found this frame, oriented and smoothed
  * @param options Which rules to apply, each switchable from the Config panel
  * @param drivenBoneNames The bones this frame may change, from `cameraFrameDrivenBoneNames`
  */
 export const applyCameraPoseFrame = (
-  bones: THREE.Bone[],
-  rest: CameraRetargetRest,
+  rig: CameraRetargetRig,
   frame: CameraPoseFrame,
   options: CameraPoseMappingOptions,
   drivenBoneNames: Set<string>
 ): void => {
-  const context = createRetargetContext(bones, rest, drivenBoneNames, options)
+  const context = createRetargetContext(rig, drivenBoneNames, options)
   if (!context) return
   const point = readBodyPoints(frame.bodyLandmarks, options)
   const torso = observeTorso(context, point)

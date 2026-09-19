@@ -11,6 +11,7 @@ import {
   easeBonesFromTransforms
 } from './cameraPoseRetarget'
 import { mirrorCameraLandmarks } from './cameraPoseMapping'
+import { guessBoneMapping } from './boneMapping'
 import { faceMatrixToHeadRotation, mirrorCameraPoseFrame } from './cameraPoseFrame'
 import {
   buildBodyLandmarks,
@@ -38,11 +39,10 @@ const poseRig = (frame: Partial<CameraPoseFrame>, options = DEFAULT_OPTIONS) => 
   }
   const allBoneNames = new Set(bones.map((bone) => bone.name))
   applyCameraPoseFrame(
-    bones,
-    rest,
+    { bones, rest, mapping: {} },
     fullFrame,
     options,
-    cameraFrameDrivenBoneNames(fullFrame, allBoneNames)
+    cameraFrameDrivenBoneNames(fullFrame, allBoneNames, {})
   )
   const bone = (name: string): THREE.Bone => bones.find((candidate) => candidate.name === name)!
   const position = (name: string): THREE.Vector3 =>
@@ -779,6 +779,47 @@ describe('bone smoothing', () => {
   })
 })
 
+describe('a rig whose bones are named some other way', () => {
+  /** The same skeleton under a Blender-style convention: no rig prefix, and the side as a suffix. */
+  const sideSuffix = (name: string): string =>
+    name.includes('Left') ? '_L' : name.includes('Right') ? '_R' : ''
+  const renameBone = (name: string): string =>
+    `${name.replace(/^mixamorig(Left|Right)?/, '')}${sideSuffix(name)}`
+
+  const poseRenamedRig = (bodyLandmarks: CameraLandmark[]) => {
+    const bones = buildMixamoRig()
+    bones.forEach((bone) => (bone.name = renameBone(bone.name)))
+    const rest = captureCameraRetargetRest(bones)
+    const mapping = guessBoneMapping(bones.map((bone) => bone.name))
+    const frame: CameraPoseFrame = { bodyLandmarks, handLandmarks: {}, headRotation: null }
+    applyCameraPoseFrame(
+      { bones, rest, mapping },
+      frame,
+      DEFAULT_OPTIONS,
+      cameraFrameDrivenBoneNames(frame, new Set(bones.map((bone) => bone.name)), mapping)
+    )
+    const position = (name: string): THREE.Vector3 =>
+      bones
+        .find((candidate) => candidate.name === renameBone(`mixamorig${name}`))!
+        .getWorldPosition(new THREE.Vector3())
+    return (from: string, to: string): THREE.Vector3 => position(to).sub(position(from)).normalize()
+  }
+
+  it('poses every limb exactly as it does a rig already carrying the canonical names', () => {
+    // Arrange
+    const bodyLandmarks = buildBodyLandmarks(STRETCH_POSE)
+
+    // Act
+    const canonical = poseRig({ bodyLandmarks })
+    const renamed = poseRenamedRig(bodyLandmarks)
+
+    // Assert
+    LIMB_SEGMENTS.forEach(([from, to]) => {
+      expect(degreesBetween(renamed(from, to), canonical.segment(from, to))).toBeLessThan(1)
+    })
+  })
+})
+
 describe('cameraFrameDrivenBoneNames', () => {
   const scope = new Set([
     'mixamorigHips',
@@ -812,7 +853,7 @@ describe('cameraFrameDrivenBoneNames', () => {
     }
 
     // Act
-    const driven = cameraFrameDrivenBoneNames(fullFrame, scope)
+    const driven = cameraFrameDrivenBoneNames(fullFrame, scope, {})
 
     // Assert
     expect([...driven].sort()).toEqual([...expected].sort())

@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { useRigModel } from './useRigModel'
 import { useRigKeyframes } from './useRigKeyframes'
+import { useRigBoneMapping } from './useRigBoneMapping'
 import { useRigCameraPose } from './useRigCameraPose'
 import { useRigHandPose } from './useRigHandPose'
 import { useRigRecordedPresets } from './useRigRecordedPresets'
@@ -24,7 +25,12 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     rigModel.skinnedMesh,
     rigModel.boneNames
   )
-  const rigCameraPose = useRigCameraPose(rigModel.bones, rigModel.resetAllBonesToRest)
+  const rigBoneMapping = useRigBoneMapping(rigModel.bones)
+  const rigCameraPose = useRigCameraPose(
+    rigModel.bones,
+    rigModel.resetAllBonesToRest,
+    rigBoneMapping.boneMapping
+  )
   const rigHandPose = useRigHandPose(rigModel.bones, config, rigModel.getRestQuaternions)
   const recordedPresets = useRigRecordedPresets()
   const rigPhysics = useRigPhysics(config, rigModel.bones, rigModel.model)
@@ -120,6 +126,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   return {
     ...rigModel,
     ...rigKeyframes,
+    ...rigBoneMapping,
     ...rigCameraPose,
     ...rigHandPose,
     ...recordedPresets,

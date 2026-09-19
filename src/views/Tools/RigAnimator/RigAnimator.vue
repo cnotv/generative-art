@@ -15,7 +15,8 @@ import {
   Bone,
   Eye,
   Settings,
-  Square
+  Square,
+  Waypoints
 } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
@@ -44,8 +45,11 @@ import {
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
-  DEFAULT_ENCLOSURE_OPACITY
+  DEFAULT_ENCLOSURE_OPACITY,
+  BONE_MAPPING_PATH_PREFIX,
+  RIG_BONE_SLOTS
 } from './config'
+import { findBoneCrossings } from './boneCrossings'
 import { buildRigPanelGroups } from './panelSchema'
 import RigConfigAccordion from './RigConfigAccordion.vue'
 import { useRigAnimator } from './useRigAnimator'
@@ -94,6 +98,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   model: '',
   poses: '',
   selectedBone: '',
+  boneMappingSlot: RIG_BONE_SLOTS[0].canonical,
   boneRotation: { x: 0, y: 0, z: 0 },
   bonePosition: { x: 0, y: 0, z: 0 },
   frame: 0,
@@ -212,6 +217,10 @@ const targetBodyPartGroupLabels = computed(() =>
 const rig = useRigAnimator(reactiveConfig)
 /** Whether the rig panel is open: the camera preview, its actions and every setting. */
 const showRigPanel = ref(false)
+/** Whether the mapping is being worked on: bones shown, and the crossing check running over
+ * whatever is posing the rig right now, a capture or a playback alike. */
+const showBoneMapping = ref(false)
+const boneCrossings = ref<string[]>([])
 const modelFileInput = ref<HTMLInputElement | null>(null)
 const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
 const cameraCaptureReference = ref<InstanceType<typeof CameraPoseCapture> | null>(null)
@@ -364,17 +373,28 @@ const rigPanelGroups = computed(() =>
   })
 )
 
+/** The Bone Mapping rows address the rig's mapping, which belongs to the loaded rig rather than
+ * to the panel's own settings; every other row is a plain config field. */
 const readRigSetting = (path: string): unknown =>
-  (reactiveConfig.value as Record<string, unknown>)[path]
+  path.startsWith(BONE_MAPPING_PATH_PREFIX)
+    ? rig.boneMapping.value[path.slice(BONE_MAPPING_PATH_PREFIX.length)]
+    : (reactiveConfig.value as Record<string, unknown>)[path]
 
 const writeRigSetting = (path: string, value: unknown): void => {
+  if (path.startsWith(BONE_MAPPING_PATH_PREFIX)) {
+    rig.setBoneMapping(path.slice(BONE_MAPPING_PATH_PREFIX.length), String(value))
+    return
+  }
   reactiveConfig.value = { ...reactiveConfig.value, [path]: value }
 }
 
 const rigPanelActions: Record<string, () => void> = {
   autoRig: () => rig.runAutoRig(),
   resetBone: () => rig.resetSelectedBone(),
-  respawnMarbles: () => rig.rebuildMarbles()
+  respawnMarbles: () => rig.rebuildMarbles(),
+  autoMapBones: () => rig.autoMapBones(),
+  assignSelectedBone: () =>
+    rig.setBoneMapping(reactiveConfig.value.boneMappingSlot, reactiveConfig.value.selectedBone)
 }
 
 const runRigPanelAction = (name: string): void => rigPanelActions[name]?.()
@@ -406,6 +426,34 @@ const handleToggleRecord = (): void => {
 const handleTogglePlayback = (): void => {
   if (!rig.isPlaying.value && motionRecording.isRecording.value) stopRecordingAndCommit()
   rig.togglePlayback()
+}
+
+/**
+ * Re-read which limbs are currently crossing, from the render loop, so a mapping is judged while
+ * the rig moves rather than on a still pose. Skipped entirely while the mode is off, and the list
+ * is only written when it actually changes: a reactive write on every frame of a capture would
+ * re-render the overlay sixty times a second to say the same thing.
+ */
+const updateBoneCrossings = (): void => {
+  if (!showBoneMapping.value) {
+    if (boneCrossings.value.length > 0) boneCrossings.value = []
+    return
+  }
+  const found = findBoneCrossings(
+    rig.bones.value,
+    rig.boneMapping.value,
+    rig.boneCrossingDistance.value
+  )
+  if (found.join('|') !== boneCrossings.value.join('|')) boneCrossings.value = found
+}
+
+/** The docked skeleton icon opens the mapping work: the rig panel where the roles are assigned,
+ * the bone markers to click them from, and the crossing check over whatever poses the rig. */
+const toggleBoneMapping = (): void => {
+  showBoneMapping.value = !showBoneMapping.value
+  if (!showBoneMapping.value) return
+  reactiveConfig.value.showBoneMarkers = true
+  showRigPanel.value = true
 }
 
 /** The docked gear opens the rig panel, or closes it again, without starting the camera. */
@@ -578,6 +626,7 @@ const init = async (): Promise<void> => {
         beforeTimeline: () => {
           rig.tickPlayback()
           rig.tickPhysics()
+          updateBoneCrossings()
         },
         timeline
       })
@@ -670,6 +719,16 @@ onUnmounted(() => {
       <Bone />
     </IconButton>
     <IconButton
+      v-if="rig.boneNames.value.length > 0"
+      size="sm"
+      variant="outline"
+      :active="showBoneMapping"
+      :title="showBoneMapping ? 'Stop Checking the Mapping' : 'Map Bones and Check Them'"
+      @click="toggleBoneMapping"
+    >
+      <Waypoints />
+    </IconButton>
+    <IconButton
       size="sm"
       variant="outline"
       :active="showRigPanel"
@@ -732,6 +791,11 @@ onUnmounted(() => {
       <Circle />
     </IconButton>
   </div>
+  <!-- Named in the rig's own terms rather than the landmarks': what is wrong is a role pointing
+       at the wrong bone, and the pose is only how that shows. -->
+  <ul v-if="showBoneMapping && boneCrossings.length > 0" class="rig-bone-crossings">
+    <li v-for="crossing in boneCrossings" :key="crossing">{{ crossing }}</li>
+  </ul>
   <MergeTargetDiagram
     v-if="showRigPanel"
     class="rig-merge-target-diagram"
@@ -813,6 +877,27 @@ canvas {
   top: calc(var(--nav-height) + var(--spacing-3) + var(--btn-sm-height) + var(--spacing-3));
   left: var(--spacing-3);
   z-index: var(--z-overlay);
+}
+
+/* Centred at the top, the one strip of the canvas nothing else is docked in: the buttons and the
+   merge diagram hold the left, the camera preview the right, the timeline the bottom. */
+.rig-bone-crossings {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--spacing-3));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-overlay);
+  margin: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+  list-style: none;
+  border-radius: var(--radius-md);
+
+  /* The same dusty rose the selected bone marker is drawn in, so the warning and the bones it is
+     about read as one thing. */
+  background: rgb(240 168 160 / 85%);
+  color: var(--color-foreground);
+  font-size: var(--font-size-xs);
+  text-align: center;
 }
 
 .rig-canvas-controls__record {
