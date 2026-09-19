@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { rigGenerateHumanoidSkeleton, rigAutoSkinMesh } from './humanoidRig'
+import {
+  rigGenerateHumanoidSkeleton,
+  rigAutoSkinMesh,
+  rigAutoSkinMeshByDistance
+} from './humanoidRig'
 import { HUMANOID_BONE_HIERARCHY } from './config'
 
 describe('rigGenerateHumanoidSkeleton', () => {
@@ -33,6 +37,12 @@ describe('rigGenerateHumanoidSkeleton', () => {
 
   it('builds a skeleton over the same bones', () => {
     expect(result.skeleton.bones).toHaveLength(result.bones.length)
+  })
+
+  it('ends the head at the top of the model, so the head has a length of its own', () => {
+    const crown = result.bones.find((bone) => bone.name === 'mixamorigHeadTop_End')
+    expect(crown?.parent?.name).toBe('mixamorigHead')
+    expect(crown!.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(2)
   })
 })
 
@@ -109,5 +119,49 @@ describe('rigAutoSkinMesh', () => {
     // Vertex 0 sits far from any seam, so it should carry no second influence at all.
     const farWeight = geometry.attributes.skinWeight.array[0 * 4 + 1]
     expect(farWeight).toBe(0)
+  })
+})
+
+describe('rigAutoSkinMeshByDistance', () => {
+  // Two stacked bones, boneA running 0..1 and boneB running 1..2, with a point at each height.
+  const boneA = Object.assign(new THREE.Bone(), { name: 'boneA' })
+  const boneB = Object.assign(new THREE.Bone(), { name: 'boneB' })
+  const boneC = Object.assign(new THREE.Bone(), { name: 'boneC' })
+  boneB.position.set(0, 1, 0)
+  boneC.position.set(0, 1, 0)
+  boneA.add(boneB)
+  boneB.add(boneC)
+  boneA.updateMatrixWorld(true)
+  const bones = [boneA, boneB, boneC]
+
+  const buildPointsGeometry = (heights: number[]): THREE.BufferGeometry =>
+    new THREE.BufferGeometry().setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(
+        heights.flatMap((height) => [0.1, height, 0]),
+        3
+      )
+    )
+
+  it.each([
+    { height: 0.3, bone: 0 },
+    { height: 1.6, bone: 1 }
+  ])('binds a vertex at height $height mostly to the bone it lies beside', ({ height, bone }) => {
+    const geometry = buildPointsGeometry([height])
+
+    rigAutoSkinMeshByDistance(geometry, bones)
+
+    expect(geometry.attributes.skinIndex.array[0]).toBe(bone)
+    expect(geometry.attributes.skinWeight.array[0]).toBeGreaterThan(0.5)
+  })
+
+  it('gives every vertex two weights that add up to one', () => {
+    const geometry = buildPointsGeometry([0.2, 0.9, 1.4, 2.3])
+
+    rigAutoSkinMeshByDistance(geometry, bones)
+
+    const weights = [...geometry.attributes.skinWeight.array]
+    const totals = [0, 1, 2, 3].map((vertex) => weights[vertex * 4] + weights[vertex * 4 + 1])
+    totals.forEach((total) => expect(total).toBeCloseTo(1))
   })
 })
