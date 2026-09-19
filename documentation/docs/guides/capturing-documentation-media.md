@@ -239,6 +239,12 @@ node scripts/record-demo.mjs /tmp/demo/shorter-limbs.scenes.json
 | `{ "upload": file, "into": selector }`   | Sets a file input; `into` defaults to the first file input on the page |
 | `{ "download": target, "saveAs": file }` | Clicks the target and saves whatever it downloads                      |
 | `{ "caption": "text" }`                  | Replaces the caption partway through a scene                           |
+| `{ "wheel": -1800, "at": [x, y] }`       | Scrolls the mouse wheel over a point, one notch per hundred            |
+| `{ "drag": [[x, y], [x, y]], "button" }` | Drags between two points; `"right"` pans an orbit camera               |
+
+Wheel and drag take viewport pixels. They are how a scene frames a detail the view shows too small
+by default: pan the detail to the orbit centre with a right drag, zoom in with the wheel, then pan
+it clear of the panel.
 
 A `{ "role", "name" }` target matches the accessible name exactly, and an icon-only button's
 name is its `title`, so the Rig Animator timeline's play button is

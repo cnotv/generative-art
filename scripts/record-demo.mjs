@@ -22,6 +22,12 @@ const DEFAULT_SPEED = 1
 const CLIP_FRAMES_PER_SECOND = 30
 /** How often a config value gliding to its target is rewritten, so the change reads as motion. */
 const GLIDE_STEP_MILLISECONDS = 60
+/** One notch of a mouse wheel, the unit a `wheel` step is scrolled in. */
+const WHEEL_NOTCH = 100
+const WHEEL_NOTCH_MILLISECONDS = 40
+/** A drag passes through this many points, so the camera it moves glides rather than jumps. */
+const DRAG_POINT_COUNT = 20
+const DRAG_POINT_MILLISECONDS = 20
 /** Headless Chromium's software renderer paints white patches over WebGL; the Mac GPU does not. */
 const DEFAULT_LAUNCH_ARGS = ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist']
 const SCENE_NAME_PATTERN = /^[\w-]+$/
@@ -172,6 +178,33 @@ export const compareArguments = ({ left, right, target, width }) => [
   target
 ]
 
+/**
+ * A wheel scroll split into notches, the way a real wheel delivers it: a camera control that
+ * zooms a step per wheel event barely moves for one large event.
+ * @param {number} delta The total scroll, negative towards the viewer
+ * @returns {number[]} One delta per notch, adding up to the total
+ */
+export const wheelNotches = (delta) => {
+  const notchCount = Math.max(1, Math.round(Math.abs(delta) / WHEEL_NOTCH))
+  return Array.from({ length: notchCount }, () => delta / notchCount)
+}
+
+/**
+ * The points a drag passes through between its two ends, excluding the start and ending on the
+ * target.
+ * @param {[number, number]} from Where the drag starts, in viewport pixels
+ * @param {[number, number]} to Where it ends
+ * @returns {[number, number][]} Every point to move through, in order
+ */
+export const dragPoints = ([fromX, fromY], [toX, toY]) =>
+  Array.from({ length: DRAG_POINT_COUNT }, (_, index) => {
+    const progress = (index + 1) / DRAG_POINT_COUNT
+    return [fromX + (toX - fromX) * progress, fromY + (toY - fromY) * progress]
+  })
+
+const inSequence = (items, run) =>
+  items.reduce((previous, item) => previous.then(() => run(item)), Promise.resolve())
+
 const locate = (page, target) =>
   typeof target === 'string'
     ? page.locator(target).first()
@@ -205,15 +238,29 @@ const glideField = async (page, selector, to, over) => {
   const field = page.locator(selector).first()
   await field.scrollIntoViewIfNeeded()
   const from = Number(await field.inputValue())
-  await glideValues(from, to, over).reduce(
-    (previous, value) =>
-      previous.then(async () => {
-        await field.fill(String(value))
-        await field.dispatchEvent('input')
-        await page.waitForTimeout(GLIDE_STEP_MILLISECONDS)
-      }),
-    Promise.resolve()
-  )
+  await inSequence(glideValues(from, to, over), async (value) => {
+    await field.fill(String(value))
+    await field.dispatchEvent('input')
+    await page.waitForTimeout(GLIDE_STEP_MILLISECONDS)
+  })
+}
+
+const scrollWheel = async (page, delta, at) => {
+  await page.mouse.move(...at)
+  await inSequence(wheelNotches(delta), async (notch) => {
+    await page.mouse.wheel(0, notch)
+    await page.waitForTimeout(WHEEL_NOTCH_MILLISECONDS)
+  })
+}
+
+const dragMouse = async (page, [from, to], button) => {
+  await page.mouse.move(...from)
+  await page.mouse.down({ button })
+  await inSequence(dragPoints(from, to), async (point) => {
+    await page.mouse.move(...point)
+    await page.waitForTimeout(DRAG_POINT_MILLISECONDS)
+  })
+  await page.mouse.up({ button })
 }
 
 const STEP_RUNNERS = {
@@ -234,6 +281,8 @@ const STEP_RUNNERS = {
     await locate(page, step.download).click()
     await (await download).saveAs(resolve(settings.directory, step.saveAs))
   },
+  wheel: (page, step) => scrollWheel(page, step.wheel, step.at),
+  drag: (page, step) => dragMouse(page, step.drag, step.button ?? 'left'),
   config: (page, step) =>
     glideField(page, configFieldSelector(step.config), step.to, step.over ?? 0)
 }

@@ -5,8 +5,10 @@ import {
   compareArguments,
   configFieldSelector,
   cutWindow,
+  dragPoints,
   glideValues,
-  parseScenes
+  parseScenes,
+  wheelNotches
 } from './record-demo.mjs'
 
 const sceneFile = (overrides) =>
@@ -125,5 +127,28 @@ describe('compareArguments', () => {
 
     expect(argumentList.filter((argument) => argument === '-i')).toHaveLength(2)
     expect(argumentList).toContain('[0:v][1:v]hstack=inputs=2,scale=1100:-2')
+  })
+})
+
+describe('wheelNotches', () => {
+  it.each([
+    { delta: -1600, notches: 16 },
+    { delta: 250, notches: 3 },
+    { delta: 30, notches: 1 }
+  ])('splits $delta into $notches notches adding up to it', ({ delta, notches }) => {
+    const split = wheelNotches(delta)
+
+    expect(split).toHaveLength(notches)
+    expect(split.reduce((total, notch) => total + notch, 0)).toBeCloseTo(delta)
+  })
+})
+
+describe('dragPoints', () => {
+  it('moves in even steps and ends on the target', () => {
+    const points = dragPoints([550, 300], [550, 500])
+
+    expect(points).toHaveLength(20)
+    expect(points[0]).toEqual([550, 310])
+    expect(points.at(-1)).toEqual([550, 500])
   })
 })
