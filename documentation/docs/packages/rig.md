@@ -60,16 +60,20 @@ const skinnedMesh = rigFindSkinnedMesh(model) // null if the model was never rig
 const unrigged = rigFindUnskinnedMeshes(model) // meshes with no skeleton at all
 ```
 
-## rigGenerateHumanoidSkeleton / rigAutoSkinMesh
+## rigGenerateHumanoidSkeleton / rigAutoSkinMesh / rigAutoSkinMeshByDistance
 
 For a model with meshes but no skeleton: generate a canonical Mixamo-named humanoid
-skeleton fit to the model's bounding box, then auto-skin each mesh to it. Weighting walks
-the mesh's own surface (a vertex adjacency graph, searched with a multi-source Dijkstra
-seeded from each bone) rather than measuring straight-line distance through the model's
-interior, so a narrow gap the skin doesn't actually cross, an armpit and the chest below
-it, one finger and its neighbour, does not bleed weight from one limb into another. A
-heuristic fallback, not a substitute for an authored rig: expect rough deformation at
-joints on unusual proportions.
+skeleton fit to the model's bounding box, ending the head at `mixamorigHeadTop_End` on the
+top of the box so the head has a segment of its own, then auto-skin each mesh to it.
+`rigAutoSkinMesh` walks the mesh's own surface (a vertex adjacency graph, searched with a
+multi-source Dijkstra seeded from each bone) rather than measuring straight-line distance
+through the model's interior, so a narrow gap the skin doesn't actually cross, an armpit and
+the chest below it, one finger and its neighbour, does not bleed weight from one limb into
+another. That search grows with the square of the vertex count, several seconds at five
+thousand vertices; `rigAutoSkinMeshByDistance` binds each vertex to its two nearest bone
+segments in a single linear pass instead, for a mesh too dense to search. A heuristic
+fallback, not a substitute for an authored rig: expect rough deformation at joints on
+unusual proportions.
 
 ```typescript
 import { rigGenerateHumanoidSkeleton, rigAutoSkinMesh } from '@webgamekit/rig'
@@ -80,6 +84,7 @@ const { root, bones, skeleton } = rigGenerateHumanoidSkeleton(box)
 model.add(root)
 
 rigAutoSkinMesh(mesh.geometry, bones) // adds skinIndex/skinWeight attributes
+// or, for a dense mesh: rigAutoSkinMeshByDistance(mesh.geometry, bones)
 const skinnedMesh = new THREE.SkinnedMesh(mesh.geometry, mesh.material)
 skinnedMesh.bind(skeleton)
 ```
