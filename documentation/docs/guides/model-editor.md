@@ -27,6 +27,26 @@ The default model loads on arrival; the upload button at the top left of the can
 
 ![The Face group of the Config panel, each feature's Size, Height and Depth reading the values that produced the head above](/img/model-editor/face-panel.webp)
 
+## From the editor to an animation
+
+A copy of the default character with every limb at 75%, length and size together, downloaded and
+loaded into the Rig Animator, where the bundled Running preset plays on it. The preset only turns
+bones, so the shortened limbs keep their proportions through the whole cycle.
+
+<video controls loop muted playsinline width="720" src="/video/model-editor/shorter-limbs.webm">
+  The original character runs in the Rig Animator. In the Model Editor, the length and size of the
+  upper arms, forearms, hands, thighs, shins and feet glide down to 75%. The downloaded copy then
+  runs in the Rig Animator with visibly shorter arms and legs.
+</video>
+
+<video controls loop muted playsinline width="720" src="/video/model-editor/shorter-limbs-compare.webm">
+  The original and the shortened copy run side by side. The copy's legs and arms are shorter, so its
+  head sits proportionally larger on its body.
+</video>
+
+The clips were recorded with the `record-demo` procedure; the scene file is in the plan on the
+feature's issue.
+
 ## What an upload needs
 
 | The upload                             | What the editor does                                                                  |
