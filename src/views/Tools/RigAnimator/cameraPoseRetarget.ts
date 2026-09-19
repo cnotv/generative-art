@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { ikFindTwoBoneChain, ikSolveTwoBoneChain } from '@webgamekit/rig'
 import type { HandSide } from '@webgamekit/rig'
 import {
   CAMERA_HEAD_MAX_TURN_RADIANS,
@@ -13,6 +14,7 @@ import {
   lowPassBlendFactor,
   smoothingCutoffHertz
 } from './cameraPoseMapping'
+import type { TwoBoneIkChain } from '@webgamekit/rig'
 import type {
   CameraBoneTransform,
   CameraHandLandmark,
@@ -683,6 +685,75 @@ const observePalm = (
 }
 
 /**
+ * How much bigger the rig is than the performer, measured across the one span both bodies show
+ * plainly and neither can foreshorten much: shoulder to shoulder. Everything the reach fitting
+ * asks of the rig is expressed in this scale, so a rig authored in centimetres and a performer
+ * measured in metres still agree about where a hand belongs.
+ * @param context The pose being applied
+ * @param point This frame's body landmarks, in scene axes
+ * @returns The scale from performer to rig, or null when the shoulders are not both in view
+ */
+const rigToPerformerScale = (context: RetargetContext, point: BodyPointReader): number | null => {
+  const leftShoulder = point(CAMERA_LANDMARK_INDEX.leftShoulder)
+  const rightShoulder = point(CAMERA_LANDMARK_INDEX.rightShoulder)
+  const restLeft = context.rest.worldPositions.get(sideBone('Left', 'Arm'))
+  const restRight = context.rest.worldPositions.get(sideBone('Right', 'Arm'))
+  if (!leftShoulder || !rightShoulder || !restLeft || !restRight) return null
+  const performerSpan = leftShoulder.distanceTo(rightShoulder)
+  return performerSpan > DIRECTION_EPSILON ? restLeft.distanceTo(restRight) / performerSpan : null
+}
+
+/** Pull the root and mid joints of a solved chain back inside their human ranges, which the
+ * closed-form solve knows nothing about. */
+const limitChainJoints = (context: RetargetContext, chain: TwoBoneIkChain): void => {
+  ;[chain.root, chain.mid].forEach((bone) =>
+    bone.quaternion.copy(limitJoint(context, bone, bone.quaternion.clone()))
+  )
+}
+
+/**
+ * Bend a limb so its far end lands where the performer's did relative to their own body, rather
+ * than wherever the rig's own segment lengths carry it along the detected direction.
+ *
+ * Copying directions alone cannot place a hand: the rig travels its own arm length down the
+ * detected ray, so a rig whose arms are long for its shoulders sails past a contact the
+ * performer made and the hands cross, and a short-armed one stops short of it. The offset from
+ * the performer's shoulder to their wrist, scaled into the rig's own body size and hung off the
+ * rig's own shoulder, is that contact expressed in the rig's proportions; the two-bone solve
+ * then reaches it by bending the elbow, which is the joint with slack to give.
+ *
+ * The bend direction is taken from wherever the direction pass has already left the mid joint,
+ * so the elbow or knee keeps the side the performer bent it toward. A target beyond the limb's
+ * reach clamps to the fully extended limb rather than stretching it.
+ * @param context The pose being applied
+ * @param endBoneName The far end of the chain, a hand or a foot
+ * @param observedOffset From the performer's own chain root to that end, in scene axes
+ * @param bodyScale The scale from performer to rig, from `rigToPerformerScale`
+ * @returns Nothing; the chain's root and mid bones are rotated
+ */
+const fitChainReach = (
+  context: RetargetContext,
+  endBoneName: string,
+  observedOffset: THREE.Vector3,
+  bodyScale: number
+): void => {
+  const end = context.bonesByName.get(endBoneName)
+  const chain = end ? ikFindTwoBoneChain(end) : null
+  if (
+    !chain ||
+    !context.drivenBoneNames.has(chain.root.name) ||
+    !context.drivenBoneNames.has(chain.mid.name)
+  ) {
+    return
+  }
+  const target = chain.root
+    .getWorldPosition(new THREE.Vector3())
+    .add(observedOffset.clone().multiplyScalar(bodyScale))
+  ikSolveTwoBoneChain(chain, target, chain.mid.getWorldPosition(new THREE.Vector3()))
+  limitChainJoints(context, chain)
+}
+
+/**
  * Aim the upper arm at the elbow and the forearm at the wrist, then turn the hand to the detected
  * palm. The upper arm's roll comes from which way the forearm swings off it, since an elbow only
  * bends one way; the forearm's roll comes from the palm, the only thing that shows it.
@@ -691,7 +762,8 @@ const applyArm = (
   context: RetargetContext,
   side: HandSide,
   point: BodyPointReader,
-  handLandmarks: CameraHandLandmark[] | undefined
+  handLandmarks: CameraHandLandmark[] | undefined,
+  bodyScale: number | null
 ): void => {
   const indices = ARM_LANDMARKS[side]
   const shoulder = point(indices.shoulder)
@@ -725,6 +797,12 @@ const applyArm = (
     lower,
     forearmTwist
   )
+  // After the directions are copied, never before: the elbow they leave behind is the bend
+  // hint the solve reaches the wrist with, and the hand's own turn below is absolute, so it
+  // lands correctly on whatever forearm the solve ends up with.
+  if (bodyScale !== null && wrist) {
+    fitChainReach(context, sideBone(side, 'Hand'), wrist.clone().sub(shoulder), bodyScale)
+  }
   const handChange =
     forearmDriven && observedHand && restHand ? frameChange(observedHand, restHand) : null
   if (handChange) rotateFromRest(context, sideBone(side, 'Hand'), handChange)
@@ -795,7 +873,12 @@ const legTwistCue = (
 }
 
 /** Aim the thigh at the knee, the shin at the ankle and the foot at the toes, as far as each is in view. */
-const applyLeg = (context: RetargetContext, side: HandSide, point: BodyPointReader): boolean => {
+const applyLeg = (
+  context: RetargetContext,
+  side: HandSide,
+  point: BodyPointReader,
+  bodyScale: number | null
+): boolean => {
   const indices = LEG_LANDMARKS[side]
   const hip = point(indices.hip)
   const knee = point(indices.knee)
@@ -818,6 +901,9 @@ const applyLeg = (context: RetargetContext, side: HandSide, point: BodyPointRead
   )
   if (!ankle || !shin) return thighDriven
   aimBone(context, sideBone(side, 'Leg'), sideBone(side, 'Foot'), shin)
+  if (bodyScale !== null) {
+    fitChainReach(context, sideBone(side, 'Foot'), ankle.clone().sub(hip), bodyScale)
+  }
   if (toe && context.options.aimFeet) {
     aimBone(context, sideBone(side, 'Foot'), sideBone(side, 'ToeBase'), toe.sub(ankle))
   }
@@ -892,6 +978,7 @@ export const applyCameraPoseFrame = (
   const context = createRetargetContext(bones, rest, drivenBoneNames, options)
   if (!context) return
   const point = readBodyPoints(frame.bodyLandmarks, options)
+  const bodyScale = options.fitLimbReach ? rigToPerformerScale(context, point) : null
   const torso = observeTorso(context, point)
   if (torso) applyTorso(context, torso)
   const chest = torso?.chest ?? new THREE.Quaternion()
@@ -899,10 +986,11 @@ export const applyCameraPoseFrame = (
   if (head) applyHead(context, head, chest)
   RIG_SIDES.forEach((side) => {
     const handLandmarks = frame.handLandmarks[side]
-    if (options.aimArms) applyArm(context, side, point, handLandmarks)
+    if (options.aimArms) applyArm(context, side, point, handLandmarks, bodyScale)
     if (handLandmarks) applyFingers(context, side, handLandmarks)
   })
   const legsDriven =
-    options.aimLegs && RIG_SIDES.map((side) => applyLeg(context, side, point)).some(Boolean)
+    options.aimLegs &&
+    RIG_SIDES.map((side) => applyLeg(context, side, point, bodyScale)).some(Boolean)
   if (options.groundFeet && legsDriven) groundFeet(context)
 }

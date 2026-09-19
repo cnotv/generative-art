@@ -29,6 +29,7 @@ export interface RigAnimatorConfig {
   cameraAimLegs: boolean
   cameraRollThighs: boolean
   cameraAimFeet: boolean
+  cameraFitReach: boolean
   cameraTrackFace: boolean
   cameraSearchFaceAroundBody: boolean
   cameraTrackHands: boolean
@@ -169,6 +170,12 @@ export interface CameraPoseMappingOptions {
   rollThighsFromKneesAndFeet: boolean
   /** Aim each foot at its toes. */
   aimFeet: boolean
+  /**
+   * Land each hand and foot where the performer's own was relative to their body, by scaling
+   * that offset into the rig's proportions and solving the limb to it, instead of letting the
+   * rig's own segment lengths decide how far down the detected direction it travels.
+   */
+  fitLimbReach: boolean
   /** How confident a body landmark must be to drive a bone. */
   visibilityThreshold: number
   /** A limb bent less than this carries no cue for its upper bone's roll. */

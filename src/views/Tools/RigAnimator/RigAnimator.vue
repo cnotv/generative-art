@@ -14,6 +14,7 @@ import {
   Circle,
   Bone,
   Eye,
+  Ruler,
   Settings,
   Square
 } from 'lucide-vue-next'
@@ -46,6 +47,7 @@ import {
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
   DEFAULT_ENCLOSURE_OPACITY
 } from './config'
+import { useRigLimbCheck } from './useRigLimbCheck'
 import { buildRigPanelGroups } from './panelSchema'
 import RigConfigAccordion from './RigConfigAccordion.vue'
 import { useRigAnimator } from './useRigAnimator'
@@ -112,6 +114,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraAimLegs: true,
   cameraRollThighs: true,
   cameraAimFeet: true,
+  cameraFitReach: true,
   cameraLimitJoints: true,
   cameraTrackFace: true,
   cameraSearchFaceAroundBody: true,
@@ -166,6 +169,7 @@ const cameraPoseMappingOptions = computed(
     aimLegs: reactiveConfig.value.cameraAimLegs,
     rollThighsFromKneesAndFeet: reactiveConfig.value.cameraRollThighs,
     aimFeet: reactiveConfig.value.cameraAimFeet,
+    fitLimbReach: reactiveConfig.value.cameraFitReach,
     visibilityThreshold: reactiveConfig.value.cameraVisibilityThreshold,
     twistMinBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistMinBendDegrees),
     twistFullBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistFullBendDegrees),
@@ -212,6 +216,10 @@ const targetBodyPartGroupLabels = computed(() =>
 const rig = useRigAnimator(reactiveConfig)
 /** Whether the rig panel is open: the camera preview, its actions and every setting. */
 const showRigPanel = ref(false)
+/** Whether the reach is being judged: bones shown, and the crossing check running over
+ * whatever is posing the rig right now, a capture or a playback alike. */
+const showLimbCheck = ref(false)
+const limbCheck = useRigLimbCheck(rig.bones, showLimbCheck)
 const modelFileInput = ref<HTMLInputElement | null>(null)
 const rigTimelineReference = ref<InstanceType<typeof RigTimeline> | null>(null)
 const cameraCaptureReference = ref<InstanceType<typeof CameraPoseCapture> | null>(null)
@@ -408,6 +416,13 @@ const handleTogglePlayback = (): void => {
   rig.togglePlayback()
 }
 
+/** The docked ruler turns on the bone markers and the crossing check together: judging a reach
+ * means watching the bones while something drives them. */
+const toggleLimbCheck = (): void => {
+  showLimbCheck.value = !showLimbCheck.value
+  if (showLimbCheck.value) reactiveConfig.value.showBoneMarkers = true
+}
+
 /** The docked gear opens the rig panel, or closes it again, without starting the camera. */
 const toggleRigPanel = (): void => {
   if (showRigPanel.value) handleCloseCamera()
@@ -578,6 +593,7 @@ const init = async (): Promise<void> => {
         beforeTimeline: () => {
           rig.tickPlayback()
           rig.tickPhysics()
+          limbCheck.updateCrossings()
         },
         timeline
       })
@@ -670,6 +686,16 @@ onUnmounted(() => {
       <Bone />
     </IconButton>
     <IconButton
+      v-if="rig.boneNames.value.length > 0"
+      size="sm"
+      variant="outline"
+      :active="showLimbCheck"
+      :title="showLimbCheck ? 'Stop Checking Limbs' : 'Check Limbs While Posing'"
+      @click="toggleLimbCheck"
+    >
+      <Ruler />
+    </IconButton>
+    <IconButton
       size="sm"
       variant="outline"
       :active="showRigPanel"
@@ -732,6 +758,11 @@ onUnmounted(() => {
       <Circle />
     </IconButton>
   </div>
+  <!-- Named as limbs meeting rather than as landmarks: what is wrong is how far the rig
+       reaches, and the pose is only how that shows. -->
+  <ul v-if="showLimbCheck && limbCheck.crossings.value.length > 0" class="rig-bone-crossings">
+    <li v-for="crossing in limbCheck.crossings.value" :key="crossing">{{ crossing }}</li>
+  </ul>
   <MergeTargetDiagram
     v-if="showRigPanel"
     class="rig-merge-target-diagram"
@@ -813,6 +844,27 @@ canvas {
   top: calc(var(--nav-height) + var(--spacing-3) + var(--btn-sm-height) + var(--spacing-3));
   left: var(--spacing-3);
   z-index: var(--z-overlay);
+}
+
+/* Centred at the top, the one strip of the canvas nothing else is docked in: the buttons and
+   the merge diagram hold the left, the camera preview the right, the timeline the bottom. */
+.rig-bone-crossings {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--spacing-3));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-overlay);
+  margin: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+  list-style: none;
+  border-radius: var(--radius-md);
+
+  /* The same dusty rose the selected bone marker is drawn in, so the warning and the bones it
+     is about read as one thing. */
+  background: rgb(240 168 160 / 85%);
+  color: var(--color-foreground);
+  font-size: var(--font-size-xs);
+  text-align: center;
 }
 
 .rig-canvas-controls__record {

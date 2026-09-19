@@ -254,6 +254,40 @@ empty stream reloads the element even when it held none, rewinding and pausing t
 Record Motion kept sampling a frozen frame. The start now notices it was cancelled, and a stream
 is only cleared when one was actually set.
 
+## What directions cannot do
+
+Copying directions makes proportions stop mattering for a limb's shape. It does not make them
+stop mattering for where the limb ends up, and that is a different question with the opposite
+answer.
+
+A segment turned to the performer's direction is then walked along that direction by the rig's
+own length. Two bodies pointing their arms identically put their hands in different places unless
+their arms are the same length relative to the body the arm hangs off. So every contact the
+performer makes — hands clasped, a hand at the face, a palm on a knee — is a contact the rig
+misses, by however much its arm-to-shoulder ratio differs. It is not a rounding error: the
+shipped character misses a clasp by half a shoulder width, and the miss grows with the mismatch.
+
+The tempting fix does nothing at all. Rebuilding the detected skeleton with the rig's own segment
+lengths, segment by segment, leaves every direction exactly as it was, and a mapping that reads
+only directions cannot tell the two skeletons apart. Scaling the source is invisible to a scheme
+that already discards scale.
+
+What the contact actually is, is a position: the offset from the performer's shoulder to their
+wrist, which says both where the hand went and how far. Expressed in the rig's own body size and
+hung off the rig's own shoulder, it is the same gesture on a different body, and reaching it is
+an inverse kinematics problem the repo already had a closed-form solver for.
+
+So the rule is narrower than it first looked. Directions decide a limb's shape; positions decide
+where it ends. The pipeline now does both, in that order: the direction pass runs first and its
+elbow becomes the bend hint the solve needs, so the solve changes only how far the limb reaches,
+never which way it folds. The joint limits are re-applied afterwards, because a closed-form solve
+has never heard of them.
+
+Which span to measure the body scale across matters more than it looks. Height is wrong: it
+changes with a crouch. Arm length is wrong: it is the thing being corrected. Shoulder to shoulder
+is stable under every pose the camera can read, and it is the span a detector reports most
+reliably, so it is the one both bodies are measured across.
+
 ## Limits
 
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest
@@ -267,3 +301,5 @@ is only cleared when one was actually set.
 - **No shrug.** Nothing in the landmarks separates a raised clavicle from a tilted chest.
 - **No expressions.** The bundled models carry no face blend shapes, so the face drives the head's
   rotation only.
+- **One scale for the whole body.** Reach is fitted through a single shoulder-measured scale, so a
+  rig with human arms on very long legs has one of the two fitted well and the other approximately.

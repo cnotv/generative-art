@@ -127,6 +127,7 @@ const cameraBoneControls: ConfigControlsSchema = {
   cameraAimLegs: { checkbox: true, label: 'Aim Legs' },
   cameraRollThighs: { checkbox: true, label: 'Roll Thighs from Knees and Feet' },
   cameraAimFeet: { checkbox: true, label: 'Aim Feet' },
+  cameraFitReach: { checkbox: true, label: 'Match Reach to the Model' },
   cameraLimitJoints: { checkbox: true, label: 'Keep Joints in Human Range' }
 }
 
