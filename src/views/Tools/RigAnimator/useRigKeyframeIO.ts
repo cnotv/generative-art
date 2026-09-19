@@ -1,7 +1,7 @@
 import type { Ref, ShallowRef } from 'vue'
 import * as THREE from 'three'
 import { poseBuildClip, type PoseKeyframe } from '@webgamekit/rig'
-import { exportRigClipAsGlb, exportPosesAsJson, parsePosesJson } from './export'
+import { exportModelAsGlb, exportPosesAsJson, parsePosesJson } from './export'
 import { EXPORT_GLB_FILENAME, EXPORT_JSON_FILENAME } from './config'
 import { clearRigAutosave, type RigAutosave } from './autosave'
 import { loadRigPreset } from './presets'
@@ -44,7 +44,7 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
   const exportGlb = async (): Promise<void> => {
     if (!model.value || keyframes.value.length === 0) return
     const clip = poseBuildClip(keyframes.value, boneNames.value, config.value.fps, 'RigAnimation')
-    await exportRigClipAsGlb(model.value, clip, EXPORT_GLB_FILENAME)
+    await exportModelAsGlb(model.value, EXPORT_GLB_FILENAME, [clip])
   }
 
   /** Export the raw pose keyframes as JSON, for re-editing later in this same tool. */
