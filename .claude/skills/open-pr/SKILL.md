@@ -1,26 +1,27 @@
 ---
 name: open-pr
 description: >-
-  Use when a change is validated and ready to ship — per AGENTS.md, every change ships with
-  a pull request, opened without waiting to be asked — and when explicitly asked to open,
-  raise, create, submit or update one: "open the PR", "raise a PR", "make a pull request",
-  "push this up", "update the PR description". Covers making sure an issue exists first,
-  rebasing onto main, force-pushing safely, the PR body format, keeping the description
-  current after each push, watching CI to green, and the abstraction review that closes out
-  the work.
+  Use when a change reaches its first commit, to open its draft pull request — per AGENTS.md
+  every request opens one, without waiting to be asked — and again when the change is
+  validated, to mark it ready. Also when explicitly asked to open, raise, create, submit or
+  update one: "open the PR", "raise a PR", "make a pull request", "push this up", "update
+  the PR description". Covers the issue the PR closes, rebasing onto main, force-pushing
+  safely, the PR body format, keeping the description current after each push, watching CI
+  to green, and the abstraction review that closes out the work.
 ---
 
 # Opening a pull request
 
-Work is not done at the last commit — it is done once the PR exists and its checks are
-green. Open one as soon as the change is validated (`finish-change` passed); do not wait to
-be asked.
+The pull request opens as a draft at the first commit, not at the end: it is where the
+decisions are recorded while they are still being made. It is marked ready once the change
+is validated (`finish-change` passed) and its checks are green. Neither step waits to be
+asked.
 
-## 0. Make sure an issue exists
+## 0. The issue it closes
 
-The PR title and body both need an issue number (step 3). Work that started from a linked
-issue already has one. A prototype (AGENTS.md's "How work starts") does not — write it now,
-covering what was built and why, before opening the PR.
+The PR title and body both need an issue number (step 3), and `start-issue` has already
+opened or read that issue before the branch existed. If somehow no issue exists, write it
+now, covering what is being built and why, before opening the PR.
 
 ## 1. Rebase onto main
 
@@ -58,8 +59,12 @@ section from becoming a place to invent rules nobody needed.
 ## 3. Open it
 
 ```sh
-gh pr create --title "<type>: <summary> (#<issue-number>)" --body-file <file>
+gh pr create --draft --title "<type>: <summary> (#<issue-number>)" --body-file <file>
 ```
+
+`--draft` while the work is still moving; `gh pr ready` once it is validated and green. A
+draft opened at the first commit describes what is being done and why, and is updated as
+the work lands rather than rewritten at the end.
 
 The issue number belongs in the PR title, so it appears on merge. The body follows
 `.github/pull_request_template.md` and starts with `Closes #<issue-number>`, which links
@@ -83,7 +88,7 @@ A body long enough to skim past has failed, however accurate it is.
 
 Two sections need care:
 
-- **Added on top of the initial plan** — only the **conceptual or architectural** departures
+- **Added on top of the issue** — only the **conceptual or architectural** departures
   from what the issue described: a reshaped API, a changed mechanism, a dropped or added
   layer, a new convention. One line each. Not a list of everything built — the diff has
   that, and the issue already said what was asked for. If the work matched the issue in
