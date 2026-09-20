@@ -23,7 +23,7 @@ Filled in once `deploy/netlify` succeeds — see the open-pr procedure. -->
 
 -
 
-## Added on top of the initial plan
+## Added on top of the issue
 
 <!-- Only conceptual or architectural departures from what the issue described: a reshaped
      API, a changed mechanism, a dropped or added layer, a new convention. One line each,

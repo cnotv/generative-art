@@ -9,21 +9,21 @@ This file holds the rules that apply to every change. Rules for one area load fr
 
 ## How work starts
 
-Two entry paths, chosen by whether an issue exists yet.
+Every request opens an issue, a branch and a draft pull request, in that order, before any
+code. There is no plan-first step and nothing to wait for: the issue says what and why in a
+few lines, and the decisions land in the pull request body as they are made.
 
-- **A linked issue** — the message contains a `github.com/.../issues/N` URL. Read the issue,
-  sync main, branch, and post the implementation plan as an issue comment _before_ writing
-  any code. Tests come first. Run the `start-issue` procedure; it is not optional and its
-  steps are not reorderable.
-- **A prototype** — "let's try X", "add an option for Y", with no issue yet. Build the
-  proof of concept directly on a branch off main and go straight to something running.
-  Validate it together, and only once it is in good shape write the issue documenting what
-  was built and why. Never gate this path behind a design doc, spec review or issue-first
-  process; the friction is the whole thing it is avoiding. Prototypes are exempt from
-  tests-first, but they owe tests and, once validated, the issue and the pull request that
-  closes it — run `open-pr` without waiting to be asked; work is not done at the last commit.
+1. **The issue.** One that already exists is read, comments included; otherwise it is written
+   from the request. If intent, scope or expected behaviour is unclear, ask one focused
+   question covering everything missing, wait, and write it from the answer.
+2. **The branch**, off main, named `<type>/<issue-number>-<description>`. A fresh branch every
+   time, never the current one, never reused.
+3. **The draft pull request**, opened at the first commit rather than the last, carrying
+   `Closes #<issue-number>` and kept current as the work moves.
 
-Either way: a fresh branch off main every time, never the current branch, never reused.
+`start-issue` covers the first two steps and `open-pr` the third; neither is optional and their
+steps are not reorderable. Tests come first, except for an exploratory prototype, which still
+owes them before the pull request is marked ready.
 
 ## Working agreements
 
@@ -36,7 +36,7 @@ Either way: a fresh branch off main every time, never the current branch, never 
 - **Write it once, at the length it earns.** A one-line fix gets one line; a surprising
   constraint gets a paragraph. Prose that repeats the diff or restates something already
   written above is noise that hides what matters. Each kind of writing has one home, below.
-- **Always ship an issue and a pull request** once work is done — see "How work starts".
+- **Every request starts with an issue and a draft pull request** — see "How work starts".
 - **Never modify `eslint.config.js`** unless explicitly asked. Fix violations by changing the
   code, not by loosening the rule.
 - **Never use `eslint-disable`**, in any form, and never `--no-verify`. If a hook or a rule
@@ -77,8 +77,8 @@ Either way: a fresh branch off main every time, never the current branch, never 
 
 ## Git
 
-- Branches are always `<type>/<issue-number>-<description>` once an issue exists (`feat`,
-  `fix`, `docs`, `refactor`, `test`, `chore`); a prototype branch gets renamed to match before the PR opens.
+- Branches are always `<type>/<issue-number>-<description>` (`feat`, `fix`, `docs`,
+  `refactor`, `test`, `chore`), so the number is on the branch from its first commit.
 - **Rebase, never merge.** `git fetch origin main && git rebase origin/main`. Never `git pull`,
   which merges by default. After a rebase, `git push --force-with-lease`, never `--force`.
 - **Commit subjects never reference an issue number** — no `#123`, no `(#123)`, no
@@ -113,9 +113,9 @@ These are the steps that are easy to omit and impossible to notice missing. Run 
 - [ ] Changed package API is reflected in `documentation/docs/packages/`
 - [ ] Any guide that tracks a file you changed has been re-read and fixed
 - [ ] A journey doc exists if the work produced a non-obvious finding
-- [ ] An issue and an open PR both exist for this work, describing it accurately rather than
-      left to be inferred from a thread of comments
-- [ ] Every artifact the plan named exists, not just the ones that were forced by a deletion
+- [ ] The issue and the PR opened at the start still describe the work accurately, rather
+      than leaving it to be inferred from a thread of comments
+- [ ] Every artifact the issue named exists, not just the ones that were forced by a deletion
 - [ ] `pnpm lint`, `pnpm lint:css` and `pnpm test:unit` pass, and you saw them pass
 
 ## Scoped rules
