@@ -294,6 +294,12 @@ swinging nowhere in a run. Read at any visibility, the same arm follows the dete
 The detector's guesses for a limb it cannot see were better than the fallback, which is the case
 for holding a lost limb rather than resetting it.
 
+<video controls loop muted playsinline width="720" src="/video/animation/rig-running-reproduction.webm">
+  The recording, the default character posed by the camera capture, and the same character posed by
+  the Running preset, side by side for four seconds. Legs and the near arm follow the preset; the far
+  arm keeps swinging back out to its rest pose, held straight out to the side.
+</video>
+
 Two more things the recording showed about the detectors. On a side view the pose model swaps the
 legs for a few frames every stride, the full model as much as the lite one, so a heavier model is no
 fix. And the face landmarker finds no face on the stylised character in any frame, sunglasses and
