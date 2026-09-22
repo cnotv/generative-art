@@ -468,6 +468,15 @@ filtered from every sample within half a frame of it. With three samples or more
 the rotation closest to all the others, so a misread pose is dropped outright instead of landing
 on the timeline; with only two they are averaged, and a single sample is kept as it is.
 
+Two settings in **Camera Pose**, both on by default, then clean the take up the way the
+timeline's Filter and Halve buttons would, over the take's own keyframes only. **Smooth
+Recording** runs Filter six times (`RECORDING_SMOOTHING_PASSES`), pulling each keyframe toward the
+frames either side of it. **Thin Out Recording** then runs Halve twice (`RECORDING_HALVING_PASSES`),
+so the take keeps one keyframe in four, first and last always included, and interpolates the rest.
+Smoothing goes first so thinning never keeps a misread frame. The counts were measured on a
+recording of the Running preset: six smoothing passes cost nothing, two halvings stay within about a
+degree of the full take, and every further halving loses the stride quickly.
+
 ![The canvas buttons mid-recording: the record toggle has turned into a solid red square, between the camera and Camera Preview buttons](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
@@ -493,7 +502,7 @@ file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays through once, slowed down by **Video Slowdown Ratio**, twice by default, and runs the exact same
+plays through once, slowed down by **Video Slowdown Ratio**, six times by default, and runs the exact same
 live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
 continuously the same way a webcam does. Playing it never records anything by itself: **Play
@@ -656,13 +665,13 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Video Slowdown Ratio**, 2 by default, from 1 to 6, sets two things at once for an uploaded
+- **Video Slowdown Ratio**, 6 by default, from 1 to 6, sets two things at once for an uploaded
   video: how many times slower it plays, and how many poses Record Motion samples per frame of it
   before filtering them down to one keyframe. The two go together because a video slowed N times
   gives detection about N readings of each of its frames. Record Motion times a video take by the
   video's own position rather than the clock on the wall, so the recorded clip keeps the video's
   real timing at any ratio. 1 plays at normal speed with one sample a frame and nothing to filter.
-  The smoothing times above still run on the wall clock, so at a ratio of 2 they act on half as
+  The smoothing times above still run on the wall clock, so at a ratio of 6 they act on a sixth as
   much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
