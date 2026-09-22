@@ -11,12 +11,11 @@
  * Usage: node scripts/extract-video-landmarks.mjs <video> <output.json> [--fps 30] [--full]
  *   --full uses pose_landmarker_full instead of the lite model the app ships with.
  */
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
+import { cutFrames } from './video-frames.mjs'
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const visionPackage = join(repositoryRoot, 'node_modules', '@mediapipe', 'tasks-vision')
@@ -38,25 +37,6 @@ const parseArguments = (argv) => {
     output: resolve(output),
     framesPerSecond: fpsIndex >= 0 ? Number(argv[fpsIndex + 1]) : 30,
     poseVariant: argv.includes('--full') ? 'full' : 'lite'
-  }
-}
-
-const cutFrames = (video, framesPerSecond) => {
-  const directory = mkdtempSync(join(tmpdir(), 'landmark-frames-'))
-  execFileSync('ffmpeg', [
-    '-v',
-    'error',
-    '-i',
-    video,
-    '-vf',
-    `fps=${framesPerSecond}`,
-    join(directory, '%05d.png')
-  ])
-  return {
-    directory,
-    files: readdirSync(directory)
-      .filter((name) => name.endsWith('.png'))
-      .sort()
   }
 }
 
