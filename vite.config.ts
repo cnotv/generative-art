@@ -19,7 +19,8 @@ const packages = [
   'multiplayer-server',
   'dictionary',
   'chat',
-  'canvas-editor'
+  'canvas-editor',
+  'history'
 ]
 const allowedHosts = ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz', 'cnotv.github.io']
 

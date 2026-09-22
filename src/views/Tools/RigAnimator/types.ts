@@ -50,6 +50,7 @@ export interface RigAnimatorConfig {
   cameraBoneSmoothingMilliseconds: number
   cameraBoneMaxTurnSpeed: number
   cameraLimitJoints: boolean
+  cameraFilterRollFlips: boolean
   cameraVisibilityThreshold: number
   cameraTwistMinBendDegrees: number
   cameraTwistFullBendDegrees: number
@@ -179,6 +180,11 @@ export interface CameraPoseMappingOptions {
   boneSmoothingMilliseconds: number
   /** Keep every joint inside a human range, see `CAMERA_JOINT_LIMITS_DEGREES`. */
   limitJoints: boolean
+  /**
+   * Hold back a bone's roll when it departs from the direction that bone was already rolling
+   * in, which is how a twist cue read past half a turn shows up, see `trackBoneRoll`.
+   */
+  filterRollFlips: boolean
   /** The fastest a joint may turn, in radians a second; 0 turns the cap off. */
   maxBoneTurnRadiansPerSecond: number
 }
@@ -262,4 +268,45 @@ export interface CameraDetection {
   previewLandmarks: NormalizedLandmark[] | null
   previewHandLandmarks: NormalizedLandmark[][]
   frame: CameraPoseFrame
+}
+
+/**
+ * How one bone has been rolling about its own length. The angle runs on past half a turn rather
+ * than jumping sign, and the velocity is the direction of movement a new reading is judged against.
+ */
+export interface BoneRollTrack {
+  angle: number
+  /** Radians a second, signed, from the last accepted reading. */
+  velocity: number
+  /** Readings in a row that departed from that movement, waiting to confirm a real turn. */
+  pendingReadings: number
+}
+
+/** Each bone's roll track from the previous frame, keyed by bone name. */
+export type BoneRollTracks = Map<string, BoneRollTrack>
+
+/** What one pass of the retarget is allowed to touch, and what it carries over from the last one. */
+export interface CameraRetargetPass {
+  drivenBoneNames: Set<string>
+  rollTracks: BoneRollTracks
+  /** Time since the previous frame was applied, which is what a roll's movement is measured over. */
+  elapsedSeconds: number
+}
+
+/** When a roll reading is taken for a flip rather than a turn. */
+export interface BoneRollFlipSettings {
+  /** How far a reading may depart from where the roll was heading before it is held back. */
+  flipRadians: number
+  /** Readings in a row that have to agree before a departure is taken for a real turn. */
+  confirmReadings: number
+  /** The fastest a tracked roll may be remembered as moving, in radians a second. */
+  maxVelocityRadiansPerSecond: number
+  /** A gap longer than this starts the track over, so a resumed capture lands whole. */
+  resetSeconds: number
+}
+
+/** A roll reading once its track has judged it: the angle to apply, and the track to carry forward. */
+export interface BoneRollReading {
+  angle: number
+  track: BoneRollTrack
 }

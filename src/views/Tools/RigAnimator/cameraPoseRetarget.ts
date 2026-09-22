@@ -6,20 +6,26 @@ import {
   CAMERA_NECK_TURN_SHARE,
   CAMERA_PELVIS_LEAN_SHARE,
   CAMERA_BONE_SMOOTHING_RESET_SECONDS,
-  CAMERA_JOINT_LIMITS_DEGREES
+  CAMERA_JOINT_LIMITS_DEGREES,
+  CAMERA_ROLL_FLIP_DEGREES,
+  CAMERA_ROLL_FLIP_CONFIRM_READINGS,
+  CAMERA_ROLL_TRACK_MAX_DEGREES_PER_SECOND
 } from './config'
+import { BONE_LENGTH_AXIS, splitSwingTwist, trackBoneRoll } from './boneRollTracking'
 import {
   CAMERA_LANDMARK_INDEX,
   lowPassBlendFactor,
   smoothingCutoffHertz
 } from './cameraPoseMapping'
 import type {
+  BoneRollFlipSettings,
   CameraBoneTransform,
   CameraHandLandmark,
   CameraJointLimitDegrees,
   CameraLandmark,
   CameraPoseFrame,
   CameraPoseMappingOptions,
+  CameraRetargetPass,
   CameraRetargetRest
 } from './types'
 
@@ -32,8 +38,7 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0)
 /** The Face Landmarker's identity pose looks along +z with the subject's left along +x. */
 const CANONICAL_FACE_FORWARD = new THREE.Vector3(0, 0, 1)
 const CANONICAL_FACE_LATERAL = new THREE.Vector3(1, 0, 0)
-/** Every bone of a Mixamo rig runs along its own local +y and curls a finger about its local +x. */
-const BONE_LENGTH_AXIS = new THREE.Vector3(0, 1, 0)
+/** Every bone of a Mixamo rig curls a finger about its own local +x; `BONE_LENGTH_AXIS` is the other. */
 const FINGER_FLEXION_AXIS = new THREE.Vector3(1, 0, 0)
 const JOINT_LIMITS = new Map(Object.entries(CAMERA_JOINT_LIMITS_DEGREES))
 
@@ -109,11 +114,18 @@ const FOOT_BONE_NAMES = [
 interface RetargetContext {
   bonesByName: Map<string, THREE.Bone>
   rest: CameraRetargetRest
-  drivenBoneNames: Set<string>
   options: CameraPoseMappingOptions
   /** The rig's own left, and the way it faces, at rest. */
   restLateral: THREE.Vector3
   restForward: THREE.Vector3
+  pass: CameraRetargetPass
+}
+
+const BONE_ROLL_FLIP_SETTINGS: BoneRollFlipSettings = {
+  flipRadians: THREE.MathUtils.degToRad(CAMERA_ROLL_FLIP_DEGREES),
+  confirmReadings: CAMERA_ROLL_FLIP_CONFIRM_READINGS,
+  maxVelocityRadiansPerSecond: THREE.MathUtils.degToRad(CAMERA_ROLL_TRACK_MAX_DEGREES_PER_SECOND),
+  resetSeconds: CAMERA_BONE_SMOOTHING_RESET_SECONDS
 }
 
 /** Two directions that fix an orientation: one a segment runs along, one it leans toward. */
@@ -302,22 +314,6 @@ const frameChange = (observed: SegmentFrame, rest: SegmentFrame): THREE.Quaterni
   return observedRotation && restRotation ? observedRotation.multiply(restRotation.invert()) : null
 }
 
-/**
- * Split a rotation into its turn about `unitAxis`, as a signed angle, and the swing left over, so
- * that `swing * twist` rebuilds it.
- */
-const splitSwingTwist = (
-  rotation: THREE.Quaternion,
-  unitAxis: THREE.Vector3
-): { swing: THREE.Quaternion; twistAngle: number } => {
-  // The same rotation has two quaternions; the one with w >= 0 keeps the angle within ±180°.
-  const hemisphere = rotation.w < 0 ? -1 : 1
-  const along = new THREE.Vector3(rotation.x, rotation.y, rotation.z).dot(unitAxis) * hemisphere
-  const twistAngle = 2 * Math.atan2(along, rotation.w * hemisphere)
-  const twist = new THREE.Quaternion().setFromAxisAngle(unitAxis, twistAngle)
-  return { swing: rotation.clone().multiply(twist.invert()), twistAngle }
-}
-
 const limitSwingTwist = (
   fromRest: THREE.Quaternion,
   limit: { swing: number; twist: number }
@@ -401,7 +397,7 @@ const drivenBone = (
 ): { bone: THREE.Bone; restQuaternion: THREE.Quaternion } | null => {
   const bone = context.bonesByName.get(boneName)
   const restQuaternion = context.rest.worldQuaternions.get(boneName)
-  return bone && restQuaternion && context.drivenBoneNames.has(boneName)
+  return bone && restQuaternion && context.pass.drivenBoneNames.has(boneName)
     ? { bone, restQuaternion }
     : null
 }
@@ -418,8 +414,30 @@ const rotateFromRest = (
   }
 }
 
+/**
+ * The roll this frame should apply, once the bone's own direction of travel has had its say. With
+ * the filter off the reading is taken as it comes, half-turn jumps and all.
+ */
+const trackedRollAngle = (
+  context: RetargetContext,
+  boneName: string,
+  observedAngle: number
+): number => {
+  if (!context.options.filterRollFlips) return observedAngle
+  const reading = trackBoneRoll(
+    context.pass.rollTracks.get(boneName),
+    observedAngle,
+    context.pass.elapsedSeconds,
+    BONE_ROLL_FLIP_SETTINGS
+  )
+  context.pass.rollTracks.set(boneName, reading.track)
+  return reading.angle
+}
+
 /** Roll a world-space change about `unitAxis` until the twist cue's rest direction meets the observed one. */
 const rollToward = (
+  context: RetargetContext,
+  boneName: string,
   change: THREE.Quaternion,
   unitAxis: THREE.Vector3,
   twist: TwistCue
@@ -429,9 +447,13 @@ const rollToward = (
   if (carried.lengthSq() < DIRECTION_EPSILON || observed.lengthSq() < DIRECTION_EPSILON) {
     return change
   }
-  const angle = Math.atan2(
-    new THREE.Vector3().crossVectors(carried, observed).dot(unitAxis),
-    carried.dot(observed)
+  const angle = trackedRollAngle(
+    context,
+    boneName,
+    Math.atan2(
+      new THREE.Vector3().crossVectors(carried, observed).dot(unitAxis),
+      carried.dot(observed)
+    )
   )
   return new THREE.Quaternion().setFromAxisAngle(unitAxis, angle * twist.weight).multiply(change)
 }
@@ -464,7 +486,7 @@ const aimBone = (
   const swung = new THREE.Quaternion()
     .setFromUnitVectors(restAim.applyQuaternion(restToCurrent), target)
     .multiply(restToCurrent)
-  const turned = twist ? rollToward(swung, target, twist) : swung
+  const turned = twist ? rollToward(context, boneName, swung, target, twist) : swung
   setBoneWorldQuaternion(context, driven.bone, turned.multiply(driven.restQuaternion))
   return true
 }
@@ -852,8 +874,8 @@ const groundFeet = (context: RetargetContext): void => {
 const createRetargetContext = (
   bones: THREE.Bone[],
   rest: CameraRetargetRest,
-  drivenBoneNames: Set<string>,
-  options: CameraPoseMappingOptions
+  options: CameraPoseMappingOptions,
+  pass: CameraRetargetPass
 ): RetargetContext | null => {
   const restLeftArm = rest.worldPositions.get('mixamorigLeftArm')
   const restRightArm = rest.worldPositions.get('mixamorigRightArm')
@@ -862,10 +884,10 @@ const createRetargetContext = (
   return {
     bonesByName: new Map(bones.map((bone) => [bone.name, bone])),
     rest,
-    drivenBoneNames,
     options,
     restLateral,
-    restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize()
+    restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize(),
+    pass
   }
 }
 
@@ -876,20 +898,20 @@ const createRetargetContext = (
  * are copied, so a rig whose proportions differ from the performer's still stretches fully
  * straight in a T-pose and reaches overhead in a stretch. Parents are posed before children, so
  * each bone only adds its own turn on top of what the bone above it already did.
- * @param bones The rig's bones, with every bone in `drivenBoneNames` already reset to rest
+ * @param bones The rig's bones, with every bone this pass drives already reset to rest
  * @param rest The rig's rest pose, from `captureCameraRetargetRest`
  * @param frame What the camera found this frame, oriented and smoothed
  * @param options Which rules to apply, each switchable from the Config panel
- * @param drivenBoneNames The bones this frame may change, from `cameraFrameDrivenBoneNames`
+ * @param pass Which bones this frame may change, and the roll tracks carried from the last one
  */
 export const applyCameraPoseFrame = (
   bones: THREE.Bone[],
   rest: CameraRetargetRest,
   frame: CameraPoseFrame,
   options: CameraPoseMappingOptions,
-  drivenBoneNames: Set<string>
+  pass: CameraRetargetPass
 ): void => {
-  const context = createRetargetContext(bones, rest, drivenBoneNames, options)
+  const context = createRetargetContext(bones, rest, options, pass)
   if (!context) return
   const point = readBodyPoints(frame.bodyLandmarks, options)
   const torso = observeTorso(context, point)

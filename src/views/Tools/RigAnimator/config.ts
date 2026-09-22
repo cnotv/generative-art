@@ -311,6 +311,22 @@ export const CAMERA_HAND_FLIP_CONFIRM_READINGS = 3
 export const CAMERA_HAND_TRACK_RESET_MILLISECONDS = 500
 /** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
 export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
+/**
+ * The furthest, in degrees, a bone's roll may depart from where its own movement said it was
+ * heading before the reading is held back, until `CAMERA_ROLL_FLIP_CONFIRM_READINGS` readings in
+ * a row agree on it. A twist cue is read from two directions at most half a turn apart, so a limb
+ * rolling past that point reads as having jumped to the opposite sign, and the bone swings almost
+ * a whole turn on a single frame. 180 turns the check off.
+ */
+export const CAMERA_ROLL_FLIP_DEGREES = 90
+/** How many readings in a row must agree before a sharply changed roll is believed. */
+export const CAMERA_ROLL_FLIP_CONFIRM_READINGS = 3
+/**
+ * The fastest, in degrees a second, a tracked roll is remembered as moving. Without a cap one
+ * accepted jump would have the next frame's reading measured against a guess a long way past
+ * anything the limb could reach, and good readings would be held back behind it.
+ */
+export const CAMERA_ROLL_TRACK_MAX_DEGREES_PER_SECOND = 360
 
 /** How far, in metres, a smoothed landmark may move in a single frame before the excess past
  * this is clamped off as a sudden jump rather than genuine motion. */

@@ -113,6 +113,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraRollThighs: true,
   cameraAimFeet: true,
   cameraLimitJoints: true,
+  cameraFilterRollFlips: true,
   cameraTrackFace: true,
   cameraSearchFaceAroundBody: true,
   cameraTrackHands: true,
@@ -171,6 +172,7 @@ const cameraPoseMappingOptions = computed(
     twistFullBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistFullBendDegrees),
     boneSmoothingMilliseconds: reactiveConfig.value.cameraBoneSmoothingMilliseconds,
     limitJoints: reactiveConfig.value.cameraLimitJoints,
+    filterRollFlips: reactiveConfig.value.cameraFilterRollFlips,
     maxBoneTurnRadiansPerSecond: THREE.MathUtils.degToRad(
       reactiveConfig.value.cameraBoneMaxTurnSpeed
     )

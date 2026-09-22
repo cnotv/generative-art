@@ -127,7 +127,8 @@ const cameraBoneControls: ConfigControlsSchema = {
   cameraAimLegs: { checkbox: true, label: 'Aim Legs' },
   cameraRollThighs: { checkbox: true, label: 'Roll Thighs from Knees and Feet' },
   cameraAimFeet: { checkbox: true, label: 'Aim Feet' },
-  cameraLimitJoints: { checkbox: true, label: 'Keep Joints in Human Range' }
+  cameraLimitJoints: { checkbox: true, label: 'Keep Joints in Human Range' },
+  cameraFilterRollFlips: { checkbox: true, label: 'Ignore Rolls That Flip Over' }
 }
 
 const physicsControls = (physicsEnabled: boolean): ConfigControlsSchema => ({
