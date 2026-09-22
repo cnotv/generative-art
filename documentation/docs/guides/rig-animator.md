@@ -139,7 +139,9 @@ height while the camera drives the rig.
 ![The default character in its rest pose standing on the sand coloured ground disc, its shadow cast behind it](/img/animation/rig-ground.webp)
 
 The other docked buttons, left to right: **Bone Markers**, once the model carries a rig, shows
-or hides the markers described next. **Show Rig Panel**, a gear, opens and closes the rig panel
+or hides the markers described next. **Check Limbs While Posing**, a ruler, turns on the markers
+and the crossing check described under **Checking the limbs while something poses the rig**.
+**Show Rig Panel**, a gear, opens and closes the rig panel
 described under **Capturing a pose from the camera**, which also holds every setting. **Start
 Camera Tracking** opens that panel if it is closed and starts following the webcam, or stops
 it. **Record Motion**, a solid red dot, appears once the panel has a live camera or a video to
@@ -149,7 +151,7 @@ Flow** starts and stops the drip; dropping one on demand is a touch, not a butto
 its own section below. Each toggle flips the same setting as its checkbox in the rig panel, so
 the two places always agree.
 
-![Upload Model, Bone Markers, the rig panel gear, Start Camera Tracking, the red Record Motion dot, Camera Preview and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
+![Upload Model, Bone Markers, Check Limbs While Posing, the rig panel gear, Start Camera Tracking and Physics docked at the top left of the canvas](/img/animation/rig-canvas-controls.webp)
 
 ## Picking and posing a bone
 
@@ -565,6 +567,42 @@ vertices bound to it, and the model came apart at every joint.
 
 ![Mixamo's Y Bot posed from the same clip, an arm raised overhead and a high kick, every limb attached](/img/animation/rig-camera-ybot-retarget.webp)
 
+### Reach that matches the model
+
+Directions alone cannot place a hand. Every limb segment turns to point where the performer's
+did, so the rig then travels its own arm length down that ray: a rig whose arms are long for its
+shoulders sails past a contact the performer made, and a short-armed one stops short of it. Hands
+clasped on the midline end up apart, or crossed past each other; a hand raised to the face lands
+inside it, or beside it. The shipped character misses a clasp by half a shoulder width, and it
+gets worse, not better, as a rig's proportions drift further from the performer's.
+
+**Match Reach to the Model**, on by default, fixes where a limb lands rather than where it
+points. The offset from the performer's own shoulder to their wrist is scaled into the rig's body
+size — measured across the shoulders, the one span both bodies show plainly and neither can
+foreshorten much — hung off the rig's own shoulder, and the arm is solved to it with the same
+two-bone IK a bone drag uses. The elbow bend comes from the direction pass that has already run,
+so it stays on the side the performer bent it. Legs work the same way, hip to ankle.
+
+A target further away than the limb can reach extends it fully toward the target rather than
+stretching it, and both joints are pulled back inside their human ranges afterwards, since a
+closed-form solve knows nothing about them. Off, the capture behaves exactly as it did before:
+directions copied, and the reach wherever the rig's own proportions happen to put it.
+
+### Checking the limbs while something poses the rig
+
+A reach that does not match looks fine at rest. It shows in motion, which is a bad moment to be
+reading numbers. The ruler on the canvas turns on the bone markers and a check that watches the
+hands against each other and against the head, the forearms, and the feet, on every frame of
+whatever is posing the rig — a live capture, a recorded take played back, or a bone dragged by
+hand — and names any pair that has closed to about a third of how far apart it stands at rest.
+
+Each pair is judged against its own rest distance rather than one distance for the whole rig: a
+rig stands with its feet almost touching and its arms out wide, so a single threshold loose
+enough to catch a hand reaching the head reports those feet while the rig is still standing
+still. Hands genuinely clasped report too. It is a hint about a reach, not a verdict on a pose.
+
+![The character with a hand raised to its face, bone markers showing, and Hand R meets Head named at the top of the canvas](/img/animation/rig-limb-check.webp)
+
 ### Switching each rule on and off
 
 Every rule the capture follows has its own checkbox in the rig panel, all on by default, so a
@@ -584,6 +622,9 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
   mirrored preview. **Only While Video Plays** stops reading a paused video.
 - **Turn Hips**, **Bend Spine**, **Turn Neck and Head**, **Aim Arms**, **Aim Legs** and **Aim
   Feet** each leave their bones at rest when off.
+- **Match Reach to the Model**, on by default, lands each hand and foot where the performer's own
+  was relative to their body instead of wherever the rig's segment lengths reach; see **Reach
+  that matches the model** above.
 - **Correct Ear and Nose Head Pitch** tips a head read from the ears back up by the 19° a level
   gaze reads downward. **Ignore Impossible Head Turns** drops a face reading turned further from
   the chest than a neck can turn, which a face half hidden behind an arm produced, and uses the

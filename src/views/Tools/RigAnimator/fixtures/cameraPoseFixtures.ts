@@ -41,6 +41,8 @@ export const buildMappingOptions = (
   aimLegs: true,
   rollThighsFromKneesAndFeet: true,
   aimFeet: true,
+  // Off by default so the direction tests read the directions alone; the reach tests turn it on.
+  fitLimbReach: false,
   visibilityThreshold: CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   twistMinBendRadians: THREE.MathUtils.degToRad(CAMERA_TWIST_MIN_BEND_DEGREES),
   twistFullBendRadians: THREE.MathUtils.degToRad(CAMERA_TWIST_FULL_BEND_DEGREES),

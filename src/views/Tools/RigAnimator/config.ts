@@ -52,6 +52,37 @@ export const BONE_MARKER_DEPTH_FALLOFF = 0.82
 /** A marker never shrinks past this fraction of its rig's base size, however deep the chain. */
 export const BONE_MARKER_MIN_SCALE = 0.35
 
+/**
+ * The bone pairs the crossing check watches while a capture or a playback runs: the ones a
+ * reach that does not match the model drives into each other, rather than every pair in the
+ * rig. Hands meeting each other or the head is what an over-long arm looks like from the
+ * front, which is the angle a capture is usually judged from.
+ */
+export const RIG_BONE_CROSSING_PAIRS: { first: string; second: string; label: string }[] = [
+  { first: 'mixamorigLeftHand', second: 'mixamorigRightHand', label: 'Hand L meets Hand R' },
+  { first: 'mixamorigLeftHand', second: 'mixamorigHead', label: 'Hand L meets Head' },
+  { first: 'mixamorigRightHand', second: 'mixamorigHead', label: 'Hand R meets Head' },
+  {
+    first: 'mixamorigLeftForeArm',
+    second: 'mixamorigRightForeArm',
+    label: 'Forearm L meets Forearm R'
+  },
+  { first: 'mixamorigLeftFoot', second: 'mixamorigRightFoot', label: 'Foot L meets Foot R' }
+]
+
+/**
+ * How far a watched pair must close, as a share of how far apart it stands at rest, before the
+ * check calls it crossed.
+ *
+ * Measured joint origin to joint origin rather than surface to surface: a palm flat against a
+ * cheek still leaves the wrist a hand's length from the skull's own joint, so the fraction has
+ * to be generous enough to fire on the pose anyone would call a hand on the face. Tuned against
+ * the shipped character until it did without also reporting the feet it stands on. Hands
+ * genuinely clasped together report too, which is the intended trade: the check is a hint about
+ * a reach, not a verdict on a pose.
+ */
+export const BONE_CROSSING_REST_FRACTION = 0.35
+
 export const DEFAULT_FPS = 30
 /**
  * How many poses Record Motion samples per timeline frame from the live camera; an uploaded video

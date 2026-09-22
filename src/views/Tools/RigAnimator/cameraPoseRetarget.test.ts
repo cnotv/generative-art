@@ -779,6 +779,87 @@ describe('bone smoothing', () => {
   })
 })
 
+describe('reach fitted to the model rather than the performer', () => {
+  /** Hands clasped together on the midline, in front of the chest, elbows out and down. */
+  const CLASPED_HANDS = {
+    13: [0.3, -0.35, -0.1],
+    14: [-0.3, -0.35, -0.1],
+    15: [0, -0.45, -0.25],
+    16: [0, -0.45, -0.25],
+    17: [0.02, -0.47, -0.28],
+    18: [-0.02, -0.47, -0.28],
+    19: [0.02, -0.43, -0.28],
+    20: [-0.02, -0.43, -0.28]
+  } satisfies Record<number, [number, number, number]>
+
+  const topmost = (node: THREE.Object3D): THREE.Object3D =>
+    node.parent ? topmost(node.parent) : node
+
+  /** The standard rig with both arms scaled, posed from the clasped-hands frame. */
+  const poseWithArms = (armLengthScale: number, fitLimbReach: boolean) => {
+    const bones = buildMixamoRig()
+    const bone = (name: string): THREE.Bone => bones.find((candidate) => candidate.name === name)!
+    ;['Left', 'Right'].forEach((side) => {
+      bone(`mixamorig${side}ForeArm`).position.multiplyScalar(armLengthScale)
+      bone(`mixamorig${side}Hand`).position.multiplyScalar(armLengthScale)
+    })
+    topmost(bones[0]).updateMatrixWorld(true)
+
+    const rest = captureCameraRetargetRest(bones)
+    const frame: CameraPoseFrame = {
+      bodyLandmarks: buildBodyLandmarks(CLASPED_HANDS),
+      handLandmarks: {},
+      headRotation: null
+    }
+    applyCameraPoseFrame(
+      bones,
+      rest,
+      frame,
+      buildMappingOptions({ fitLimbReach }),
+      cameraFrameDrivenBoneNames(frame, new Set(bones.map((candidate) => candidate.name)))
+    )
+    const at = (name: string): THREE.Vector3 => bone(name).getWorldPosition(new THREE.Vector3())
+    return {
+      shoulderSpan: at('mixamorigLeftArm').distanceTo(at('mixamorigRightArm')),
+      handGap: at('mixamorigLeftHand').distanceTo(at('mixamorigRightHand')),
+      leftElbow: at('mixamorigLeftForeArm')
+    }
+  }
+
+  it.each([
+    ['its own', 1],
+    ['half again as long', 1.5],
+    ['noticeably shorter', 0.6]
+  ])('lands both hands on the contact when the rig has %s arms', (_, armLengthScale) => {
+    // Arrange, Act
+    const copied = poseWithArms(armLengthScale, false)
+    const fitted = poseWithArms(armLengthScale, true)
+
+    // Assert: copying directions leaves the hands a good part of a shoulder span apart,
+    // whichever way the arm length is wrong; fitting the reach closes it.
+    expect(copied.handGap).toBeGreaterThan(0.2 * copied.shoulderSpan)
+    expect(fitted.handGap).toBeLessThan(0.01 * fitted.shoulderSpan)
+  })
+
+  it('keeps the elbow bent the way the performer bent it', () => {
+    // Arrange, Act
+    const fitted = poseWithArms(1, true)
+
+    // Assert: the performer's own left elbow is out to their left, and so is the rig's.
+    expect(fitted.leftElbow.x).toBeGreaterThan(0)
+  })
+
+  it('reaches as far as it can toward a contact the rig is too short to make', () => {
+    // Arrange, Act
+    const copied = poseWithArms(0.3, false)
+    const fitted = poseWithArms(0.3, true)
+
+    // Assert: the limb extends toward the target instead of stretching to it.
+    expect(fitted.handGap).toBeLessThan(copied.handGap / 2)
+    expect(fitted.handGap).toBeGreaterThan(0)
+  })
+})
+
 describe('cameraFrameDrivenBoneNames', () => {
   const scope = new Set([
     'mixamorigHips',
