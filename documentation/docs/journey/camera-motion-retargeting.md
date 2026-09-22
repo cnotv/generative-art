@@ -254,6 +254,51 @@ empty stream reloads the element even when it held none, rewinding and pausing t
 Record Motion kept sampling a frozen frame. The start now notices it was cancelled, and a stream
 is only cleared when one was actually set.
 
+## Scoring a capture against a recording of the rig itself
+
+A clip of a real performer can only be compared with what a detector read from it, which puts the
+detector's own mistakes into the reference. A screen recording of the Rig Animator playing one of
+its own presets does not have that problem: the preset is the exact motion on screen, bone for bone,
+so a capture of the recording can be scored against the truth. The **Running** preset, recorded for
+four seconds from an oblique front view, is the first such clip.
+
+![Six frames of the recorded Running preset with the lite pose model's reading drawn over each: the subject's left side in blue, right in red. Frames 0 and 10 put the raised back leg on the wrong side](/img/animation/rig-running-recording-detection.webp)
+
+Two things have to be settled before any score means something. The recording starts wherever the
+loop happened to be, so the preset is slid along its own 0.7 second loop to the start that best
+fits the detection. The camera looks at the character from the side, so both bodies are turned
+about the vertical by the single angle that lines them up best across the whole take, not frame by
+frame: a per-frame fit would also forgive a body leaning the wrong way.
+
+The scores use the terms of pose estimation benchmarks, each chosen for what the others miss.
+
+| Measure                                                                     | Reads                                    | Blind to                             |
+| --------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------ |
+| Mean limb segment angle                                                     | which way each bone points, in 3D        | limb length, so proportions are fair |
+| Percentage of correct keypoints at a fifth of a torso, in the camera's view | what the recording would look like       | depth, which one camera reads worst  |
+| Correlation of each knee's bend over time                                   | a stride reproduced as a stride, in step | how deep each bend goes              |
+
+What the first recording showed, with the Config panel as it starts:
+
+| Limb     | Detector against the preset | Capture against the preset |
+| -------- | --------------------------- | -------------------------- |
+| Legs     | 14°                         | 13°                        |
+| Near arm | 23°                         | 22°                        |
+| Far arm  | 33°                         | 68°                        |
+
+Where the detector sees a limb, the capture is as good as the detector and slightly better, since
+smoothing takes out some of its jitter. The far arm is the exception, and not because of the
+mapping. The lite model reports its elbow and wrist at 0.2 to 0.6 visibility, under the 0.5 cut-off,
+so on most frames the capture treats them as not detected and returns the arm to rest: a T-pose arm
+swinging nowhere in a run. Read at any visibility, the same arm follows the detection within 7°.
+The detector's guesses for a limb it cannot see were better than the fallback, which is the case
+for holding a lost limb rather than resetting it.
+
+Two more things the recording showed about the detectors. On a side view the pose model swaps the
+legs for a few frames every stride, the full model as much as the lite one, so a heavier model is no
+fix. And the face landmarker finds no face on the stylised character in any frame, sunglasses and
+all, so a capture of a rendered character gets no head rotation from it.
+
 ## Limits
 
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest

@@ -695,6 +695,21 @@ instead of stepping the playhead — see **Selecting a range of frames** above. 
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
 
+### Scoring a capture against a recording
+
+A recording of the rig playing a preset is a test case with a known answer. The script
+`scripts/extract-video-landmarks.mjs` runs MediaPipe's pose and face detectors over every frame of
+a video in headless Chromium and writes the readings as a fixture:
+
+```sh
+node scripts/extract-video-landmarks.mjs recording.mp4 src/views/Tools/RigAnimator/fixtures/runningClipFrames.json
+```
+
+`clipReproduction.test.ts` replays that fixture through the same steps a live capture takes, with
+the Config panel's defaults, and scores the rig against the preset it recorded using the measures
+in `poseSimilarity.ts`. What the scores mean, and what the first recording showed, is in
+[Copying a Performer onto a Rig](../journey/camera-motion-retargeting.md#scoring-a-capture-against-a-recording-of-the-rig-itself).
+
 ## Merging sources by body part
 
 Every source that can drive the rig — a camera or photo capture, a bundled preset, a
