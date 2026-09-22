@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import * as THREE from 'three'
 import { fbxLoader } from '@webgamekit/threejs'
-import { poseBuildClip } from '@webgamekit/rig'
+import { poseBuildClip, poseCapture, type Pose } from '@webgamekit/rig'
 import {
   applyCameraPoseFrame,
   cameraBoneMaxTurnRadians,
@@ -94,11 +94,20 @@ const recordedFrames = runningClip.frames.map((frame) => ({
 const rigRoot = (bones: THREE.Bone[]): THREE.Object3D =>
   bones.find((bone) => !(bone.parent instanceof THREE.Bone))!.parent!
 
-const readRigJoints = (bones: THREE.Bone[]): THREE.Vector3[] => {
+/** Where the compared joints are, and every bone's rotation, so a frame can also be rendered. */
+interface RigFrame {
+  joints: THREE.Vector3[]
+  pose: Pose
+}
+
+const readRigFrame = (bones: THREE.Bone[]): RigFrame => {
   rigRoot(bones).updateMatrixWorld(true)
-  return JOINTS.map(([name]) =>
-    bones.find((bone) => bone.name === `mixamorig${name}`)!.getWorldPosition(new THREE.Vector3())
-  )
+  return {
+    joints: JOINTS.map(([name]) =>
+      bones.find((bone) => bone.name === `mixamorig${name}`)!.getWorldPosition(new THREE.Vector3())
+    ),
+    pose: poseCapture(bones)
+  }
 }
 
 /** MediaPipe's y grows downward and z away from the camera; the scene's y up and z toward it. */
@@ -116,14 +125,14 @@ const replayCapture = (
   frames: typeof recordedFrames,
   options = PANEL_OPTIONS,
   smoothing = PANEL_SMOOTHING
-): THREE.Vector3[][] => {
+): RigFrame[] => {
   const bones = buildMixamoRig()
   const rest = captureCameraRetargetRest(bones)
   const allBoneNames = new Set(bones.map((bone) => bone.name))
   const restTransforms = captureBoneTransforms(bones, allBoneNames)
   const frameSeconds = 1 / DEFAULT_FPS
-  return frames.reduce<{ previous: CameraPoseFrame | null; joints: THREE.Vector3[][] }>(
-    ({ previous, joints }, { time, poseFrame }, index) => {
+  return frames.reduce<{ previous: CameraPoseFrame | null; rigFrames: RigFrame[] }>(
+    ({ previous, rigFrames }, { time, poseFrame }, index) => {
       const smoothed = smoothCameraPoseFrame(previous, poseFrame, time * 1000, smoothing)
       const driven = cameraFrameDrivenBoneNames(smoothed, allBoneNames)
       const before = captureBoneTransforms(bones, driven)
@@ -142,10 +151,10 @@ const replayCapture = (
         cameraBoneSmoothingShare(options.boneSmoothingMilliseconds, elapsedSeconds),
         cameraBoneMaxTurnRadians(options.maxBoneTurnRadiansPerSecond, elapsedSeconds)
       )
-      return { previous: smoothed, joints: [...joints, readRigJoints(bones)] }
+      return { previous: smoothed, rigFrames: [...rigFrames, readRigFrame(bones)] }
     },
-    { previous: null, joints: [] }
-  ).joints
+    { previous: null, rigFrames: [] }
+  ).rigFrames
 }
 
 /**
@@ -167,15 +176,15 @@ const loadRunningPreset = () => {
   )
   const mixer = new THREE.AnimationMixer(rigRoot(bones))
   mixer.clipAction(clip).play()
-  const jointsAt = (seconds: number): THREE.Vector3[] => {
+  const frameAt = (seconds: number): RigFrame => {
     mixer.setTime(seconds % clip.duration)
-    return readRigJoints(bones)
+    return readRigFrame(bones)
   }
-  return { duration: clip.duration, jointsAt }
+  return { duration: clip.duration, frameAt }
 }
 
-const normalizeAll = (frames: THREE.Vector3[][]): THREE.Vector3[][] =>
-  frames.map((joints) => normalizeSkeleton(joints, TORSO))
+const normalizeAll = (frames: RigFrame[] | THREE.Vector3[][]): THREE.Vector3[][] =>
+  frames.map((frame) => normalizeSkeleton(Array.isArray(frame) ? frame : frame.joints, TORSO))
 
 /**
  * The recording starts wherever the loop happened to be, so the preset is slid along its own loop
@@ -186,15 +195,15 @@ const normalizeAll = (frames: THREE.Vector3[][]): THREE.Vector3[][] =>
 const alignPresetToRecording = (
   preset: ReturnType<typeof loadRunningPreset>,
   detection: THREE.Vector3[][]
-): THREE.Vector3[][] => {
+): RigFrame[] => {
   const offsets = Array.from(
     { length: Math.ceil(preset.duration * OFFSET_STEPS_PER_SECOND) },
     (_, step) => step / OFFSET_STEPS_PER_SECOND
   )
-  const presetAt = (offset: number): THREE.Vector3[][] =>
-    normalizeAll(recordedFrames.map(({ time }) => preset.jointsAt(time + offset)))
+  const presetAt = (offset: number): RigFrame[] =>
+    recordedFrames.map(({ time }) => preset.frameAt(time + offset))
   const errors = offsets.map((offset) => {
-    const reference = presetAt(offset)
+    const reference = normalizeAll(presetAt(offset))
     return meanJointError(
       reference,
       turnAboutVertical(detection, bestVerticalTurn(reference, detection))
@@ -219,8 +228,10 @@ describe('reproducing a screen recording of the Running preset through camera ca
   const detected = normalizeAll(
     recordedFrames.map(({ poseFrame }) => readLandmarkJoints(poseFrame.bodyLandmarks!))
   )
-  const truth = alignPresetToRecording(loadRunningPreset(), detected)
-  const captured = normalizeAll(replayCapture(recordedFrames))
+  const presetFrames = alignPresetToRecording(loadRunningPreset(), detected)
+  const captureFrames = replayCapture(recordedFrames)
+  const truth = normalizeAll(presetFrames)
+  const captured = normalizeAll(captureFrames)
   const capturedFacingTruth = turnAboutVertical(captured, bestVerticalTurn(truth, captured))
 
   it.each([
@@ -274,6 +285,37 @@ describe('reproducing a screen recording of the Running preset through camera ca
 
       // Assert
       expect(degrees).toBeLessThan(40)
+    }
+  )
+
+  // Only on request: the frames a side by side comparison video is rendered from, see
+  // `scripts/render-clip-comparison.mjs`.
+  it.runIf(process.env.CLIP_COMPARISON_OUTPUT)(
+    'writes both rigs, frame by frame, for a comparison video',
+    () => {
+      // Arrange
+      const outputPath = process.env.CLIP_COMPARISON_OUTPUT!
+      const comparison = {
+        framesPerSecond: DEFAULT_FPS,
+        captureTurn: bestVerticalTurn(detected, captured),
+        presetTurn: bestVerticalTurn(detected, truth),
+        frames: recordedFrames.map(({ time }, index) => ({
+          time,
+          capture: captureFrames[index].pose,
+          preset: presetFrames[index].pose,
+          limbAngleDegrees: meanSegmentAngleDegrees(
+            [truth[index]],
+            [capturedFacingTruth[index]],
+            LIMB_SEGMENTS
+          )
+        }))
+      }
+
+      // Act
+      writeFileSync(outputPath, JSON.stringify(comparison))
+
+      // Assert
+      expect(readFileSync(outputPath, 'utf8').length).toBeGreaterThan(0)
     }
   )
 })

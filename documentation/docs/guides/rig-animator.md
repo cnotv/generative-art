@@ -748,6 +748,15 @@ the Config panel's defaults, and scores the rig against the preset it recorded u
 in `poseSimilarity.ts`. What the scores mean, and what the first recording showed, is in
 [Copying a Performer onto a Rig](../journey/camera-motion-retargeting.md#scoring-a-capture-against-a-recording-of-the-rig-itself).
 
+To see the scores, render them. The test writes both rigs' poses when given a path, and a second
+script plays them on the default character beside the recording, with each frame's limb angle
+error:
+
+```sh
+CLIP_COMPARISON_OUTPUT=comparison.json pnpm vitest run src/views/Tools/RigAnimator/clipReproduction.test.ts
+node scripts/render-clip-comparison.mjs recording.mp4 comparison.json comparison.mp4
+```
+
 ## Merging sources by body part
 
 Every source that can drive the rig — a camera or photo capture, a bundled preset, a
