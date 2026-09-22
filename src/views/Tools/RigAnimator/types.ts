@@ -58,6 +58,10 @@ export interface RigAnimatorConfig {
   cameraTwistFullBendDegrees: number
   cameraShowPreview: boolean
   cameraVideoSlowdownRatio: number
+  /** Smooth a finished take `RECORDING_SMOOTHING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraSmoothRecording: boolean
+  /** Halve a finished take `RECORDING_HALVING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraThinRecording: boolean
   targetLeftArm: boolean
   targetRightArm: boolean
   targetLeftLeg: boolean
@@ -335,4 +339,10 @@ export interface CameraRetargetPass {
   turnTracks: TurnTracks
   /** Time since the previous frame was applied, which is what a roll's movement is measured over. */
   elapsedSeconds: number
+}
+
+/** How many times a finished take is smoothed and halved, see `cleanUpRecordedTake`. */
+export interface RecordedTakeCleanup {
+  smoothingPasses: number
+  halvingPasses: number
 }
