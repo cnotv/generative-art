@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { HandSide } from '@webgamekit/rig'
 import skeleton from './mixamoCharacterSkeleton.json'
+import trainingClip from './trainingClipFrames.json'
 import {
   CAMERA_HAND_FLIP_DEGREES,
   CAMERA_HAND_HOLD_MILLISECONDS,
@@ -15,6 +16,7 @@ import {
 import type {
   CameraHandLandmark,
   CameraLandmark,
+  CameraPoseFrame,
   CameraPoseMappingOptions,
   CameraSmoothingSettings
 } from '../types'
@@ -46,7 +48,7 @@ export const buildMappingOptions = (
   twistFullBendRadians: THREE.MathUtils.degToRad(CAMERA_TWIST_FULL_BEND_DEGREES),
   boneSmoothingMilliseconds: 0,
   limitJoints: true,
-  filterRollFlips: false,
+  filterBodyFlips: false,
   maxBoneTurnRadiansPerSecond: 0,
   ...overrides
 })
@@ -199,3 +201,45 @@ export const buildHandLandmarks = (
   const turned = palm === 'down' ? points : points.map(([x, y, z]): Point => [x, -y, -z])
   return turned.map(([x, y, z]) => ({ x: side === 'Left' ? x : -x, y, z }))
 }
+
+/**
+ * The attached training clip as the app's own detectors read it: sixteen seconds of dancing at
+ * thirty frames a second, every frame, so a change can be measured against real detection noise
+ * rather than a pose built to prove a point. See `trainingClipFrames.json` for how it was packed.
+ * @returns One `CameraPoseFrame` per frame of the clip, in order
+ */
+export const loadTrainingClipFrames = (): CameraPoseFrame[] =>
+  trainingClip.frames.map((frame) => ({
+    bodyLandmarks:
+      frame.body &&
+      Array.from({ length: frame.body.length / 4 }, (_, index) => ({
+        x: frame.body![index * 4],
+        y: frame.body![index * 4 + 1],
+        z: frame.body![index * 4 + 2],
+        visibility: frame.body![index * 4 + 3]
+      })),
+    handLandmarks: Object.fromEntries(
+      (
+        [
+          ['Left', frame.left],
+          ['Right', frame.right]
+        ] as const
+      ).flatMap(([side, marks]) =>
+        marks
+          ? [
+              [
+                side,
+                Array.from({ length: marks.length / 3 }, (_, index) => ({
+                  x: marks[index * 3],
+                  y: marks[index * 3 + 1],
+                  z: marks[index * 3 + 2]
+                }))
+              ] as const
+            ]
+          : []
+      )
+    ),
+    headRotation: frame.head
+      ? { x: frame.head[0], y: frame.head[1], z: frame.head[2], w: frame.head[3] }
+      : null
+  }))

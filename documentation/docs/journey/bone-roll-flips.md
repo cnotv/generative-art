@@ -2,81 +2,87 @@
 sidebar_position: 129
 ---
 
-# The Roll That Turns a Limb Over
+# The Body That Turns Round and Back
 
-Why an arm in a camera capture would spin half a turn on a single frame and stay there, why
-slowing it down did not help, and what finally told a flip apart from a movement.
+Why a camera capture would spin the whole rig away from the camera and back inside a second, why
+the first three things we tried made it worse, and what a real clip had to say about all of them.
 
-## Two directions cannot say more than half a turn
+## The complaint, and the wrong suspect
 
-A bone's swing, where it points, comes from the detected body directly: the upper arm points at
-the elbow, the thigh at the knee. Its roll, how it is turned about its own length, has no
-landmark of its own. It is inferred from a second direction, a cue: which way the forearm swings
-off a bent elbow, which way the palm faces, where the kneecap points. The roll applied is the
-angle from where that cue sits in the rig's rest pose to where the detection puts it.
+A limb rolling over is the obvious suspect, because a roll is inferred rather than seen. A bone's
+swing comes from the detection directly, but how it is turned about its own length has no landmark
+of its own and is read from a second direction: which way a bent elbow points, which way a palm
+faces. Two directions only ever report an angle within half a turn of zero, so a limb rolling past
+that point reads as having jumped to the opposite sign, and the roll applied is a fraction of the
+angle rather than the whole of it, which makes the two very far apart.
 
-An angle measured between two directions is only ever reported within half a turn of zero. The
-measurement has no way to distinguish a cue that has travelled a hundred and eighty-one degrees
-one way from one that has travelled a hundred and seventy-nine the other, because as geometry
-they are the same pair of directions. So as a limb rolls steadily past that point, the reported
-angle does not continue past it. It changes sign.
+That story is coherent, and a test built to demonstrate it demonstrates it. On the attached clip,
+played through the whole pipeline with its shipped settings, it is not what happens: the joint
+speed cap already absorbs a flipped roll, and a guard built on the same reasoning left the count of
+single-frame roll flips exactly where it found it while adding an artefact of its own. Every
+threshold tried scored worse than no guard at all.
 
-That alone would not matter if the roll were always applied whole, because a rotation of plus
-and minus the same angle about the same axis are the same rotation once you go all the way
-round. But the cue is weighted: a limb barely bent carries almost no information about its roll,
-so its cue is faded in as the bend grows. A partial roll of plus a hundred and seventy-nine
-degrees and a partial roll of minus a hundred and seventy-nine degrees are nowhere near each
-other. The limb turns over between one frame and the next.
+The clip was clear about where the flip actually is. The whole body's facing:
 
-```mermaid
-flowchart TD
-    A[Cue direction rolls steadily] --> B{Past half a turn?}
-    B -- no --> C[Reported angle grows smoothly]
-    B -- yes --> D[Reported angle changes sign]
-    D --> E{Applied whole?}
-    E -- yes --> F[Same rotation, nothing visible]
-    E -- weighted, as a faded cue is --> G[Limb turns over on one frame]
-```
+| Frame                         | 270 | 274 | 276 | 278  | 280 | 284 | 290 | 294  | 300 |
+| ----------------------------- | --- | --- | --- | ---- | --- | --- | --- | ---- | --- |
+| Degrees off facing the camera | -12 | +20 | +68 | +116 | +68 | -20 | -65 | -115 | -14 |
 
-## Slowing it down hides it and does not fix it
+## Why the torso, and why depth
 
-The first instinct is to cap how fast a joint may turn, which the capture already does for other
-reasons. It makes the failure worse rather than better. A cap turns a single wrong frame into a
-slide: the limb takes several frames to arrive at the flipped pose instead of one, which looks
-less like a glitch and more like a deliberate movement, and once it arrives nothing pulls it
-back. The same is true of smoothing. Both spread the error over time; neither has any opinion
-about whether the reading was wrong.
+Facing the camera and facing away are the same pose as far as a width is concerned: a hip line
+square to the camera projects its full width whichever way the body faces. What separates them is
+depth, read across a torso barely wider than the depth error itself, so the detector lands on
+either reading from one frame to the next and the rig spins with it. The shoulder line is no
+steadier despite being sixty per cent wider, which is what rules out span as the explanation.
 
-A threshold on the size of the step does not work either, because a real limb genuinely can roll
-a long way in a few frames, and it does so exactly during the fast movements where a capture is
-most worth having.
+Two further things this hid behind:
 
-## What the bone already knows
+- **The joint speed cap hides it at playing speed.** A cap spreads a bad reading over several
+  frames instead of rejecting it, so at thirty frames a second the spin is a fast slide and at a
+  sixth of that it is a spin. The complaint arrived from someone slowing the clip down, which is
+  the only reason it was visible at all.
+- **Time cannot tell a misread from a turn.** The detector reads "facing away" for five consecutive
+  frames that agree with one another. No waiting period separates that from a real turn without
+  delaying every real turn by as long. A confirm counter that counts disagreements rather than
+  agreements is worse still: it will confirm a reading that is merely bouncing.
 
-The missing information is not in the frame. It is in the frames before it: the direction the
-roll was already travelling in, and how fast.
+## What the geometry says instead
 
-Carrying that forward answers both halves of the problem at once. A reading beyond half a turn
-is continued rather than mirrored, because the equivalent angle nearest to where the roll was
-heading is the one on the far side, not the one that changed sign. And a reading that departs
-from that heading by more than a right angle is not applied at all: the bone holds the roll it
-had, until enough frames in a row agree, at which point the departure is a real turn and is let
-through. The same confirm-or-hold shape the hand tracker already uses for a palm that appears to
-flip over.
+A body cannot get from facing the camera to facing away without passing side-on, and side-on is
+exactly where the hip line stops lying across the image and starts lying along depth. That share
+is a number every frame already carries, and it is the evidence that a turn is happening at all.
 
-The last piece is a cap on the remembered speed. Without one, a single accepted jump leaves the
-track predicting a position no limb could reach, and every good reading after it is measured
-against that prediction and held back.
+Writing the line as a unit vector makes the relation exact: its side component is the cosine of the
+facing and its depth component the sine, so a body turning at some rate moves the side component by
+precisely the depth component times that rate. Holding each frame's step to that is no more than
+saying a body turns no faster than a body can turn. A square body barely moves, because it has
+offered no evidence of turning; a body passing through side-on follows within a frame or two.
 
-## The same cue, one step later
+Nothing is gated and nothing is decided, which is what keeps it from latching. A reading that stays
+put wins eventually whatever the body is doing, and one that bounces cancels itself out. The rate
+is taken from whichever of the believed and the observed facings says the body is turned, so coming
+back to square is as quick as leaving it; measuring only the observed facing leaves the rig stuck
+facing away long after the performer has come back.
 
-A take that has already been recorded carries its flipped frames with it, and the polish pass
-made them worse: smoothing a keyframe toward its neighbours drags the clean neighbours toward
-the bad one. Here the direction of travel is not a remembered velocity but the pair of keyframes
-either side, which describe exactly where the bone was going across that span.
+## The clock the rate is measured against
 
-The signature is what distinguishes the case. A flip is almost entirely a turn about the bone's
-own length, with hardly any swing; a limb genuinely swinging hard turns the bone somewhere else
-entirely. Splitting the change between a keyframe and the movement its neighbours describe into
-those two parts separates a spike to discard from a peak to keep, which no threshold on the
-overall size of the change can do.
+A rate limit is only as good as the time it divides by. Slowing a video down does not slow the
+performance down, so a pipeline handed wall-clock time believes the performer had six times longer
+to move and lets six times as much through — which is why the artefact grew when the clip was
+slowed. The capture clock, which already existed for recording so that a slowed video still records
+at its real speed, is the right clock for every rate the pose is held to: bone smoothing, the joint
+cap, and how fast the body may turn.
+
+## Measuring it at all
+
+None of the above was arrived at by reasoning. Each step was a measurement against the same clip,
+detected once through the app's own detectors and kept as a fixture, and each of the first three
+ideas was abandoned because the measurement contradicted it.
+
+The metric matters as much as the fix. Counting single-frame flips measures nothing once a speed
+cap is spreading them. Counting facing excursions catches real turns along with false ones. What
+finally separates them is the physical question: over the frames where the facing swung, was the
+body ever turned enough for that swing to be possible? Judged over the departure rather than over
+the whole return, and on the median rather than every frame, since the same depth noise that swings
+the facing also throws the odd single frame past side-on.

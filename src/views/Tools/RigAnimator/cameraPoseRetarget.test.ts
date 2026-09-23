@@ -20,7 +20,7 @@ import {
 } from './fixtures/cameraPoseFixtures'
 import danceClip from './fixtures/danceClipFrames.json'
 import { CAMERA_JOINT_LIMITS_DEGREES } from './config'
-import type { BoneRollTracks, CameraLandmark, CameraPoseFrame } from './types'
+import type { TurnTracks, CameraLandmark, CameraPoseFrame } from './types'
 
 const DEFAULT_OPTIONS = buildMappingOptions()
 /** Copies the detection exactly, however far past a human joint it reads. */
@@ -30,7 +30,7 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0)
 const poseRig = (
   frame: Partial<CameraPoseFrame>,
   options = DEFAULT_OPTIONS,
-  rollTracks: BoneRollTracks = new Map(),
+  turnTracks: TurnTracks = new Map(),
   elapsedSeconds = Infinity
 ) => {
   const bones = buildMixamoRig()
@@ -44,7 +44,7 @@ const poseRig = (
   const allBoneNames = new Set(bones.map((bone) => bone.name))
   applyCameraPoseFrame(bones, rest, fullFrame, options, {
     drivenBoneNames: cameraFrameDrivenBoneNames(fullFrame, allBoneNames),
-    rollTracks,
+    turnTracks,
     elapsedSeconds
   })
   const bone = (name: string): THREE.Bone => bones.find((candidate) => candidate.name === name)!
@@ -819,74 +819,5 @@ describe('cameraFrameDrivenBoneNames', () => {
 
     // Assert
     expect([...driven].sort()).toEqual([...expected].sort())
-  })
-})
-
-describe('holding back a roll that flips over', () => {
-  const FRAME_SECONDS = 1 / 30
-  const FOREARM = 'mixamorigLeftForeArm'
-
-  /**
-   * Plays frames through one rig the way a capture does, resetting to rest between them and
-   * carrying the roll tracks forward, and reports how far the forearm turned on each frame.
-   */
-  const playPalmTurn = (palms: ('down' | 'up')[], filterRollFlips: boolean): number[] => {
-    const bones = buildMixamoRig()
-    const rest = captureCameraRetargetRest(bones)
-    const restLocals = bones.map((bone) => bone.quaternion.clone())
-    const options = buildMappingOptions({ filterRollFlips })
-    const rollTracks: BoneRollTracks = new Map()
-    const forearm = bones.find((bone) => bone.name === FOREARM)!
-    let previous = forearm.getWorldQuaternion(new THREE.Quaternion())
-    return palms.map((palm) => {
-      bones.forEach((bone, index) => bone.quaternion.copy(restLocals[index]))
-      bones[0].parent?.updateMatrixWorld(true)
-      const frame: CameraPoseFrame = {
-        bodyLandmarks: buildBodyLandmarks(),
-        handLandmarks: { Left: buildHandLandmarks('Left', 'open', palm) },
-        headRotation: null
-      }
-      applyCameraPoseFrame(bones, rest, frame, options, {
-        drivenBoneNames: cameraFrameDrivenBoneNames(frame, new Set(bones.map((bone) => bone.name))),
-        rollTracks,
-        elapsedSeconds: FRAME_SECONDS
-      })
-      const current = forearm.getWorldQuaternion(new THREE.Quaternion())
-      const turned = previous.angleTo(current)
-      previous = current
-      return turned
-    })
-  }
-
-  it('lets the palm through on the first frame, with nothing to judge it against', () => {
-    // Arrange, Act
-    const [first] = playPalmTurn(['down'], true)
-
-    // Assert
-    expect(first).toBeGreaterThan(0)
-  })
-
-  it('turns the forearm half over when the palm flips and the filter is off', () => {
-    // Arrange, Act
-    const [, flipped] = playPalmTurn(['down', 'up'], false)
-
-    // Assert
-    expect(flipped).toBeGreaterThan(THREE.MathUtils.degToRad(90))
-  })
-
-  it('holds the forearm where it was when the same flip arrives with the filter on', () => {
-    // Arrange, Act
-    const [, flipped] = playPalmTurn(['down', 'up'], true)
-
-    // Assert
-    expect(flipped).toBeLessThan(THREE.MathUtils.degToRad(5))
-  })
-
-  it('gives in once the flipped palm holds for enough frames to be believed', () => {
-    // Arrange, Act
-    const turns = playPalmTurn(['down', 'up', 'up', 'up'], true)
-
-    // Assert
-    expect(turns[3]).toBeGreaterThan(THREE.MathUtils.degToRad(90))
   })
 })

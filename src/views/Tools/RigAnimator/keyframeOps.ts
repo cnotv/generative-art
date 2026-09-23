@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 import type { Pose, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
-import { isBoneRollFlip } from './boneRollTracking'
-import { CAMERA_ROLL_FLIP_DEGREES } from './config'
+import { isBoneRollFlip } from './turnTracking'
+import { CAMERA_KEYFRAME_ROLL_FLIP_DEGREES } from './config'
 
-const ROLL_FLIP_RADIANS = THREE.MathUtils.degToRad(CAMERA_ROLL_FLIP_DEGREES)
+const ROLL_FLIP_RADIANS = THREE.MathUtils.degToRad(CAMERA_KEYFRAME_ROLL_FLIP_DEGREES)
 
 /**
  * Shift every keyframe in `frames` by the same `deltaFrames`, preserving their spacing — a

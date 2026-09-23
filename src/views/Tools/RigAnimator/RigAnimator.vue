@@ -113,7 +113,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraRollThighs: true,
   cameraAimFeet: true,
   cameraLimitJoints: true,
-  cameraFilterRollFlips: true,
+  cameraFilterBodyFlips: true,
   cameraTrackFace: true,
   cameraSearchFaceAroundBody: true,
   cameraTrackHands: true,
@@ -172,7 +172,7 @@ const cameraPoseMappingOptions = computed(
     twistFullBendRadians: THREE.MathUtils.degToRad(reactiveConfig.value.cameraTwistFullBendDegrees),
     boneSmoothingMilliseconds: reactiveConfig.value.cameraBoneSmoothingMilliseconds,
     limitJoints: reactiveConfig.value.cameraLimitJoints,
-    filterRollFlips: reactiveConfig.value.cameraFilterRollFlips,
+    filterBodyFlips: reactiveConfig.value.cameraFilterBodyFlips,
     maxBoneTurnRadiansPerSecond: THREE.MathUtils.degToRad(
       reactiveConfig.value.cameraBoneMaxTurnSpeed
     )
@@ -458,7 +458,15 @@ const handleCameraApply = (frame: CameraPoseFrame): void => {
   // Timeline playback poses the rig from the clip every tick; a live frame landing in between
   // would yank it back to the camera for one frame, which reads as the model twitching.
   if (rig.isPlaying.value) return
-  rig.applyCameraPose(frame, cameraPoseMappingOptions.value, targetBodyPartGroups.value)
+  // The capture clock, not wall time: a slowed video still shows a performance at its real speed,
+  // and every rate the pose is held to — bone smoothing, the joint cap, how fast the body may turn
+  // — is about the performer rather than about how fast the file happens to be playing.
+  rig.applyCameraPose(
+    frame,
+    cameraPoseMappingOptions.value,
+    targetBodyPartGroups.value,
+    cameraCaptureReference.value?.captureClockMilliseconds() ?? performance.now()
+  )
   const { bodyLandmarks } = frame
   if (
     reactiveConfig.value.cameraUseViewpoint &&

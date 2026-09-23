@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import type { BoneRollFlipSettings, BoneRollReading, BoneRollTrack } from './types'
 
 const FULL_TURN = 2 * Math.PI
 /** Every bone of a Mixamo rig runs along its own local +y, so a roll is a turn about that axis. */
@@ -17,70 +16,6 @@ export const BONE_LENGTH_AXIS = new THREE.Vector3(0, 1, 0)
 export const angleNearReference = (angle: number, reference: number): number => {
   const difference = angle - reference
   return reference + difference - FULL_TURN * Math.round(difference / FULL_TURN)
-}
-
-const clampMagnitude = (value: number, limit: number): number =>
-  Math.max(-limit, Math.min(limit, value))
-
-const startTrack = (angle: number): BoneRollReading => ({
-  angle,
-  track: { angle, velocity: 0, pendingReadings: 0 }
-})
-
-const acceptReading = (
-  track: BoneRollTrack,
-  angle: number,
-  elapsedSeconds: number,
-  settings: BoneRollFlipSettings
-): BoneRollReading => ({
-  angle,
-  track: {
-    angle,
-    velocity:
-      elapsedSeconds > 0
-        ? clampMagnitude(
-            (angle - track.angle) / elapsedSeconds,
-            settings.maxVelocityRadiansPerSecond
-          )
-        : track.velocity,
-    pendingReadings: 0
-  }
-})
-
-/**
- * Judge one bone's roll reading against the direction that bone was already rolling in, and say
- * what to apply.
- *
- * A twist cue is read from two directions a half turn apart at worst, so a limb near the edge of
- * that range flips its sign between one frame and the next. Left alone the bone swings almost a
- * whole turn on a single misread frame and the take is spoiled. Carrying the roll forward from
- * where it was heading catches both halves of that: a reading beyond half a turn is continued
- * rather than mirrored, and one that departs from the movement altogether is held back until
- * enough frames in a row agree it is a real turn, the same way a hand's sharp turn is confirmed.
- * @param track The bone's roll from the previous frame, or undefined the first time
- * @param observedAngle The roll this frame read, in radians, within half a turn of zero
- * @param elapsedSeconds Time since the previous frame was applied
- * @param settings When a reading counts as a flip, see `BoneRollFlipSettings`
- * @returns The roll to apply and the track to carry into the next frame
- */
-export const trackBoneRoll = (
-  track: BoneRollTrack | undefined,
-  observedAngle: number,
-  elapsedSeconds: number,
-  settings: BoneRollFlipSettings
-): BoneRollReading => {
-  if (!track || !Number.isFinite(elapsedSeconds) || elapsedSeconds > settings.resetSeconds) {
-    return startTrack(observedAngle)
-  }
-  const predicted = track.angle + track.velocity * elapsedSeconds
-  const candidate = angleNearReference(observedAngle, predicted)
-  if (Math.abs(candidate - predicted) <= settings.flipRadians) {
-    return acceptReading(track, candidate, elapsedSeconds, settings)
-  }
-  const pendingReadings = track.pendingReadings + 1
-  return pendingReadings >= settings.confirmReadings
-    ? acceptReading(track, candidate, elapsedSeconds, settings)
-    : { angle: track.angle, track: { angle: track.angle, velocity: 0, pendingReadings } }
 }
 
 /**

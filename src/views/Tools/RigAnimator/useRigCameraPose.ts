@@ -12,7 +12,7 @@ import {
 } from './cameraPoseRetarget'
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
 import type {
-  BoneRollTracks,
+  TurnTracks,
   CameraPoseFrame,
   CameraPoseMappingOptions,
   CameraRetargetRest
@@ -36,14 +36,14 @@ export const useRigCameraPose = (
   /** When the last frame was applied, so bone smoothing knows how long it has been. */
   let lastAppliedAtMilliseconds: number | null = null
   /** How each bone has been rolling, so a reading that flips it over can be spotted. */
-  const rollTracks: BoneRollTracks = new Map()
+  const turnTracks: TurnTracks = new Map()
   // Synchronous on purpose: the rig stands at rest the instant its bones are adopted, and a
   // deferred watcher could run after a restored autosave has already posed it.
   watch(
     bones,
     (nextBones) => {
       retargetRest = nextBones.length > 0 ? captureCameraRetargetRest(nextBones) : null
-      rollTracks.clear()
+      turnTracks.clear()
     },
     { immediate: true, flush: 'sync' }
   )
@@ -90,7 +90,7 @@ export const useRigCameraPose = (
     lastAppliedAtMilliseconds = timestampMilliseconds
     applyCameraPoseFrame(bones.value, retargetRest, frame, options, {
       drivenBoneNames,
-      rollTracks,
+      turnTracks,
       elapsedSeconds
     })
     easeBonesFromTransforms(
