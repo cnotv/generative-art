@@ -19,7 +19,6 @@ import {
 } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
-import EditorHistoryControls from '@/components/EditorHistoryControls.vue'
 import { createReactiveConfig } from '@/stores/viewConfig'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import {
@@ -662,13 +661,6 @@ onUnmounted(() => {
     <IconButton size="sm" variant="outline" title="Upload Model" @click="modelFileInput?.click()">
       <Upload />
     </IconButton>
-    <EditorHistoryControls
-      :can-undo="rig.canUndo.value"
-      :can-redo="rig.canRedo.value"
-      :log="rig.historyLog.value"
-      @undo="rig.undoKeyframeEdit"
-      @redo="rig.redoKeyframeEdit"
-    />
     <IconButton
       v-if="rig.boneNames.value.length > 0"
       size="sm"
@@ -757,6 +749,9 @@ onUnmounted(() => {
     :has-clipboard="rig.hasClipboard.value"
     :can-apply-hand-pose="rig.canApplyHandPose.value"
     :recorded-presets="rig.recordedPresets.value"
+    :can-undo="rig.canUndo.value"
+    :can-redo="rig.canRedo.value"
+    :history-log="rig.historyLog.value"
     @update:frame="moveToFrame"
     @update:frame-max="rig.setFrameMax"
     @add-keyframe="rig.addKeyframe"
@@ -768,6 +763,9 @@ onUnmounted(() => {
     @remove-frame-range="rig.removeFrameRange"
     @insert-frame-range="rig.insertFrameRange"
     @toggle-playback="handleTogglePlayback"
+    @undo="rig.undoKeyframeEdit"
+    @redo="rig.redoKeyframeEdit"
+    @go-to-edit="rig.goToKeyframeEdit"
     @import-poses="(url) => (reactiveConfig.poses = url)"
     @export-glb="rig.exportGlb"
     @export-json="rig.exportJson"

@@ -39,7 +39,7 @@ switching tools never changes the call site.
 
 ## History
 
-Undo lives in [`@webgamekit/history`](./history.md), which every editor in the playground
+Undo lives in the playground's own `src/utils/editorHistory.ts`, which every editor there
 shares. This package only paints: `drawingRestore` is what puts a snapshot back.
 
 A canvas snapshots as a data URL of the whole canvas rather than as operation deltas — simple,

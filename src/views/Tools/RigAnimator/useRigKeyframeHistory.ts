@@ -45,6 +45,7 @@ export const useRigKeyframeHistory = ({
     historyLog: history.log,
     undoKeyframeEdit: history.undo,
     redoKeyframeEdit: history.redo,
+    goToKeyframeEdit: history.goTo,
     /**
      * Persist the current edit and record it as one undoable action, called explicitly from every
      * genuine user change (never from `reset` or `restoreAutosave`, so the reset-then-restore that

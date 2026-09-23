@@ -3,12 +3,13 @@ import {
   historyCanRedo,
   historyCanUndo,
   historyCreate,
+  historyGoTo,
   historyLog,
   historyPush,
   historyRedo,
   historyState,
   historyUndo
-} from './core'
+} from './editorHistory'
 
 const openedStack = () => historyCreate('Opened', 'blank', 10)
 
@@ -107,8 +108,8 @@ describe('historyLog', () => {
     const painted = historyPush(historyPush(openedStack(), 'Painted', 'red'), 'Erased', 'white')
 
     expect(historyLog(painted)).toEqual([
-      { label: 'Erased', undone: false },
-      { label: 'Painted', undone: false }
+      { label: 'Erased', undone: false, index: 2 },
+      { label: 'Painted', undone: false, index: 1 }
     ])
   })
 
@@ -117,13 +118,73 @@ describe('historyLog', () => {
     const undone = historyUndo(painted).stack
 
     expect(historyLog(undone)).toEqual([
-      { label: 'Erased', undone: true },
-      { label: 'Painted', undone: false }
+      { label: 'Erased', undone: true, index: 2 },
+      { label: 'Painted', undone: false, index: 1 }
     ])
     expect(historyLog(historyRedo(undone).stack)).toEqual(historyLog(painted))
   })
 
   it('is empty on a stack nothing has been done to', () => {
     expect(historyLog(openedStack())).toEqual([])
+  })
+})
+
+describe('historyGoTo', () => {
+  const threeActions = () =>
+    ['red', 'white', 'blue'].reduce(
+      (stack, snapshot) => historyPush(stack, `Painted ${snapshot}`, snapshot),
+      openedStack()
+    )
+
+  it('walks back several actions at once, leaving the ones after it undone', () => {
+    // Arrange
+    const stack = threeActions()
+
+    // Act
+    const jumped = historyGoTo(stack, 1)
+
+    // Assert
+    expect(jumped.entry?.snapshot).toBe('red')
+    expect(historyLog(jumped.stack).map((entry) => entry.undone)).toEqual([true, true, false])
+  })
+
+  it('walks forward again from a state that was undone', () => {
+    // Arrange
+    const walkedBack = historyGoTo(threeActions(), 0).stack
+
+    // Act
+    const jumped = historyGoTo(walkedBack, 3)
+
+    // Assert
+    expect(jumped.entry?.snapshot).toBe('blue')
+    expect(historyCanRedo(jumped.stack)).toBe(false)
+  })
+
+  it.each([
+    ['the state already on screen', 3],
+    ['an index before the timeline', -1],
+    ['an index past the timeline', 4]
+  ])('does nothing for %s', (_name, index) => {
+    // Arrange
+    const stack = threeActions()
+
+    // Act
+    const jumped = historyGoTo(stack, index)
+
+    // Assert
+    expect(jumped.entry).toBeNull()
+    expect(jumped.stack).toBe(stack)
+  })
+
+  it('leaves an action recorded after the jump with no way forward', () => {
+    // Arrange
+    const walkedBack = historyGoTo(threeActions(), 1).stack
+
+    // Act
+    const branched = historyPush(walkedBack, 'Painted green', 'green')
+
+    // Assert
+    expect(historyCanRedo(branched)).toBe(false)
+    expect(historyState(branched)).toBe('green')
   })
 })

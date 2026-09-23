@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import {
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuPortal,
   DropdownMenuRoot,
   DropdownMenuTrigger
 } from 'radix-vue'
 import { Undo2, Redo2, History } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
-import type { HistoryLogEntry } from '@webgamekit/history'
+import type { HistoryLogEntry } from '@/types/editorHistory'
 
 interface Properties {
   canUndo: boolean
@@ -17,7 +18,7 @@ interface Properties {
 }
 
 withDefaults(defineProps<Properties>(), { size: 'sm' })
-defineEmits<{ undo: []; redo: [] }>()
+defineEmits<{ undo: []; redo: []; goTo: [index: number] }>()
 </script>
 
 <template>
@@ -43,7 +44,12 @@ defineEmits<{ undo: []; redo: [] }>()
   </IconButton>
   <DropdownMenuRoot>
     <DropdownMenuTrigger as-child>
-      <IconButton :size="size" variant="outline" title="Action Log" aria-label="Action log">
+      <IconButton
+        :size="size"
+        variant="outline"
+        title="Action Log, click an action to step straight to it"
+        aria-label="Action log"
+      >
         <History />
       </IconButton>
     </DropdownMenuTrigger>
@@ -51,14 +57,16 @@ defineEmits<{ undo: []; redo: [] }>()
       <DropdownMenuContent class="history-log" :side-offset="4" align="start">
         <p v-if="log.length === 0" class="history-log__empty">Nothing done yet</p>
         <ol v-else class="history-log__list">
-          <li
-            v-for="(entry, index) in log"
-            :key="`${index}-${entry.label}`"
+          <DropdownMenuItem
+            v-for="entry in log"
+            :key="entry.index"
+            as="li"
             class="history-log__entry"
             :class="{ 'history-log__entry--undone': entry.undone }"
+            @select="$emit('goTo', entry.index)"
           >
             {{ entry.label }}
-          </li>
+          </DropdownMenuItem>
         </ol>
       </DropdownMenuContent>
     </DropdownMenuPortal>
@@ -95,6 +103,13 @@ defineEmits<{ undo: []; redo: [] }>()
 .history-log__entry {
   padding: var(--spacing-1);
   border-radius: var(--radius-sm);
+  cursor: pointer;
+  outline: none;
+}
+
+.history-log__entry:hover,
+.history-log__entry[data-highlighted] {
+  background: var(--color-accent);
 }
 
 .history-log__entry--undone {

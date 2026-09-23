@@ -232,13 +232,18 @@ joint when nothing else is selected, poses it normally instead.
 
 ## Undoing a bad edit
 
-Undo, redo and the action log sit at the left of the canvas controls. Undo steps back through
+Undo, redo and the action log sit at the left of the timeline's first row. Undo steps back through
 every change to the keyframe list, whatever made it: a keyframe added or deleted, a block
 dragged, pasted or cut, a polish pass, a whole recorded take. The log names each one, newest
 first, and strikes through the ones undo has taken away, so a stack of similar steps is still
 readable. Fifty steps are kept.
 
-![The action log open under the canvas controls, listing Deleted keyframe struck through above two Added keyframe entries](/img/animation/rig-action-log.webp)
+Clicking a line in the log goes straight to that point instead of walking there a step at a
+time, in either direction: click one that is struck through to come back forward again. The
+next edit made from wherever you stopped drops everything after it, the way undo then drawing
+does in any editor.
+
+![The action log open above the timeline row after clicking its oldest line, with the two newer Added keyframe lines struck through and a single keyframe left on the timeline](/img/animation/rig-action-log.webp)
 
 Loading a model, importing a file or restoring the autosave starts the history over rather
 than being another step to walk back: undoing past a load would put the previous model's

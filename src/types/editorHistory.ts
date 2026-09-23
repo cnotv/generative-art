@@ -14,10 +14,12 @@ export interface HistoryStack<TSnapshot> {
   limit: number
 }
 
-/** One line of the action log: what was done, and whether it still stands. */
+/** One line of the action log: what was done, whether it still stands, and where to jump to. */
 export interface HistoryLogEntry {
   label: string
   undone: boolean
+  /** This action's place on the timeline, for `historyGoTo`. */
+  index: number
 }
 
 /** A stack after a move, with the state to put back on screen, or null when nothing moved. */

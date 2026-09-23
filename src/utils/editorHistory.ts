@@ -1,4 +1,9 @@
-import type { HistoryEntry, HistoryLogEntry, HistoryStack, HistoryStep } from './types'
+import type {
+  HistoryEntry,
+  HistoryLogEntry,
+  HistoryStack,
+  HistoryStep
+} from '@/types/editorHistory'
 
 /**
  * Open a history on the state an editor starts in. That first state is not an action and never
@@ -76,14 +81,39 @@ export const historyCanRedo = <TSnapshot>(stack: HistoryStack<TSnapshot>): boole
  * @param stack The current history
  * @returns One line per action, newest first
  */
-export const historyLog = <TSnapshot>(stack: HistoryStack<TSnapshot>): HistoryLogEntry[] => {
-  const done = stack.past.slice(1).map((entry: HistoryEntry<TSnapshot>) => ({
-    label: entry.label,
-    undone: false
-  }))
-  const undone = stack.future.map((entry: HistoryEntry<TSnapshot>) => ({
-    label: entry.label,
-    undone: true
-  }))
-  return [...done, ...undone].reverse()
+export const historyLog = <TSnapshot>(stack: HistoryStack<TSnapshot>): HistoryLogEntry[] =>
+  [...stack.past, ...stack.future]
+    .map((entry: HistoryEntry<TSnapshot>, index) => ({
+      label: entry.label,
+      undone: index >= stack.past.length,
+      index
+    }))
+    .slice(1)
+    .reverse()
+
+/**
+ * Step straight to one action instead of walking there, for a log whose lines can be clicked.
+ * Everything after it becomes undone, everything up to it stands, whichever side of the current
+ * state it sits on.
+ * @param stack The current history
+ * @param index The action's place on the timeline, from `historyLog`
+ * @returns The history and the state to restore, or the same history and null for the state
+ * already on screen or an index off the timeline
+ */
+export const historyGoTo = <TSnapshot>(
+  stack: HistoryStack<TSnapshot>,
+  index: number
+): HistoryStep<TSnapshot> => {
+  const timeline = [...stack.past, ...stack.future]
+  if (index < 0 || index >= timeline.length || index === stack.past.length - 1) {
+    return { stack, entry: null }
+  }
+  return {
+    stack: {
+      past: timeline.slice(0, index + 1),
+      future: timeline.slice(index + 1),
+      limit: stack.limit
+    },
+    entry: timeline[index]
+  }
 }

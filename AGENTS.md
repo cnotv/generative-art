@@ -128,7 +128,7 @@ touched. Read one directly if you are working in its area without opening a matc
 | `vue-components.md`      | anything in `src/components/` or `src/views/`, or a stylesheet               |
 | `lobby-ui.md`            | the LobbyUI kit, a game overlay or dialog, or anything in `src/views/Games/` |
 | `threejs-views.md`       | a 3D view, scene, animation loop, or the threejs package                     |
-| `packages.md`            | anything in `packages/`                                                      |
+| `packages.md`            | anything in `packages/`, and whether a new one is earned at all              |
 | `tests.md`               | any `*.test.ts`                                                              |
 | `docs.md`                | anything in `documentation/`                                                 |
 | `colour.md`              | choosing any colour — a material, a background, a token, a diagram           |

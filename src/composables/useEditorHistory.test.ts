@@ -64,6 +64,20 @@ describe('useEditorHistory', () => {
     expect(restored).toEqual([])
   })
 
+  it('steps straight to an action from the log, leaving the ones after it undone', async () => {
+    // Arrange
+    const { history, restored } = trackedHistory()
+    history.record('Painted', 'red')
+    history.record('Erased', 'white')
+
+    // Act
+    await history.goTo(history.log.value[1].index)
+
+    // Assert
+    expect(restored).toEqual(['red'])
+    expect(history.log.value.map((entry) => entry.undone)).toEqual([true, false])
+  })
+
   it('names every action in the log, newest first, marking the undone ones', async () => {
     // Arrange
     const { history } = trackedHistory()
@@ -75,8 +89,8 @@ describe('useEditorHistory', () => {
 
     // Assert
     expect(history.log.value).toEqual([
-      { label: 'Erased', undone: true },
-      { label: 'Painted', undone: false }
+      { label: 'Erased', undone: true, index: 2 },
+      { label: 'Painted', undone: false, index: 1 }
     ])
   })
 

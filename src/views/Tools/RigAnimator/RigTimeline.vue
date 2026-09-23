@@ -20,6 +20,7 @@ import {
   Waves
 } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
+import EditorHistoryControls from '@/components/EditorHistoryControls.vue'
 import { Select } from '@/components/ui/select'
 import { POSES_FILE_ACCEPT } from './config'
 import { RIG_PRESETS } from './presets'
@@ -27,6 +28,7 @@ import { computeTimelineTicks } from './timelineTicks'
 import { computeSelectionRange, keyframesInRange } from './frameSelection'
 import { HAND_POSE_PRESETS } from '@webgamekit/rig'
 import type { RecordedPreset } from './useRigRecordedPresets'
+import type { HistoryLogEntry } from '@/types/editorHistory'
 
 interface Properties {
   frame: number
@@ -36,6 +38,9 @@ interface Properties {
   hasClipboard: boolean
   canApplyHandPose: boolean
   recordedPresets: RecordedPreset[]
+  canUndo: boolean
+  canRedo: boolean
+  historyLog: HistoryLogEntry[]
 }
 
 const props = defineProps<Properties>()
@@ -52,6 +57,9 @@ const emit = defineEmits<{
   removeFrameRange: [startFrame: number, endFrame: number]
   insertFrameRange: [atFrame: number, span: number]
   togglePlayback: []
+  undo: []
+  redo: []
+  goToEdit: [index: number]
   importPoses: [url: string]
   exportGlb: []
   exportJson: []
@@ -270,6 +278,14 @@ onUnmounted(stopDrag)
 <template>
   <div class="rig-timeline">
     <div class="rig-timeline__row">
+      <EditorHistoryControls
+        :can-undo="canUndo"
+        :can-redo="canRedo"
+        :log="historyLog"
+        @undo="emit('undo')"
+        @redo="emit('redo')"
+        @go-to="(index) => emit('goToEdit', index)"
+      />
       <IconButton size="sm" :title="isPlaying ? 'Pause' : 'Play'" @click="emit('togglePlayback')">
         <Pause v-if="isPlaying" />
         <Play v-else />

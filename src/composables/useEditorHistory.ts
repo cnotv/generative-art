@@ -3,13 +3,14 @@ import {
   historyCanRedo,
   historyCanUndo,
   historyCreate,
+  historyGoTo,
   historyLog,
   historyPush,
   historyRedo,
   historyState,
   historyUndo
-} from '@webgamekit/history'
-import type { HistoryStack } from '@webgamekit/history'
+} from '@/utils/editorHistory'
+import type { HistoryStack, HistoryStep } from '@/types/editorHistory'
 
 /** How many states an editor keeps, the one it opened on included. */
 export const EDITOR_HISTORY_LIMIT = 50
@@ -37,7 +38,9 @@ export const useEditorHistory = <TSnapshot>(
     historyCreate(openingLabel, openingSnapshot, limit)
   )
 
-  const step = async (move: typeof historyUndo<TSnapshot>): Promise<void> => {
+  const step = async (
+    move: (stack: HistoryStack<TSnapshot>) => HistoryStep<TSnapshot>
+  ): Promise<void> => {
     const moved = move(stack.value)
     if (!moved.entry) return
     stack.value = moved.stack
@@ -60,6 +63,11 @@ export const useEditorHistory = <TSnapshot>(
     undo: (): Promise<void> => step(historyUndo),
     /** Step forward into an action that was undone. */
     redo: (): Promise<void> => step(historyRedo),
+    /**
+     * Step straight to one action from the log instead of walking there.
+     * @param index The action's place on the timeline, from the log
+     */
+    goTo: (index: number): Promise<void> => step((stack) => historyGoTo(stack, index)),
     /**
      * Start a fresh history, for an editor that has loaded something else entirely.
      * @param label What to call the state it now opens in

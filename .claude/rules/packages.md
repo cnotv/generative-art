@@ -7,6 +7,18 @@ paths:
 
 These are a framework-agnostic toolkit, published and consumed independently of this app.
 
+## A package is a pack of features, never one module
+
+Framework-agnostic and reusable is not the test — almost any pure module is both, and the
+playground's own `src/utils/` is where those go. A package is earned by a body of related
+features someone outside this repo would install on its own, and it is not free: a build under
+its own stricter config, a lockfile entry, a `vite.config.ts` registration, a page in
+`documentation/docs/packages/`, and two contract tests that fail until both exist. One
+function, one file, or one small module several views happen to share is a util.
+
+When shared logic outgrows a util, the first question is whether an existing package already
+owns that ground, not whether it deserves a new one.
+
 - **No Vue, no React, no framework dependency.** Anything that needs Vue reactivity, router
   or lifecycle belongs in `src/composables/` instead.
 - **Every exported function has a JSDoc comment** with `@param` and `@returns`. One line of
