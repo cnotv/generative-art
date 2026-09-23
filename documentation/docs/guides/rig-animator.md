@@ -486,7 +486,7 @@ Smoothing goes first so thinning never keeps a misread frame. The counts were me
 recording of the Running preset: six smoothing passes cost nothing, two halvings stay within about a
 degree of the full take, and every further halving loses the stride quickly.
 
-![The Rig Animator after recording an uploaded video: Camera Pose shows Video Slowdown Ratio at 6 with Smooth Recording and Thin Out Recording both checked, and the timeline below carries one keyframe every four frames from 0 to 120](/img/animation/rig-recording-cleanup.webp)
+![The Rig Animator after recording an uploaded video: Camera Pose shows Video Slowdown Ratio at 10 with Smooth Recording and Thin Out Recording both checked, and the timeline below carries one keyframe every four frames from 0 to 120](/img/animation/rig-recording-cleanup.webp)
 
 ![The canvas buttons mid-recording: the record toggle has turned into a solid red square, between the camera and Camera Preview buttons](/img/animation/rig-record-motion.webp)
 
@@ -513,13 +513,15 @@ file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays through once, slowed down by **Video Slowdown Ratio**, six times by default, and runs the exact same
+plays through once, slowed down by **Video Slowdown Ratio**, ten times by default, and runs the exact same
 live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
 continuously the same way a webcam does. Playing it never records anything by itself: **Play
 Video** / **Pause Video**, a play icon that joins the action row once a video is loaded, plays and
 pauses the clip on its own, without starting a take or moving the timeline, so the mapping can be
-watched first, and it stays on the action row even while the preview is hidden. Record Motion
+watched first, and it stays on the action row even while the preview is hidden. While the clip
+plays, the preview leaves out the detected skeleton so the video itself can be watched; paused, it
+draws what detection read for the frame on screen. Record Motion
 then works against it exactly as it does against the camera: clicking it on a paused video plays
 the video too, and the take ends on its own once the video reaches its natural end, the same as a
 manual **Stop Recording** click would. It plays once rather than looping specifically so that end
@@ -676,13 +678,14 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Video Slowdown Ratio**, 6 by default, from 1 to 6, sets two things at once for an uploaded
+- **Video Slowdown Ratio**, 10 by default, from 1 to 16, sets two things at once for an uploaded
   video: how many times slower it plays, and how many poses Record Motion samples per frame of it
   before filtering them down to one keyframe. The two go together because a video slowed N times
   gives detection about N readings of each of its frames. Record Motion times a video take by the
   video's own position rather than the clock on the wall, so the recorded clip keeps the video's
   real timing at any ratio. 1 plays at normal speed with one sample a frame and nothing to filter.
-  The smoothing times above still run on the wall clock, so at a ratio of 6 they act on a sixth as
+  16 is the ceiling because browsers will not play a video slower than a sixteenth of its speed.
+  The smoothing times above still run on the wall clock, so at a ratio of 10 they act on a tenth as
   much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the

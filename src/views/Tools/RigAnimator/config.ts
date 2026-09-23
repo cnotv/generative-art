@@ -260,10 +260,11 @@ export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0
  * Motion samples per frame of it before filtering them down to one: slowed N times, detection gets
  * about N readings of every video frame, so N samples a frame is what it can fill. Record Motion
  * follows the video's own clock, so a take keeps the video's real timing at any ratio. 1 plays at
- * normal speed with one sample a frame and nothing to filter.
+ * normal speed with one sample a frame and nothing to filter. 16 is the most browsers allow: a
+ * video's playback rate cannot go under 1/16, and Chromium throws below it.
  */
-export const CAMERA_VIDEO_SLOWDOWN_RATIO = 6
-export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 6, step: 1 }
+export const CAMERA_VIDEO_SLOWDOWN_RATIO = 10
+export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 16, step: 1 }
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
