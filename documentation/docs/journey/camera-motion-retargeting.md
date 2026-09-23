@@ -70,7 +70,7 @@ runs along the arm and a generated skeleton with no rest rotation at all are han
   from the chest.
 - **Seen, not guessed.** BlazePose still reports a position for a body part out of frame, the
   legs below a webcam framed on the upper body say. A landmark outside the image counts as out of
-  view, and the bones it would drive keep their rest pose. Detection itself only runs while the
+  view, and the bones it would drive keep the pose they last had. Detection itself only runs while the
   source is live, so a paused video stops posing the rig rather than repeating one frame.
 - **Hands first.** A hand found on the whole frame wins over anything the body suggests about it,
   and takes its side from the body's nearer visible wrist.
@@ -253,6 +253,22 @@ permission when a clip was uploaded eventually cleared the element's stream, and
 empty stream reloads the element even when it held none, rewinding and pausing the clip while
 Record Motion kept sampling a frozen frame. The start now notices it was cancelled, and a stream
 is only cleared when one was actually set.
+
+## A limb the camera loses
+
+Every frame used to reset each limb bone to rest before posing it, so a bone whose landmarks fell
+under the confidence cut-off stayed at rest for that frame. On a side view that is most of the far
+arm's frames: scored against a screen recording of the Rig Animator's own Running preset, whose
+motion is known bone for bone, the lite model reports that arm's elbow and wrist at 0.2 to 0.6
+visibility, under the 0.5 cut-off, and the capture held it out in a T-pose through the run, 68°
+off the preset against the detector's own 33°.
+
+A frame now drives only the limb bones it can see. An upper arm needs its shoulder and elbow, a
+forearm and hand their elbow and wrist, and likewise thigh, shin and foot; a bone it cannot see is
+neither reset nor posed, and keeps the last confident pose. The far arm came in to 39°, with
+nothing else moving. The first frame of a new video or camera session is the exception: with no
+earlier reading of this performer to hold, a limb it cannot see starts from rest rather than from
+whatever pose the rig was left in.
 
 ## Limits
 

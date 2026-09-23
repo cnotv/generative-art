@@ -43,7 +43,11 @@ const poseRig = (
   }
   const allBoneNames = new Set(bones.map((bone) => bone.name))
   applyCameraPoseFrame(bones, rest, fullFrame, options, {
-    drivenBoneNames: cameraFrameDrivenBoneNames(fullFrame, allBoneNames),
+    drivenBoneNames: cameraFrameDrivenBoneNames(
+      fullFrame,
+      allBoneNames,
+      options.visibilityThreshold
+    ),
     turnTracks,
     elapsedSeconds
   })
@@ -788,13 +792,29 @@ describe('cameraFrameDrivenBoneNames', () => {
     'mixamorigNeck',
     'mixamorigHead',
     'mixamorigLeftArm',
+    'mixamorigLeftForeArm',
     'mixamorigLeftHand',
     'mixamorigLeftHandIndex1',
+    'mixamorigLeftLeg',
     'mixamorigRightHandIndex1'
   ])
+  const bodyLosing = (index: number) =>
+    buildBodyLandmarks().map((landmark, landmarkIndex) =>
+      landmarkIndex === index ? { ...landmark, visibility: 0 } : landmark
+    )
 
   it.each([
     ['a body drives the whole scope', { bodyLandmarks: buildBodyLandmarks() }, [...scope]],
+    [
+      'a body missing its left wrist leaves that forearm, hand and fingers where they were',
+      { bodyLandmarks: bodyLosing(15) },
+      [...scope].filter((name) => !/LeftForeArm|LeftHand/.test(name))
+    ],
+    [
+      'a body missing its left knee leaves that leg where it was',
+      { bodyLandmarks: bodyLosing(25) },
+      [...scope].filter((name) => name !== 'mixamorigLeftLeg')
+    ],
     [
       'a hand alone drives only that hand’s fingers',
       { handLandmarks: { Left: buildHandLandmarks('Left', 'open') } },
@@ -815,7 +835,7 @@ describe('cameraFrameDrivenBoneNames', () => {
     }
 
     // Act
-    const driven = cameraFrameDrivenBoneNames(fullFrame, scope)
+    const driven = cameraFrameDrivenBoneNames(fullFrame, scope, DEFAULT_OPTIONS.visibilityThreshold)
 
     // Assert
     expect([...driven].sort()).toEqual([...expected].sort())

@@ -384,7 +384,11 @@ through with no swap. Only a side the whole frame missed is looked for again, in
 that side's own wrist, because the Hand Landmarker is trained on close-ups and misses a hand that
 is small in a wide shot. A frame showing a hand but no body curls only that hand's fingers and
 leaves the rest of the rig exactly as it was, rather than snapping a body the camera is simply
-not showing back to rest.
+not showing back to rest. The same holds inside a body: a limb whose landmarks fall under
+**Landmark Confidence Needed**, an arm swinging behind the torso, is left where the last frame
+that saw it put it, instead of dropping to its rest pose. An upper arm is held when its shoulder
+or elbow is lost, a forearm and hand when the elbow or wrist is, and likewise for thigh, shin and
+foot.
 
 The Hand Landmarker is also the only source for which way a palm faces. BlazePose reports a
 pinky and an index point of its own, but they sit a hand's width apart and jitter by centimetres,
@@ -590,8 +594,8 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   point, and the palm for the forearm and hand. A segment whose landmarks drop out of view is
   skipped on its own, so a wrist behind the body still leaves the upper arm following. A
   landmark the pose detector places outside the image counts as out of view however confident
-  it claims to be: it is a guess, so legs below a webcam framed on the upper body keep their rest
-  pose instead of following it.
+  it claims to be: it is a guess, so legs below a webcam framed on the upper body keep the pose
+  they last had, their rest pose when a session starts, instead of following it.
 - **Hands.** See **Fingers from the camera** above.
 - **Travel.** The rig walks across the floor with the performer. World landmarks are centred on
   the hips and cannot say where the body is, so that comes from the picture: how large the body
@@ -612,8 +616,10 @@ What those two rules are based on, and what the attached clips showed, is in
 
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
 Merge Target diagram currently has active; see **Merging sources by body part** below. With
-every region active, the default, that is the whole rig: a bone the mapping does not drive this
-frame never keeps a stale pose left over from an earlier manual edit or a previous capture.
+every region active, the default, that is the whole rig, less any limb the frame cannot see,
+which keeps its last pose. The first frame of a new video, photo or camera session resets every
+bone it may drive, seen or not, so a limb out of view starts from rest rather than from a pose
+left over from an earlier manual edit or a previous capture.
 
 A model with more than one skinned mesh, such as Mixamo's Y Bot, loads with one mesh's skeleton
 hung at zero offset beneath the other's bones of the same name. The tool adopts the topmost bone
@@ -741,13 +747,13 @@ movement by eye:
 | Max Joint Speed (°/s)      | 720     | real fast moves lag; lower it when a limb still flips for a frame          |
 | Hold a Lost Hand (ms)      | 330     | a hand drops out and back; lower it when a hand lingers after leaving      |
 | Palm Turn to Confirm (°)   | 45      | a real quick wrist turn lags; lower it when a palm still flips; 180 is off |
-| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest       |
+| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when a limb stays frozen too long           |
 | Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                          |
 | Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                              |
 
 **Bones Settle** works on the result rather than the landmarks: each bone eases from where the
 last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,
-such as a limb whose landmarks drop out falling back to rest. A pose applied after more than half
+such as a limb picked up again after being held. A pose applied after more than half
 a second lands whole, so a new photo or a resumed video is not blended from a stale pose. **Max
 Joint Speed** caps how fast any bone may turn between two readings. A misread frame flipping a
 forearm's roll half a turn asks for thousands of degrees a second, far past any dancer, so it is
