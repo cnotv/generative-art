@@ -614,7 +614,9 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
   turn apart, so a limb rolling past that point reads as having jumped to the opposite sign and
   the bone spins almost the whole way round on one frame. Three readings in a row that agree are
   taken as a real turn and let through, the same way a sharply turned palm is confirmed. Switch
-  it off to see a take exactly as the detector read it.
+  it off to see a take exactly as the detector read it. Why a roll flips at all, and why capping
+  how fast a joint may turn makes it worse rather than better, is in
+  [The Roll That Turns a Limb Over](../journey/bone-roll-flips.md).
 - **Keep Joints in Human Range**, on by default, keeps every joint the capture turns inside the
   range a body can reach, measured from the rig's own rest pose: how far each one may swing off
   its rest direction and how far it may roll about its own length, from a few degrees for a
