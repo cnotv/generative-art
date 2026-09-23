@@ -19,6 +19,7 @@ import {
 } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
+import EditorHistoryControls from '@/components/EditorHistoryControls.vue'
 import { createReactiveConfig } from '@/stores/viewConfig'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import {
@@ -661,6 +662,13 @@ onUnmounted(() => {
     <IconButton size="sm" variant="outline" title="Upload Model" @click="modelFileInput?.click()">
       <Upload />
     </IconButton>
+    <EditorHistoryControls
+      :can-undo="rig.canUndo.value"
+      :can-redo="rig.canRedo.value"
+      :log="rig.historyLog.value"
+      @undo="rig.undoKeyframeEdit"
+      @redo="rig.redoKeyframeEdit"
+    />
     <IconButton
       v-if="rig.boneNames.value.length > 0"
       size="sm"

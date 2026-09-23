@@ -39,24 +39,13 @@ switching tools never changes the call site.
 
 ## History
 
-```typescript
-import { historyCreate, historyPush, historyUndo, historyCanUndo } from '@webgamekit/canvas-editor'
+Undo lives in [`@webgamekit/history`](./history.md), which every editor in the playground
+shares. This package only paints: `drawingRestore` is what puts a snapshot back.
 
-let stack = historyCreate()
-stack = historyPush(stack, canvas.toDataURL())
-
-const { stack: undone, snapshot } = historyUndo(stack)
-if (snapshot) await drawingRestore(ctx, snapshot)
-```
-
-Snapshots are data URLs of the whole canvas, not operation deltas — simple, and immune to
-divergence between the recorded operations and what was actually painted. The cost is memory
-per snapshot, so push on stroke completion rather than on every pointer move.
-
-`historyPush` clears the redo future, which is what makes drawing after an undo behave the
-way every editor behaves. Undo and redo return `{ stack, snapshot }`, with a `null` snapshot
-when there is nothing to move to, so the caller can drive a disabled button state from
-`historyCanUndo` / `historyCanRedo` instead of catching an error.
+A canvas snapshots as a data URL of the whole canvas rather than as operation deltas — simple,
+and immune to divergence between the recorded operations and what was actually painted. The
+cost is memory per snapshot, so record on stroke completion rather than on every pointer move,
+and keep the history's limit low enough that fifty full-size canvases are not held at once.
 
 ## Persistence
 
@@ -91,24 +80,20 @@ and one that does not.
 
 ## API
 
-| Function                                                | Returns                             | Description                       |
-| ------------------------------------------------------- | ----------------------------------- | --------------------------------- |
-| `drawingStroke(ctx, from, to, options)`                 | `void`                              | Segment between two points        |
-| `drawingDot(ctx, point, options)`                       | `void`                              | Single dot                        |
-| `drawingFill(ctx, point, color)`                        | `void`                              | Flood fill                        |
-| `drawingClear(ctx)`                                     | `void`                              | Clears the canvas                 |
-| `drawingRestore(ctx, dataUrl)`                          | `Promise<void>`                     | Paints a snapshot back            |
-| `historyCreate()`                                       | `HistoryStack`                      | Empty stack                       |
-| `historyPush(stack, snapshot)`                          | `HistoryStack`                      | Appends, clearing the redo future |
-| `historyUndo(stack)` / `historyRedo(stack)`             | `{ stack, snapshot }`               | `snapshot` is `null` at the end   |
-| `historyCanUndo(stack)` / `historyCanRedo(stack)`       | `boolean`                           | Button state                      |
-| `storageSave(backend, name, dataUrl)`                   | `Promise<void> \| void`             | Saves to the chosen backend       |
-| `storageLoad(backend, name)`                            | `Promise<StorageSlot \| null>` \| … | Loads a slot                      |
-| `storageDelete(backend, name)` / `storageList(backend)` | —                                   | Removes / enumerates slots        |
-| `textureLoadImage(src)`                                 | `Promise<HTMLImageElement>`         | Loads an image                    |
-| `textureResizeToMaxWidth(...)`                          | `HTMLCanvasElement`                 | Caps the largest dimension        |
-| `textureBuildCombined(...)`                             | `Promise<HTMLCanvasElement>`        | Composes canvases into one        |
-| `textureToDataUrl(canvas, type?)`                       | `string`                            | Serialises a canvas               |
+| Function                                                | Returns                             | Description                 |
+| ------------------------------------------------------- | ----------------------------------- | --------------------------- |
+| `drawingStroke(ctx, from, to, options)`                 | `void`                              | Segment between two points  |
+| `drawingDot(ctx, point, options)`                       | `void`                              | Single dot                  |
+| `drawingFill(ctx, point, color)`                        | `void`                              | Flood fill                  |
+| `drawingClear(ctx)`                                     | `void`                              | Clears the canvas           |
+| `drawingRestore(ctx, dataUrl)`                          | `Promise<void>`                     | Paints a snapshot back      |
+| `storageSave(backend, name, dataUrl)`                   | `Promise<void> \| void`             | Saves to the chosen backend |
+| `storageLoad(backend, name)`                            | `Promise<StorageSlot \| null>` \| … | Loads a slot                |
+| `storageDelete(backend, name)` / `storageList(backend)` | —                                   | Removes / enumerates slots  |
+| `textureLoadImage(src)`                                 | `Promise<HTMLImageElement>`         | Loads an image              |
+| `textureResizeToMaxWidth(...)`                          | `HTMLCanvasElement`                 | Caps the largest dimension  |
+| `textureBuildCombined(...)`                             | `Promise<HTMLCanvasElement>`        | Composes canvases into one  |
+| `textureToDataUrl(canvas, type?)`                       | `string`                            | Serialises a canvas         |
 
 ## Types
 
@@ -135,11 +120,6 @@ interface StrokeEvent {
 interface FillEvent {
   point: DrawingPoint
   color: string
-}
-
-interface HistoryStack {
-  past: string[]
-  future: string[]
 }
 
 type StorageBackend = 'localStorage' | 'indexedDB'

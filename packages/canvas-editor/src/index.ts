@@ -2,16 +2,6 @@ export { drawingStroke, drawingDot, drawingFill, drawingClear, drawingRestore } 
 export type { DrawingTool, DrawingOptions, DrawingPoint, StrokeEvent, FillEvent } from './drawing'
 
 export {
-  historyCreate,
-  historyPush,
-  historyUndo,
-  historyRedo,
-  historyCanUndo,
-  historyCanRedo
-} from './history'
-export type { HistoryStack } from './history'
-
-export {
   storageSave,
   storageLoad,
   storageDelete,

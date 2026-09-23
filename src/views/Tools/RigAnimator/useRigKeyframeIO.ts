@@ -15,7 +15,9 @@ interface RigKeyframeIODeps {
   keyframes: Ref<PoseKeyframe[]>
   keyframeFrames: Ref<number[]>
   frameMax: Ref<number>
-  setFrameMax: (nextFrameMax: number) => void
+  applyFrameMax: (nextFrameMax: number) => void
+  persistAutosave: (label: string) => void
+  reopenHistory: (label: string) => void
   rebuildPreviewClip: () => void
   reset: () => void
 }
@@ -35,7 +37,9 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
     keyframes,
     keyframeFrames,
     frameMax,
-    setFrameMax,
+    applyFrameMax,
+    persistAutosave,
+    reopenHistory,
     rebuildPreviewClip,
     reset
   } = deps
@@ -52,12 +56,20 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
     exportPosesAsJson(keyframes.value, config.value.fps, EXPORT_JSON_FILENAME)
   }
 
-  /** Adopt an externally-sourced keyframe set, expand the frame range to fit, rebuild the clip. */
-  const applyLoadedKeyframes = (nextKeyframes: PoseKeyframe[], nextFps?: number): void => {
+  /** Adopt an externally-sourced keyframe set, expand the frame range to fit, rebuild the clip.
+   * @param nextKeyframes The keyframes to adopt
+   * @param nextFps The rate they were authored at, when the source carries one
+   * @param label What adopting them is called in the history log */
+  const applyLoadedKeyframes = (
+    nextKeyframes: PoseKeyframe[],
+    nextFps?: number,
+    label = 'Loaded keyframes'
+  ): void => {
     if (nextFps !== undefined) config.value.fps = nextFps
     keyframes.value = nextKeyframes
-    setFrameMax(Math.max(frameMax.value, ...keyframeFrames.value))
+    applyFrameMax(Math.max(frameMax.value, ...keyframeFrames.value))
     rebuildPreviewClip()
+    persistAutosave(label)
   }
 
   /** Load a previously exported poses file (`url`, a blob URL), replacing the current keyframes. */
@@ -65,7 +77,7 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
     if (!url) return
     const text = await fetch(url).then((response) => response.text())
     const parsed = parsePosesJson(text)
-    if (parsed) applyLoadedKeyframes(parsed.keyframes, parsed.fps)
+    if (parsed) applyLoadedKeyframes(parsed.keyframes, parsed.fps, 'Imported keyframes')
   }
 
   /**
@@ -84,8 +96,9 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
       nextKeyframes,
       boneNamesInScope
     )
-    setFrameMax(Math.max(frameMax.value, ...keyframeFrames.value))
+    applyFrameMax(Math.max(frameMax.value, ...keyframeFrames.value))
     rebuildPreviewClip()
+    persistAutosave('Merged keyframes')
   }
 
   /** Load a bundled example animation and sample it into keyframes, merged into `boneNamesInScope`. */
@@ -100,6 +113,7 @@ export const useRigKeyframeIO = (deps: RigKeyframeIODeps) => {
     keyframes.value = autosave.keyframes
     frameMax.value = autosave.frameMax
     rebuildPreviewClip()
+    reopenHistory('Restored autosave')
   }
 
   /** Clear every keyframe and the autosave behind them, back to a blank edit. */

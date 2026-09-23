@@ -69,24 +69,32 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     )
   }
 
-  /** Swap in an edited keyframe list, then rebuild, persist and show the pose at the playhead. */
-  const commitEditedKeyframes = (keyframes: PoseKeyframe[]): void => {
+  /** Swap in an edited keyframe list, then rebuild, persist and show the pose at the playhead.
+   * @param keyframes The edited list
+   * @param label What the edit is called in the history log */
+  const commitEditedKeyframes = (keyframes: PoseKeyframe[], label: string): void => {
     if (keyframes === rigKeyframes.keyframes.value) return
     rigKeyframes.keyframes.value = keyframes
-    rigKeyframes.commitKeyframes()
+    rigKeyframes.commitKeyframes(label)
     rigKeyframes.scrubToFrame(config.value.frame)
   }
 
   /** Smooth the keyframes at `frames` one pass further, see `filterKeyframesInList`. */
   const filterKeyframes = (frames: number[]): void =>
-    commitEditedKeyframes(filterKeyframesInList(rigKeyframes.keyframes.value, frames))
+    commitEditedKeyframes(
+      filterKeyframesInList(rigKeyframes.keyframes.value, frames),
+      'Polished keyframes'
+    )
 
   /** Halve the keyframes at `frames`, see `reduceKeyframesInList`. */
   const reduceKeyframes = (frames: number[]): void =>
-    commitEditedKeyframes(reduceKeyframesInList(rigKeyframes.keyframes.value, frames))
+    commitEditedKeyframes(
+      reduceKeyframesInList(rigKeyframes.keyframes.value, frames),
+      'Halved keyframes'
+    )
 
   /** Rebuild the preview clip and persist once, after a burst of `captureKeyframeSilently` calls. */
-  const commitRecordedKeyframes = (): void => rigKeyframes.commitKeyframes()
+  const commitRecordedKeyframes = (): void => rigKeyframes.commitKeyframes('Recorded motion')
 
   /** Paste the copied pose(s) onto the current frame and apply the landing one to the live rig. */
   const pasteKeyframes = (): void => rigKeyframes.pasteKeyframes(rigModel.bones.value)

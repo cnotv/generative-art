@@ -6,7 +6,7 @@ import type {
   NormalizedLandmark,
   PoseLandmarker
 } from '@mediapipe/tasks-vision'
-import type { HandSide, QuaternionData } from '@webgamekit/rig'
+import type { HandSide, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
 
 export interface RigAnimatorConfig {
   model: string
@@ -280,6 +280,12 @@ export interface BoneRollTrack {
   velocity: number
   /** Readings in a row that departed from that movement, waiting to confirm a real turn. */
   pendingReadings: number
+}
+
+/** Everything an undo of a keyframe edit has to put back. */
+export interface RigHistorySnapshot {
+  keyframes: PoseKeyframe[]
+  frameMax: number
 }
 
 /** Each bone's roll track from the previous frame, keyed by bone name. */
