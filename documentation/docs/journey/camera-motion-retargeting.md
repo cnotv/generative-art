@@ -280,11 +280,11 @@ The scores use the terms of pose estimation benchmarks, each chosen for what the
 
 What the first recording showed, with the Config panel as it starts:
 
-| Limb     | Detector against the preset | Capture against the preset |
-| -------- | --------------------------- | -------------------------- |
-| Legs     | 14°                         | 13°                        |
-| Near arm | 23°                         | 22°                        |
-| Far arm  | 33°                         | 68°                        |
+| Limb     | Detector against the preset | Capture, lost limb reset | Capture, lost limb held |
+| -------- | --------------------------- | ------------------------ | ----------------------- |
+| Legs     | 14°                         | 13°                      | 13°                     |
+| Near arm | 23°                         | 22°                      | 22°                     |
+| Far arm  | 33°                         | 68°                      | 39°                     |
 
 Where the detector sees a limb, the capture is as good as the detector and slightly better, since
 smoothing takes out some of its jitter. The far arm is the exception, and not because of the
@@ -294,10 +294,16 @@ swinging nowhere in a run. Read at any visibility, the same arm follows the dete
 The detector's guesses for a limb it cannot see were better than the fallback, which is the case
 for holding a lost limb rather than resetting it.
 
+Holding it is what the capture now does: a frame no longer drives a limb bone whose landmarks it
+cannot see, so the bone is neither reset nor posed and keeps the last confident reading. The far
+arm came in from 68° to 39°, close to the detector's own 33°, with nothing else moving. The rest
+of the gap is the arm standing still through the part of the stride it spends behind the body,
+where the preset keeps swinging it.
+
 <video controls loop muted playsinline width="720" poster="/img/animation/rig-running-reproduction.webp" src="/video/animation/rig-running-reproduction.webm">
   The recording, the default character posed by the camera capture, and the same character posed by
   the Running preset, side by side for four seconds. Legs and the near arm follow the preset; the far
-  arm keeps swinging back out to its rest pose, held straight out to the side.
+  arm holds its last seen pose while it is behind the body, instead of dropping to its rest pose.
 </video>
 
 Two more things the recording showed about the detectors. On a side view the pose model swaps the
