@@ -15,6 +15,7 @@ import {
 } from './cameraPoseRetarget'
 import { faceMatrixToHeadRotation, smoothCameraPoseFrame } from './cameraPoseFrame'
 import { sampleClipAsPoseKeyframes } from './presets'
+import { cleanUpRecordedTake } from './keyframeOps'
 import {
   bestVerticalTurn,
   jointBendDegrees,
@@ -34,7 +35,9 @@ import runningClip from './fixtures/runningClipFrames.json'
 import {
   CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
-  DEFAULT_FPS
+  DEFAULT_FPS,
+  RECORDING_HALVING_PASSES,
+  RECORDING_SMOOTHING_PASSES
 } from './config'
 import type { CameraLandmark, CameraPoseFrame } from './types'
 
@@ -183,6 +186,32 @@ const loadRunningPreset = () => {
   return { duration: clip.duration, frameAt }
 }
 
+/**
+ * The capture as Record Motion leaves it on the timeline: one keyframe per frame, cleaned up with
+ * the default passes, then played back with the interpolation the timeline uses between them.
+ */
+const playRecordedTake = (rigFrames: RigFrame[]): RigFrame[] => {
+  const keyframes = cleanUpRecordedTake(
+    rigFrames.map(({ pose }, frame) => ({ frame, pose })),
+    { smoothingPasses: RECORDING_SMOOTHING_PASSES, halvingPasses: RECORDING_HALVING_PASSES }
+  )
+  const bones = buildMixamoRig()
+  const mixer = new THREE.AnimationMixer(rigRoot(bones))
+  mixer
+    .clipAction(
+      poseBuildClip(
+        keyframes,
+        bones.map((bone) => bone.name),
+        DEFAULT_FPS
+      )
+    )
+    .play()
+  return rigFrames.map((_, frame) => {
+    mixer.setTime(frame / DEFAULT_FPS)
+    return readRigFrame(bones)
+  })
+}
+
 const normalizeAll = (frames: RigFrame[] | THREE.Vector3[][]): THREE.Vector3[][] =>
   frames.map((frame) => normalizeSkeleton(Array.isArray(frame) ? frame : frame.joints, TORSO))
 
@@ -247,6 +276,24 @@ describe('reproducing a screen recording of the Running preset through camera ca
       expect(degrees).toBeLessThan(maxDegrees)
     }
   )
+
+  it('keeps the legs and the stride once Record Motion smooths and thins the take', () => {
+    // Arrange
+    const recorded = normalizeAll(playRecordedTake(captureFrames))
+    const recordedFacingTruth = turnAboutVertical(recorded, bestVerticalTurn(truth, recorded))
+    const kneeBends = (frames: THREE.Vector3[][], chain: [number, number, number]): number[] =>
+      frames.map((joints) => jointBendDegrees(joints, chain))
+
+    // Act
+    const legDegrees = meanSegmentAngleDegrees(truth, recordedFacingTruth, LIMB_SEGMENTS.slice(4))
+    const kneeCorrelations = BENDS.filter(([name]) => name.endsWith('knee')).map(([, chain]) =>
+      pearsonCorrelation(kneeBends(truth, chain), kneeBends(recordedFacingTruth, chain))
+    )
+
+    // Assert
+    expect(legDegrees).toBeLessThan(15)
+    kneeCorrelations.forEach((correlation) => expect(correlation).toBeGreaterThan(0.65))
+  })
 
   it.each(BENDS.filter(([name]) => name.endsWith('knee')))(
     'bends the %s in step with the preset, stride for stride',
