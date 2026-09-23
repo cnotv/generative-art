@@ -232,7 +232,8 @@ joint when nothing else is selected, poses it normally instead.
 
 ## Undoing a bad edit
 
-Undo, redo and the action log sit at the left of the timeline's first row. Undo steps back through
+Undo, redo and the action log are one control at the left of the timeline's first row: the two
+arrows, and a caret beside them that opens the log. Undo steps back through
 every change to the keyframe list, whatever made it: a keyframe added or deleted, a block
 dragged, pasted or cut, a polish pass, a whole recorded take. The log names each one, newest
 first, and strikes through the ones undo has taken away, so a stack of similar steps is still
