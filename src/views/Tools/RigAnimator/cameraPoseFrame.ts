@@ -15,6 +15,7 @@ import {
 import { mirrorCameraHandLandmarks } from './cameraHandPoseMapping'
 import { cameraHandOrientation } from './cameraPoseRetarget'
 import type {
+  CameraCaptureMode,
   CameraCropSquare,
   CameraHandLandmark,
   CameraHandTrack,
@@ -200,6 +201,24 @@ export const smoothHeadRotation = (
   const blended = from.slerp(to, lowPassBlendFactor(cutoffHertz, elapsedSeconds))
   return { x: blended.x, y: blended.y, z: blended.z, w: blended.w }
 }
+
+/**
+ * Whether the detected skeleton belongs on the camera preview: only while it is a live reading. A
+ * live camera and a photo always show what was just read. An uploaded video shows it while
+ * detection runs or a take records, and hides it otherwise: replaying a take seeks a paused video
+ * the detector no longer reads, where the last reading would sit over frames it does not match.
+ * @param state The capture source, and whether its video is being read or recorded right now
+ * @returns True when the overlay should be drawn over the preview
+ */
+export const isDetectionOverlayShown = ({
+  mode,
+  isDetecting,
+  isRecording
+}: {
+  mode: CameraCaptureMode
+  isDetecting: boolean
+  isRecording: boolean
+}): boolean => mode !== 'video' || isDetecting || isRecording
 
 /**
  * Whether a frame found anything at all worth applying.

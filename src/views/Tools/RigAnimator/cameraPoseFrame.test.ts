@@ -7,6 +7,7 @@ import {
   cropSquareAroundLandmark,
   faceMatrixToHeadRotation,
   hasCameraPoseContent,
+  isDetectionOverlayShown,
   mirrorCameraPoseFrame,
   mirrorHeadRotation,
   smoothCameraPoseFrame,
@@ -244,6 +245,25 @@ describe('hasCameraPoseContent', () => {
   ])('reports a frame holding %s as %s', (_, frame, expected) => {
     expect(hasCameraPoseContent(frame)).toBe(expected)
   })
+})
+
+describe('isDetectionOverlayShown', () => {
+  it.each([
+    { mode: 'camera', isDetecting: false, isRecording: false, expected: true },
+    { mode: 'photo', isDetecting: false, isRecording: false, expected: true },
+    { mode: 'video', isDetecting: true, isRecording: false, expected: true },
+    { mode: 'video', isDetecting: false, isRecording: true, expected: true },
+    { mode: 'video', isDetecting: false, isRecording: false, expected: false }
+  ] as const)(
+    'shows it for $mode, detecting $isDetecting, recording $isRecording: $expected',
+    ({ expected, ...state }) => {
+      // Arrange, Act
+      const shown = isDetectionOverlayShown(state)
+
+      // Assert
+      expect(shown).toBe(expected)
+    }
+  )
 })
 
 describe('mirrorCameraPoseFrame', () => {

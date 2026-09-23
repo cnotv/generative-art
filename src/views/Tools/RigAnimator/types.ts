@@ -85,6 +85,9 @@ export interface CameraHandLandmark {
   velocity?: CameraLandmarkVelocity
 }
 
+/** Where the camera capture reads a pose from. */
+export type CameraCaptureMode = 'camera' | 'photo' | 'video'
+
 /** One BlazePose landmark: metres in world mode, normalized [0,1] in image mode either way. */
 export interface CameraLandmark extends CameraHandLandmark {
   visibility: number

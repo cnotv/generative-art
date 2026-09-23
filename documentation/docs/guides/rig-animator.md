@@ -436,7 +436,9 @@ overlay from
 MediaPipe's Pose Landmarker. The overlay only draws a landmark MediaPipe is actually confident
 about: one it isn't, typically a body part out of frame, still gets a guessed position
 internally, and drawing that would show a confident-looking line to something that isn't really
-there.
+there. For an uploaded video the overlay shows only while detection is reading it or a take is
+recording; replaying a take on the timeline hides it, since the paused frames it seeks through are
+no longer being read.
 
 The model re-centers within the part of the canvas the panel leaves visible rather than sitting
 off-center against the panel's edge, without the 3D canvas itself ever resizing: opening the

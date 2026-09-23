@@ -21,14 +21,19 @@ import { useCameraPoseCapture } from './useCameraPoseCapture'
 import { useCameraPhotoPose } from './useCameraPhotoPose'
 import { useVideoPoseCapture } from './useVideoPoseCapture'
 import { useVideoTimelineSync } from './useVideoTimelineSync'
-import { hasCameraPoseContent } from './cameraPoseFrame'
+import { hasCameraPoseContent, isDetectionOverlayShown } from './cameraPoseFrame'
 import {
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_PANEL_WIDTH_VW,
   MEDIA_FILE_ACCEPT,
   RECORDING_SAMPLES_PER_FRAME
 } from './config'
-import type { CameraDetectionOptions, CameraPoseFrame, CameraSmoothingSettings } from './types'
+import type {
+  CameraCaptureMode,
+  CameraDetectionOptions,
+  CameraPoseFrame,
+  CameraSmoothingSettings
+} from './types'
 
 const props = defineProps<{
   /** The Config panel's smoothing sliders for the live feed. */
@@ -76,7 +81,7 @@ const uploadedVideo = useVideoPoseCapture(
   detectionOptions,
   computed(() => 1 / props.videoSlowdownRatio)
 )
-const mode = ref<'camera' | 'photo' | 'video'>('camera')
+const mode = ref<CameraCaptureMode>('camera')
 
 /** Picks the field from whichever source is active in the current mode. */
 const pickByMode = <T,>(cameraValue: T, videoValue: T, photoValue: T): T => {
@@ -336,10 +341,14 @@ onUnmounted(() => {
         @ended="handleVideoEnded"
         @seeked="handleVideoSeeked"
       ></video>
-      <!-- Hidden while an uploaded video plays, so the clip itself can be watched; paused, it shows
-        what detection read for the frame on screen. -->
       <canvas
-        v-show="!(mode === 'video' && isVideoPlaying)"
+        v-show="
+          isDetectionOverlayShown({
+            mode,
+            isDetecting: uploadedVideo.isDetecting.value,
+            isRecording
+          })
+        "
         ref="canvasReference"
         class="camera-pose-capture__overlay"
       ></canvas>
