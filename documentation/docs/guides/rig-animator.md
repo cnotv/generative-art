@@ -115,6 +115,11 @@ exist, so two poses are already a movement.
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
   applying a preset to whichever hand the selected bone belongs to
+- `src/views/Tools/RigAnimator/poseSimilarity.ts` (+ `.test.ts`): pose estimation measures for
+  comparing two skeletons over time, used by `clipReproduction.test.ts` to score a capture against
+  a recording of a preset
+- `scripts/extract-video-landmarks.mjs`, `scripts/render-clip-comparison.mjs`: turning a recording
+  into a test fixture, and rendering a test's result side by side with the recording
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
 - `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`, `handPose.ts`: the
   framework-agnostic logic. See the [rig package's docs](/docs/packages/rig) for the
@@ -476,6 +481,8 @@ so the take keeps one keyframe in four, first and last always included, and inte
 Smoothing goes first so thinning never keeps a misread frame. The counts were measured on a
 recording of the Running preset: six smoothing passes cost nothing, two halvings stay within about a
 degree of the full take, and every further halving loses the stride quickly.
+
+![The Rig Animator after recording an uploaded video: Camera Pose shows Video Slowdown Ratio at 6 with Smooth Recording and Thin Out Recording both checked, and the timeline below carries one keyframe every four frames from 0 to 120](/img/animation/rig-recording-cleanup.webp)
 
 ![The canvas buttons mid-recording: the record toggle has turned into a solid red square, between the camera and Camera Preview buttons](/img/animation/rig-record-motion.webp)
 
