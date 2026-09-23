@@ -13,6 +13,7 @@ import {
   captureCameraRetargetRest,
   easeBonesFromTransforms
 } from './cameraPoseRetarget'
+import { fitLandmarksToImage, solveCameraRootOffset } from './cameraImageFit'
 import { faceMatrixToHeadRotation, smoothCameraPoseFrame } from './cameraPoseFrame'
 import { sampleClipAsPoseKeyframes } from './presets'
 import { cleanUpRecordedTake } from './keyframeOps'
@@ -33,7 +34,9 @@ import {
 } from './fixtures/cameraPoseFixtures'
 import runningClip from './fixtures/runningClipFrames.json'
 import {
+  CAMERA_ASSUMED_VERTICAL_FOV_DEGREES,
   CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
+  CAMERA_IMAGE_FIT_SHARE,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
   DEFAULT_FPS,
   RECORDING_HALVING_PASSES,
@@ -85,14 +88,22 @@ const PANEL_SMOOTHING = buildSmoothingSettings({ maxJump: CAMERA_LANDMARK_MAX_JU
 
 const RUNNING_PRESET_PATH = resolve(process.cwd(), 'public/animations/running.fbx')
 
-const recordedFrames = runningClip.frames.map((frame) => ({
-  time: frame.time,
-  poseFrame: {
-    bodyLandmarks: frame.bodyLandmarks,
-    handLandmarks: {},
-    headRotation: frame.faceMatrix ? faceMatrixToHeadRotation(frame.faceMatrix) : null
-  } satisfies CameraPoseFrame
-}))
+/** The recording as `detectCameraPose` hands it on, its world landmarks fitted to the image by `share`. */
+const readRecordedFrames = (share: number) =>
+  runningClip.frames.map((frame) => ({
+    time: frame.time,
+    poseFrame: {
+      bodyLandmarks: fitLandmarksToImage(
+        frame.bodyLandmarks,
+        frame.bodyImageLandmarks,
+        runningClip.imageSize,
+        { share, verticalFieldOfViewDegrees: CAMERA_ASSUMED_VERTICAL_FOV_DEGREES }
+      ),
+      handLandmarks: {},
+      headRotation: frame.faceMatrix ? faceMatrixToHeadRotation(frame.faceMatrix) : null
+    } satisfies CameraPoseFrame
+  }))
+const recordedFrames = readRecordedFrames(CAMERA_IMAGE_FIT_SHARE)
 
 const rigRoot = (bones: THREE.Bone[]): THREE.Object3D =>
   bones.find((bone) => !(bone.parent instanceof THREE.Bone))!.parent!
@@ -260,7 +271,7 @@ const inRecordingView = (
 
 describe('reproducing a screen recording of the Running preset through camera capture', () => {
   const detected = normalizeAll(
-    recordedFrames.map(({ poseFrame }) => readLandmarkJoints(poseFrame.bodyLandmarks!))
+    runningClip.frames.map((frame) => readLandmarkJoints(frame.bodyLandmarks))
   )
   const presetFrames = alignPresetToRecording(loadRunningPreset(), detected)
   const captureFrames = replayCapture(recordedFrames)
@@ -335,6 +346,62 @@ describe('reproducing a screen recording of the Running preset through camera ca
 
     // Assert
     expect(degrees).toBeLessThan(42)
+  })
+
+  // VNect fits its skeleton to the 2D reading as well as the 3D one (see `fitLandmarksToImage`).
+  // On this recording the world reading alone pointed the legs 12.6° off the preset with knee
+  // correlations of 0.73 and 0.77; pulled fully onto the image it lands at 11.2°, 0.86 and 0.87.
+  it('points the legs closer and keeps the stride better once fitted to the image', () => {
+    // Arrange
+    const worldOnly = normalizeAll(replayCapture(readRecordedFrames(0)))
+    const worldOnlyFacingTruth = turnAboutVertical(worldOnly, bestVerticalTurn(truth, worldOnly))
+    const kneeCorrelation = (frames: THREE.Vector3[][], chain: [number, number, number]) =>
+      pearsonCorrelation(
+        truth.map((joints) => jointBendDegrees(joints, chain)),
+        frames.map((joints) => jointBendDegrees(joints, chain))
+      )
+    const knees = BENDS.filter(([name]) => name.endsWith('knee')).map(([, chain]) => chain)
+
+    // Act
+    const fittedLegs = meanSegmentAngleDegrees(truth, capturedFacingTruth, LIMB_SEGMENTS.slice(4))
+    const worldOnlyLegs = meanSegmentAngleDegrees(
+      truth,
+      worldOnlyFacingTruth,
+      LIMB_SEGMENTS.slice(4)
+    )
+
+    // Assert
+    expect(fittedLegs).toBeLessThan(worldOnlyLegs - 1)
+    knees.forEach((chain) =>
+      expect(kneeCorrelation(capturedFacingTruth, chain)).toBeGreaterThan(
+        kneeCorrelation(worldOnlyFacingTruth, chain) + 0.05
+      )
+    )
+  })
+
+  // The recording is of a character running on one spot in front of a still camera, so wherever
+  // the solve places its hips should hardly move. The height swings a little with the stride.
+  it('places the runner, who stays on one spot, steadily in front of the camera', () => {
+    // Arrange
+    const standardDeviation = (values: number[]): number => {
+      const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+      return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length)
+    }
+
+    // Act
+    const offsets = runningClip.frames.map(
+      (frame) =>
+        solveCameraRootOffset(
+          frame.bodyLandmarks,
+          frame.bodyImageLandmarks,
+          runningClip.imageSize,
+          CAMERA_ASSUMED_VERTICAL_FOV_DEGREES
+        )!
+    )
+
+    // Assert
+    expect(standardDeviation(offsets.map(({ x }) => x))).toBeLessThan(0.03)
+    expect(standardDeviation(offsets.map(({ z }) => z))).toBeLessThan(0.1)
   })
 
   // Only on request: the frames a side by side comparison video is rendered from, see

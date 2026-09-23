@@ -35,6 +35,7 @@ export interface RigAnimatorConfig {
   cameraSearchHandsAroundWrists: boolean
   cameraSideHandsByWrist: boolean
   cameraIgnoreOutsideImage: boolean
+  cameraImageFit: number
   cameraMirrorLive: boolean
   cameraDetectOnlyWhilePlaying: boolean
   cameraUseDepth: boolean
@@ -110,6 +111,20 @@ export interface CameraLandmarkVelocity {
   x: number
   y: number
   z: number
+}
+
+/** A video frame's size in pixels. */
+export interface CameraImageSize {
+  width: number
+  height: number
+}
+
+/** How far world landmarks are pulled onto the rays through their image landmarks. */
+export interface CameraImageFitSettings {
+  /** 0 leaves the world reading alone, 1 puts every joint on its image ray. */
+  share: number
+  /** The camera's vertical field of view, assumed when it is not calibrated. */
+  verticalFieldOfViewDegrees: number
 }
 
 /** The live feed's smoothing, tuned from the Config panel. */
@@ -207,6 +222,8 @@ export interface CameraDetectionOptions {
   sideHandsByNearestWrist: boolean
   /** Treat body landmarks placed outside the image as not detected. */
   ignoreLandmarksOutsideImage: boolean
+  /** How far the body's 3D landmarks are pulled onto their 2D readings. */
+  imageFit: CameraImageFitSettings
   /** Mirror the live camera, body, hands and head, to match its mirrored preview. */
   mirrorLiveCamera: boolean
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */

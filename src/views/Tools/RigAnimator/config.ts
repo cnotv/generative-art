@@ -344,6 +344,22 @@ export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
 export const CAMERA_MAX_JUMP_RANGE = { min: 0.02, max: 0.5, step: 0.01 }
 
 /**
+ * How far each body landmark is pulled from the pose detector's 3D reading onto the camera ray
+ * through its 2D reading, see `fitLandmarksToImage`. Measured on the recorded Running preset, the
+ * full pull pointed the legs 11° off the preset instead of 13° and lifted each knee's bend
+ * correlation from about 0.75 to 0.86. 0 uses the 3D reading alone.
+ */
+export const CAMERA_IMAGE_FIT_SHARE = 1
+/** Range and step the Config panel's image fit slider offers. */
+export const CAMERA_IMAGE_FIT_SHARE_RANGE = { min: 0, max: 1, step: 0.05 }
+/**
+ * The vertical field of view assumed for an uncalibrated camera, VNect's own default. The fit
+ * barely depends on it: a wider lens places the body closer and each image ray steeper, and the
+ * two cancel for everything but the body's own depth.
+ */
+export const CAMERA_ASSUMED_VERTICAL_FOV_DEGREES = 54
+
+/**
  * Keyboard and gamepad shortcuts for the rig timeline. X and Square are the same physical
  * button under two different platforms' naming, so "X to save, Square for next" as asked
  * would bind one button to two actions; next/previous instead use the D-pad (button14/15),

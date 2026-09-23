@@ -28,6 +28,8 @@ import {
   MODEL_FILE_ACCEPT,
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_SMOOTHING_MILLISECONDS,
+  CAMERA_IMAGE_FIT_SHARE,
+  CAMERA_ASSUMED_VERTICAL_FOV_DEGREES,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
   CAMERA_SMOOTHING_SPEED_RESPONSE,
   CAMERA_SMOOTHING_TURN_RESPONSE,
@@ -123,6 +125,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraSearchHandsAroundWrists: true,
   cameraSideHandsByWrist: true,
   cameraIgnoreOutsideImage: true,
+  cameraImageFit: CAMERA_IMAGE_FIT_SHARE,
   cameraMirrorLive: true,
   cameraDetectOnlyWhilePlaying: true,
   cameraUseDepth: true,
@@ -204,6 +207,10 @@ const cameraDetectionOptions = computed(
     searchHandsAroundWrists: reactiveConfig.value.cameraSearchHandsAroundWrists,
     sideHandsByNearestWrist: reactiveConfig.value.cameraSideHandsByWrist,
     ignoreLandmarksOutsideImage: reactiveConfig.value.cameraIgnoreOutsideImage,
+    imageFit: {
+      share: reactiveConfig.value.cameraImageFit,
+      verticalFieldOfViewDegrees: CAMERA_ASSUMED_VERTICAL_FOV_DEGREES
+    },
     mirrorLiveCamera: reactiveConfig.value.cameraMirrorLive,
     detectOnlyWhilePlaying: reactiveConfig.value.cameraDetectOnlyWhilePlaying
   })

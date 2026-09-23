@@ -94,6 +94,7 @@ const detectInPage = async ({ files, framesPerSecond, poseModel, faceModel }) =>
       time,
       imageSize: { width: image.width, height: image.height },
       bodyLandmarks: poseResult.worldLandmarks[0] ?? null,
+      bodyImageLandmarks: poseResult.landmarks[0] ?? null,
       faceMatrix: faceResult.facialTransformationMatrixes?.[0]?.data ?? null
     }
   }
@@ -120,6 +121,7 @@ const main = async () => {
     const frames = readings.map((reading) => ({
       time: round(reading.time),
       bodyLandmarks: reading.bodyLandmarks?.map(roundLandmark) ?? null,
+      bodyImageLandmarks: reading.bodyImageLandmarks?.map(roundLandmark) ?? null,
       handLandmarks: {},
       faceMatrix: reading.faceMatrix?.map(round) ?? null
     }))
