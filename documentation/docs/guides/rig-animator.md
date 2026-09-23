@@ -623,7 +623,9 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
   again in a crop around a wrist the whole frame found no hand at. **Hand Side by Nearest Wrist**
   sides a hand by the body's wrist instead of the detector's own label.
 - **Ignore Body Outside Image** treats a body landmark placed outside the picture as not
-  detected. **Mirror Live Camera** reflects the webcam's body, hands and head to match its
+  detected. **Fit Body to Image** pulls each body landmark from the pose detector's 3D reading
+  onto the line from the camera through where the detector saw it in the picture: 1, the default,
+  pulls it all the way and 0 uses the 3D reading alone. **Mirror Live Camera** reflects the webcam's body, hands and head to match its
   mirrored preview. **Only While Video Plays** stops reading a paused video.
 - **Turn Hips**, **Bend Spine**, **Turn Neck and Head**, **Aim Arms**, **Aim Legs** and **Aim
   Feet** each leave their bones at rest when off.

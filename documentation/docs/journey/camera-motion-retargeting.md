@@ -311,6 +311,55 @@ legs for a few frames every stride, the full model as much as the lite one, so a
 fix. And the face landmarker finds no face on the stylised character in any frame, sunglasses and
 all, so a capture of a rendered character gets no head rotation from it.
 
+## Fitting the 3D reading to the picture
+
+BlazePose reports every body landmark twice: once in the picture, and once in 3D metres around the
+hips. The capture used to read only the 3D one. VNect (Mehta et al., SIGGRAPH 2017) showed the two
+readings are complementary: the picture says precisely where a joint is on screen and nothing about
+its depth, while the 3D reading knows depth but places the joint on screen less accurately. It
+fitted one skeleton to both at once, and fitting to the picture alone halved its accuracy.
+
+The fit here stays on the landmarks, before any bone is turned, since the retarget only ever reads
+directions between them. It takes two steps. First the hips are placed in front of a pinhole camera:
+every visible landmark, shifted by the hips' position, has to project onto its own spot in the
+picture, which gives two equations per landmark in the three unknowns of that position, solved by
+least squares. Then each landmark slides sideways onto the camera ray through its spot in the
+picture, keeping its own depth. It happens at detection, before a self-view is mirrored, so the
+picture and the 3D reading still agree on which side is which.
+
+![The left and right knee's bend over the four second recording: the preset dashed, the 3D reading alone in orange and the fitted reading in blue. The orange line drops away mid stride where the blue one follows the preset](/img/animation/rig-image-fit-knees.webp)
+
+On the Running recording, with everything else at its defaults:
+
+| Measure                              | 3D reading alone | Fitted to the picture |
+| ------------------------------------ | ---------------- | --------------------- |
+| Legs, mean limb segment angle        | 12.6°            | 11.2°                 |
+| Near arm                             | 22.3°            | 19.9°                 |
+| Far arm                              | 39.4°            | 38.9°                 |
+| Left and right knee bend correlation | 0.73 and 0.77    | 0.86 and 0.87         |
+| Joints within a fifth of a torso, 2D | 60%              | 57%                   |
+
+The one score that drops is the keypoint count, which compares the two bodies seen without
+perspective, while the fit matches them to a camera that has it. Whether that accounts for all of
+the drop is untested.
+
+**The field of view hardly matters.** An uncalibrated camera is assumed to see 54° vertically,
+VNect's own default. A wider lens places the body closer and makes every ray steeper, and the two
+cancel for everything but the body's own depth: at 40°, 54° and 70° the legs came out at 11.3°,
+11.2° and 11.2°.
+
+**The hips' position is steady enough to use.** The recorded character runs on one spot in front of
+a still camera, so its true position never changes. The solve put it 2.3 m away, wandering by 1.4 cm
+from side to side and 7.8 cm in depth (one standard deviation). Nothing moves the rig with it yet:
+walking the rig around the floor is the calibration work in its own issue.
+
+**Holding depth back made everything worse.** VNect also penalises how fast the skeleton moves
+toward or away from the camera, the axis one camera reads worst. Damping the landmarks' depth the
+same way, over 100 to 500 ms, pointed the legs 14° off instead of 12.6° and lowered every other
+score. VNect damps the whole body's distance from the camera; the landmarks here are measured about
+the hips, and in a stride the limbs really do swing toward and away from the camera, so damping them
+only makes them late.
+
 ## Limits
 
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest
