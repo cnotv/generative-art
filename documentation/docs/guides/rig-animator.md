@@ -232,6 +232,21 @@ joint when nothing else is selected, poses it normally instead.
 
 ## Undoing a bad edit
 
+Undo, redo and the action log sit at the left of the canvas controls. Undo steps back through
+every change to the keyframe list, whatever made it: a keyframe added or deleted, a block
+dragged, pasted or cut, a polish pass, a whole recorded take. The log names each one, newest
+first, and strikes through the ones undo has taken away, so a stack of similar steps is still
+readable. Fifty steps are kept.
+
+![The action log open under the canvas controls, listing Deleted keyframe struck through above two Added keyframe entries](/img/animation/rig-action-log.webp)
+
+Loading a model, importing a file or restoring the autosave starts the history over rather
+than being another step to walk back: undoing past a load would put the previous model's
+keyframes onto bones that no longer exist.
+
+Posing a bone by hand is not on that list. A pose only becomes an edit once it is captured as
+a keyframe, and until then **Reset Bone to Rest Pose** is what takes it back.
+
 Typing an exact position can still go too far: a joint moved well past its rest offset tears
 the mesh at that seam, since translation, unlike rotation, does not preserve limb length. An IK
 reach beyond a limb's own proportions can likewise pull it into an unnatural line. **Reset Bone
@@ -594,6 +609,12 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
 - **Palms from Body When No Hand Found**, off by default, reads the palm from BlazePose's own
   wrist, pinky and index whenever the Hand Landmarker found no hand, as the capture used to. See
   **Fingers from the camera** for why it is off.
+- **Ignore Rolls That Flip Over**, on by default, holds back a roll that departs from the
+  direction that bone was already rolling in. A roll is read from two directions at most half a
+  turn apart, so a limb rolling past that point reads as having jumped to the opposite sign and
+  the bone spins almost the whole way round on one frame. Three readings in a row that agree are
+  taken as a real turn and let through, the same way a sharply turned palm is confirmed. Switch
+  it off to see a take exactly as the detector read it.
 - **Keep Joints in Human Range**, on by default, keeps every joint the capture turns inside the
   range a body can reach, measured from the rig's own rest pose: how far each one may swing off
   its rest direction and how far it may roll about its own length, from a few degrees for a

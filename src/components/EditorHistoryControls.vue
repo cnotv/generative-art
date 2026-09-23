@@ -48,7 +48,7 @@ defineEmits<{ undo: []; redo: [] }>()
       </IconButton>
     </DropdownMenuTrigger>
     <DropdownMenuPortal>
-      <DropdownMenuContent class="history-log" :side-offset="4" align="end">
+      <DropdownMenuContent class="history-log" :side-offset="4" align="start">
         <p v-if="log.length === 0" class="history-log__empty">Nothing done yet</p>
         <ol v-else class="history-log__list">
           <li
@@ -65,7 +65,8 @@ defineEmits<{ undo: []; redo: [] }>()
   </DropdownMenuRoot>
 </template>
 
-<style scoped>
+<!-- The panel is portalled out of this component, so a scoped style never reaches it. -->
+<style>
 .history-log {
   max-height: 16rem;
   min-width: 12rem;
