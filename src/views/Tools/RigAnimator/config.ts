@@ -311,6 +311,19 @@ export const CAMERA_HAND_FLIP_CONFIRM_READINGS = 3
 export const CAMERA_HAND_TRACK_RESET_MILLISECONDS = 500
 /** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
 export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
+/**
+ * The fastest, in degrees a second, a body is taken to turn on the spot. It is what limits how
+ * quickly a line across the body may change which way it says the body faces, in proportion to
+ * how side-on that line already is, see `steadyLateral`. Raising it takes the rig closer to the
+ * raw reading, front-to-back flips included; lowering it makes a real turn arrive late.
+ */
+export const CAMERA_BODY_TURN_MAX_DEGREES_PER_SECOND = 360
+/**
+ * How far, in degrees, a recorded keyframe's roll may sit from the movement its neighbours
+ * describe before the polish pass drops it for their midpoint rather than easing toward it. A
+ * recorded take has no joint speed cap to spread a bad frame, so one shows up whole.
+ */
+export const CAMERA_KEYFRAME_ROLL_FLIP_DEGREES = 90
 
 /** How far, in metres, a smoothed landmark may move in a single frame before the excess past
  * this is clamped off as a sudden jump rather than genuine motion. */

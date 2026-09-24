@@ -232,6 +232,27 @@ joint when nothing else is selected, poses it normally instead.
 
 ## Undoing a bad edit
 
+Undo, redo and the action log are one control at the left of the timeline's first row: the two
+arrows, and a caret beside them that opens the log. Undo steps back through
+every change to the keyframe list, whatever made it: a keyframe added or deleted, a block
+dragged, pasted or cut, a polish pass, a whole recorded take. The log names each one, newest
+first, and strikes through the ones undo has taken away, so a stack of similar steps is still
+readable. Fifty steps are kept.
+
+Clicking a line in the log goes straight to that point instead of walking there a step at a
+time, in either direction: click one that is struck through to come back forward again. The
+next edit made from wherever you stopped drops everything after it, the way undo then drawing
+does in any editor.
+
+![The action log open above the timeline row after clicking its oldest line, with the two newer Added keyframe lines struck through and a single keyframe left on the timeline](/img/animation/rig-action-log.webp)
+
+Loading a model, importing a file or restoring the autosave starts the history over rather
+than being another step to walk back: undoing past a load would put the previous model's
+keyframes onto bones that no longer exist.
+
+Posing a bone by hand is not on that list. A pose only becomes an edit once it is captured as
+a keyframe, and until then **Reset Bone to Rest Pose** is what takes it back.
+
 Typing an exact position can still go too far: a joint moved well past its rest offset tears
 the mesh at that seam, since translation, unlike rotation, does not preserve limb length. An IK
 reach beyond a limb's own proportions can likewise pull it into an unnatural line. **Reset Bone
@@ -594,6 +615,14 @@ MediaPipe reads from each frame; **Camera Bones** rules decide which bones that 
 - **Palms from Body When No Hand Found**, off by default, reads the palm from BlazePose's own
   wrist, pinky and index whenever the Hand Landmarker found no hand, as the capture used to. See
   **Fingers from the camera** for why it is off.
+- **Ignore Turns That Flip the Body**, on by default, holds the body to turning no faster than a
+  body can. Facing the camera and facing away project the same width, and the depth that separates
+  them is read across a torso barely wider than the error in it, so the detector lands on either
+  from one frame to the next and the whole rig spins round and back. Each frame may turn the body
+  only as far as that frame's own evidence of turning allows, which is how much of the hip line
+  lies along depth: none at all when square to the camera, all of it when side-on. Switch it off
+  to see a take exactly as the detector read it. Why it happens, and why the three obvious fixes
+  made it worse, is in [The Body That Turns Round and Back](../journey/bone-roll-flips.md).
 - **Keep Joints in Human Range**, on by default, keeps every joint the capture turns inside the
   range a body can reach, measured from the rig's own rest pose: how far each one may swing off
   its rest direction and how far it may roll about its own length, from a few degrees for a

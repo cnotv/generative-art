@@ -20,14 +20,19 @@ import {
 } from './fixtures/cameraPoseFixtures'
 import danceClip from './fixtures/danceClipFrames.json'
 import { CAMERA_JOINT_LIMITS_DEGREES } from './config'
-import type { CameraLandmark, CameraPoseFrame } from './types'
+import type { TurnTracks, CameraLandmark, CameraPoseFrame } from './types'
 
 const DEFAULT_OPTIONS = buildMappingOptions()
 /** Copies the detection exactly, however far past a human joint it reads. */
 const UNLIMITED_OPTIONS = buildMappingOptions({ limitJoints: false })
 const WORLD_UP = new THREE.Vector3(0, 1, 0)
 
-const poseRig = (frame: Partial<CameraPoseFrame>, options = DEFAULT_OPTIONS) => {
+const poseRig = (
+  frame: Partial<CameraPoseFrame>,
+  options = DEFAULT_OPTIONS,
+  turnTracks: TurnTracks = new Map(),
+  elapsedSeconds = Infinity
+) => {
   const bones = buildMixamoRig()
   const rest = captureCameraRetargetRest(bones)
   const fullFrame: CameraPoseFrame = {
@@ -37,13 +42,11 @@ const poseRig = (frame: Partial<CameraPoseFrame>, options = DEFAULT_OPTIONS) => 
     ...frame
   }
   const allBoneNames = new Set(bones.map((bone) => bone.name))
-  applyCameraPoseFrame(
-    bones,
-    rest,
-    fullFrame,
-    options,
-    cameraFrameDrivenBoneNames(fullFrame, allBoneNames)
-  )
+  applyCameraPoseFrame(bones, rest, fullFrame, options, {
+    drivenBoneNames: cameraFrameDrivenBoneNames(fullFrame, allBoneNames),
+    turnTracks,
+    elapsedSeconds
+  })
   const bone = (name: string): THREE.Bone => bones.find((candidate) => candidate.name === name)!
   const position = (name: string): THREE.Vector3 =>
     bone(`mixamorig${name}`).getWorldPosition(new THREE.Vector3())

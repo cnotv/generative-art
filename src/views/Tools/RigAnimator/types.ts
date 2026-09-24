@@ -6,7 +6,7 @@ import type {
   NormalizedLandmark,
   PoseLandmarker
 } from '@mediapipe/tasks-vision'
-import type { HandSide, QuaternionData } from '@webgamekit/rig'
+import type { HandSide, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
 
 export interface RigAnimatorConfig {
   model: string
@@ -50,6 +50,7 @@ export interface RigAnimatorConfig {
   cameraBoneSmoothingMilliseconds: number
   cameraBoneMaxTurnSpeed: number
   cameraLimitJoints: boolean
+  cameraFilterBodyFlips: boolean
   cameraVisibilityThreshold: number
   cameraTwistMinBendDegrees: number
   cameraTwistFullBendDegrees: number
@@ -179,6 +180,11 @@ export interface CameraPoseMappingOptions {
   boneSmoothingMilliseconds: number
   /** Keep every joint inside a human range, see `CAMERA_JOINT_LIMITS_DEGREES`. */
   limitJoints: boolean
+  /**
+   * Hold back a bone's roll when it departs from the direction that bone was already rolling
+   * in, which is how a twist cue read past half a turn shows up, see `trackTurnAngle`.
+   */
+  filterBodyFlips: boolean
   /** The fastest a joint may turn, in radians a second; 0 turns the cap off. */
   maxBoneTurnRadiansPerSecond: number
 }
@@ -262,4 +268,30 @@ export interface CameraDetection {
   previewLandmarks: NormalizedLandmark[] | null
   previewHandLandmarks: NormalizedLandmark[][]
   frame: CameraPoseFrame
+}
+
+/**
+ * How one bone has been rolling about its own length. The angle runs on past half a turn rather
+ * than jumping sign, and the velocity is the direction of movement a new reading is judged against.
+ */
+export interface TurnTrack {
+  /** The side reading last believed for one line across the body, as a share of its length. */
+  lateral: number
+}
+
+/** Everything an undo of a keyframe edit has to put back. */
+export interface RigHistorySnapshot {
+  keyframes: PoseKeyframe[]
+  frameMax: number
+}
+
+/** Each bone's roll track from the previous frame, keyed by bone name. */
+export type TurnTracks = Map<string, TurnTrack>
+
+/** What one pass of the retarget is allowed to touch, and what it carries over from the last one. */
+export interface CameraRetargetPass {
+  drivenBoneNames: Set<string>
+  turnTracks: TurnTracks
+  /** Time since the previous frame was applied, which is what a roll's movement is measured over. */
+  elapsedSeconds: number
 }

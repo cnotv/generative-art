@@ -11,7 +11,12 @@ import {
   easeBonesFromTransforms
 } from './cameraPoseRetarget'
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
-import type { CameraPoseFrame, CameraPoseMappingOptions, CameraRetargetRest } from './types'
+import type {
+  TurnTracks,
+  CameraPoseFrame,
+  CameraPoseMappingOptions,
+  CameraRetargetRest
+} from './types'
 
 /**
  * Owns the camera-pose-capture readiness check and applies a detected frame to the rig, split out
@@ -30,12 +35,15 @@ export const useRigCameraPose = (
   let retargetRest: CameraRetargetRest | null = null
   /** When the last frame was applied, so bone smoothing knows how long it has been. */
   let lastAppliedAtMilliseconds: number | null = null
+  /** How each bone has been rolling, so a reading that flips it over can be spotted. */
+  const turnTracks: TurnTracks = new Map()
   // Synchronous on purpose: the rig stands at rest the instant its bones are adopted, and a
   // deferred watcher could run after a restored autosave has already posed it.
   watch(
     bones,
     (nextBones) => {
       retargetRest = nextBones.length > 0 ? captureCameraRetargetRest(nextBones) : null
+      turnTracks.clear()
     },
     { immediate: true, flush: 'sync' }
   )
@@ -55,7 +63,7 @@ export const useRigCameraPose = (
    * @param frame The detected body, hands and head, from `CameraPoseCapture`
    * @param options Which rules to apply and how, see `CameraPoseMappingOptions`
    * @param targetGroups Which body-part groups this capture is allowed to touch
-   * @param timestampMilliseconds When this frame is applied, for bone smoothing
+   * @param timestampMilliseconds When this frame is applied, for bone smoothing and roll tracking
    */
   const applyCameraPose = (
     frame: CameraPoseFrame,
@@ -75,12 +83,16 @@ export const useRigCameraPose = (
     resetAllBonesToRest(
       new Set(bones.value.map((bone) => bone.name).filter((name) => !drivenBoneNames.has(name)))
     )
-    applyCameraPoseFrame(bones.value, retargetRest, frame, options, drivenBoneNames)
     const elapsedSeconds =
       lastAppliedAtMilliseconds === null
         ? Infinity
         : (timestampMilliseconds - lastAppliedAtMilliseconds) / 1000
     lastAppliedAtMilliseconds = timestampMilliseconds
+    applyCameraPoseFrame(bones.value, retargetRest, frame, options, {
+      drivenBoneNames,
+      turnTracks,
+      elapsedSeconds
+    })
     easeBonesFromTransforms(
       bones.value,
       previousTransforms,

@@ -10,7 +10,7 @@ interface Dependencies {
   keyframeFrames: Ref<number[]>
   frameMax: Ref<number>
   rebuildPreviewClip: () => void
-  persistAutosave: () => void
+  persistAutosave: (label: string) => void
 }
 
 /**
@@ -40,7 +40,7 @@ export const useRigFrameRipple = ({
     else if (config.value.frame >= startFrame) config.value.frame = startFrame
     frameMax.value = clampFrameMax(frameMax.value - span, config.value.frame, keyframeFrames.value)
     rebuildPreviewClip()
-    persistAutosave()
+    persistAutosave('Removed frame range')
   }
 
   /**
@@ -55,7 +55,7 @@ export const useRigFrameRipple = ({
     if (config.value.frame >= atFrame) config.value.frame += span
     frameMax.value = clampFrameMax(frameMax.value + span, config.value.frame, keyframeFrames.value)
     rebuildPreviewClip()
-    persistAutosave()
+    persistAutosave('Inserted frame range')
   }
 
   return { removeFrameRange, insertFrameRange }

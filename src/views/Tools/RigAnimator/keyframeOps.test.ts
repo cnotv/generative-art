@@ -390,3 +390,51 @@ describe('reduceKeyframesInList', () => {
     expect(reduced.map(({ frame }) => frame)).toEqual([0, 2, 3, 4, 5, 6])
   })
 })
+
+describe('filterKeyframesInList, on a keyframe whose roll flipped over', () => {
+  const ALONG_BONE = new THREE.Vector3(0, 1, 0)
+  const ACROSS_BONE = new THREE.Vector3(1, 0, 0)
+  const posed = (axis: THREE.Vector3, degrees: number) => {
+    const { x, y, z, w } = new THREE.Quaternion().setFromAxisAngle(
+      axis,
+      THREE.MathUtils.degToRad(degrees)
+    )
+    return { mixamorigLeftForeArm: { x, y, z, w } }
+  }
+  const rollAt = (keyframes: PoseKeyframe[], frame: number): number => {
+    const { y, w } = keyframes.find((keyframe) => keyframe.frame === frame)!.pose
+      .mixamorigLeftForeArm
+    return THREE.MathUtils.radToDeg(2 * Math.atan2(y, Math.abs(w)))
+  }
+
+  it('drops it onto the movement its neighbours describe, rather than easing toward it', () => {
+    // Arrange
+    const keyframes = [
+      { frame: 0, pose: posed(ALONG_BONE, 0) },
+      { frame: 1, pose: posed(ALONG_BONE, 200) },
+      { frame: 2, pose: posed(ALONG_BONE, 40) }
+    ]
+
+    // Act
+    const filtered = filterKeyframesInList(keyframes, [0, 1, 2])
+
+    // Assert
+    expect(rollAt(filtered, 1)).toBeCloseTo(20, 1)
+  })
+
+  it('still only eases a limb that swung hard, which is a movement and not a flip', () => {
+    // Arrange
+    const keyframes = [
+      { frame: 0, pose: posed(ACROSS_BONE, 0) },
+      { frame: 1, pose: posed(ACROSS_BONE, 100) },
+      { frame: 2, pose: posed(ACROSS_BONE, 40) }
+    ]
+
+    // Act
+    const filtered = filterKeyframesInList(keyframes, [0, 1, 2])
+    const { x, w } = filtered[1].pose.mixamorigLeftForeArm
+
+    // Assert
+    expect(THREE.MathUtils.radToDeg(2 * Math.atan2(x, w))).toBeGreaterThan(25)
+  })
+})

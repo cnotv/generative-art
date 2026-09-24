@@ -7,7 +7,7 @@ interface Dependencies {
   config: Ref<RigAnimatorConfig>
   keyframes: Ref<PoseKeyframe[]>
   rebuildPreviewClip: () => void
-  persistAutosave: () => void
+  persistAutosave: (label: string) => void
 }
 
 /** One copied pose, kept relative to the earliest frame in the copy rather than an absolute
@@ -69,7 +69,7 @@ export const useRigKeyframeClipboard = ({
     const poseAtCurrentFrame = pasted.find((keyframe) => keyframe.frame === baseFrame)?.pose
     if (poseAtCurrentFrame) poseApply(bones, poseAtCurrentFrame)
     rebuildPreviewClip()
-    persistAutosave()
+    persistAutosave('Pasted keyframes')
   }
 
   return { hasClipboard, copyKeyframes, pasteKeyframes }

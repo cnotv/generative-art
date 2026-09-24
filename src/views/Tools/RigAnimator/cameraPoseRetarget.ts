@@ -6,8 +6,10 @@ import {
   CAMERA_NECK_TURN_SHARE,
   CAMERA_PELVIS_LEAN_SHARE,
   CAMERA_BONE_SMOOTHING_RESET_SECONDS,
-  CAMERA_JOINT_LIMITS_DEGREES
+  CAMERA_JOINT_LIMITS_DEGREES,
+  CAMERA_BODY_TURN_MAX_DEGREES_PER_SECOND
 } from './config'
+import { BONE_LENGTH_AXIS, splitSwingTwist } from './turnTracking'
 import {
   CAMERA_LANDMARK_INDEX,
   lowPassBlendFactor,
@@ -20,6 +22,7 @@ import type {
   CameraLandmark,
   CameraPoseFrame,
   CameraPoseMappingOptions,
+  CameraRetargetPass,
   CameraRetargetRest
 } from './types'
 
@@ -32,8 +35,7 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0)
 /** The Face Landmarker's identity pose looks along +z with the subject's left along +x. */
 const CANONICAL_FACE_FORWARD = new THREE.Vector3(0, 0, 1)
 const CANONICAL_FACE_LATERAL = new THREE.Vector3(1, 0, 0)
-/** Every bone of a Mixamo rig runs along its own local +y and curls a finger about its local +x. */
-const BONE_LENGTH_AXIS = new THREE.Vector3(0, 1, 0)
+/** Every bone of a Mixamo rig curls a finger about its own local +x; `BONE_LENGTH_AXIS` is the other. */
 const FINGER_FLEXION_AXIS = new THREE.Vector3(1, 0, 0)
 const JOINT_LIMITS = new Map(Object.entries(CAMERA_JOINT_LIMITS_DEGREES))
 
@@ -109,12 +111,15 @@ const FOOT_BONE_NAMES = [
 interface RetargetContext {
   bonesByName: Map<string, THREE.Bone>
   rest: CameraRetargetRest
-  drivenBoneNames: Set<string>
   options: CameraPoseMappingOptions
   /** The rig's own left, and the way it faces, at rest. */
   restLateral: THREE.Vector3
   restForward: THREE.Vector3
+  pass: CameraRetargetPass
 }
+
+const HIP_LINE_KEY = 'hips'
+const SHOULDER_LINE_KEY = 'shoulders'
 
 /** Two directions that fix an orientation: one a segment runs along, one it leans toward. */
 interface SegmentFrame {
@@ -302,22 +307,6 @@ const frameChange = (observed: SegmentFrame, rest: SegmentFrame): THREE.Quaterni
   return observedRotation && restRotation ? observedRotation.multiply(restRotation.invert()) : null
 }
 
-/**
- * Split a rotation into its turn about `unitAxis`, as a signed angle, and the swing left over, so
- * that `swing * twist` rebuilds it.
- */
-const splitSwingTwist = (
-  rotation: THREE.Quaternion,
-  unitAxis: THREE.Vector3
-): { swing: THREE.Quaternion; twistAngle: number } => {
-  // The same rotation has two quaternions; the one with w >= 0 keeps the angle within ±180°.
-  const hemisphere = rotation.w < 0 ? -1 : 1
-  const along = new THREE.Vector3(rotation.x, rotation.y, rotation.z).dot(unitAxis) * hemisphere
-  const twistAngle = 2 * Math.atan2(along, rotation.w * hemisphere)
-  const twist = new THREE.Quaternion().setFromAxisAngle(unitAxis, twistAngle)
-  return { swing: rotation.clone().multiply(twist.invert()), twistAngle }
-}
-
 const limitSwingTwist = (
   fromRest: THREE.Quaternion,
   limit: { swing: number; twist: number }
@@ -401,7 +390,7 @@ const drivenBone = (
 ): { bone: THREE.Bone; restQuaternion: THREE.Quaternion } | null => {
   const bone = context.bonesByName.get(boneName)
   const restQuaternion = context.rest.worldQuaternions.get(boneName)
-  return bone && restQuaternion && context.drivenBoneNames.has(boneName)
+  return bone && restQuaternion && context.pass.drivenBoneNames.has(boneName)
     ? { bone, restQuaternion }
     : null
 }
@@ -481,6 +470,67 @@ const bendTwistWeight = (
   return THREE.MathUtils.clamp((bend - options.twistMinBendRadians) / fadeRange, 0, 1)
 }
 
+/**
+ * Steady which way a line across the body says it faces, at the speed that line's own reading
+ * earns.
+ *
+ * Which side of the body the detector has put on the left is what decides whether the rig faces
+ * the camera or away, and on a body square to the camera that reading is a guess: both ways
+ * project the same width, so it lands on either from one frame to the next and the whole rig spins
+ * round and back. The evidence that a turn is real is how much of the line lies along depth, which
+ * is nothing at all when the body is square and everything when it is side-on.
+ *
+ * So the reading is not gated, it is rate limited by that evidence. Writing the line as a unit
+ * vector, its side component is the cosine of the facing and its depth component the sine, so a
+ * body turning at `w` radians a second moves the side component by exactly the depth component
+ * times `w`. Holding each frame's step to that is no more than saying the body turns no faster
+ * than a body can. Nothing latches, because nothing is ever decided: a reading that stays put
+ * eventually wins whatever the body is doing, and one that bounces cancels itself out.
+ * @param context The retarget context, which carries what each line last read
+ * @param key Which line this is
+ * @param lateral The line, in scene axes
+ * @returns The line with its lateral reading steadied, at its original length
+ */
+const steadyLateral = (
+  context: RetargetContext,
+  key: string,
+  lateral: THREE.Vector3
+): THREE.Vector3 => {
+  const length = lateral.length()
+  if (!context.options.filterBodyFlips || length < DIRECTION_EPSILON) return lateral
+  const unit = lateral.clone().divideScalar(length)
+  const previous = context.pass.turnTracks.get(key)
+  const stale = context.pass.elapsedSeconds > CAMERA_BONE_SMOOTHING_RESET_SECONDS
+  if (!previous || stale) {
+    context.pass.turnTracks.set(key, { lateral: unit.x })
+    return lateral
+  }
+  // Whichever of the two says the body is turned: a body already believed side-on can swing back
+  // to square as fast as it left, and throttling the return by the square reading is what would
+  // leave it stuck facing away long after the performer came back.
+  const turnedShare = Math.max(
+    Math.abs(unit.z),
+    Math.sqrt(Math.max(0, 1 - previous.lateral * previous.lateral))
+  )
+  const allowedStep =
+    turnedShare *
+    THREE.MathUtils.degToRad(CAMERA_BODY_TURN_MAX_DEGREES_PER_SECOND) *
+    context.pass.elapsedSeconds
+  const step = THREE.MathUtils.clamp(unit.x - previous.lateral, -allowedStep, allowedStep)
+  const steadyX = previous.lateral + step
+  context.pass.turnTracks.set(key, { lateral: steadyX })
+  // The other two components keep their proportions, so only the side reading has moved.
+  const remaining = Math.sqrt(Math.max(0, 1 - steadyX * steadyX))
+  const otherLength = Math.hypot(unit.y, unit.z)
+  return otherLength < DIRECTION_EPSILON
+    ? new THREE.Vector3(steadyX, 0, remaining).multiplyScalar(length)
+    : new THREE.Vector3(
+        steadyX,
+        (unit.y / otherLength) * remaining,
+        (unit.z / otherLength) * remaining
+      ).multiplyScalar(length)
+}
+
 const observeHips = (context: RetargetContext, point: BodyPointReader) => {
   const leftHip = point(CAMERA_LANDMARK_INDEX.leftHip)
   const rightHip = point(CAMERA_LANDMARK_INDEX.rightHip)
@@ -518,15 +568,17 @@ const observeTorso = (context: RetargetContext, point: BodyPointReader): TorsoRo
     )
     return chest ? { pelvis: new THREE.Quaternion(), chest } : null
   }
+  const steadyHipLateral = steadyLateral(context, HIP_LINE_KEY, hips.lateral)
+  const steadyShoulderLateral = steadyLateral(context, SHOULDER_LINE_KEY, shoulderLateral)
   const torsoUp = midpoint(leftShoulder, rightShoulder).sub(hips.center)
   const restTorsoUp = midpoint(restLeftArm, restRightArm).sub(hips.restCenter)
   const pelvisUp = WORLD_UP.clone().lerp(torsoUp.clone().normalize(), CAMERA_PELVIS_LEAN_SHARE)
   const chest = frameChange(
-    { primary: torsoUp, lateral: shoulderLateral },
+    { primary: torsoUp, lateral: steadyShoulderLateral },
     { primary: restTorsoUp, lateral: restShoulderLateral }
   )
   const pelvis = frameChange(
-    { primary: pelvisUp, lateral: hips.lateral },
+    { primary: pelvisUp, lateral: steadyHipLateral },
     { primary: restTorsoUp, lateral: hips.restLateral }
   )
   return chest && pelvis ? { pelvis, chest } : null
@@ -852,8 +904,8 @@ const groundFeet = (context: RetargetContext): void => {
 const createRetargetContext = (
   bones: THREE.Bone[],
   rest: CameraRetargetRest,
-  drivenBoneNames: Set<string>,
-  options: CameraPoseMappingOptions
+  options: CameraPoseMappingOptions,
+  pass: CameraRetargetPass
 ): RetargetContext | null => {
   const restLeftArm = rest.worldPositions.get('mixamorigLeftArm')
   const restRightArm = rest.worldPositions.get('mixamorigRightArm')
@@ -862,10 +914,10 @@ const createRetargetContext = (
   return {
     bonesByName: new Map(bones.map((bone) => [bone.name, bone])),
     rest,
-    drivenBoneNames,
     options,
     restLateral,
-    restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize()
+    restForward: new THREE.Vector3().crossVectors(restLateral, WORLD_UP).normalize(),
+    pass
   }
 }
 
@@ -876,20 +928,20 @@ const createRetargetContext = (
  * are copied, so a rig whose proportions differ from the performer's still stretches fully
  * straight in a T-pose and reaches overhead in a stretch. Parents are posed before children, so
  * each bone only adds its own turn on top of what the bone above it already did.
- * @param bones The rig's bones, with every bone in `drivenBoneNames` already reset to rest
+ * @param bones The rig's bones, with every bone this pass drives already reset to rest
  * @param rest The rig's rest pose, from `captureCameraRetargetRest`
  * @param frame What the camera found this frame, oriented and smoothed
  * @param options Which rules to apply, each switchable from the Config panel
- * @param drivenBoneNames The bones this frame may change, from `cameraFrameDrivenBoneNames`
+ * @param pass Which bones this frame may change, and the roll tracks carried from the last one
  */
 export const applyCameraPoseFrame = (
   bones: THREE.Bone[],
   rest: CameraRetargetRest,
   frame: CameraPoseFrame,
   options: CameraPoseMappingOptions,
-  drivenBoneNames: Set<string>
+  pass: CameraRetargetPass
 ): void => {
-  const context = createRetargetContext(bones, rest, drivenBoneNames, options)
+  const context = createRetargetContext(bones, rest, options, pass)
   if (!context) return
   const point = readBodyPoints(frame.bodyLandmarks, options)
   const torso = observeTorso(context, point)

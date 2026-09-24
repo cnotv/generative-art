@@ -1,5 +1,9 @@
 import * as THREE from 'three'
 import type { Pose, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
+import { isBoneRollFlip } from './turnTracking'
+import { CAMERA_KEYFRAME_ROLL_FLIP_DEGREES } from './config'
+
+const ROLL_FLIP_RADIANS = THREE.MathUtils.degToRad(CAMERA_KEYFRAME_ROLL_FLIP_DEGREES)
 
 /**
  * Shift every keyframe in `frames` by the same `deltaFrames`, preserving their spacing — a
@@ -203,14 +207,22 @@ const scopedKeyframes = (keyframes: PoseKeyframe[], frames: number[]): PoseKeyfr
     .sort((first, second) => first.frame - second.frame)
 }
 
-/** One bone's rotation at a keyframe, filtered against the keyframes either side of it. */
+/**
+ * One bone's rotation at a keyframe, filtered against the keyframes either side of it. A keyframe
+ * that only differs from its neighbours by having spun the bone about its own length is dropped
+ * for their midpoint rather than eased toward: that is a flipped twist cue rather than a
+ * movement, see `isBoneRollFlip`, and easing halfway to it drags the clean keyframes over too.
+ */
 const filterBoneBetweenNeighbours = (
   previous: QuaternionData,
   current: QuaternionData,
   next: QuaternionData
 ): QuaternionData => {
-  const outvoted = toQuaternion(filterRotationSamples([previous, current, next]))
   const between = toQuaternion(previous).slerp(toQuaternion(next), 0.5)
+  if (isBoneRollFlip(between, toQuaternion(current), ROLL_FLIP_RADIANS)) {
+    return toQuaternionData(between)
+  }
+  const outvoted = toQuaternion(filterRotationSamples([previous, current, next]))
   return toQuaternionData(between.slerp(outvoted, 0.5))
 }
 

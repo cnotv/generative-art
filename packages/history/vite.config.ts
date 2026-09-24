@@ -5,11 +5,11 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(import.meta.dirname, 'src/index.ts'),
-      name: 'WebGameKitCanvasEditor',
+      name: 'WebGameToolkitHistory',
       fileName: 'index'
     },
     rollupOptions: {
-      external: ['@webgamekit/history'],
+      external: [],
       output: {
         globals: {}
       }
