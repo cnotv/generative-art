@@ -90,6 +90,41 @@ describe('useRigCameraPose', () => {
     expect(bone('mixamorigLeftArm').quaternion.angleTo(tPoseArm)).toBeLessThan(1e-6)
   })
 
+  it.each([
+    ['elbow', 13, ['mixamorigLeftArm', 'mixamorigLeftForeArm', 'mixamorigLeftHand']],
+    ['wrist', 15, ['mixamorigLeftForeArm', 'mixamorigLeftHand']]
+  ])(
+    'keeps the arm where the last frame left it when its %s drops out of view',
+    (_, lostLandmark, heldBones) => {
+      // Arrange: the arm is raised, then the next frame stands in a T-pose with one landmark lost.
+      const { applyCameraPose, bone } = buildWiredRig()
+      applyCameraPose(
+        {
+          ...EMPTY_FRAME,
+          bodyLandmarks: buildBodyLandmarks({ 13: [0.2, -0.8, 0], 15: [0.22, -1.05, 0] })
+        },
+        OPTIONS,
+        ALL_GROUPS
+      )
+      const raised = new Map(
+        heldBones.map((name) => [name, bone(name).quaternion.clone()] as const)
+      )
+      const rightArmBefore = bone('mixamorigRightArm').quaternion.clone()
+      const lost = buildBodyLandmarks().map((landmark, index) =>
+        index === lostLandmark ? { ...landmark, visibility: 0 } : landmark
+      )
+
+      // Act
+      applyCameraPose({ ...EMPTY_FRAME, bodyLandmarks: lost }, OPTIONS, ALL_GROUPS)
+
+      // Assert
+      raised.forEach((quaternion, name) =>
+        expect(bone(name).quaternion.angleTo(quaternion)).toBeCloseTo(0)
+      )
+      expect(bone('mixamorigRightArm').quaternion.equals(rightArmBefore)).toBe(true)
+    }
+  )
+
   it('curls the fingers of a hand filmed on its own without resetting the posed body', () => {
     // Arrange: the body is posed by an earlier frame, then only a hand stays in view.
     const { applyCameraPose, bone } = buildWiredRig()

@@ -52,7 +52,11 @@ const facingPerFrame = (filterBodyFlips: boolean, secondsPerFrame: number): numb
     const steadied = steadyCameraHands(handTracks, frame, timestampMilliseconds, smoothing)
     handTracks = steadied.tracks
     smoothed = smoothCameraPoseFrame(smoothed, steadied.frame, timestampMilliseconds, smoothing)
-    const drivenBoneNames = cameraFrameDrivenBoneNames(smoothed, allBoneNames)
+    const drivenBoneNames = cameraFrameDrivenBoneNames(
+      smoothed,
+      allBoneNames,
+      options.visibilityThreshold
+    )
     const elapsedSeconds = index === 0 ? Infinity : secondsPerFrame
     const before = captureBoneTransforms(bones, drivenBoneNames)
     bones.forEach((bone, boneIndex) => {

@@ -336,7 +336,13 @@ onUnmounted(() => {
         @ended="handleVideoEnded"
         @seeked="handleVideoSeeked"
       ></video>
-      <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
+      <!-- Hidden while an uploaded video plays, so the clip itself can be watched; paused, it shows
+        what detection read for the frame on screen. -->
+      <canvas
+        v-show="!(mode === 'video' && isVideoPlaying)"
+        ref="canvasReference"
+        class="camera-pose-capture__overlay"
+      ></canvas>
     </div>
     <p class="camera-pose-capture__status camera-pose-capture__status--scope">
       {{
