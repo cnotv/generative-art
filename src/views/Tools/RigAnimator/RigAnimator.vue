@@ -28,6 +28,8 @@ import {
   MODEL_FILE_ACCEPT,
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_SMOOTHING_MILLISECONDS,
+  CAMERA_IMAGE_FIT_SHARE,
+  CAMERA_ASSUMED_VERTICAL_FOV_DEGREES,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
   CAMERA_SMOOTHING_SPEED_RESPONSE,
   CAMERA_SMOOTHING_TURN_RESPONSE,
@@ -40,12 +42,15 @@ import {
   CAMERA_TWIST_MIN_BEND_DEGREES,
   CAMERA_TWIST_FULL_BEND_DEGREES,
   CAMERA_VIDEO_SLOWDOWN_RATIO,
+  RECORDING_HALVING_PASSES,
   RECORDING_SAMPLES_PER_FRAME,
+  RECORDING_SMOOTHING_PASSES,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
   DEFAULT_ENCLOSURE_OPACITY
 } from './config'
+import { cleanUpRecordedTake } from './keyframeOps'
 import { buildRigPanelGroups } from './panelSchema'
 import RigConfigAccordion from './RigConfigAccordion.vue'
 import { useRigAnimator } from './useRigAnimator'
@@ -120,6 +125,7 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraSearchHandsAroundWrists: true,
   cameraSideHandsByWrist: true,
   cameraIgnoreOutsideImage: true,
+  cameraImageFit: CAMERA_IMAGE_FIT_SHARE,
   cameraMirrorLive: true,
   cameraDetectOnlyWhilePlaying: true,
   cameraUseDepth: true,
@@ -138,6 +144,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraTwistFullBendDegrees: CAMERA_TWIST_FULL_BEND_DEGREES,
   cameraShowPreview: false,
   cameraVideoSlowdownRatio: CAMERA_VIDEO_SLOWDOWN_RATIO,
+  cameraSmoothRecording: true,
+  cameraThinRecording: true,
   targetLeftArm: true,
   targetRightArm: true,
   targetLeftLeg: true,
@@ -199,6 +207,10 @@ const cameraDetectionOptions = computed(
     searchHandsAroundWrists: reactiveConfig.value.cameraSearchHandsAroundWrists,
     sideHandsByNearestWrist: reactiveConfig.value.cameraSideHandsByWrist,
     ignoreLandmarksOutsideImage: reactiveConfig.value.cameraIgnoreOutsideImage,
+    imageFit: {
+      share: reactiveConfig.value.cameraImageFit,
+      verticalFieldOfViewDegrees: CAMERA_ASSUMED_VERTICAL_FOV_DEGREES
+    },
     mirrorLiveCamera: reactiveConfig.value.cameraMirrorLive,
     detectOnlyWhilePlaying: reactiveConfig.value.cameraDetectOnlyWhilePlaying
   })
@@ -233,7 +245,16 @@ const motionRecording = useRigMotionRecording({
   addKeyframe: () => rig.captureKeyframeSilently(),
   capturePose: () => rig.capturePose(),
   replaceTake: (fromFrame, toFrame, keyframes) =>
-    rig.replaceRecordedTake(fromFrame, toFrame, keyframes)
+    rig.replaceRecordedTake(
+      fromFrame,
+      toFrame,
+      cleanUpRecordedTake(keyframes, {
+        smoothingPasses: reactiveConfig.value.cameraSmoothRecording
+          ? RECORDING_SMOOTHING_PASSES
+          : 0,
+        halvingPasses: reactiveConfig.value.cameraThinRecording ? RECORDING_HALVING_PASSES : 0
+      })
+    )
 })
 
 /** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop

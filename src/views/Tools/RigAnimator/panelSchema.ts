@@ -13,6 +13,7 @@ import {
   CAMERA_HAND_HOLD_MILLISECONDS_RANGE,
   CAMERA_VISIBILITY_THRESHOLD_RANGE,
   CAMERA_TWIST_BEND_DEGREES_RANGE,
+  CAMERA_IMAGE_FIT_SHARE_RANGE,
   CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE,
   CAMERA_MAX_JUMP_RANGE,
   MARBLE_SPAWN_INTERVAL_RANGE,
@@ -61,7 +62,9 @@ const cameraPoseControls: ConfigControlsSchema = {
   cameraUseDepth: { checkbox: true, label: 'Use Depth (Z Axis)' },
   cameraUseViewpoint: { checkbox: true, label: 'Match Camera Angle to Photo' },
   cameraShowPreview: { checkbox: true, label: 'Show Camera Preview' },
-  cameraVideoSlowdownRatio: { ...CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE, label: 'Video Slowdown Ratio' }
+  cameraVideoSlowdownRatio: { ...CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE, label: 'Video Slowdown Ratio' },
+  cameraSmoothRecording: { checkbox: true, label: 'Smooth Recording' },
+  cameraThinRecording: { checkbox: true, label: 'Thin Out Recording' }
 }
 
 const cameraSmoothingControls: ConfigControlsSchema = {
@@ -110,6 +113,7 @@ const cameraDetectControls: ConfigControlsSchema = {
   cameraSearchHandsAroundWrists: { checkbox: true, label: 'Hand Search Around Wrists' },
   cameraSideHandsByWrist: { checkbox: true, label: 'Hand Side by Nearest Wrist' },
   cameraIgnoreOutsideImage: { checkbox: true, label: 'Ignore Body Outside Image' },
+  cameraImageFit: { ...CAMERA_IMAGE_FIT_SHARE_RANGE, label: 'Fit Body to Image' },
   cameraMirrorLive: { checkbox: true, label: 'Mirror Live Camera' },
   cameraDetectOnlyWhilePlaying: { checkbox: true, label: 'Only While Video Plays' }
 }

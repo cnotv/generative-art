@@ -254,6 +254,112 @@ empty stream reloads the element even when it held none, rewinding and pausing t
 Record Motion kept sampling a frozen frame. The start now notices it was cancelled, and a stream
 is only cleared when one was actually set.
 
+## Scoring a capture against a recording of the rig itself
+
+A clip of a real performer can only be compared with what a detector read from it, which puts the
+detector's own mistakes into the reference. A screen recording of the Rig Animator playing one of
+its own presets does not have that problem: the preset is the exact motion on screen, bone for bone,
+so a capture of the recording can be scored against the truth. The **Running** preset, recorded for
+four seconds from an oblique front view, is the first such clip.
+
+![Six frames of the recorded Running preset with the lite pose model's reading drawn over each: the subject's left side in blue, right in red. Frames 0 and 10 put the raised back leg on the wrong side](/img/animation/rig-running-recording-detection.webp)
+
+Two things have to be settled before any score means something. The recording starts wherever the
+loop happened to be, so the preset is slid along its own 0.7 second loop to the start that best
+fits the detection. The camera looks at the character from the side, so both bodies are turned
+about the vertical by the single angle that lines them up best across the whole take, not frame by
+frame: a per-frame fit would also forgive a body leaning the wrong way.
+
+The scores use the terms of pose estimation benchmarks, each chosen for what the others miss.
+
+| Measure                                                                     | Reads                                    | Blind to                             |
+| --------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------ |
+| Mean limb segment angle                                                     | which way each bone points, in 3D        | limb length, so proportions are fair |
+| Percentage of correct keypoints at a fifth of a torso, in the camera's view | what the recording would look like       | depth, which one camera reads worst  |
+| Correlation of each knee's bend over time                                   | a stride reproduced as a stride, in step | how deep each bend goes              |
+
+What the first recording showed, with the Config panel as it starts:
+
+| Limb     | Detector against the preset | Capture, lost limb reset | Capture, lost limb held |
+| -------- | --------------------------- | ------------------------ | ----------------------- |
+| Legs     | 14°                         | 13°                      | 13°                     |
+| Near arm | 23°                         | 22°                      | 22°                     |
+| Far arm  | 33°                         | 68°                      | 39°                     |
+
+Where the detector sees a limb, the capture is as good as the detector and slightly better, since
+smoothing takes out some of its jitter. The far arm is the exception, and not because of the
+mapping. The lite model reports its elbow and wrist at 0.2 to 0.6 visibility, under the 0.5 cut-off,
+so on most frames the capture treats them as not detected and returns the arm to rest: a T-pose arm
+swinging nowhere in a run. Read at any visibility, the same arm follows the detection within 7°.
+The detector's guesses for a limb it cannot see were better than the fallback, which is the case
+for holding a lost limb rather than resetting it.
+
+Holding it is what the capture now does: a frame no longer drives a limb bone whose landmarks it
+cannot see, so the bone is neither reset nor posed and keeps the last confident reading. The far
+arm came in from 68° to 39°, close to the detector's own 33°, with nothing else moving. The rest
+of the gap is the arm standing still through the part of the stride it spends behind the body,
+where the preset keeps swinging it.
+
+<video controls loop muted playsinline width="720" poster="/img/animation/rig-running-reproduction.webp" src="/video/animation/rig-running-reproduction.webm">
+  The recording, the default character posed by the camera capture, and the same character posed by
+  the Running preset, side by side for four seconds. Legs and the near arm follow the preset; the far
+  arm holds its last seen pose while it is behind the body, instead of dropping to its rest pose.
+</video>
+
+Two more things the recording showed about the detectors. On a side view the pose model swaps the
+legs for a few frames every stride, the full model as much as the lite one, so a heavier model is no
+fix. And the face landmarker finds no face on the stylised character in any frame, sunglasses and
+all, so a capture of a rendered character gets no head rotation from it.
+
+## Fitting the 3D reading to the picture
+
+BlazePose reports every body landmark twice: once in the picture, and once in 3D metres around the
+hips. The capture used to read only the 3D one. VNect (Mehta et al., SIGGRAPH 2017) showed the two
+readings are complementary: the picture says precisely where a joint is on screen and nothing about
+its depth, while the 3D reading knows depth but places the joint on screen less accurately. It
+fitted one skeleton to both at once, and fitting to the picture alone halved its accuracy.
+
+The fit here stays on the landmarks, before any bone is turned, since the retarget only ever reads
+directions between them. It takes two steps. First the hips are placed in front of a pinhole camera:
+every visible landmark, shifted by the hips' position, has to project onto its own spot in the
+picture, which gives two equations per landmark in the three unknowns of that position, solved by
+least squares. Then each landmark slides sideways onto the camera ray through its spot in the
+picture, keeping its own depth. It happens at detection, before a self-view is mirrored, so the
+picture and the 3D reading still agree on which side is which.
+
+![The left and right knee's bend over the four second recording: the preset dashed, the 3D reading alone in orange and the fitted reading in blue. The orange line drops away mid stride where the blue one follows the preset](/img/animation/rig-image-fit-knees.webp)
+
+On the Running recording, with everything else at its defaults:
+
+| Measure                              | 3D reading alone | Fitted to the picture |
+| ------------------------------------ | ---------------- | --------------------- |
+| Legs, mean limb segment angle        | 12.6°            | 11.2°                 |
+| Near arm                             | 22.3°            | 19.9°                 |
+| Far arm                              | 39.4°            | 38.9°                 |
+| Left and right knee bend correlation | 0.73 and 0.77    | 0.86 and 0.87         |
+| Joints within a fifth of a torso, 2D | 60%              | 57%                   |
+
+The one score that drops is the keypoint count, which compares the two bodies seen without
+perspective, while the fit matches them to a camera that has it. Whether that accounts for all of
+the drop is untested.
+
+**The field of view hardly matters.** An uncalibrated camera is assumed to see 54° vertically,
+VNect's own default. A wider lens places the body closer and makes every ray steeper, and the two
+cancel for everything but the body's own depth: at 40°, 54° and 70° the legs came out at 11.3°,
+11.2° and 11.2°.
+
+**The hips' position is steady enough to use.** The recorded character runs on one spot in front of
+a still camera, so its true position never changes. The solve put it 2.3 m away, wandering by 1.4 cm
+from side to side and 7.8 cm in depth (one standard deviation). Nothing moves the rig with it yet:
+walking the rig around the floor is the calibration work in its own issue.
+
+**Holding depth back made everything worse.** VNect also penalises how fast the skeleton moves
+toward or away from the camera, the axis one camera reads worst. Damping the landmarks' depth the
+same way, over 100 to 500 ms, pointed the legs 14° off instead of 12.6° and lowered every other
+score. VNect damps the whole body's distance from the camera; the landmarks here are measured about
+the hips, and in a stride the limbs really do swing toward and away from the camera, so damping them
+only makes them late.
+
 ## Limits
 
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest

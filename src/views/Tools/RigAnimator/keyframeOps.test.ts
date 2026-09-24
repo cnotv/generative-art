@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import type { PoseKeyframe } from '@webgamekit/rig'
 import {
+  cleanUpRecordedTake,
   filterKeyframesInList,
   filterRecordedSamples,
   reduceKeyframesInList,
@@ -436,5 +437,71 @@ describe('filterKeyframesInList, on a keyframe whose roll flipped over', () => {
 
     // Assert
     expect(THREE.MathUtils.radToDeg(2 * Math.atan2(x, w))).toBeGreaterThan(25)
+  })
+})
+
+describe('cleanUpRecordedTake', () => {
+  const turned = (degrees: number) => {
+    const { x, y, z, w } = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      THREE.MathUtils.degToRad(degrees)
+    )
+    return { mixamorigHips: { x, y, z, w } }
+  }
+  const degreesAt = (keyframes: PoseKeyframe[], frame: number): number => {
+    const { x, y, z, w } = keyframes.find((keyframe) => keyframe.frame === frame)!.pose
+      .mixamorigHips
+    return THREE.MathUtils.radToDeg(
+      new THREE.Quaternion(x, y, z, w).angleTo(new THREE.Quaternion())
+    )
+  }
+  const take = Array.from({ length: 9 }, (_, frame) => ({ frame, pose: turned(frame * 5) }))
+
+  it.each([
+    { halvingPasses: 0, expected: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+    { halvingPasses: 1, expected: [0, 2, 4, 6, 8] },
+    { halvingPasses: 2, expected: [0, 4, 8] }
+  ])('keeps $expected after $halvingPasses halvings', ({ halvingPasses, expected }) => {
+    // Arrange, Act
+    const cleaned = cleanUpRecordedTake(take, { smoothingPasses: 0, halvingPasses })
+
+    // Assert
+    expect(cleaned.map(({ frame }) => frame)).toEqual(expected)
+  })
+
+  it.each([1, 6])('pulls a misread frame back toward its neighbours in %i passes', (passes) => {
+    // Arrange
+    const spiked = take.map((keyframe) =>
+      keyframe.frame === 4 ? { frame: 4, pose: turned(120) } : keyframe
+    )
+
+    // Act
+    const cleaned = cleanUpRecordedTake(spiked, { smoothingPasses: passes, halvingPasses: 0 })
+
+    // Assert
+    expect(Math.abs(degreesAt(cleaned, 4) - 20)).toBeLessThan(10)
+  })
+
+  it('smooths before thinning, so a kept keyframe is never a misread one', () => {
+    // Arrange
+    const spiked = take.map((keyframe) =>
+      keyframe.frame === 4 ? { frame: 4, pose: turned(120) } : keyframe
+    )
+
+    // Act
+    const cleaned = cleanUpRecordedTake(spiked, { smoothingPasses: 1, halvingPasses: 2 })
+
+    // Assert
+    expect(cleaned.map(({ frame }) => frame)).toEqual([0, 4, 8])
+    expect(Math.abs(degreesAt(cleaned, 4) - 20)).toBeLessThan(10)
+  })
+
+  it('leaves the first and last keyframe exactly where the take put them', () => {
+    // Arrange, Act
+    const cleaned = cleanUpRecordedTake(take, { smoothingPasses: 6, halvingPasses: 2 })
+
+    // Assert
+    expect(degreesAt(cleaned, 0)).toBeCloseTo(0)
+    expect(degreesAt(cleaned, 8)).toBeCloseTo(40)
   })
 })

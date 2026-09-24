@@ -20,6 +20,7 @@ import {
 } from './config'
 import { CAMERA_LANDMARK_INDEX } from './cameraPoseMapping'
 import { resolveCameraHandSide } from './cameraHandPoseMapping'
+import { fitLandmarksToImage } from './cameraImageFit'
 import {
   assignHandSides,
   cropLandmarksToFrame,
@@ -290,10 +291,14 @@ export const detectCameraPose = (
   const bodyImage = poseResult.landmarks[0] ?? null
   const bodyWorld = poseResult.worldLandmarks[0] ?? null
   const hands = detectHands(context, bodyImage)
-  const bodyLandmarks =
-    bodyWorld && bodyImage && context.options.ignoreLandmarksOutsideImage
-      ? hideLandmarksOutsideFrame(bodyWorld, bodyImage)
+  const fittedWorld =
+    bodyWorld && bodyImage
+      ? fitLandmarksToImage(bodyWorld, bodyImage, context.frameSize, context.options.imageFit)
       : bodyWorld
+  const bodyLandmarks =
+    fittedWorld && bodyImage && context.options.ignoreLandmarksOutsideImage
+      ? hideLandmarksOutsideFrame(fittedWorld, bodyImage)
+      : fittedWorld
   return {
     previewLandmarks: bodyImage,
     previewHandLandmarks: hands.map((hand) => hand.imageLandmarks),

@@ -35,6 +35,7 @@ export interface RigAnimatorConfig {
   cameraSearchHandsAroundWrists: boolean
   cameraSideHandsByWrist: boolean
   cameraIgnoreOutsideImage: boolean
+  cameraImageFit: number
   cameraMirrorLive: boolean
   cameraDetectOnlyWhilePlaying: boolean
   cameraUseDepth: boolean
@@ -56,6 +57,10 @@ export interface RigAnimatorConfig {
   cameraTwistFullBendDegrees: number
   cameraShowPreview: boolean
   cameraVideoSlowdownRatio: number
+  /** Smooth a finished take `RECORDING_SMOOTHING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraSmoothRecording: boolean
+  /** Halve a finished take `RECORDING_HALVING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraThinRecording: boolean
   targetLeftArm: boolean
   targetRightArm: boolean
   targetLeftLeg: boolean
@@ -106,6 +111,20 @@ export interface CameraLandmarkVelocity {
   x: number
   y: number
   z: number
+}
+
+/** A video frame's size in pixels. */
+export interface CameraImageSize {
+  width: number
+  height: number
+}
+
+/** How far world landmarks are pulled onto the rays through their image landmarks. */
+export interface CameraImageFitSettings {
+  /** 0 leaves the world reading alone, 1 puts every joint on its image ray. */
+  share: number
+  /** The camera's vertical field of view, assumed when it is not calibrated. */
+  verticalFieldOfViewDegrees: number
 }
 
 /** The live feed's smoothing, tuned from the Config panel. */
@@ -203,6 +222,8 @@ export interface CameraDetectionOptions {
   sideHandsByNearestWrist: boolean
   /** Treat body landmarks placed outside the image as not detected. */
   ignoreLandmarksOutsideImage: boolean
+  /** How far the body's 3D landmarks are pulled onto their 2D readings. */
+  imageFit: CameraImageFitSettings
   /** Mirror the live camera, body, hands and head, to match its mirrored preview. */
   mirrorLiveCamera: boolean
   /** Only detect while an uploaded video plays; off, a paused frame keeps being read. */
@@ -294,4 +315,18 @@ export interface CameraRetargetPass {
   turnTracks: TurnTracks
   /** Time since the previous frame was applied, which is what a roll's movement is measured over. */
   elapsedSeconds: number
+}
+
+/** How many times a finished take is smoothed and halved, see `cleanUpRecordedTake`. */
+export interface RecordedTakeCleanup {
+  smoothingPasses: number
+  halvingPasses: number
+}
+
+/** Where a skeleton's shoulders and hips sit in its joint list, for `normalizeSkeleton`. */
+export interface SkeletonTorsoJoints {
+  leftShoulder: number
+  rightShoulder: number
+  leftHip: number
+  rightHip: number
 }
