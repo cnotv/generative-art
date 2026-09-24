@@ -39,7 +39,7 @@ import {
   RECORDING_HALVING_PASSES,
   RECORDING_SMOOTHING_PASSES
 } from './config'
-import type { CameraLandmark, CameraPoseFrame } from './types'
+import type { CameraLandmark, CameraPoseFrame, TurnTracks } from './types'
 
 /** Each compared joint, as the rig bone that sits on it and the BlazePose landmark for it. */
 const JOINTS: [string, number][] = [
@@ -133,6 +133,7 @@ const replayCapture = (
   const rest = captureCameraRetargetRest(bones)
   const allBoneNames = new Set(bones.map((bone) => bone.name))
   const restTransforms = captureBoneTransforms(bones, allBoneNames)
+  const turnTracks: TurnTracks = new Map()
   const frameSeconds = 1 / DEFAULT_FPS
   return frames.reduce<{ previous: CameraPoseFrame | null; rigFrames: RigFrame[] }>(
     ({ previous, rigFrames }, { time, poseFrame }, index) => {
@@ -146,8 +147,12 @@ const replayCapture = (
           bone.position.copy(restTransforms.get(bone.name)!.position)
         })
       rigRoot(bones).updateMatrixWorld(true)
-      applyCameraPoseFrame(bones, rest, smoothed, options, driven)
       const elapsedSeconds = index === 0 ? Infinity : frameSeconds
+      applyCameraPoseFrame(bones, rest, smoothed, options, {
+        drivenBoneNames: driven,
+        turnTracks,
+        elapsedSeconds
+      })
       easeBonesFromTransforms(
         bones,
         before,
