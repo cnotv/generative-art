@@ -9,8 +9,8 @@ import {
   historyRedo,
   historyState,
   historyUndo
-} from '@/utils/editorHistory'
-import type { HistoryStack, HistoryStep } from '@/types/editorHistory'
+} from '@webgamekit/history'
+import type { HistoryStack, HistoryStep } from '@webgamekit/history'
 
 /** How many states an editor keeps, the one it opened on included. */
 export const EDITOR_HISTORY_LIMIT = 50

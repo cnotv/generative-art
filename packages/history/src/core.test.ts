@@ -9,7 +9,7 @@ import {
   historyRedo,
   historyState,
   historyUndo
-} from './editorHistory'
+} from './core'
 
 const openedStack = () => historyCreate('Opened', 'blank', 10)
 

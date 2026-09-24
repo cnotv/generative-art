@@ -28,7 +28,7 @@ import { computeTimelineTicks } from './timelineTicks'
 import { computeSelectionRange, keyframesInRange } from './frameSelection'
 import { HAND_POSE_PRESETS } from '@webgamekit/rig'
 import type { RecordedPreset } from './useRigRecordedPresets'
-import type { HistoryLogEntry } from '@/types/editorHistory'
+import type { HistoryLogEntry } from '@webgamekit/history'
 
 interface Properties {
   frame: number

@@ -1,5 +1,5 @@
 {
-  "name": "@webgamekit/canvas-editor",
+  "name": "@webgamekit/history",
   "version": "0.0.1",
   "type": "module",
   "files": [
@@ -20,14 +20,12 @@
     "prepare": "pnpm run build",
     "prepublishOnly": "pnpm run build"
   },
-  "dependencies": {
-    "@webgamekit/history": "workspace:*"
-  },
   "publishConfig": {
     "access": "public"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "vitest": "^4.0.18"
   }
 }

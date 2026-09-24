@@ -7,14 +7,20 @@ paths:
 
 These are a framework-agnostic toolkit, published and consumed independently of this app.
 
-## A package is a pack of features, never one module
+## A package is a pack of features, or ground another package needs
 
 Framework-agnostic and reusable is not the test — almost any pure module is both, and the
-playground's own `src/utils/` is where those go. A package is earned by a body of related
-features someone outside this repo would install on its own, and it is not free: a build under
-its own stricter config, a lockfile entry, a `vite.config.ts` registration, a page in
-`documentation/docs/packages/`, and two contract tests that fail until both exist. One
-function, one file, or one small module several views happen to share is a util.
+playground's own `src/utils/` is where those go. A package is not free either: a build under its
+own stricter config, a lockfile entry, a `vite.config.ts` registration, a page in
+`documentation/docs/packages/`, and two contract tests that fail until both exist. One function,
+one file, or one small module several views happen to share is a util.
+
+Two things earn one. A body of related features someone outside this repo would install on its
+own, which is what most of these are. Or ground a package here already needs, however small:
+`@webgamekit/history` is one undo stack and nothing else, but `@webgamekit/canvas-editor` is
+unusable standalone without it, and the alternatives are a published package with a hole in its
+API or a second copy of the stack living inside it. A package may depend on another and
+re-export it, as canvas-editor does, so its consumers still get one implementation.
 
 When shared logic outgrows a util, the first question is whether an existing package already
 owns that ground, not whether it deserves a new one.

@@ -8,7 +8,7 @@ import {
 } from 'radix-vue'
 import { Undo2, Redo2, ChevronDown } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
-import type { HistoryLogEntry } from '@/types/editorHistory'
+import type { HistoryLogEntry } from '@webgamekit/history'
 
 interface Properties {
   canUndo: boolean

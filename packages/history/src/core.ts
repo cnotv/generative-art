@@ -1,9 +1,4 @@
-import type {
-  HistoryEntry,
-  HistoryLogEntry,
-  HistoryStack,
-  HistoryStep
-} from '@/types/editorHistory'
+import type { HistoryEntry, HistoryLogEntry, HistoryStack, HistoryStep } from './types'
 
 /**
  * Open a history on the state an editor starts in. That first state is not an action and never
