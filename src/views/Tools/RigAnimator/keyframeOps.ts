@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { Pose, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
 import { isBoneRollFlip } from './turnTracking'
 import { CAMERA_KEYFRAME_ROLL_FLIP_DEGREES } from './config'
+import type { RecordedTakeCleanup } from './types'
 
 const ROLL_FLIP_RADIANS = THREE.MathUtils.degToRad(CAMERA_KEYFRAME_ROLL_FLIP_DEGREES)
 
@@ -284,3 +285,35 @@ export const reduceKeyframesInList = (
   )
   return keyframes.filter((keyframe) => !removed.has(keyframe.frame))
 }
+
+const repeatOverWholeList = (
+  keyframes: PoseKeyframe[],
+  passes: number,
+  operation: (list: PoseKeyframe[], frames: number[]) => PoseKeyframe[]
+): PoseKeyframe[] =>
+  Array.from({ length: passes }).reduce<PoseKeyframe[]>(
+    (current) =>
+      operation(
+        current,
+        current.map(({ frame }) => frame)
+      ),
+    keyframes
+  )
+
+/**
+ * Clean up a finished take the way the timeline's Filter and Halve buttons would, pressed over the
+ * whole take several times. Smoothing runs first, so a misread frame is pulled back before thinning
+ * decides which keyframes stay.
+ * @param keyframes The take's keyframes, one per frame
+ * @param passes How many times to smooth and to halve; 0 skips either
+ * @returns The cleaned take, first and last keyframe unchanged
+ */
+export const cleanUpRecordedTake = (
+  keyframes: PoseKeyframe[],
+  passes: RecordedTakeCleanup
+): PoseKeyframe[] =>
+  repeatOverWholeList(
+    repeatOverWholeList(keyframes, passes.smoothingPasses, filterKeyframesInList),
+    passes.halvingPasses,
+    reduceKeyframesInList
+  )

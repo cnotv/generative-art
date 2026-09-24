@@ -115,6 +115,11 @@ exist, so two poses are already a movement.
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
   applying a preset to whichever hand the selected bone belongs to
+- `src/views/Tools/RigAnimator/poseSimilarity.ts` (+ `.test.ts`): pose estimation measures for
+  comparing two skeletons over time, used by `clipReproduction.test.ts` to score a capture against
+  a recording of a preset
+- `scripts/extract-video-landmarks.mjs`, `scripts/render-clip-comparison.mjs`: turning a recording
+  into a test fixture, and rendering a test's result side by side with the recording
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
 - `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`, `handPose.ts`: the
   framework-agnostic logic. See the [rig package's docs](/docs/packages/rig) for the
@@ -378,7 +383,11 @@ through with no swap. Only a side the whole frame missed is looked for again, in
 that side's own wrist, because the Hand Landmarker is trained on close-ups and misses a hand that
 is small in a wide shot. A frame showing a hand but no body curls only that hand's fingers and
 leaves the rest of the rig exactly as it was, rather than snapping a body the camera is simply
-not showing back to rest.
+not showing back to rest. The same holds inside a body: a limb whose landmarks fall under
+**Landmark Confidence Needed**, an arm swinging behind the torso, is left where the last frame
+that saw it put it, instead of dropping to its rest pose. An upper arm is held when its shoulder
+or elbow is lost, a forearm and hand when the elbow or wrist is, and likewise for thigh, shin and
+foot.
 
 The Hand Landmarker is also the only source for which way a palm faces. BlazePose reports a
 pinky and an index point of its own, but they sit a hand's width apart and jitter by centimetres,
@@ -427,7 +436,9 @@ overlay from
 MediaPipe's Pose Landmarker. The overlay only draws a landmark MediaPipe is actually confident
 about: one it isn't, typically a body part out of frame, still gets a guessed position
 internally, and drawing that would show a confident-looking line to something that isn't really
-there.
+there. For an uploaded video the overlay shows only while detection is reading it or a take is
+recording; replaying a take on the timeline hides it, since the paused frames it seeks through are
+no longer being read.
 
 The model re-centers within the part of the canvas the panel leaves visible rather than sitting
 off-center against the panel's edge, without the 3D canvas itself ever resizing: opening the
@@ -468,6 +479,17 @@ filtered from every sample within half a frame of it. With three samples or more
 the rotation closest to all the others, so a misread pose is dropped outright instead of landing
 on the timeline; with only two they are averaged, and a single sample is kept as it is.
 
+Two settings in **Camera Pose**, both on by default, then clean the take up the way the
+timeline's Filter and Halve buttons would, over the take's own keyframes only. **Smooth
+Recording** runs Filter six times (`RECORDING_SMOOTHING_PASSES`), pulling each keyframe toward the
+frames either side of it. **Thin Out Recording** then runs Halve twice (`RECORDING_HALVING_PASSES`),
+so the take keeps one keyframe in four, first and last always included, and interpolates the rest.
+Smoothing goes first so thinning never keeps a misread frame. The counts were measured on a
+recording of the Running preset: six smoothing passes cost nothing, two halvings stay within about a
+degree of the full take, and every further halving loses the stride quickly.
+
+![The Rig Animator after recording an uploaded video: Camera Pose shows Video Slowdown Ratio at 10 with Smooth Recording and Thin Out Recording both checked, and the timeline below carries one keyframe every four frames from 0 to 120](/img/animation/rig-recording-cleanup.webp)
+
 ![The canvas buttons mid-recording: the record toggle has turned into a solid red square, between the camera and Camera Preview buttons](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
@@ -493,13 +515,15 @@ file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays through once, slowed down by **Video Slowdown Ratio**, twice by default, and runs the exact same
+plays through once, slowed down by **Video Slowdown Ratio**, ten times by default, and runs the exact same
 live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
 continuously the same way a webcam does. Playing it never records anything by itself: **Play
 Video** / **Pause Video**, a play icon that joins the action row once a video is loaded, plays and
 pauses the clip on its own, without starting a take or moving the timeline, so the mapping can be
-watched first, and it stays on the action row even while the preview is hidden. Record Motion
+watched first, and it stays on the action row even while the preview is hidden. While the clip
+plays, the preview leaves out the detected skeleton so the video itself can be watched; paused, it
+draws what detection read for the frame on screen. Record Motion
 then works against it exactly as it does against the camera: clicking it on a paused video plays
 the video too, and the take ends on its own once the video reaches its natural end, the same as a
 manual **Stop Recording** click would. It plays once rather than looping specifically so that end
@@ -656,13 +680,14 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Video Slowdown Ratio**, 2 by default, from 1 to 6, sets two things at once for an uploaded
+- **Video Slowdown Ratio**, 10 by default, from 1 to 16, sets two things at once for an uploaded
   video: how many times slower it plays, and how many poses Record Motion samples per frame of it
   before filtering them down to one keyframe. The two go together because a video slowed N times
   gives detection about N readings of each of its frames. Record Motion times a video take by the
   video's own position rather than the clock on the wall, so the recorded clip keeps the video's
   real timing at any ratio. 1 plays at normal speed with one sample a frame and nothing to filter.
-  The smoothing times above still run on the wall clock, so at a ratio of 2 they act on half as
+  16 is the ceiling because browsers will not play a video slower than a sixteenth of its speed.
+  The smoothing times above still run on the wall clock, so at a ratio of 10 they act on a tenth as
   much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
@@ -699,13 +724,13 @@ movement by eye:
 | Max Joint Speed (°/s)      | 720     | real fast moves lag; lower it when a limb still flips for a frame          |
 | Hold a Lost Hand (ms)      | 330     | a hand drops out and back; lower it when a hand lingers after leaving      |
 | Palm Turn to Confirm (°)   | 45      | a real quick wrist turn lags; lower it when a palm still flips; 180 is off |
-| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest       |
+| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when a limb stays frozen too long           |
 | Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                          |
 | Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                              |
 
 **Bones Settle** works on the result rather than the landmarks: each bone eases from where the
 last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,
-such as a limb whose landmarks drop out falling back to rest. A pose applied after more than half
+such as a limb picked up again after being held. A pose applied after more than half
 a second lands whole, so a new photo or a resumed video is not blended from a stale pose. **Max
 Joint Speed** caps how fast any bone may turn between two readings. A misread frame flipping a
 forearm's roll half a turn asks for thousands of degrees a second, far past any dancer, so it is
@@ -723,6 +748,30 @@ Arrow** and **Shift+Right Arrow** extend the frame selection by one frame in tha
 instead of stepping the playhead — see **Selecting a range of frames** above. These are
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
+
+### Scoring a capture against a recording
+
+A recording of the rig playing a preset is a test case with a known answer. The script
+`scripts/extract-video-landmarks.mjs` runs MediaPipe's pose and face detectors over every frame of
+a video in headless Chromium and writes the readings as a fixture:
+
+```sh
+node scripts/extract-video-landmarks.mjs recording.mp4 src/views/Tools/RigAnimator/fixtures/runningClipFrames.json
+```
+
+`clipReproduction.test.ts` replays that fixture through the same steps a live capture takes, with
+the Config panel's defaults, and scores the rig against the preset it recorded using the measures
+in `poseSimilarity.ts`. What the scores mean, and what the first recording showed, is in
+[Copying a Performer onto a Rig](../journey/camera-motion-retargeting.md#scoring-a-capture-against-a-recording-of-the-rig-itself).
+
+To see the scores, render them. The test writes both rigs' poses when given a path, and a second
+script plays them on the default character beside the recording, with each frame's limb angle
+error:
+
+```sh
+CLIP_COMPARISON_OUTPUT=comparison.json pnpm vitest run src/views/Tools/RigAnimator/clipReproduction.test.ts
+node scripts/render-clip-comparison.mjs recording.mp4 comparison.json comparison.mp4
+```
 
 ## Merging sources by body part
 

@@ -56,6 +56,10 @@ export interface RigAnimatorConfig {
   cameraTwistFullBendDegrees: number
   cameraShowPreview: boolean
   cameraVideoSlowdownRatio: number
+  /** Smooth a finished take `RECORDING_SMOOTHING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraSmoothRecording: boolean
+  /** Halve a finished take `RECORDING_HALVING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraThinRecording: boolean
   targetLeftArm: boolean
   targetRightArm: boolean
   targetLeftLeg: boolean
@@ -80,6 +84,9 @@ export interface CameraHandLandmark {
   /** How fast it was moving, once the live feed's smoothing has read it. */
   velocity?: CameraLandmarkVelocity
 }
+
+/** Where the camera capture reads a pose from. */
+export type CameraCaptureMode = 'camera' | 'photo' | 'video'
 
 /** One BlazePose landmark: metres in world mode, normalized [0,1] in image mode either way. */
 export interface CameraLandmark extends CameraHandLandmark {
@@ -294,4 +301,18 @@ export interface CameraRetargetPass {
   turnTracks: TurnTracks
   /** Time since the previous frame was applied, which is what a roll's movement is measured over. */
   elapsedSeconds: number
+}
+
+/** How many times a finished take is smoothed and halved, see `cleanUpRecordedTake`. */
+export interface RecordedTakeCleanup {
+  smoothingPasses: number
+  halvingPasses: number
+}
+
+/** Where a skeleton's shoulders and hips sit in its joint list, for `normalizeSkeleton`. */
+export interface SkeletonTorsoJoints {
+  leftShoulder: number
+  rightShoulder: number
+  leftHip: number
+  rightHip: number
 }

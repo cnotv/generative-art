@@ -159,20 +159,66 @@ export const captureCameraRetargetRest = (bones: THREE.Bone[]): CameraRetargetRe
   )
 })
 
+/** Each limb bone, keyed by its name after the side, and the landmarks it is aimed between. */
+const limbBoneLandmarks = (side: HandSide): [string, number[]][] => {
+  const arm = ARM_LANDMARKS[side]
+  const leg = LEG_LANDMARKS[side]
+  return [
+    ['Arm', [arm.shoulder, arm.elbow]],
+    ['ForeArm', [arm.elbow, arm.wrist]],
+    ['Hand', [arm.elbow, arm.wrist]],
+    ['UpLeg', [leg.hip, leg.knee]],
+    ['Leg', [leg.knee, leg.ankle]],
+    ['Foot', [leg.ankle, leg.toe]]
+  ]
+}
+
+/**
+ * The limb bones a body frame cannot see: those with a landmark they are aimed between under the
+ * visibility cut-off. A hidden hand takes its fingers along, unless the hand detector found them.
+ */
+const createHiddenLimbBoneCheck = (
+  frame: CameraPoseFrame,
+  landmarks: CameraLandmark[],
+  visibilityThreshold: number
+): ((name: string) => boolean) => {
+  const isHidden = (index: number): boolean =>
+    (landmarks[index]?.visibility ?? 0) < visibilityThreshold
+  const hidden = RIG_SIDES.flatMap((side) =>
+    limbBoneLandmarks(side)
+      .filter(([, indices]) => indices.some(isHidden))
+      .map(([part]) => ({ side, name: sideBone(side, part) }))
+  )
+  return (name) =>
+    hidden.some(
+      ({ side, name: hiddenName }) =>
+        name === hiddenName ||
+        (hiddenName === sideBone(side, 'Hand') &&
+          !frame.handLandmarks[side] &&
+          name.startsWith(hiddenName))
+    )
+}
+
 /**
  * Which bones a frame drives, within `boneNamesInScope`. A frame with a body drives the whole
- * scope. One without, a hand or a face filmed on its own, drives only the fingers of the hand(s)
- * found and the neck and head: resetting the rest of the body on every such frame would snap a
- * pose the camera simply is not showing right now back to rest.
+ * scope except the limb bones it cannot see, which keep whatever pose the last frame that saw them
+ * left: an arm swinging behind the body stays where it was rather than snapping to rest. One
+ * without a body, a hand or a face filmed on its own, drives only the fingers of the hand(s) found
+ * and the neck and head, for the same reason.
  * @param frame What the camera found this frame
  * @param boneNamesInScope The bones the Merge Target selection allows touching
+ * @param visibilityThreshold The confidence under which a landmark counts as not seen
  * @returns The bones to reset and drive this frame
  */
 export const cameraFrameDrivenBoneNames = (
   frame: CameraPoseFrame,
-  boneNamesInScope: Set<string>
+  boneNamesInScope: Set<string>,
+  visibilityThreshold: number
 ): Set<string> => {
-  if (frame.bodyLandmarks) return boneNamesInScope
+  if (frame.bodyLandmarks) {
+    const isHidden = createHiddenLimbBoneCheck(frame, frame.bodyLandmarks, visibilityThreshold)
+    return new Set([...boneNamesInScope].filter((name) => !isHidden(name)))
+  }
   const handNames = RIG_SIDES.filter((side) => frame.handLandmarks[side]).map((side) =>
     sideBone(side, 'Hand')
   )

@@ -50,9 +50,10 @@ export const useRigCameraPose = (
 
   /**
    * Apply a detected frame to the rig: reset whichever bones the frame drives back to rest, then
-   * rotate them to match it (see `applyCameraPoseFrame`). Resetting first means a bone the frame
-   * has nothing for this time, a limb out of frame, falls back to rest rather than keeping a pose
-   * from an earlier edit or capture mixed in with the new one.
+   * rotate them to match it (see `applyCameraPoseFrame`). Resetting first means a driven bone no
+   * rule turns, a clavicle, never keeps a pose from an earlier edit mixed in with the new one. A
+   * limb the frame cannot see is not driven at all (see `cameraFrameDrivenBoneNames`), so it
+   * keeps the pose the last frame that saw it left.
    *
    * `targetGroups` scopes both the reset and the application to the bones inside those groups
    * (see `boneBodyPartGroup`): a bone outside every selected group is left exactly as it was,
@@ -74,7 +75,8 @@ export const useRigCameraPose = (
     if (!retargetRest) return
     const drivenBoneNames = cameraFrameDrivenBoneNames(
       frame,
-      boneNamesInGroups(bones.value, targetGroups)
+      boneNamesInGroups(bones.value, targetGroups),
+      options.visibilityThreshold
     )
     const previousTransforms =
       options.boneSmoothingMilliseconds > 0 || options.maxBoneTurnRadiansPerSecond > 0
