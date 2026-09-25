@@ -37,6 +37,21 @@ export const SCENE_DEFAULTS = {
     textureRepeat: [10, 10] as [number, number],
     textureOffset: [0, 0] as [number, number]
   },
+  fog: {
+    color: 0xbfd1e5,
+    near: 50,
+    far: 600
+  },
+  water: {
+    size: [200, 200] as [number, number],
+    position: [0, 0, 0] as CoordinateTuple,
+    heading: 0,
+    color: 0x7f7f7f,
+    resolution: 1024,
+    rippleStrength: 0.02,
+    rippleScale: 40,
+    rippleSpeed: 0.6
+  },
   lights: {
     ambient: {
       color: 0xffffff,

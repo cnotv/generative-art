@@ -257,6 +257,42 @@ export interface CameraConfig {
   focus?: number
 }
 
+export interface FogConfig {
+  color?: number
+  /**
+   * Density of exponential-squared fog. When set, `near` and `far` are ignored: exponential
+   * fog has no far plane, so a horizon stays readable however large the ground is, where
+   * linear fog reaches full opacity at `far` and flattens everything past it to one colour.
+   */
+  density?: number
+  /** Linear fog only: where the haze begins. */
+  near?: number
+  /** Linear fog only: where the haze is total. */
+  far?: number
+}
+
+export interface WaterConfig {
+  /** Extent of the surface as [width, length], lying flat on the XZ plane. */
+  size?: [number, number]
+  /** Where the surface sits. Its own length runs along Z until `heading` turns it. */
+  position?: CoordinateTuple
+  /** Radians to turn the surface about Y, so a river can cut across the ground at an angle. */
+  heading?: number
+  /** Tint blended over the reflected image. A dark tint reads as depth. */
+  color?: number
+  /**
+   * Resolution of the square render target the reflection is drawn into. The reflection is a
+   * second pass over the whole scene, so halving this is the cheapest frame time available.
+   */
+  resolution?: number
+  /** How far the ripple displaces the reflection. Zero leaves a still mirror. */
+  rippleStrength?: number
+  /** How many ripple crests fit across the surface. */
+  rippleScale?: number
+  /** How fast the ripple travels, in crests per second. */
+  rippleSpeed?: number
+}
+
 export interface GroundConfig {
   size?: number | CoordinateTuple
   /**
@@ -282,7 +318,11 @@ export interface SetupConfig {
     transparent?: boolean
   }
   camera?: CameraConfig
+  /** Absent leaves the scene unfogged; there is no default haze to opt out of. */
+  fog?: FogConfig
   ground?: GroundConfig | false
+  /** Absent leaves the scene dry; a surface is only created once one is declared. */
+  water?: WaterConfig
   sky?:
     | {
         texture?: string

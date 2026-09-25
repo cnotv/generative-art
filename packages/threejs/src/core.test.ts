@@ -122,6 +122,25 @@ describe('resolveSetupConfig', () => {
     })
   })
 
+  describe('fog and water', () => {
+    it.each(['fog', 'water'] as const)(
+      'leaves %s out when the caller never asked for it, so existing scenes stay unchanged',
+      (section) => {
+        expect(resolveSetupConfig({})[section]).toBeUndefined()
+      }
+    )
+
+    it('fills in SCENE_DEFAULTS for the fog fields left out', () => {
+      const result = resolveSetupConfig({ fog: { color: 0x010203 } })
+      expect(result.fog).toEqual({ ...SCENE_DEFAULTS.fog, color: 0x010203 })
+    })
+
+    it('fills in SCENE_DEFAULTS for the water fields left out', () => {
+      const result = resolveSetupConfig({ water: { rippleSpeed: 3 } })
+      expect(result.water).toEqual({ ...SCENE_DEFAULTS.water, rippleSpeed: 3 })
+    })
+  })
+
   describe('passthrough fields', () => {
     it('preserves orbit config as-is', () => {
       const result = resolveSetupConfig({ orbit: false })

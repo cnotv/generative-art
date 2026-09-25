@@ -1,10 +1,21 @@
 import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
+import { Reflector } from 'three/addons/objects/Reflector.js'
 import { times } from './utils/lodash'
 import { CoordinateTuple, Model } from '@webgamekit/animation'
-import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types'
+import {
+  FogConfig,
+  GeneratedInstanceConfig,
+  InstanceConfig,
+  PhysicOptions,
+  WaterConfig
+} from './types'
 import { SCENE_DEFAULTS } from './defaults'
 import { textureLoader } from './loaders'
+import { WaterShader } from './shaders/WaterShader'
+
+/** Reused by `getWater` so turning a surface allocates nothing per call. */
+const WORLD_UP = new THREE.Vector3(0, 1, 0)
 
 /**
  * Initialize typical configuration for ThreeJS and Rapier for a given canvas.
@@ -108,6 +119,101 @@ export const getGround = (
   }
 
   return { mesh, rigidBody, helper, collider }
+}
+
+/**
+ * Hang haze in the scene, so distance reads as distance rather than as a smaller copy of
+ * what is near. Replaces whatever fog the scene already had.
+ * @param scene The scene to fog
+ * @param config Colour, plus either `density` for exponential fog or `near`/`far` for linear
+ * @returns The fog that was set
+ */
+export const getFog = (
+  scene: THREE.Scene,
+  {
+    color = SCENE_DEFAULTS.fog.color,
+    density,
+    near = SCENE_DEFAULTS.fog.near,
+    far = SCENE_DEFAULTS.fog.far
+  }: FogConfig
+): THREE.Fog | THREE.FogExp2 => {
+  const fog =
+    density === undefined ? new THREE.Fog(color, near, far) : new THREE.FogExp2(color, density)
+  scene.fog = fog
+  return fog
+}
+
+/**
+ * Create a flat reflective water surface, lying on the XZ plane.
+ *
+ * The reflection is a second pass over the whole scene, drawn from the surface's own point of
+ * view into a render target, so the cost scales with everything the scene holds rather than
+ * with the size of the water. That render target is reachable through neither `disposeObject`
+ * nor `disposeScene`: a surface removed while the scene lives on has to be freed through the
+ * `dispose` returned here, or it keeps its target for as long as the renderer does.
+ * @param scene The scene to add the surface to
+ * @param config Size, placement, tint and ripple
+ * @returns The surface mesh and the function that frees its render target
+ */
+export const getWater = (
+  scene: THREE.Scene,
+  {
+    size = SCENE_DEFAULTS.water.size,
+    position = SCENE_DEFAULTS.water.position,
+    heading = SCENE_DEFAULTS.water.heading,
+    color = SCENE_DEFAULTS.water.color,
+    resolution = SCENE_DEFAULTS.water.resolution,
+    rippleStrength = SCENE_DEFAULTS.water.rippleStrength,
+    rippleScale = SCENE_DEFAULTS.water.rippleScale,
+    rippleSpeed = SCENE_DEFAULTS.water.rippleSpeed
+  }: WaterConfig
+): { mesh: Reflector; dispose: () => void } => {
+  const geometry = new THREE.PlaneGeometry(size[0], size[1])
+  const mesh = new Reflector(geometry, {
+    shader: WaterShader,
+    color,
+    textureWidth: resolution,
+    textureHeight: resolution
+  })
+  mesh.name = 'water'
+  mesh.rotation.x = -Math.PI / 2
+  // About the world's up axis rather than the mesh's own, which the rotation above has
+  // already laid on its side; a `rotation.z` here would depend on the Euler order.
+  mesh.rotateOnWorldAxis(WORLD_UP, heading)
+  mesh.position.set(...position)
+
+  const material = mesh.material as THREE.ShaderMaterial
+  material.fog = true
+  material.uniforms.rippleStrength.value = rippleStrength
+  material.uniforms.rippleScale.value = rippleScale
+  material.uniforms.rippleSpeed.value = rippleSpeed
+
+  // The surface is hidden during its own reflection pass, so this never re-enters.
+  const clock = new THREE.Clock()
+  const renderReflection = mesh.onBeforeRender
+  mesh.onBeforeRender = (renderer, renderedScene, camera, geometryArgument, materialArgument) => {
+    material.uniforms.time.value = clock.getElapsedTime()
+    renderReflection.call(
+      mesh,
+      renderer,
+      renderedScene,
+      camera,
+      geometryArgument,
+      materialArgument,
+      null as unknown as THREE.Group
+    )
+  }
+
+  scene.add(mesh)
+
+  return {
+    mesh,
+    dispose: () => {
+      mesh.removeFromParent()
+      mesh.dispose()
+      geometry.dispose()
+    }
+  }
 }
 
 /**

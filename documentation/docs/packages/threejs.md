@@ -137,9 +137,54 @@ Configure scene with camera, lights, ground, and sky.
     texture?: string
   },
   sky?: { color?: number },
+  fog?: {
+    color?: number,
+    density?: number,             // exponential-squared fog; `near` and `far` are then ignored
+    near?: number,
+    far?: number
+  },
+  water?: {
+    size?: [number, number],      // [width, length], lying flat on the XZ plane
+    position?: CoordinateTuple,
+    heading?: number,             // radians about Y, so a river can cut across at an angle
+    color?: number,               // tint blended over the reflection; dark reads as depth
+    resolution?: number,          // square reflection render target; halving it buys frame time
+    rippleStrength?: number,      // 0 leaves a still mirror
+    rippleScale?: number,
+    rippleSpeed?: number
+  },
   orbit?: { target?: THREE.Vector3, disabled?: boolean },
   postprocessing?: PostProcessingConfig
 }
+```
+
+`fog` and `water` have no default section. A scene that declares neither stays clear and dry,
+so nothing existing gains haze or a surface it did not ask for.
+
+### getFog(scene, config) and getWater(scene, config)
+
+What `setup()` calls for those two sections, and what to call directly to add either to a scene
+`setup()` did not build.
+
+`getFog` replaces whatever fog the scene had and returns it. Passing `density` gives
+`THREE.FogExp2`, which has no far plane and so keeps a horizon readable however large the
+ground is; leaving it out gives linear `THREE.Fog` between `near` and `far`.
+
+`getWater` returns `{ mesh, dispose }`. The surface is a `Reflector` named `water`, drawn with a
+shader that adds two things to three's own: the scene's fog, without which a reflection stays
+sharp at a distance where the geometry it mirrors has faded and the surface reads as a hole cut
+through the haze; and a travelling sine ripple, so it moves without a normal map to ship.
+
+The reflection is a second pass over the whole scene, so its cost scales with everything the
+scene holds rather than with the size of the water. Its render target is reachable through
+neither `disposeObject` nor `disposeScene` — a surface removed while the scene lives on has to
+be freed through `dispose`, or it holds its target for as long as the renderer does.
+
+```typescript
+import { getFog, getWater } from '@webgamekit/threejs'
+
+getFog(scene, { color: 0xb7bda8, density: 0.0042 })
+const river = getWater(scene, { size: [90, 1400], position: [39, -0.8, 0], color: 0x6f7a63 })
 ```
 
 ### animate(options)

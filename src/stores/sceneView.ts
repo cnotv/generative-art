@@ -730,7 +730,7 @@ const runSetupWithDefineSetup = async (
   })
   return {
     ground: result.ground,
-    orbit: result.orbit as OrbitControls,
+    orbit: result.orbit as OrbitControls | null,
     scene,
     camera,
     world,
@@ -743,7 +743,8 @@ interface SceneSetupResult {
   scene: THREE.Scene
   camera: THREE.Camera
   world: import('@dimforge/rapier3d-compat').default.World
-  orbit: OrbitControls
+  /** Null for a scene declaring `orbit: false`, which creates no controls at all. */
+  orbit: OrbitControls | null
   ground: { mesh?: THREE.Mesh } | null
   cleanup: () => void
   /** Swaps the render camera and returns the orbit controls now bound to it. */
@@ -1427,7 +1428,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     toolsAnimate({ timeline: createTimelineManager() })
     return {
       ground: result.ground,
-      orbit: result.orbit as OrbitControls,
+      orbit: result.orbit as OrbitControls | null,
       scene,
       camera,
       world,
@@ -1454,7 +1455,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     swapActiveCamera.value = setActiveCamera
 
     resolveSceneReferencesFromResult(
-      { scene, camera, world, orbit: orbit ?? ({} as OrbitControls), ground },
+      { scene, camera, world, orbit, ground },
       {
         threeScene,
         threeCamera,

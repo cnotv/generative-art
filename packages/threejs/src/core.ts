@@ -12,9 +12,11 @@ import {
   LightsConfig,
   GroundConfig,
   CameraConfig,
+  FogConfig,
+  WaterConfig,
   OnProgress
 } from './types'
-import { getScene, getGround, getSky } from './getters'
+import { getScene, getGround, getSky, getFog, getWater } from './getters'
 import { getLights, getEnvironmentLight } from './lights'
 import { disposeScene } from './dispose'
 import { updateCamera } from './camera'
@@ -43,6 +45,20 @@ export const resolveSetupConfig = (config: SetupConfig): SetupConfig => ({
           SCENE_DEFAULTS.ground as Record<string, unknown>,
           (config.ground ?? {}) as Record<string, unknown>
         ) as GroundConfig),
+  // Fog and water have no default section: a scene that declares neither stays clear and dry,
+  // so merging defaults in for an absent one would put haze on every existing view.
+  fog: config.fog
+    ? (deepMerge(
+        SCENE_DEFAULTS.fog as Record<string, unknown>,
+        config.fog as Record<string, unknown>
+      ) as FogConfig)
+    : config.fog,
+  water: config.water
+    ? (deepMerge(
+        SCENE_DEFAULTS.water as Record<string, unknown>,
+        config.water as Record<string, unknown>
+      ) as WaterConfig)
+    : config.water,
   sky:
     config.sky === false
       ? false
@@ -108,6 +124,8 @@ const applySceneConfig = (
   }
   const ground = resolved.ground !== false ? getGround(scene, world, resolved.ground ?? {}) : null
   if (resolved.sky !== false) getSky(scene, resolved.sky ?? {})
+  if (resolved.fog) getFog(scene, resolved.fog)
+  if (resolved.water) getWater(scene, resolved.water)
   if (resolved.camera) updateCamera(camera, resolved.camera)
   return ground
 }
