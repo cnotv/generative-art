@@ -1,10 +1,24 @@
 import * as THREE from 'three'
 import RAPIER from '@dimforge/rapier3d-compat'
+import { Reflector } from 'three/addons/objects/Reflector.js'
 import { times } from './utils/lodash'
 import { CoordinateTuple, Model } from '@webgamekit/animation'
-import { GeneratedInstanceConfig, InstanceConfig, PhysicOptions } from './types'
+import {
+  FogConfig,
+  GeneratedInstanceConfig,
+  GroundChannelConfig,
+  GroundReliefConfig,
+  InstanceConfig,
+  PhysicOptions,
+  WaterConfig
+} from './types'
 import { SCENE_DEFAULTS } from './defaults'
 import { textureLoader } from './loaders'
+import { WaterShader } from './shaders/WaterShader'
+import { fractalNoise } from './noise'
+
+/** Reused by `getWater` so turning a surface allocates nothing per call. */
+const WORLD_UP = new THREE.Vector3(0, 1, 0)
 
 /**
  * Initialize typical configuration for ThreeJS and Rapier for a given canvas.
@@ -54,6 +68,73 @@ export const getScene = async (
  * @param { size, position, helpers, color, texture }
  * @returns
  */
+/**
+ * A grid lying flat on the XZ plane, its vertices raised and lowered by layered noise.
+ *
+ * Built as a plane rather than a box: the underside and the sides of a slab this size are never
+ * seen, and at the segment count relief needs they would cost as many triangles again as the
+ * surface itself.
+ * @param size The ground's [width, height, depth]; height is ignored, a plane having none
+ * @param relief How far the surface moves, how tightly it folds, and from which seed
+ * @returns The displaced geometry, with normals recomputed so the light reads the new slopes
+ */
+/**
+ * How far the relief surface rises above the ground's declared level at one spot.
+ *
+ * The same function the surface is built from, so anything that has to sit on the ground asks
+ * this rather than keeping its own copy of the noise settings and drifting out of step.
+ * @param x Distance from the ground's centre along X
+ * @param z Distance from the ground's centre along Z
+ * @param relief The same relief the ground was built with
+ * @returns The height at that spot, positive above the declared level and negative below
+ */
+/**
+ * How far the ground drops into a channel at one distance across it.
+ *
+ * Full depth across the floor, then a smooth climb back over the width of the banks, so the
+ * sides meet the surrounding relief without a crease along the join.
+ * @param x Distance from the ground's centre along X
+ * @param channel Where the channel runs, how wide, how deep, and how far its banks reach
+ * @returns How far the ground drops here, zero outside the banks
+ */
+const getChannelDepth = (x: number, { centerX, width, depth, banks }: GroundChannelConfig) => {
+  const fromFloor = Math.abs(x - centerX) - width / 2
+  if (fromFloor <= 0) return depth
+  if (fromFloor >= banks || banks <= 0) return 0
+  const climb = fromFloor / banks
+  return depth * (1 - climb * climb * (3 - 2 * climb))
+}
+
+export const getGroundHeight = (
+  x: number,
+  z: number,
+  {
+    amplitude = SCENE_DEFAULTS.groundRelief.amplitude,
+    frequency = SCENE_DEFAULTS.groundRelief.frequency,
+    octaves = SCENE_DEFAULTS.groundRelief.octaves,
+    seed = SCENE_DEFAULTS.groundRelief.seed,
+    channel
+  }: GroundReliefConfig
+): number =>
+  fractalNoise(x, z, { seed, octaves, frequency, amplitude, lacunarity: 2, persistence: 0.5 }) -
+  (channel ? getChannelDepth(x, channel) : 0)
+
+const getReliefGeometry = (
+  size: CoordinateTuple,
+  relief: GroundReliefConfig
+): THREE.PlaneGeometry => {
+  const segments = relief.segments ?? SCENE_DEFAULTS.groundRelief.segments
+  const geometry = new THREE.PlaneGeometry(size[0], size[2], segments, segments)
+  geometry.rotateX(-Math.PI / 2)
+  const vertices = geometry.attributes.position
+  Array.from({ length: vertices.count }).forEach((_, index) => {
+    vertices.setY(index, getGroundHeight(vertices.getX(index), vertices.getZ(index), relief))
+  })
+  vertices.needsUpdate = true
+  geometry.computeVertexNormals()
+  return geometry
+}
+
 export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -65,7 +146,8 @@ export const getGround = (
     texture,
     textureRepeat = SCENE_DEFAULTS.ground.textureRepeat,
     textureOffset = SCENE_DEFAULTS.ground.textureOffset,
-    restitution = 0
+    restitution = 0,
+    relief
   }: {
     size?: CoordinateTuple | number
     position?: CoordinateTuple
@@ -75,13 +157,18 @@ export const getGround = (
     textureRepeat?: [number, number]
     textureOffset?: [number, number]
     restitution?: number
+    relief?: GroundReliefConfig
   }
 ) => {
   const defaultProps = { color }
   const groundSizes: CoordinateTuple = Array.isArray(size) ? size : [size, 0.01, size]
   const groundCenterY = position[1] - (groundSizes[1] || 0.01) / 2
   const groundPosition: CoordinateTuple = [position[0], groundCenterY, position[2]]
-  const geometry = new THREE.BoxGeometry(...groundSizes)
+  // A relief surface sits at the level asked for; a slab's centre sits half its height below it.
+  const meshPosition: CoordinateTuple = relief ? position : groundPosition
+  const geometry = relief
+    ? getReliefGeometry(groundSizes, relief)
+    : new THREE.BoxGeometry(...groundSizes)
   const material = new THREE.MeshStandardMaterial({
     ...defaultProps,
     ...(texture ? { map: getTextures(texture, textureRepeat, textureOffset) } : {})
@@ -90,7 +177,7 @@ export const getGround = (
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = 'ground'
   mesh.receiveShadow = true
-  mesh.position.set(...groundPosition)
+  mesh.position.set(...meshPosition)
   mesh.userData.physics = { mass: 0 }
 
   scene.add(mesh)
@@ -108,6 +195,101 @@ export const getGround = (
   }
 
   return { mesh, rigidBody, helper, collider }
+}
+
+/**
+ * Hang haze in the scene, so distance reads as distance rather than as a smaller copy of
+ * what is near. Replaces whatever fog the scene already had.
+ * @param scene The scene to fog
+ * @param config Colour, plus either `density` for exponential fog or `near`/`far` for linear
+ * @returns The fog that was set
+ */
+export const getFog = (
+  scene: THREE.Scene,
+  {
+    color = SCENE_DEFAULTS.fog.color,
+    density,
+    near = SCENE_DEFAULTS.fog.near,
+    far = SCENE_DEFAULTS.fog.far
+  }: FogConfig
+): THREE.Fog | THREE.FogExp2 => {
+  const fog =
+    density === undefined ? new THREE.Fog(color, near, far) : new THREE.FogExp2(color, density)
+  scene.fog = fog
+  return fog
+}
+
+/**
+ * Create a flat reflective water surface, lying on the XZ plane.
+ *
+ * The reflection is a second pass over the whole scene, drawn from the surface's own point of
+ * view into a render target, so the cost scales with everything the scene holds rather than
+ * with the size of the water. That render target is reachable through neither `disposeObject`
+ * nor `disposeScene`: a surface removed while the scene lives on has to be freed through the
+ * `dispose` returned here, or it keeps its target for as long as the renderer does.
+ * @param scene The scene to add the surface to
+ * @param config Size, placement, tint and ripple
+ * @returns The surface mesh and the function that frees its render target
+ */
+export const getWater = (
+  scene: THREE.Scene,
+  {
+    size = SCENE_DEFAULTS.water.size,
+    position = SCENE_DEFAULTS.water.position,
+    heading = SCENE_DEFAULTS.water.heading,
+    color = SCENE_DEFAULTS.water.color,
+    resolution = SCENE_DEFAULTS.water.resolution,
+    rippleStrength = SCENE_DEFAULTS.water.rippleStrength,
+    rippleScale = SCENE_DEFAULTS.water.rippleScale,
+    rippleSpeed = SCENE_DEFAULTS.water.rippleSpeed
+  }: WaterConfig
+): { mesh: Reflector; dispose: () => void } => {
+  const geometry = new THREE.PlaneGeometry(size[0], size[1])
+  const mesh = new Reflector(geometry, {
+    shader: WaterShader,
+    color,
+    textureWidth: resolution,
+    textureHeight: resolution
+  })
+  mesh.name = 'water'
+  mesh.rotation.x = -Math.PI / 2
+  // About the world's up axis rather than the mesh's own, which the rotation above has
+  // already laid on its side; a `rotation.z` here would depend on the Euler order.
+  mesh.rotateOnWorldAxis(WORLD_UP, heading)
+  mesh.position.set(...position)
+
+  const material = mesh.material as THREE.ShaderMaterial
+  material.fog = true
+  material.uniforms.rippleStrength.value = rippleStrength
+  material.uniforms.rippleScale.value = rippleScale
+  material.uniforms.rippleSpeed.value = rippleSpeed
+
+  // The surface is hidden during its own reflection pass, so this never re-enters.
+  const clock = new THREE.Clock()
+  const renderReflection = mesh.onBeforeRender
+  mesh.onBeforeRender = (renderer, renderedScene, camera, geometryArgument, materialArgument) => {
+    material.uniforms.time.value = clock.getElapsedTime()
+    renderReflection.call(
+      mesh,
+      renderer,
+      renderedScene,
+      camera,
+      geometryArgument,
+      materialArgument,
+      null as unknown as THREE.Group
+    )
+  }
+
+  scene.add(mesh)
+
+  return {
+    mesh,
+    dispose: () => {
+      mesh.removeFromParent()
+      mesh.dispose()
+      geometry.dispose()
+    }
+  }
 }
 
 /**

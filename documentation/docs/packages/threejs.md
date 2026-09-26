@@ -134,12 +134,104 @@ Configure scene with camera, lights, ground, and sky.
     size?: CoordinateTuple,
     color?: number,
     position?: CoordinateTuple,  // the TOP SURFACE, not the centre; defaults to [1, -1, 1]
-    texture?: string
+    texture?: string,
+    relief?: {
+      amplitude?: number,        // reach of the first noise layer; the finer ones add to it
+      frequency?: number,        // bigger means smaller features
+      octaves?: number,
+      seed?: number,
+      segments?: number,         // grid cells across the ground
+      channel?: {                // a valley running along Z, for water to run in
+        centerX: number,
+        width: number,           // the floor, before the sides start climbing
+        depth: number,
+        banks: number            // how far the sides take to climb back
+      }
+    }
   },
   sky?: { color?: number },
+  fog?: {
+    color?: number,
+    density?: number,             // exponential-squared fog; `near` and `far` are then ignored
+    near?: number,
+    far?: number
+  },
+  water?: {
+    size?: [number, number],      // [width, length], lying flat on the XZ plane
+    position?: CoordinateTuple,
+    heading?: number,             // radians about Y, so a river can cut across at an angle
+    color?: number,               // tint blended over the reflection; dark reads as depth
+    resolution?: number,          // square reflection render target; halving it buys frame time
+    rippleStrength?: number,      // 0 leaves a still mirror
+    rippleScale?: number,
+    rippleSpeed?: number
+  },
   orbit?: { target?: THREE.Vector3, disabled?: boolean },
   postprocessing?: PostProcessingConfig
 }
+```
+
+`fog`, `water` and `ground.relief` have no default section. A scene that declares none of them
+stays clear, dry and flat, so nothing existing gains haze, a surface or a slope it did not ask
+for.
+
+### Ground relief
+
+Without `relief` the ground is the flat slab it has always been. With it the top surface becomes
+a grid displaced by layered noise, built as a plane rather than a box, since the underside and
+sides of a slab that size are never seen and would cost as many triangles again.
+
+The collider does not follow the surface: it stays the flat cuboid it was, so a body rests on
+the mean level rather than on the hummock under it. Anything that has to sit on the surface
+instead asks `getGroundHeight(x, z, relief)`, which is the same function the surface is built
+from, with `x` and `z` measured from the ground's centre.
+
+`channel` cuts a valley along Z through the relief. Water is a flat plane, and laid over relief
+alone it pools in whatever the noise happened to leave low, which reads as a chain of puddles
+rather than a river; the valley gives it somewhere to run.
+
+```typescript
+import { getGroundHeight } from '@webgamekit/threejs'
+
+const relief = {
+  amplitude: 2.2,
+  frequency: 0.0035,
+  channel: { centerX: 39, width: 78, depth: 5, banks: 34 }
+}
+
+walker.position.y = groundLevel + getGroundHeight(walker.position.x, walker.position.z, relief)
+```
+
+### simplexNoise2D(x, z, seed) and fractalNoise(x, z, config)
+
+The noise `relief` is built from, exported for anything that wants its own terrain. `fractalNoise`
+sums `octaves` layers, each `lacunarity` times finer and `persistence` times quieter than the one
+before. Both are pure and seeded, so the same coordinates always give the same value.
+
+### getFog(scene, config) and getWater(scene, config)
+
+What `setup()` calls for those two sections, and what to call directly to add either to a scene
+`setup()` did not build.
+
+`getFog` replaces whatever fog the scene had and returns it. Passing `density` gives
+`THREE.FogExp2`, which has no far plane and so keeps a horizon readable however large the
+ground is; leaving it out gives linear `THREE.Fog` between `near` and `far`.
+
+`getWater` returns `{ mesh, dispose }`. The surface is a `Reflector` named `water`, drawn with a
+shader that adds two things to three's own: the scene's fog, without which a reflection stays
+sharp at a distance where the geometry it mirrors has faded and the surface reads as a hole cut
+through the haze; and a travelling sine ripple, so it moves without a normal map to ship.
+
+The reflection is a second pass over the whole scene, so its cost scales with everything the
+scene holds rather than with the size of the water. Its render target is reachable through
+neither `disposeObject` nor `disposeScene` — a surface removed while the scene lives on has to
+be freed through `dispose`, or it holds its target for as long as the renderer does.
+
+```typescript
+import { getFog, getWater } from '@webgamekit/threejs'
+
+getFog(scene, { color: 0xb7bda8, density: 0.0042 })
+const river = getWater(scene, { size: [90, 1400], position: [39, -0.8, 0], color: 0x6f7a63 })
 ```
 
 ### animate(options)
@@ -653,15 +745,46 @@ import { removeElements } from '@webgamekit/threejs'
 removeElements(world, [coin1, coin2, coin3])
 ```
 
-### instanceMatrixMesh(scene, geometry, material, options)
+### instanceMatrixMesh(mesh, scene, options)
 
-Create an instanced mesh for rendering many identical objects efficiently.
+Draw one mesh many times in a single draw call. One entry per copy, carrying its `position`,
+`rotation` and `scale`.
 
 ```typescript
 import { instanceMatrixMesh } from '@webgamekit/threejs'
 
-const trees = instanceMatrixMesh(scene, geometry, material, treePositions)
+instanceMatrixMesh(grassBlade, scene, bladePlacements)
 ```
+
+### instanceMatrixModel(model, parent, options)
+
+The same for a model made of several meshes: one draw call per mesh in the model, whatever the
+number of copies. Returns those instanced meshes.
+
+Each mesh is instanced on its own transform relative to the model's root, so the copies keep
+the shape the model was authored with; instancing every mesh on the copy's transform alone
+stacks a trunk, its branches and its canopy on one spot. Shadow flags come from the model root,
+which both `getModel` and `loadGLTF` set from their options, since an `InstancedMesh` carries
+one flag for all its copies.
+
+`parent` is anything that takes children, so a set can go into a group and appear as one row in
+the playground's Elements panel rather than one row per mesh.
+
+```typescript
+import { colorModel, instanceMatrixModel, loadGLTF } from '@webgamekit/threejs'
+
+const { model } = await loadGLTF('tree.glb', { castShadow: true, receiveShadow: true })
+colorModel(model, [0x574b3e, 0x574b3e, 0x6b7a55, 0x7d8a62, 0x5e6d4b, 0x88936d])
+
+const forest = new THREE.Group()
+forest.name = 'forest'
+instanceMatrixModel(model, forest, treePlacements)
+scene.add(forest)
+```
+
+The model itself is a template and is never added to `parent`. Dropping meshes from it before
+instancing gives a second, cheaper set from the same asset: a tree without its trunk meshes is
+a bush, and on the tree used above that is 94 triangles a copy instead of 5370.
 
 ## Lights
 

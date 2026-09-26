@@ -1,10 +1,19 @@
 import type { NoiseConfig } from './types'
 
 /**
+ * Tables already built, by seed.
+ *
+ * Building one shuffles 256 entries. A terrain grid asks for noise once per vertex per octave,
+ * which is hundreds of thousands of calls for one ground, and rebuilding the table on each of
+ * them costs more than the noise it serves.
+ */
+const permutationTables = new Map<number, number[]>()
+
+/**
  * Permutation table seeded deterministically.
  * Returns a 512-element array for wrapping gradient lookups.
  */
-const createPermutationTable = (seed: number): number[] => {
+const buildPermutationTable = (seed: number): number[] => {
   const base = Array.from({ length: 256 }, (_, index) => index)
   const seededShuffle = (array: number[], shuffleSeed: number): number[] => {
     const result = [...array]
@@ -19,6 +28,19 @@ const createPermutationTable = (seed: number): number[] => {
   }
   const shuffled = seededShuffle(base, seed)
   return [...shuffled, ...shuffled]
+}
+
+/**
+ * The permutation table for a seed, built once and kept.
+ * @param seed The seed the table belongs to
+ * @returns A 512-element table for wrapping gradient lookups
+ */
+const createPermutationTable = (seed: number): number[] => {
+  const cached = permutationTables.get(seed)
+  if (cached) return cached
+  const table = buildPermutationTable(seed)
+  permutationTables.set(seed, table)
+  return table
 }
 
 /** 2D gradient vectors for simplex noise */

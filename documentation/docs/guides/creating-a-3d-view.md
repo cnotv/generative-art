@@ -60,10 +60,11 @@ description whenever someone shares it.
 
 Audit what `SetupConfig` already covers in `packages/threejs/src/types.ts` — `scene.backgroundColor`,
 `lights.ambient` / `directional` / `hemisphere` / `point` / `spot` / `rectArea` /
-`environment`, `ground.color` / `size` / `texture`,
-`sky.color` / `texture` / `size`, `camera.position` / `fov` / `near` / `far`, `orbit`,
-`postprocessing` — then declare the layout in `config.ts` rather than inlining numbers in
-the component:
+`environment`, `ground.color` / `size` / `texture` / `relief`,
+`sky.color` / `texture` / `size`, `fog.color` / `density` / `near` / `far`,
+`water.size` / `position` / `color` / `ripple*`, `camera.position` / `fov` / `near` / `far`,
+`orbit`, `postprocessing` — then declare the layout in `config.ts` rather than inlining
+numbers in the component:
 
 ```typescript
 import type { SetupConfig } from '@webgamekit/threejs'

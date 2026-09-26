@@ -257,6 +257,98 @@ export interface CameraConfig {
   focus?: number
 }
 
+/** Layered simplex noise: how rough, how large the features, and how repeatable. */
+export interface NoiseConfig {
+  seed: number
+  /** How many layers are summed. Each one is finer and quieter than the last. */
+  octaves: number
+  /** How tightly the first layer folds. Bigger means smaller features. */
+  frequency: number
+  /** Peak height of the first layer, in whatever unit the caller measures in. */
+  amplitude: number
+  /** How much finer each layer is than the one before. */
+  lacunarity: number
+  /** How much quieter each layer is than the one before. */
+  persistence: number
+}
+
+export interface FogConfig {
+  color?: number
+  /**
+   * Density of exponential-squared fog. When set, `near` and `far` are ignored: exponential
+   * fog has no far plane, so a horizon stays readable however large the ground is, where
+   * linear fog reaches full opacity at `far` and flattens everything past it to one colour.
+   */
+  density?: number
+  /** Linear fog only: where the haze begins. */
+  near?: number
+  /** Linear fog only: where the haze is total. */
+  far?: number
+}
+
+export interface WaterConfig {
+  /** Extent of the surface as [width, length], lying flat on the XZ plane. */
+  size?: [number, number]
+  /** Where the surface sits. Its own length runs along Z until `heading` turns it. */
+  position?: CoordinateTuple
+  /** Radians to turn the surface about Y, so a river can cut across the ground at an angle. */
+  heading?: number
+  /** Tint blended over the reflected image. A dark tint reads as depth. */
+  color?: number
+  /**
+   * Resolution of the square render target the reflection is drawn into. The reflection is a
+   * second pass over the whole scene, so halving this is the cheapest frame time available.
+   */
+  resolution?: number
+  /** How far the ripple displaces the reflection. Zero leaves a still mirror. */
+  rippleStrength?: number
+  /** How many ripple crests fit across the surface. */
+  rippleScale?: number
+  /** How fast the ripple travels, in crests per second. */
+  rippleSpeed?: number
+}
+
+/**
+ * Rise and fall across the ground's top surface.
+ *
+ * Absent, the ground stays the flat slab it has always been. Present, the surface becomes a
+ * grid displaced by layered noise, while the collider stays the flat cuboid it was: a body
+ * still rests on the mean level rather than on the hummock under it.
+ */
+/**
+ * A valley cut through the relief, running along Z at a fixed distance across it.
+ *
+ * Water is a flat plane, and over relief alone it pools in whatever the noise happened to leave
+ * low: a chain of puddles rather than a river. The valley gives it somewhere to run.
+ */
+export interface GroundChannelConfig {
+  /** Where the valley runs, measured along X from the ground's centre. */
+  centerX: number
+  /** How wide the floor is before the sides start climbing. */
+  width: number
+  /** How far the floor lies below the surrounding surface. */
+  depth: number
+  /** How far the sides take to climb back to the surrounding surface. */
+  banks: number
+}
+
+export interface GroundReliefConfig {
+  /**
+   * How far the first layer of noise rises and falls, in world units. The finer layers add to
+   * it, so the surface reaches somewhat further than this: with the default four layers at half
+   * the amplitude each time, about 1.9 times as far.
+   */
+  amplitude?: number
+  channel?: GroundChannelConfig
+  /** How tightly the ground folds. Bigger means smaller hummocks. */
+  frequency?: number
+  /** How many layers of noise are summed, each finer and quieter than the last. */
+  octaves?: number
+  seed?: number
+  /** Grid cells across the ground. More means smoother folds and more triangles. */
+  segments?: number
+}
+
 export interface GroundConfig {
   size?: number | CoordinateTuple
   /**
@@ -270,6 +362,7 @@ export interface GroundConfig {
   textureRepeat?: [number, number]
   textureOffset?: [number, number]
   restitution?: number
+  relief?: GroundReliefConfig
 }
 
 export interface SetupConfig {
@@ -282,7 +375,11 @@ export interface SetupConfig {
     transparent?: boolean
   }
   camera?: CameraConfig
+  /** Absent leaves the scene unfogged; there is no default haze to opt out of. */
+  fog?: FogConfig
   ground?: GroundConfig | false
+  /** Absent leaves the scene dry; a surface is only created once one is declared. */
+  water?: WaterConfig
   sky?:
     | {
         texture?: string

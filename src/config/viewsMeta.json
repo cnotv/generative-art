@@ -59,6 +59,9 @@
   "Physic Fluid": {
     "description": "Fluid simulation with particle dynamics and surface tension."
   },
+  "Stillwater": {
+    "description": "A walker crossing a hazy wetland beside a still, reflective river."
+  },
   "Threejs Example Controller": {
     "description": "Character controller demo with third-person camera."
   },
