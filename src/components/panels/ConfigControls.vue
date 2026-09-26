@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -8,6 +8,7 @@ import ColorPicker from '@/components/ui/color-picker/ColorPicker.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import Button from '@/components/ui/button/Button.vue'
 import { BezierPicker } from '@/components/ui/bezier-picker'
+import { ShaderCode } from '@/components/ui/shader-code'
 import type { EasingName } from '@/components/ui/bezier-picker'
 import {
   Accordion,
@@ -100,13 +101,33 @@ const defaultOpenGroups = computed(() => {
   return groups.value.groups.map((g) => g.key)
 })
 
+/**
+ * The control touched last, by key rather than path, so a `ShaderCode` alongside can mark the
+ * lines its uniform reaches. A panel full of sliders says nothing about which one does what.
+ */
+const lastTouched = ref('')
+const rememberTouched = (path: string) => {
+  lastTouched.value = path.split('.').at(-1) ?? ''
+}
+
+/** Every numeric control at this level, keyed the way a shader names its uniforms. */
+const numericSiblings = computed<Record<string, number>>(() =>
+  Object.fromEntries(
+    groups.value.controls
+      .map((control) => [control.key, props.getValue(control.path)] as const)
+      .filter(([, value]) => typeof value === 'number')
+  )
+)
+
 const handleSliderUpdate = (path: string, value: number[]) => {
+  rememberTouched(path)
   props.onUpdate(path, value[0])
 }
 
 const handleInputUpdate = (path: string, value: string | number) => {
   const numberValue = typeof value === 'string' ? parseFloat(value) : value
   if (!isNaN(numberValue)) {
+    rememberTouched(path)
     props.onUpdate(path, numberValue)
   }
 }
@@ -174,6 +195,15 @@ const handleButtonSelectorUpdate = (path: string, value: string) => {
         >
           {{ control.schema.label ?? formatLabel(control.key) }}
         </Button>
+      </template>
+
+      <template v-else-if="control.schema.component === 'ShaderCode'">
+        <ShaderCode
+          :source="String(getValue(control.path) ?? '')"
+          :values="numericSiblings"
+          :active="lastTouched"
+          :label="control.schema.label ?? formatLabel(control.key)"
+        />
       </template>
 
       <template v-else-if="control.schema.component === 'CoordinateInput'">

@@ -195,5 +195,13 @@ export const UNDERGROWTH_BANDS: PlantingBand[] = [
 ]
 
 export const configControls: ConfigControlsSchema = {
-  walkSpeed: { label: 'Walk speed', min: 0, max: 25, step: 0.5 }
+  walkSpeed: { label: 'Walk speed', min: 0, max: 25, step: 0.5 },
+  water: {
+    rippleStrength: { label: 'Ripple strength', min: 0, max: 0.03, step: 0.001 },
+    rippleScale: { label: 'Ripple scale', min: 5, max: 200, step: 1 },
+    rippleSpeed: { label: 'Ripple speed', min: 0, max: 3, step: 0.05 },
+    // Sits alongside the three sliders on purpose: the panel reads their values straight off
+    // its siblings, and marks the lines of the one last moved.
+    fragmentShader: { component: 'ShaderCode', label: 'Water fragment shader' }
+  }
 }

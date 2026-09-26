@@ -51,7 +51,15 @@ const handleProgress = (progress: LoadProgress): void => {
   loadingDetail.value = progress.detail
 }
 
-const reactiveConfig = createReactiveConfig({ walkSpeed: DEFAULT_WALK_SPEED })
+/**
+ * The water's three numbers start empty and are filled from the material once the scene is
+ * built, so the panel always shows what the surface is actually running rather than a second
+ * copy of the numbers that could drift from it.
+ */
+const reactiveConfig = createReactiveConfig({
+  walkSpeed: DEFAULT_WALK_SPEED,
+  water: { rippleStrength: 0, rippleScale: 0, rippleSpeed: 0, fragmentShader: '' }
+})
 
 /**
  * The tree, recoloured, shadowed and ready to be instanced. Loaded once per set rather than
@@ -118,6 +126,17 @@ onMounted(async () => {
       )
       scene.add(forest)
 
+      const water = scene.getObjectByName('water') as THREE.Mesh | undefined
+      const rippleUniforms = (water?.material as THREE.ShaderMaterial | undefined)?.uniforms
+      if (water && rippleUniforms) {
+        reactiveConfig.value.water = {
+          rippleStrength: rippleUniforms.rippleStrength.value,
+          rippleScale: rippleUniforms.rippleScale.value,
+          rippleSpeed: rippleUniforms.rippleSpeed.value,
+          fragmentShader: (water.material as THREE.ShaderMaterial).fragmentShader
+        }
+      }
+
       const walker = await getModel(scene, world, 'character2.fbx', {
         ...characterOptions,
         onProgress: handleProgress
@@ -146,6 +165,20 @@ onMounted(async () => {
           // every rise and hangs over every dip.
           walker.position.y =
             characterOptions.position![1] + groundHeightAt(walker.position.x, walker.position.z)
+        }
+      })
+      timeline.addAction({
+        name: 'water-uniforms',
+        category: 'animation',
+        start: 0,
+        action: () => {
+          if (!rippleUniforms) return
+          // Read every frame rather than on a panel callback, which is debounced half a second
+          // and would leave a dragged slider looking like it had done nothing.
+          const ripple = reactiveConfig.value.water
+          rippleUniforms.rippleStrength.value = ripple.rippleStrength
+          rippleUniforms.rippleScale.value = ripple.rippleScale
+          rippleUniforms.rippleSpeed.value = ripple.rippleSpeed
         }
       })
       // After the walk action, so both read the position this frame rather than the last one.

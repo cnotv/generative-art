@@ -185,6 +185,18 @@
   --minimap-border-radius: var(--radius-sm, 4px);
   --minimap-opacity: 0.85;
 
+  // Source code display, for the shader panel
+  --code-background: hsl(40deg 22% 95%);
+  --code-foreground: hsl(30deg 10% 30%);
+  --code-comment: hsl(140deg 14% 46%);
+  --code-keyword: hsl(280deg 26% 50%);
+  --code-type: hsl(200deg 32% 42%);
+  --code-builtin: hsl(25deg 45% 46%);
+  --code-number: hsl(340deg 30% 48%);
+  --code-uniform: hsl(215deg 45% 45%);
+  --code-line-active: hsl(48deg 62% 86%);
+  --code-annotation: hsl(215deg 45% 45%);
+
   // Z-index scale
   --z-base: 0;
   --z-dropdown: 10;
@@ -255,6 +267,16 @@
   --timeline-color-5: hsl(225deg 60% 60%);
   --timeline-color-6: hsl(270deg 55% 60%);
   --timeline-color-7: hsl(315deg 60% 60%);
+  --code-background: hsl(220deg 12% 12%);
+  --code-foreground: hsl(40deg 10% 78%);
+  --code-comment: hsl(140deg 12% 52%);
+  --code-keyword: hsl(280deg 40% 74%);
+  --code-type: hsl(195deg 45% 66%);
+  --code-builtin: hsl(30deg 55% 68%);
+  --code-number: hsl(340deg 45% 72%);
+  --code-uniform: hsl(210deg 60% 72%);
+  --code-line-active: hsl(45deg 35% 26%);
+  --code-annotation: hsl(210deg 60% 72%);
 
   // Dark theme shadows (more prominent)
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -315,6 +337,16 @@
     --timeline-color-5: hsl(225deg 60% 60%);
     --timeline-color-6: hsl(270deg 55% 60%);
     --timeline-color-7: hsl(315deg 60% 60%);
+    --code-background: hsl(220deg 12% 12%);
+    --code-foreground: hsl(40deg 10% 78%);
+    --code-comment: hsl(140deg 12% 52%);
+    --code-keyword: hsl(280deg 40% 74%);
+    --code-type: hsl(195deg 45% 66%);
+    --code-builtin: hsl(30deg 55% 68%);
+    --code-number: hsl(340deg 45% 72%);
+    --code-uniform: hsl(210deg 60% 72%);
+    --code-line-active: hsl(45deg 35% 26%);
+    --code-annotation: hsl(210deg 60% 72%);
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);

@@ -163,6 +163,37 @@ onUnmounted(() => unregisterViewConfig(route.name as string))
 
 `config.ts` exports `configControls` and `sceneControls` separately.
 
+### Showing a shader beside the controls that drive it
+
+A control named after a uniform means little next to a wall of GLSL. `component: 'ShaderCode'`
+renders the source read-only, writes each uniform's current value beside its declaration, and
+marks every line the control you touched last reaches.
+
+It reads those values off its own siblings, so the sliders go in the same group and are named
+the way the shader names its uniforms. The value it renders is the source itself, which the view
+takes from the material rather than from the shader module, so the panel shows the code actually
+compiled:
+
+```typescript
+const configControls = {
+  water: {
+    rippleStrength: { label: 'Ripple strength', min: 0, max: 0.03, step: 0.001 },
+    rippleScale: { label: 'Ripple scale', min: 5, max: 200, step: 1 },
+    fragmentShader: { component: 'ShaderCode', label: 'Water fragment shader' }
+  }
+}
+
+const material = scene.getObjectByName('water').material as THREE.ShaderMaterial
+reactiveConfig.value.water.fragmentShader = material.fragmentShader
+```
+
+A uniform the panel has no control for is annotated `// set in code` rather than left blank,
+since `time` counting the clock is worth saying out loud.
+
+Push the values back to the material from a timeline action rather than the `registerViewConfig`
+callback: that callback is debounced half a second, which leaves a dragged slider looking like it
+has done nothing.
+
 ## Registering a new package
 
 A new `@webgamekit/*` package must be added to the `packages` array in `vite.config.ts`:
