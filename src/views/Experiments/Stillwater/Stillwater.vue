@@ -2,7 +2,13 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
-import { colorModel, getModel, instanceMatrixModel, loadGLTF } from '@webgamekit/threejs'
+import {
+  colorModel,
+  getGroundHeight,
+  getModel,
+  instanceMatrixModel,
+  loadGLTF
+} from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { useSceneViewStore } from '@/stores/sceneView'
@@ -20,6 +26,7 @@ import {
   FOREST_COLORS,
   FOREST_MODEL,
   FOREST_TRUNK_PARTS,
+  GROUND_RELIEF,
   TREE_BANDS,
   UNDERGROWTH_BANDS,
   SUN_OFFSET,
@@ -67,6 +74,14 @@ const loadForestModel = async (): Promise<THREE.Group> => {
  * @param names The mesh names to remove
  * @returns The same model, without those parts and sitting on its own origin
  */
+/**
+ * The ground's height at a spot, which is what everything standing on it is placed by.
+ * @param x World X
+ * @param z World Z
+ * @returns Height above the ground's declared level
+ */
+const groundHeightAt = (x: number, z: number): number => getGroundHeight(x, z, GROUND_RELIEF)
+
 const stripParts = (model: THREE.Group, names: string[]): THREE.Group => {
   names.forEach((name) => model.getObjectByName(name)?.removeFromParent())
   const base = new THREE.Box3().setFromObject(model).min.y
@@ -90,9 +105,17 @@ onMounted(async () => {
       const forest = new THREE.Group()
       forest.name = 'forest'
       const treeModel = await loadForestModel()
-      instanceMatrixModel(treeModel, forest, TREE_BANDS.flatMap(plantBand))
+      instanceMatrixModel(
+        treeModel,
+        forest,
+        TREE_BANDS.flatMap((band) => plantBand(band, groundHeightAt))
+      )
       const bushModel = stripParts(await loadForestModel(), FOREST_TRUNK_PARTS)
-      instanceMatrixModel(bushModel, forest, UNDERGROWTH_BANDS.flatMap(plantBand))
+      instanceMatrixModel(
+        bushModel,
+        forest,
+        UNDERGROWTH_BANDS.flatMap((band) => plantBand(band, groundHeightAt))
+      )
       scene.add(forest)
 
       const walker = await getModel(scene, world, 'character2.fbx', {
@@ -119,6 +142,10 @@ onMounted(async () => {
             WALK_START_Z,
             WALK_END_Z
           )
+          // Follows the ground rather than the level it was declared at, or she wades through
+          // every rise and hangs over every dip.
+          walker.position.y =
+            characterOptions.position![1] + groundHeightAt(walker.position.x, walker.position.z)
         }
       })
       // After the walk action, so both read the position this frame rather than the last one.

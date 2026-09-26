@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { getFog, getPixelRatio, getWater } from './getters'
+import { getFog, getGroundHeight, getPixelRatio, getWater } from './getters'
 import { SCENE_DEFAULTS } from './defaults'
 
 describe('getPixelRatio', () => {
@@ -82,5 +82,47 @@ describe('getWater', () => {
     const { mesh, dispose } = getWater(scene, {})
     dispose()
     expect(scene.children).not.toContain(mesh)
+  })
+})
+
+describe('getGroundHeight', () => {
+  const relief = { amplitude: 4, frequency: 0.01, octaves: 3, seed: 5 }
+
+  it('gives the same height for the same spot every time', () => {
+    expect(getGroundHeight(12, -30, relief)).toBe(getGroundHeight(12, -30, relief))
+  })
+
+  it('stays within the summed reach of its layers, which is more than the first layer alone', () => {
+    const reach = Math.max(
+      ...Array.from({ length: 200 }, (_, step) =>
+        Math.abs(getGroundHeight(step * 7, step * 3, relief))
+      )
+    )
+    // Three layers at half the amplitude each time: 4 * (1 + 0.5 + 0.25).
+    expect(reach).toBeLessThanOrEqual(7)
+    expect(reach).toBeGreaterThan(4)
+  })
+
+  it('drops the full depth of a channel across its floor', () => {
+    const channel = { centerX: 40, width: 20, depth: 6, banks: 10 }
+    const floor = getGroundHeight(40, 0, { ...relief, channel })
+    expect(floor).toBeCloseTo(getGroundHeight(40, 0, relief) - 6)
+  })
+
+  it('leaves the ground alone beyond the channel banks', () => {
+    const channel = { centerX: 40, width: 20, depth: 6, banks: 10 }
+    expect(getGroundHeight(200, 0, { ...relief, channel })).toBe(getGroundHeight(200, 0, relief))
+  })
+
+  it('climbs out of a channel without a step, and never overshoots the surface', () => {
+    const channel = { centerX: 0, width: 0, depth: 6, banks: 20 }
+    const flat = { amplitude: 0, frequency: 0.01, octaves: 1, seed: 5, channel }
+    const profile = Array.from({ length: 21 }, (_, step) => getGroundHeight(step, 0, flat))
+    expect(profile[0]).toBeCloseTo(-6)
+    expect(profile[20]).toBeCloseTo(0)
+    profile.forEach((height, index) => {
+      expect(height).toBeLessThanOrEqual(0)
+      if (index > 0) expect(height).toBeGreaterThanOrEqual(profile[index - 1])
+    })
   })
 })

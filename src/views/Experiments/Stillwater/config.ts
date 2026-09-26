@@ -1,7 +1,28 @@
-import type { CoordinateTuple, ModelOptions, SetupConfig } from '@webgamekit/threejs'
+import type {
+  CoordinateTuple,
+  GroundReliefConfig,
+  ModelOptions,
+  SetupConfig
+} from '@webgamekit/threejs'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 import type { PlantingBand } from './types'
 import terrainTextureImage from '@/assets/images/textures/terrain.jpg'
+
+/**
+ * Low and broad. A wetland is not hilly, but a dead flat plane reads as a diagram, and it is the
+ * rise and fall catching the low sun that tells the eye this is ground. Shared with the walker
+ * and the planting, which all have to sit on the surface it describes.
+ */
+export const GROUND_RELIEF: GroundReliefConfig = {
+  amplitude: 2.2,
+  frequency: 0.0035,
+  octaves: 4,
+  seed: 7,
+  segments: 160,
+  // The river's own valley. Its floor spans the water's width and its banks climb back over
+  // thirty units either side, which is what keeps the channel running instead of pooling.
+  channel: { centerX: 39, width: 78, depth: 5, banks: 34 }
+}
 
 /** Where the walk loop begins and ends on Z. The walker travels away from the camera. */
 export const WALK_START_Z = -300
@@ -33,7 +54,7 @@ export const characterOptions: ModelOptions = {
  * Behind and well out to the bank side, so the shot looks diagonally across the water rather
  * than straight down it. Directly behind her the river is squeezed into one edge of the frame.
  */
-export const CAMERA_OFFSET: CoordinateTuple = [-40, 11, -38]
+export const CAMERA_OFFSET: CoordinateTuple = [-40, 17, -42]
 
 /** The sun's own offset from the walker: low, and far side from the camera, for a backlit shot. */
 export const SUN_OFFSET: CoordinateTuple = [70, 45, 180]
@@ -48,17 +69,20 @@ export const setupConfig: SetupConfig = {
     position: [0, -1, 0],
     color: 0xa89a82,
     texture: terrainTextureImage,
-    textureRepeat: [80, 80]
+    textureRepeat: [80, 80],
+    // Low and broad. A wetland is not hilly, but a dead flat plane reads as a diagram, and it
+    // is the rise and fall catching the low sun that tells the eye this is ground.
+    relief: GROUND_RELIEF
   },
-  // The surface sits above the mud rather than in a channel cut through it. The reference is a
-  // flooded wetland, where the level has risen over the bank and there is no bank left to see.
+  // Set just below the ground's mean level, so the channel runs unbroken while the higher folds
+  // of the relief break its edge into mudbanks instead of leaving one straight cut.
   water: {
     size: [90, 1400],
-    position: [39, -0.8, 0],
+    position: [39, -3.4, 0],
     color: 0x545f48,
-    rippleStrength: 0.02,
-    rippleScale: 60,
-    rippleSpeed: 0.35
+    rippleStrength: 0.006,
+    rippleScale: 85,
+    rippleSpeed: 1.1
   },
   // The haze already closes the horizon, so a sky dome would only add a seam where the two
   // colours meet.
@@ -75,7 +99,7 @@ export const setupConfig: SetupConfig = {
     environment: false
   },
   camera: {
-    position: [-40, 18, -338],
+    position: [-40, 24, -342],
     lookAt: [0, 7, -300],
     fov: 62,
     near: 0.5,
@@ -109,6 +133,9 @@ export const FOREST_TRUNK_PARTS = ['Object_4', 'Object_6']
 /**
  * Nothing is planted within eight units of x = 0, which is the line the walker travels, and the
  * near bank keeps clear of the camera's own track as well so no trunk swings through the lens.
+ *
+ * Roots go two units under the mean surface, since the ground now rises and falls around that
+ * level and a trunk planted exactly on it stands on stilts wherever the ground has dipped.
  */
 export const TREE_BANDS: PlantingBand[] = [
   {
@@ -116,9 +143,9 @@ export const TREE_BANDS: PlantingBand[] = [
     min: [100, 0, -700],
     max: [430, 0, 700],
     count: 22,
-    rootLevel: -1,
-    minScale: 3,
-    maxScale: 5.5,
+    rootLevel: -3,
+    minScale: 7,
+    maxScale: 13,
     seed: 11
   },
   {
@@ -126,9 +153,9 @@ export const TREE_BANDS: PlantingBand[] = [
     min: [10, 0, -700],
     max: [78, 0, 700],
     count: 30,
-    rootLevel: -1,
-    minScale: 2.6,
-    maxScale: 4.8,
+    rootLevel: -3,
+    minScale: 6,
+    maxScale: 11,
     seed: 23
   },
   {
@@ -136,9 +163,9 @@ export const TREE_BANDS: PlantingBand[] = [
     min: [-340, 0, -700],
     max: [-78, 0, 700],
     count: 14,
-    rootLevel: -1,
-    minScale: 3,
-    maxScale: 5.5,
+    rootLevel: -3,
+    minScale: 7,
+    maxScale: 13,
     seed: 37
   }
 ]
@@ -150,9 +177,9 @@ export const UNDERGROWTH_BANDS: PlantingBand[] = [
     min: [-4, 0, -700],
     max: [34, 0, 700],
     count: 70,
-    rootLevel: -1,
-    minScale: 0.25,
-    maxScale: 0.7,
+    rootLevel: -3,
+    minScale: 0.5,
+    maxScale: 1.6,
     seed: 53
   },
   {
@@ -160,9 +187,9 @@ export const UNDERGROWTH_BANDS: PlantingBand[] = [
     min: [-190, 0, -700],
     max: [-8, 0, 700],
     count: 170,
-    rootLevel: -1,
-    minScale: 0.25,
-    maxScale: 0.7,
+    rootLevel: -3,
+    minScale: 0.5,
+    maxScale: 1.6,
     seed: 71
   }
 ]

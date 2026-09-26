@@ -24,10 +24,17 @@ const slotValue = (seed: number, index: number, salt: number): number => {
  * Every copy is turned and sized differently. A stand of identical cones reads as wallpaper
  * however well the one model is made, and the girth varies separately from the height so the
  * silhouettes do not all share a profile.
+ *
+ * Each one is set down on the ground beneath it, not on the ground's mean level. Over relief
+ * that rises and falls a few units, a band planted on the mean stands on stilts in every dip.
  * @param band Where the copies go, how many, and how big
+ * @param heightAt The ground's height at a spot, relative to the band's own root level
  * @returns One entry per copy, ready for `instanceMatrixModel`
  */
-export const plantBand = (band: PlantingBand): ModelOptions[] =>
+export const plantBand = (
+  band: PlantingBand,
+  heightAt: (x: number, z: number) => number
+): ModelOptions[] =>
   generateAreaPositions({
     min: band.min,
     max: band.max,
@@ -38,7 +45,11 @@ export const plantBand = (band: PlantingBand): ModelOptions[] =>
     const girth = height * (0.75 + slotValue(band.seed, index, 3) * 0.5)
     return {
       name: band.name,
-      position: [position[0], band.rootLevel, position[2]] as CoordinateTuple,
+      position: [
+        position[0],
+        band.rootLevel + heightAt(position[0], position[2]),
+        position[2]
+      ] as CoordinateTuple,
       rotation: [0, slotValue(band.seed, index, 2) * Math.PI * 2, 0] as CoordinateTuple,
       scale: [girth, height, girth] as CoordinateTuple
     }

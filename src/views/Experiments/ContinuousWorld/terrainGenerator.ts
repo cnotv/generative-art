@@ -1,6 +1,7 @@
 import * as THREE from 'three'
-import type { NoiseConfig, HeightSampler } from './types'
-import { fractalNoise } from './noise'
+import type { NoiseConfig } from '@webgamekit/threejs'
+import { fractalNoise } from '@webgamekit/threejs'
+import type { HeightSampler } from './types'
 
 const TERRAIN_SEGMENTS = 16
 const DEFAULT_TERRAIN_BASE_COLOR = 0x4a7c3f

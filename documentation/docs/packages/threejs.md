@@ -134,7 +134,20 @@ Configure scene with camera, lights, ground, and sky.
     size?: CoordinateTuple,
     color?: number,
     position?: CoordinateTuple,  // the TOP SURFACE, not the centre; defaults to [1, -1, 1]
-    texture?: string
+    texture?: string,
+    relief?: {
+      amplitude?: number,        // reach of the first noise layer; the finer ones add to it
+      frequency?: number,        // bigger means smaller features
+      octaves?: number,
+      seed?: number,
+      segments?: number,         // grid cells across the ground
+      channel?: {                // a valley running along Z, for water to run in
+        centerX: number,
+        width: number,           // the floor, before the sides start climbing
+        depth: number,
+        banks: number            // how far the sides take to climb back
+      }
+    }
   },
   sky?: { color?: number },
   fog?: {
@@ -158,8 +171,42 @@ Configure scene with camera, lights, ground, and sky.
 }
 ```
 
-`fog` and `water` have no default section. A scene that declares neither stays clear and dry,
-so nothing existing gains haze or a surface it did not ask for.
+`fog`, `water` and `ground.relief` have no default section. A scene that declares none of them
+stays clear, dry and flat, so nothing existing gains haze, a surface or a slope it did not ask
+for.
+
+### Ground relief
+
+Without `relief` the ground is the flat slab it has always been. With it the top surface becomes
+a grid displaced by layered noise, built as a plane rather than a box, since the underside and
+sides of a slab that size are never seen and would cost as many triangles again.
+
+The collider does not follow the surface: it stays the flat cuboid it was, so a body rests on
+the mean level rather than on the hummock under it. Anything that has to sit on the surface
+instead asks `getGroundHeight(x, z, relief)`, which is the same function the surface is built
+from, with `x` and `z` measured from the ground's centre.
+
+`channel` cuts a valley along Z through the relief. Water is a flat plane, and laid over relief
+alone it pools in whatever the noise happened to leave low, which reads as a chain of puddles
+rather than a river; the valley gives it somewhere to run.
+
+```typescript
+import { getGroundHeight } from '@webgamekit/threejs'
+
+const relief = {
+  amplitude: 2.2,
+  frequency: 0.0035,
+  channel: { centerX: 39, width: 78, depth: 5, banks: 34 }
+}
+
+walker.position.y = groundLevel + getGroundHeight(walker.position.x, walker.position.z, relief)
+```
+
+### simplexNoise2D(x, z, seed) and fractalNoise(x, z, config)
+
+The noise `relief` is built from, exported for anything that wants its own terrain. `fractalNoise`
+sums `octaves` layers, each `lacunarity` times finer and `persistence` times quieter than the one
+before. Both are pure and seeded, so the same coordinates always give the same value.
 
 ### getFog(scene, config) and getWater(scene, config)
 

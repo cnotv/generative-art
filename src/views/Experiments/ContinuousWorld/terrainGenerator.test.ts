@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import { createTerrainChunk } from './terrainGenerator'
-import type { NoiseConfig } from './types'
+import type { NoiseConfig } from '@webgamekit/threejs'
 
 const defaultNoiseConfig: NoiseConfig = {
   seed: 42,

@@ -1,4 +1,5 @@
 import type * as THREE from 'three'
+import type { NoiseConfig } from '@webgamekit/threejs'
 
 export type WorldCase = 'terrain' | 'trees' | 'grass' | 'all'
 
@@ -17,15 +18,6 @@ export interface ChunkData {
   grass: THREE.InstancedMesh | null
   trees: THREE.Group | null
   ground: THREE.Mesh | null
-}
-
-export interface NoiseConfig {
-  seed: number
-  octaves: number
-  frequency: number
-  amplitude: number
-  lacunarity: number
-  persistence: number
 }
 
 export interface GeneratorConfig {

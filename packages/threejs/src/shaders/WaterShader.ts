@@ -73,14 +73,29 @@ export const WaterShader = {
     void main() {
       #include <logdepthbuf_fragment>
 
-      // Two crossing waves at different rates, so the surface never repeats visibly the way
-      // a single travelling sine does.
-      vec2 ripple = vec2(
-        sin( vSurfaceUv.y * rippleScale + time * rippleSpeed ),
-        cos( vSurfaceUv.x * rippleScale * 0.7 - time * rippleSpeed * 0.8 )
-      ) * rippleStrength;
+      // Three layers of crossing waves, each finer, faster and quieter than the last. One
+      // travelling sine reads as a rippled pane of glass, because every crest is the same size
+      // and they all move together; water has a swell with chop riding on it.
+      vec2 wave = vec2( 0.0 );
+      float waveScale = rippleScale;
+      float waveSpeed = rippleSpeed;
+      float waveWeight = 1.0;
+      for ( int layer = 0; layer < 3; layer ++ ) {
+        wave += waveWeight * vec2(
+          sin( vSurfaceUv.y * waveScale + vSurfaceUv.x * waveScale * 0.35 + time * waveSpeed ),
+          cos( vSurfaceUv.x * waveScale * 0.7 - vSurfaceUv.y * waveScale * 0.2 - time * waveSpeed * 0.8 )
+        );
+        waveScale *= 2.3;
+        waveSpeed *= 1.7;
+        waveWeight *= 0.45;
+      }
+      vec2 ripple = wave * rippleStrength;
 
-      vec4 base = texture2DProj( tDiffuse, vUv + vec4( ripple, 0.0, 0.0 ) );
+      // Scaled by vUv.w, which the projective divide takes straight back out again. Without it
+      // the same displacement is spread over the whole near foreground and squeezed into a few
+      // pixels at the horizon, and near the camera it pushes the sample clean off the
+      // reflection and leaves a torn dark edge there.
+      vec4 base = texture2DProj( tDiffuse, vUv + vec4( ripple * vUv.w, 0.0, 0.0 ) );
       gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );
 
       #include <tonemapping_fragment>

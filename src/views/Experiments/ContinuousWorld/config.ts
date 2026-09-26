@@ -1,7 +1,8 @@
 import type { CoordinateTuple } from '@webgamekit/animation'
 import type { SetupConfig } from '@webgamekit/threejs'
 import * as THREE from 'three'
-import type { NoiseConfig, GeneratorConfig, WorldCase } from './types'
+import type { NoiseConfig } from '@webgamekit/threejs'
+import type { GeneratorConfig, WorldCase } from './types'
 
 export const CAMERA_OFFSET: CoordinateTuple = [0, 10, 25]
 export const CAMERA_Y_LERP_SPEED = 2

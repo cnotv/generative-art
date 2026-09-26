@@ -37,6 +37,13 @@ export const SCENE_DEFAULTS = {
     textureRepeat: [10, 10] as [number, number],
     textureOffset: [0, 0] as [number, number]
   },
+  groundRelief: {
+    amplitude: 2,
+    frequency: 0.004,
+    octaves: 4,
+    seed: 1,
+    segments: 128
+  },
   fog: {
     color: 0xbfd1e5,
     near: 50,

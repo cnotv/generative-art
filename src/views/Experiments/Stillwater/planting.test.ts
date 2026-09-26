@@ -13,13 +13,16 @@ const band: PlantingBand = {
   seed: 11
 }
 
+/** Flat ground, so a test that is not about relief reads the band's own numbers back. */
+const flat = () => 0
+
 describe('plantBand', () => {
   it('plants the count it was asked for', () => {
-    expect(plantBand(band)).toHaveLength(12)
+    expect(plantBand(band, flat)).toHaveLength(12)
   })
 
   it('keeps every copy inside the band and rooted at its level', () => {
-    plantBand(band).forEach(({ position }) => {
+    plantBand(band, flat).forEach(({ position }) => {
       const [x, y, z] = position as [number, number, number]
       expect(x).toBeGreaterThanOrEqual(100)
       expect(x).toBeLessThanOrEqual(420)
@@ -30,7 +33,7 @@ describe('plantBand', () => {
   })
 
   it('keeps every height within the band and varies the girth around it', () => {
-    plantBand(band).forEach(({ scale }) => {
+    plantBand(band, flat).forEach(({ scale }) => {
       const [girth, height, depth] = scale as [number, number, number]
       expect(height).toBeGreaterThanOrEqual(3)
       expect(height).toBeLessThanOrEqual(5.5)
@@ -41,7 +44,7 @@ describe('plantBand', () => {
   })
 
   it('turns the copies to different headings rather than lining them all up', () => {
-    const headings = plantBand(band).map(({ rotation }) => (rotation as number[])[1])
+    const headings = plantBand(band, flat).map(({ rotation }) => (rotation as number[])[1])
     expect(new Set(headings).size).toBe(headings.length)
     headings.forEach((heading) => {
       expect(heading).toBeGreaterThanOrEqual(0)
@@ -50,10 +53,18 @@ describe('plantBand', () => {
   })
 
   it('gives the same band the same planting on every load', () => {
-    expect(plantBand(band)).toEqual(plantBand(band))
+    expect(plantBand(band, flat)).toEqual(plantBand(band, flat))
+  })
+
+  it('sets each copy down on the ground under it rather than on the mean level', () => {
+    const slope = (x: number) => x / 10
+    plantBand(band, slope).forEach(({ position }) => {
+      const [x, y] = position as [number, number, number]
+      expect(y).toBeCloseTo(-1 + slope(x))
+    })
   })
 
   it('gives a different seed a different planting', () => {
-    expect(plantBand(band)).not.toEqual(plantBand({ ...band, seed: 12 }))
+    expect(plantBand(band, flat)).not.toEqual(plantBand({ ...band, seed: 12 }, flat))
   })
 })

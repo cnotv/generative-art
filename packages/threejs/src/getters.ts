@@ -6,6 +6,8 @@ import { CoordinateTuple, Model } from '@webgamekit/animation'
 import {
   FogConfig,
   GeneratedInstanceConfig,
+  GroundChannelConfig,
+  GroundReliefConfig,
   InstanceConfig,
   PhysicOptions,
   WaterConfig
@@ -13,6 +15,7 @@ import {
 import { SCENE_DEFAULTS } from './defaults'
 import { textureLoader } from './loaders'
 import { WaterShader } from './shaders/WaterShader'
+import { fractalNoise } from './noise'
 
 /** Reused by `getWater` so turning a surface allocates nothing per call. */
 const WORLD_UP = new THREE.Vector3(0, 1, 0)
@@ -65,6 +68,73 @@ export const getScene = async (
  * @param { size, position, helpers, color, texture }
  * @returns
  */
+/**
+ * A grid lying flat on the XZ plane, its vertices raised and lowered by layered noise.
+ *
+ * Built as a plane rather than a box: the underside and the sides of a slab this size are never
+ * seen, and at the segment count relief needs they would cost as many triangles again as the
+ * surface itself.
+ * @param size The ground's [width, height, depth]; height is ignored, a plane having none
+ * @param relief How far the surface moves, how tightly it folds, and from which seed
+ * @returns The displaced geometry, with normals recomputed so the light reads the new slopes
+ */
+/**
+ * How far the relief surface rises above the ground's declared level at one spot.
+ *
+ * The same function the surface is built from, so anything that has to sit on the ground asks
+ * this rather than keeping its own copy of the noise settings and drifting out of step.
+ * @param x Distance from the ground's centre along X
+ * @param z Distance from the ground's centre along Z
+ * @param relief The same relief the ground was built with
+ * @returns The height at that spot, positive above the declared level and negative below
+ */
+/**
+ * How far the ground drops into a channel at one distance across it.
+ *
+ * Full depth across the floor, then a smooth climb back over the width of the banks, so the
+ * sides meet the surrounding relief without a crease along the join.
+ * @param x Distance from the ground's centre along X
+ * @param channel Where the channel runs, how wide, how deep, and how far its banks reach
+ * @returns How far the ground drops here, zero outside the banks
+ */
+const getChannelDepth = (x: number, { centerX, width, depth, banks }: GroundChannelConfig) => {
+  const fromFloor = Math.abs(x - centerX) - width / 2
+  if (fromFloor <= 0) return depth
+  if (fromFloor >= banks || banks <= 0) return 0
+  const climb = fromFloor / banks
+  return depth * (1 - climb * climb * (3 - 2 * climb))
+}
+
+export const getGroundHeight = (
+  x: number,
+  z: number,
+  {
+    amplitude = SCENE_DEFAULTS.groundRelief.amplitude,
+    frequency = SCENE_DEFAULTS.groundRelief.frequency,
+    octaves = SCENE_DEFAULTS.groundRelief.octaves,
+    seed = SCENE_DEFAULTS.groundRelief.seed,
+    channel
+  }: GroundReliefConfig
+): number =>
+  fractalNoise(x, z, { seed, octaves, frequency, amplitude, lacunarity: 2, persistence: 0.5 }) -
+  (channel ? getChannelDepth(x, channel) : 0)
+
+const getReliefGeometry = (
+  size: CoordinateTuple,
+  relief: GroundReliefConfig
+): THREE.PlaneGeometry => {
+  const segments = relief.segments ?? SCENE_DEFAULTS.groundRelief.segments
+  const geometry = new THREE.PlaneGeometry(size[0], size[2], segments, segments)
+  geometry.rotateX(-Math.PI / 2)
+  const vertices = geometry.attributes.position
+  Array.from({ length: vertices.count }).forEach((_, index) => {
+    vertices.setY(index, getGroundHeight(vertices.getX(index), vertices.getZ(index), relief))
+  })
+  vertices.needsUpdate = true
+  geometry.computeVertexNormals()
+  return geometry
+}
+
 export const getGround = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -76,7 +146,8 @@ export const getGround = (
     texture,
     textureRepeat = SCENE_DEFAULTS.ground.textureRepeat,
     textureOffset = SCENE_DEFAULTS.ground.textureOffset,
-    restitution = 0
+    restitution = 0,
+    relief
   }: {
     size?: CoordinateTuple | number
     position?: CoordinateTuple
@@ -86,13 +157,18 @@ export const getGround = (
     textureRepeat?: [number, number]
     textureOffset?: [number, number]
     restitution?: number
+    relief?: GroundReliefConfig
   }
 ) => {
   const defaultProps = { color }
   const groundSizes: CoordinateTuple = Array.isArray(size) ? size : [size, 0.01, size]
   const groundCenterY = position[1] - (groundSizes[1] || 0.01) / 2
   const groundPosition: CoordinateTuple = [position[0], groundCenterY, position[2]]
-  const geometry = new THREE.BoxGeometry(...groundSizes)
+  // A relief surface sits at the level asked for; a slab's centre sits half its height below it.
+  const meshPosition: CoordinateTuple = relief ? position : groundPosition
+  const geometry = relief
+    ? getReliefGeometry(groundSizes, relief)
+    : new THREE.BoxGeometry(...groundSizes)
   const material = new THREE.MeshStandardMaterial({
     ...defaultProps,
     ...(texture ? { map: getTextures(texture, textureRepeat, textureOffset) } : {})
@@ -101,7 +177,7 @@ export const getGround = (
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = 'ground'
   mesh.receiveShadow = true
-  mesh.position.set(...groundPosition)
+  mesh.position.set(...meshPosition)
   mesh.userData.physics = { mass: 0 }
 
   scene.add(mesh)
