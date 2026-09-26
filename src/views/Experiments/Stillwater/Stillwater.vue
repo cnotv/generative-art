@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
-import { getModel } from '@webgamekit/threejs'
+import { colorModel, getModel, instanceMatrixModel, loadGLTF } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import { createTimelineManager } from '@webgamekit/animation'
 import { useSceneViewStore } from '@/stores/sceneView'
@@ -12,10 +12,16 @@ import {
   createDirectionalLightFollowAction
 } from '@/utils/gameTimelineActions'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import { plantBand } from './planting'
 import { advanceWalk } from './walk'
 import {
   CAMERA_OFFSET,
   DEFAULT_WALK_SPEED,
+  FOREST_COLORS,
+  FOREST_MODEL,
+  FOREST_TRUNK_PARTS,
+  TREE_BANDS,
+  UNDERGROWTH_BANDS,
   SUN_OFFSET,
   WALK_ANIMATION,
   WALK_END_Z,
@@ -40,6 +46,36 @@ const handleProgress = (progress: LoadProgress): void => {
 
 const reactiveConfig = createReactiveConfig({ walkSpeed: DEFAULT_WALK_SPEED })
 
+/**
+ * The tree, recoloured, shadowed and ready to be instanced. Loaded once per set rather than
+ * shared, since a set that drops parts must not drop them from the other set's template too.
+ * @returns A fresh instance of the tree model
+ */
+const loadForestModel = async (): Promise<THREE.Group> => {
+  const { model } = await loadGLTF(FOREST_MODEL, { castShadow: true, receiveShadow: true })
+  colorModel(model, FOREST_COLORS)
+  return model
+}
+
+/**
+ * Drop named meshes from a model, and rest what is left on the model's own origin.
+ *
+ * Taking the trunk out leaves the canopy hanging at the height the trunk used to hold it, and
+ * `instanceMatrixModel` works in the root's frame, so lowering the root cancels itself out. The
+ * parts are what has to come down.
+ * @param model The model to take parts out of
+ * @param names The mesh names to remove
+ * @returns The same model, without those parts and sitting on its own origin
+ */
+const stripParts = (model: THREE.Group, names: string[]): THREE.Group => {
+  names.forEach((name) => model.getObjectByName(name)?.removeFromParent())
+  const base = new THREE.Box3().setFromObject(model).min.y
+  model.children.forEach((child) => {
+    child.position.y -= base
+  })
+  return model
+}
+
 onMounted(async () => {
   if (!canvas.value) return
   registerViewConfig(route.name as string, reactiveConfig, configControls)
@@ -48,6 +84,17 @@ onMounted(async () => {
     viewPanels: { showConfig: true, showScene: true, showElements: true },
     onProgress: handleProgress,
     defineSetup: async ({ scene, world, camera, getDelta, animate }) => {
+      handleProgress({ stage: 'Forest', detail: FOREST_MODEL, done: false })
+      // One group, so the Elements panel lists the forest as the one thing it is rather than as
+      // a row per mesh the tree model happens to be built from.
+      const forest = new THREE.Group()
+      forest.name = 'forest'
+      const treeModel = await loadForestModel()
+      instanceMatrixModel(treeModel, forest, TREE_BANDS.flatMap(plantBand))
+      const bushModel = stripParts(await loadForestModel(), FOREST_TRUNK_PARTS)
+      instanceMatrixModel(bushModel, forest, UNDERGROWTH_BANDS.flatMap(plantBand))
+      scene.add(forest)
+
       const walker = await getModel(scene, world, 'character2.fbx', {
         ...characterOptions,
         onProgress: handleProgress

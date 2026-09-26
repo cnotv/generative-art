@@ -414,20 +414,59 @@ export const instanceMatrixMesh = (
 }
 
 /**
- * Generate multiple instances for a model based on a configuration
- * @param model
- * @param scene
- * @param options
+ * Spawn one instanced copy of a whole model per entry in `options`, as one draw call per mesh
+ * the model holds however many copies are asked for.
+ *
+ * A model is a tree of meshes, each carrying its own transform inside that tree: a trunk at the
+ * root, a canopy raised and turned above it. Instancing every mesh on the copy's transform alone
+ * throws those away and stacks every part of the model on one spot, so each mesh is instanced on
+ * its own transform relative to the model's root instead.
+ *
+ * Shadow flags come from the model root, which both `getModel` and `loadGLTF` set from their
+ * options; an `InstancedMesh` carries one flag for all its copies, so there is nothing per-copy
+ * to read them from.
+ * @param model The model to copy, which is a template and is never added to the parent itself
+ * @param parent What the instanced meshes are added to, a scene or a group standing for the set
+ * @param options One entry per copy, carrying its position, rotation and scale
+ * @returns The instanced meshes, one per mesh in the model
  */
 export const instanceMatrixModel = (
   model: THREE.Group<THREE.Object3DEventMap>,
-  scene: THREE.Scene,
+  parent: THREE.Object3D,
   options: ModelOptions[]
-): void => {
+): THREE.InstancedMesh[] => {
+  model.updateMatrixWorld(true)
+  const rootInverse = new THREE.Matrix4().copy(model.matrixWorld).invert()
+  const partMatrix = new THREE.Matrix4()
+  const copyMatrix = new THREE.Matrix4()
+  const copyPosition = new THREE.Vector3()
+  const copyRotation = new THREE.Euler()
+  const copyQuaternion = new THREE.Quaternion()
+  const copyScale = new THREE.Vector3()
+  const parts: THREE.Mesh[] = []
   model.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) {
-      instanceMatrixMesh(child as THREE.Mesh, scene, options)
-    }
+    if ((child as THREE.Mesh).isMesh) parts.push(child as THREE.Mesh)
+  })
+
+  return parts.map((part, partIndex) => {
+    const instanced = new THREE.InstancedMesh(part.geometry, part.material, options.length)
+    instanced.name = `${model.name || 'model'}-part-${partIndex}`
+    instanced.castShadow = model.castShadow
+    instanced.receiveShadow = model.receiveShadow
+    partMatrix.multiplyMatrices(rootInverse, part.matrixWorld)
+
+    options.forEach(({ position, rotation, scale }, index) => {
+      copyPosition.set(...(position ?? [0, 0, 0]))
+      copyRotation.set(...(rotation ?? [0, 0, 0]))
+      copyQuaternion.setFromEuler(copyRotation)
+      copyScale.set(...(scale ?? [1, 1, 1]))
+      copyMatrix.compose(copyPosition, copyQuaternion, copyScale).multiply(partMatrix)
+      instanced.setMatrixAt(index, copyMatrix)
+    })
+
+    instanced.instanceMatrix.needsUpdate = true
+    parent.add(instanced)
+    return instanced
   })
 }
 

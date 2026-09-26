@@ -698,15 +698,46 @@ import { removeElements } from '@webgamekit/threejs'
 removeElements(world, [coin1, coin2, coin3])
 ```
 
-### instanceMatrixMesh(scene, geometry, material, options)
+### instanceMatrixMesh(mesh, scene, options)
 
-Create an instanced mesh for rendering many identical objects efficiently.
+Draw one mesh many times in a single draw call. One entry per copy, carrying its `position`,
+`rotation` and `scale`.
 
 ```typescript
 import { instanceMatrixMesh } from '@webgamekit/threejs'
 
-const trees = instanceMatrixMesh(scene, geometry, material, treePositions)
+instanceMatrixMesh(grassBlade, scene, bladePlacements)
 ```
+
+### instanceMatrixModel(model, parent, options)
+
+The same for a model made of several meshes: one draw call per mesh in the model, whatever the
+number of copies. Returns those instanced meshes.
+
+Each mesh is instanced on its own transform relative to the model's root, so the copies keep
+the shape the model was authored with; instancing every mesh on the copy's transform alone
+stacks a trunk, its branches and its canopy on one spot. Shadow flags come from the model root,
+which both `getModel` and `loadGLTF` set from their options, since an `InstancedMesh` carries
+one flag for all its copies.
+
+`parent` is anything that takes children, so a set can go into a group and appear as one row in
+the playground's Elements panel rather than one row per mesh.
+
+```typescript
+import { colorModel, instanceMatrixModel, loadGLTF } from '@webgamekit/threejs'
+
+const { model } = await loadGLTF('tree.glb', { castShadow: true, receiveShadow: true })
+colorModel(model, [0x574b3e, 0x574b3e, 0x6b7a55, 0x7d8a62, 0x5e6d4b, 0x88936d])
+
+const forest = new THREE.Group()
+forest.name = 'forest'
+instanceMatrixModel(model, forest, treePlacements)
+scene.add(forest)
+```
+
+The model itself is a template and is never added to `parent`. Dropping meshes from it before
+instancing gives a second, cheaper set from the same asset: a tree without its trunk meshes is
+a bush, and on the tree used above that is 94 triangles a copy instead of 5370.
 
 ## Lights
 
