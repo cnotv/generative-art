@@ -614,8 +614,10 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   readings: a video's very first one had its depth off by a hand's width. Pausing or seeking a video lands the rig
   straight on the spot for that moment.
 - **Planted feet.** The lower foot is taken as planted where it lands and held there while the
-  body moves over it, the leg bent to reach it. It is let go, easing back over a tenth of a second
-  rather than snapping, once it lifts; if the body moves further than a leg can comfortably hold
+  body moves over it, the leg bent to reach it, as long as the capture keeps it still: a foot the
+  capture sweeps across the floor faster than two leg lengths a second, as a run in place does, is
+  never held. It is let go, easing back over a tenth of a second rather than snapping, once it
+  lifts or moves off faster than four; if the body moves further than a leg can comfortably hold
   it, the foot is dragged along at that reach instead of being held until it snaps back.
 
 ![The dance clip at five moments (top) beside the default character posed from it with Follow Travel off (middle), staying on one spot, and on (bottom), stepping toward the viewer as the dancer walks up to the camera, back as she backs away, and forward again; the first column is the rest pose before the first detection](/img/animation/rig-camera-travel.webp)

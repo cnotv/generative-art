@@ -375,6 +375,15 @@ export const CAMERA_FOOT_PLANT_LIFT_SHARE = 0.03
 /** A planted foot is let go once it rises this share of the leg length above the lower foot. */
 export const CAMERA_FOOT_RELEASE_LIFT_SHARE = 0.06
 /**
+ * How fast, in leg lengths a second, a foot may move across the floor where the capture puts it
+ * and still count as planted. A foot on the ground stands still, so one sweeping back under a body
+ * running in place is not planted, however low it is. The dance clip's lower foot moves under one
+ * leg length a second at its median, the recorded Running preset's at three.
+ */
+export const CAMERA_FOOT_PLANT_SPEED_SHARE = 2
+/** A planted foot is let go once the capture moves it across the floor this fast. */
+export const CAMERA_FOOT_RELEASE_SPEED_SHARE = 4
+/**
  * The furthest, as a share of the leg length, a planted foot is held from where the leg would
  * otherwise put it. Past it the foot is dragged along at that reach: the capture's legs and the
  * travel disagree, and bending the leg further to hide it looks worse than a slow slide.

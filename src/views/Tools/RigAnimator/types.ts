@@ -331,8 +331,15 @@ export interface CameraFootPin {
   releasing: boolean
 }
 
-/** Each foot currently held, by side. */
-export type CameraFootPins = Partial<Record<HandSide, CameraFootPin>>
+/** One foot between two frames: where the leg put its ankle, and what it is held to, if anything. */
+export interface CameraFootTrack {
+  /** Where the capture put the ankle before any hold, in world space. */
+  freeAnkle: Vector3Data
+  pin: CameraFootPin | null
+}
+
+/** Each foot's track, by side. */
+export type CameraFootTracks = Partial<Record<HandSide, CameraFootTrack>>
 
 /** Each bone's roll track from the previous frame, keyed by bone name. */
 export type TurnTracks = Map<string, TurnTrack>

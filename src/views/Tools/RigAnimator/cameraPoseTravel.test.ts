@@ -13,10 +13,11 @@ import { buildBodyLandmarks, buildMixamoRig } from './fixtures/cameraPoseFixture
 import {
   CAMERA_FOOT_PIN_MAX_STRETCH_SHARE,
   CAMERA_FOOT_RELEASE_MILLISECONDS,
+  CAMERA_FOOT_RELEASE_SPEED_SHARE,
   CAMERA_TRAVEL_ANCHOR_MILLISECONDS,
   CAMERA_TRAVEL_SMOOTHING_MILLISECONDS
 } from './config'
-import type { CameraFootPins, CameraLandmark, CameraTravel } from './types'
+import type { CameraFootTracks, CameraLandmark, CameraTravel } from './types'
 
 const FRAME_SIZE = { width: 1080, height: 1920 }
 const FOCAL_PIXELS = Math.hypot(FRAME_SIZE.width, FRAME_SIZE.height)
@@ -235,27 +236,34 @@ describe('pinPlantedFeet', () => {
      * `sideways` leg lengths, and `lift` raising the left foot by bending its knee, then pinning.
      */
     const frame = (
-      pins: CameraFootPins,
+      pins: CameraFootTracks,
       { sideways, liftLeftFoot = false }: { sideways: number; liftLeftFoot?: boolean },
       elapsedSeconds = FRAME_SECONDS
-    ): CameraFootPins => {
+    ): CameraFootTracks => {
       resetAllBonesToRest(bones, restPoses)
       hips.position.x = restPoses.get('mixamorigHips')!.position.x + sideways * legLength
       if (liftLeftFoot) bone('mixamorigLeftLeg').rotateX(-Math.PI / 2)
       hips.updateMatrixWorld(true)
       return pinPlantedFeet(bones, rest, pins, elapsedSeconds)
     }
-    return { frame, ankle, legLength }
+    /** Carry the hips `sideways` leg lengths over frames at a walking pace, a tenth of a leg each. */
+    const walk = (pins: CameraFootTracks, sideways: number): CameraFootTracks =>
+      Array.from({ length: Math.round(sideways / WALKING_STEP) }).reduce<CameraFootTracks>(
+        (tracks, _, step) => frame(tracks, { sideways: (step + 1) * WALKING_STEP }),
+        pins
+      )
+    return { frame, walk, ankle, legLength }
   }
+  const WALKING_STEP = 0.02
 
   it('holds a planted foot where it landed while the hips move over it', () => {
     // Arrange
-    const { frame, ankle, legLength } = buildRig()
+    const { frame, walk, ankle, legLength } = buildRig()
     const pins = frame({}, { sideways: 0 })
     const planted = ankle('Left')
 
     // Act
-    frame(pins, { sideways: 0.1 })
+    walk(pins, 0.1)
 
     // Assert
     expect(ankle('Left').x).toBeCloseTo(planted.x, 0)
@@ -278,19 +286,37 @@ describe('pinPlantedFeet', () => {
 
   it('drags a planted foot along at the leg’s reach once the body moves further than that', () => {
     // Arrange
-    const { frame, ankle, legLength } = buildRig()
+    const { frame, walk, ankle, legLength } = buildRig()
     const pins = frame({}, { sideways: 0 })
     const planted = ankle('Left')
     const tooFar = CAMERA_FOOT_PIN_MAX_STRETCH_SHARE * 2
 
     // Act
-    frame(pins, { sideways: tooFar })
+    walk(pins, tooFar)
 
     // Assert
     expect(ankle('Left').x - planted.x).toBeCloseTo(
       (tooFar - CAMERA_FOOT_PIN_MAX_STRETCH_SHARE) * legLength,
       0
     )
+  })
+
+  it('holds no foot that sweeps across the floor, the way a body running in place moves it', () => {
+    // Arrange: the capture carries the feet with the hips, faster than a planted foot moves
+    const { frame, ankle, legLength } = buildRig()
+    const sweep = CAMERA_FOOT_RELEASE_SPEED_SHARE * 1.5 * FRAME_SECONDS
+    const steps = 6
+
+    // Act
+    Array.from({ length: steps }).reduce<CameraFootTracks>(
+      (tracks, _, step) => frame(tracks, { sideways: (step + 1) * sweep }),
+      frame({}, { sideways: 0 })
+    )
+    const swept = ankle('Left')
+
+    // Assert: exactly where the leg alone puts the foot
+    frame({}, { sideways: steps * sweep }, Infinity)
+    expect(swept.distanceTo(ankle('Left'))).toBeLessThan(legLength * 0.001)
   })
 
   it('lets go of a foot that lifts, easing it out rather than snapping', () => {

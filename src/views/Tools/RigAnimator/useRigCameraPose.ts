@@ -21,7 +21,7 @@ import {
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
 import type {
   TurnTracks,
-  CameraFootPins,
+  CameraFootTracks,
   CameraPoseFrame,
   CameraPoseMappingOptions,
   CameraRetargetRest,
@@ -49,8 +49,8 @@ export const useRigCameraPose = (
   const turnTracks: TurnTracks = new Map()
   /** How far the current source has carried the rig, null until its first reading. */
   let travel: CameraTravel | null = null
-  /** Each foot held where it landed. */
-  let footPins: CameraFootPins = {}
+  /** Where each foot was and what it is held to. */
+  let footTracks: CameraFootTracks = {}
   /** Whether no body has been applied since the source started, so there is no pose to hold. */
   let isFreshSource = true
 
@@ -61,7 +61,7 @@ export const useRigCameraPose = (
    */
   const startNewCameraSource = (): void => {
     travel = null
-    footPins = {}
+    footTracks = {}
     isFreshSource = true
   }
 
@@ -163,12 +163,12 @@ export const useRigCameraPose = (
       cameraBoneSmoothingShare(options.boneSmoothingMilliseconds, elapsedSeconds),
       cameraBoneMaxTurnRadians(options.maxBoneTurnRadiansPerSecond, elapsedSeconds)
     )
-    if (!options.pinPlantedFeet) footPins = {}
+    if (!options.pinPlantedFeet) footTracks = {}
     else if (frame.bodyLandmarks) {
-      footPins = pinPlantedFeet(
+      footTracks = pinPlantedFeet(
         bones.value,
         retargetRest,
-        footPins,
+        footTracks,
         elapsedSeconds,
         drivenBoneNames
       )

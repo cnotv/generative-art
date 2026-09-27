@@ -5,8 +5,10 @@ import {
   CAMERA_BONE_SMOOTHING_RESET_SECONDS,
   CAMERA_FOOT_PIN_MAX_STRETCH_SHARE,
   CAMERA_FOOT_PLANT_LIFT_SHARE,
+  CAMERA_FOOT_PLANT_SPEED_SHARE,
   CAMERA_FOOT_RELEASE_LIFT_SHARE,
   CAMERA_FOOT_RELEASE_MILLISECONDS,
+  CAMERA_FOOT_RELEASE_SPEED_SHARE,
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
   CAMERA_TRAVEL_ANCHOR_MILLISECONDS,
   CAMERA_TRAVEL_SMOOTHING_MILLISECONDS
@@ -19,7 +21,7 @@ import {
 import { isInsideFrame } from './cameraPoseFrame'
 import type {
   CameraFootPin,
-  CameraFootPins,
+  CameraFootTracks,
   CameraImageSize,
   CameraLandmark,
   CameraRetargetRest,
@@ -295,28 +297,51 @@ const withinReach = (
   return { x: held.x, y: position.y, z: held.z }
 }
 
+/** How one foot sits this frame, relative to the rig's leg length. */
+interface FootReading {
+  /** How far it has risen above the lower foot. */
+  liftShare: number
+  /** How fast the capture moved it across the floor since the last frame, per second. */
+  speedShare: number
+}
+
 /**
- * What to hold one foot to this frame. A foot at the floor is taken as planted where it is and
- * held there, within the leg's reach; one that rises is let go and eases back over
- * `CAMERA_FOOT_RELEASE_MILLISECONDS` rather than snapping.
+ * What to hold one foot to this frame. A foot low and still on the floor is taken as planted where
+ * it is and held there, within the leg's reach; one that rises or moves off is let go and eases
+ * back over `CAMERA_FOOT_RELEASE_MILLISECONDS` rather than snapping.
  */
 const nextFootPin = (
-  previous: CameraFootPin | undefined,
+  previous: CameraFootPin | null,
   ankle: THREE.Vector3,
-  liftShare: number,
+  { liftShare, speedShare }: FootReading,
   legLength: number,
   elapsedSeconds: number
 ): CameraFootPin | null => {
-  const letGo = previous && (previous.releasing || liftShare > CAMERA_FOOT_RELEASE_LIFT_SHARE)
+  const letGo =
+    previous &&
+    (previous.releasing ||
+      liftShare > CAMERA_FOOT_RELEASE_LIFT_SHARE ||
+      speedShare > CAMERA_FOOT_RELEASE_SPEED_SHARE)
   if (previous && !letGo) {
     return { ...previous, position: withinReach(previous.position, ankle, legLength) }
   }
   const weight = previous ? previous.weight - releaseStep(elapsedSeconds) : 0
   if (previous && weight > 0) return { ...previous, weight, releasing: true }
-  return liftShare < CAMERA_FOOT_PLANT_LIFT_SHARE
+  return liftShare < CAMERA_FOOT_PLANT_LIFT_SHARE && speedShare < CAMERA_FOOT_PLANT_SPEED_SHARE
     ? { position: { x: ankle.x, y: ankle.y, z: ankle.z }, weight: 1, releasing: false }
     : null
 }
+
+/** How fast the capture moved a foot across the floor, per second; 0 with nothing to compare. */
+const footSpeedShare = (
+  previousAnkle: Vector3Data | undefined,
+  ankle: THREE.Vector3,
+  legLength: number,
+  elapsedSeconds: number
+): number =>
+  previousAnkle && isContinuous(elapsedSeconds) && elapsedSeconds > 0
+    ? Math.hypot(ankle.x - previousAnkle.x, ankle.z - previousAnkle.z) / legLength / elapsedSeconds
+    : 0
 
 /** Which way the knee should bend: the way it already does, or the way the hips face if the leg is straight. */
 const kneePole = (leg: Leg, rest: CameraRetargetRest, legLength: number): THREE.Vector3 => {
@@ -368,40 +393,46 @@ const holdFoot = (
 /**
  * Hold each planted foot where it landed while the body moves over it, the footskate cleanup
  * GVHMR (SIGGRAPH Asia 2024) runs after placing the body: joints it judges stationary are held
- * still and the legs are solved to reach them. The lower foot is the planted one, measured by how
- * far each foot has risen from where it stands at rest, so the rule is the same on any floor the
- * rig is grounded to. Only the level position is held; height stays the capture's own.
+ * still and the legs are solved to reach them. A foot is judged planted the way contact labels
+ * are, low and still: the lower of the two, measured by how far each has risen from where it
+ * stands at rest so the rule is the same on any floor the rig is grounded to, and moving across the
+ * floor slower than a foot sweeping under a body that runs in place. Only the level position is
+ * held; height stays the capture's own.
  * @param bones The rig's bones, posed for this frame with the body already moved
  * @param rest The rig's rest pose
- * @param pins Each foot held after the previous frame; `{}` to start
+ * @param tracks Each foot after the previous frame; `{}` to start
  * @param elapsedSeconds Time since the previous frame, on the capture's own clock
  * @param drivenBoneNames The bones this frame drives; a leg outside them is left alone
- * @returns Each foot held after this frame, to hand back in next time
+ * @returns Each foot after this frame, to hand back in next time
  */
 export const pinPlantedFeet = (
   bones: THREE.Bone[],
   rest: CameraRetargetRest,
-  pins: CameraFootPins,
+  tracks: CameraFootTracks,
   elapsedSeconds: number,
   drivenBoneNames: Set<string> = new Set(bones.map((bone) => bone.name))
-): CameraFootPins => {
+): CameraFootTracks => {
   const legLength = rigLegLength(rest)
   const legs = findLegs(bones, rest, drivenBoneNames)
   if (!legLength || legs.length === 0) return {}
   const lowestRise = Math.min(...legs.map((leg) => leg.rise))
-  const carried = isContinuous(elapsedSeconds) ? pins : {}
+  const carried = isContinuous(elapsedSeconds) ? tracks : {}
   return Object.fromEntries(
-    legs.flatMap((leg) => {
+    legs.map((leg) => {
+      const ankle = leg.foot.getWorldPosition(new THREE.Vector3())
+      const previous = carried[leg.side]
       const pin = nextFootPin(
-        carried[leg.side],
-        leg.foot.getWorldPosition(new THREE.Vector3()),
-        (leg.rise - lowestRise) / legLength,
+        previous?.pin ?? null,
+        ankle,
+        {
+          liftShare: (leg.rise - lowestRise) / legLength,
+          speedShare: footSpeedShare(previous?.freeAnkle, ankle, legLength, elapsedSeconds)
+        },
         legLength,
         elapsedSeconds
       )
-      if (!pin) return []
-      holdFoot(leg, pin, rest, legLength)
-      return [[leg.side, pin]]
+      if (pin) holdFoot(leg, pin, rest, legLength)
+      return [leg.side, { freeAnkle: { x: ankle.x, y: ankle.y, z: ankle.z }, pin }]
     })
   )
 }

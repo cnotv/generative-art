@@ -106,21 +106,39 @@ Slide is how far a planted ankle moves across the floor between frames, as a sha
 A larger reach holds the foot better and bends the leg further from what the camera saw; 0.15
 keeps the legs within about 18° of the capture while more than halving the slide.
 
+Taking the lower foot as planted whatever it does was wrong for a body running in place. Scored
+against the Running preset it recorded, pinning moved the legs from 12° to 16° off the preset: its stance foot sweeps back under hips that
+do not travel, and holding it still bent the knee against the stride. A contact is now low and
+still, the way motion capture labels one: the lower foot is planted only while the capture moves it
+across the floor slower than a threshold, and let go above a higher one.
+
+| Plant below, let go above, leg lengths a second | Dance: slide, mean and 90th percentile | Dance: leg bones turned, mean and 95th percentile | Running preset: legs against the preset |
+| ----------------------------------------------- | -------------------------------------- | ------------------------------------------------- | --------------------------------------- |
+| no threshold                                    | 1.4% and 4.6%                          | 7.4° and 18°                                      | 16.0°                                   |
+| 1 and 2                                         | 2.5% and 6.8%                          | 4.0° and 14°                                      | 12.6°                                   |
+| 1.5 and 3                                       | 2.0% and 6.6%                          | 5.4° and 15°                                      | 13.2°                                   |
+| 2 and 4                                         | 1.6% and 5.4%                          | 6.6° and 18°                                      | 13.1°                                   |
+| 2.5 and 4                                       | 1.6% and 5.4%                          | 6.8° and 18°                                      | 13.1°                                   |
+
+Two and four keep nearly all of the dance clip's hold and give back all but a degree of the running
+legs, where holding nothing scores 12.4°. The free foot of the dancer moves under one leg length a
+second at its median; the running preset's sweeps at three.
+
 ## What the clips showed, together
 
 | Clip and setting                         | Planted-foot slide, mean | 90th percentile | Leg bones turned by pinning           |
 | ---------------------------------------- | ------------------------ | --------------- | ------------------------------------- |
 | Dance, rig on one spot (before)          | 3.2%                     | 7.2%            |                                       |
 | Dance, travel                            | 3.8%                     | 7.8%            |                                       |
-| Dance, travel and pinned feet            | 1.4%                     | 4.6%            | 7.4° mean, 18° at the 95th percentile |
+| Dance, travel and pinned feet            | 1.6%                     | 5.4%            | 6.6° mean, 18° at the 95th percentile |
 | Running preset, rig on one spot (before) | 9.9%                     | 19.1%           |                                       |
 | Running preset, travel                   | 9.7%                     | 17.9%           |                                       |
-| Running preset, travel and pinned feet   | 6.0%                     | 16.6%           | 6.5° mean, 21° at the 95th percentile |
+| Running preset, travel and pinned feet   | 8.6%                     | 19.3%           | 3.5° mean, 17° at the 95th percentile |
 
 Travel alone slides a planted foot slightly more than standing still, since the body now moves
 and the leg does not know it. Pinning is what brings it down. The running preset keeps sliding by
 design: a treadmill cycle on a body that stays put has to slide its feet, and it does on a real
-treadmill too.
+treadmill too, which is why pinning now leaves a foot that sweeps that fast alone.
 
 ```mermaid
 flowchart TD
@@ -134,7 +152,7 @@ flowchart TD
   bones --> ground[Ground the feet]
   ground --> travel
   travel --> smooth[Bone smoothing and joint speed cap]
-  smooth --> pins[Hold the lower foot, bend the leg to reach it]
+  smooth --> pins[Hold the lower foot while it is still, bend the leg to reach it]
 ```
 
 ## The dance clip's camera moves
@@ -159,8 +177,9 @@ came from tracking background features outside the dancer's outline between fram
 ## Limits
 
 - **A still camera is assumed.** A camera that pans or backs away reads as the performer moving.
-- **The lower foot is always planted.** A jump holds the lower foot to the floor rather than
-  flying, and a contact is judged by height alone.
+- **A contact is judged from the capture alone.** A foot low and still counts as planted, so a
+  jump in place holds the lower foot to the floor rather than flying, and a slow shuffle is held
+  like a step.
 - **The focal length is assumed.** A lens wider or narrower than a 53° diagonal scales the whole
   path by the same factor.
 - **The first quarter second does not travel.** The start is read over it, so a performer already
