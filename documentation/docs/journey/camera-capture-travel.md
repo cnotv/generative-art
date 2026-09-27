@@ -107,7 +107,9 @@ A larger reach holds the foot better and bends the leg further from what the cam
 keeps the legs within about 18° of the capture while more than halving the slide.
 
 Taking the lower foot as planted whatever it does was wrong for a body running in place. Scored
-against the Running preset it recorded, pinning moved the legs from 12° to 16° off the preset: its stance foot sweeps back under hips that
+against the Running preset it recorded (see
+[Scoring a capture](./camera-motion-retargeting.md#scoring-a-capture-against-a-recording-of-the-rig-itself)),
+pinning moved the legs from 12° to 16° off the preset: its stance foot sweeps back under hips that
 do not travel, and holding it still bent the knee against the stride. A contact is now low and
 still, the way motion capture labels one: the lower foot is planted only while the capture moves it
 across the floor slower than a threshold, and let go above a higher one.

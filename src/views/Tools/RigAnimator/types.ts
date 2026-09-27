@@ -357,3 +357,11 @@ export interface RecordedTakeCleanup {
   smoothingPasses: number
   halvingPasses: number
 }
+
+/** Where a skeleton's shoulders and hips sit in its joint list, for `normalizeSkeleton`. */
+export interface SkeletonTorsoJoints {
+  leftShoulder: number
+  rightShoulder: number
+  leftHip: number
+  rightHip: number
+}

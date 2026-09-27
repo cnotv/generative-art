@@ -120,6 +120,10 @@ exist, so two poses are already a movement.
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
   applying a preset to whichever hand the selected bone belongs to
+- `src/views/Tools/RigAnimator/poseSimilarity.ts` (+ `.test.ts`): pose estimation measures for
+  comparing two skeletons over time, used by `clipReproduction.test.ts` to score a capture against
+  a recording of a preset
+- `scripts/extract-video-landmarks.mjs`: turning a recording into a test fixture
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
 - `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`, `handPose.ts`: the
   framework-agnostic logic. See the [rig package's docs](/docs/packages/rig) for the
@@ -786,6 +790,24 @@ Arrow** and **Shift+Right Arrow** extend the frame selection by one frame in tha
 instead of stepping the playhead — see **Selecting a range of frames** above. These are
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
+
+### Scoring a capture against a recording
+
+A recording of the rig playing a preset is a test case with a known answer. The script
+`scripts/extract-video-landmarks.mjs` runs MediaPipe's pose and face detectors over every frame of
+a video in headless Chromium, the pose detector in VIDEO mode as the live capture runs it, and
+writes the readings as a fixture: each frame's world and image landmarks, and the face matrix.
+It needs `ffmpeg` on the path, to cut the video into frames Playwright's Chromium can decode.
+
+```sh
+node scripts/extract-video-landmarks.mjs recording.mp4 src/views/Tools/RigAnimator/fixtures/runningClipFrames.json
+```
+
+`clipReproduction.test.ts` replays that fixture through `useRigCameraPose` with the Config panel's
+defaults, the way the live capture applies each reading, and scores the rig against the preset it
+recorded using the measures in `poseSimilarity.ts`. What the scores mean, and what the first
+recording showed, is in
+[Copying a Performer onto a Rig](../journey/camera-motion-retargeting.md#scoring-a-capture-against-a-recording-of-the-rig-itself).
 
 ## Merging sources by body part
 
