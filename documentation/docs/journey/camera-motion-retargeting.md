@@ -261,9 +261,9 @@ is only cleared when one was actually set.
   from a different place.
 - **Front or back.** Mid turn, the lite pose model sometimes decides the wrong side faces the
   camera for a few frames, and the rig follows it.
-- **No travel.** World landmarks are centred on the hips, so the rig turns and crouches in place
-  but never walks across the floor. Grounding also moves the root, and recorded keyframes store
-  rotations only, so a recorded crouch plays back without the lowered hips.
+- **Travel comes from the picture.** World landmarks are centred on the hips, so they cannot
+  walk the rig across the floor; where the body stands is read from the image instead, see
+  [Carrying a Capture Across the Floor](camera-capture-travel.md).
 - **No shrug.** Nothing in the landmarks separates a raised clavicle from a tilted chest.
 - **No expressions.** The bundled models carry no face blend shapes, so the face drives the head's
   rotation only.

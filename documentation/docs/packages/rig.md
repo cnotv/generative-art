@@ -49,6 +49,22 @@ const mixer = new THREE.AnimationMixer(skinnedMesh)
 mixer.clipAction(clip).play()
 ```
 
+A keyframe may also carry `positions`, local bone positions keyed by bone name. Each bone
+named there gets a `<bone>.position` track over the keyframes that carry it, so a take that
+moves its hips across the floor plays back travelling; keyframes without one leave the track
+to interpolate across them. Rotation-only keyframes build exactly the clip they always did.
+
+```typescript
+const walking = poseBuildClip(
+  [
+    { frame: 0, pose: stepPose, positions: { mixamorigHips: { x: 0, y: 100, z: 0 } } },
+    { frame: 30, pose: nextStepPose, positions: { mixamorigHips: { x: 0, y: 100, z: 40 } } }
+  ],
+  boneNames,
+  30
+)
+```
+
 ## rigFindSkinnedMesh / rigFindUnskinnedMeshes
 
 Locate the skinned mesh a rig editor can pose, or the plain meshes that still need one.
@@ -193,11 +209,18 @@ interface QuaternionData {
   w: number
 }
 
+interface Vector3Data {
+  x: number
+  y: number
+  z: number
+}
+
 type Pose = Record<string, QuaternionData> // keyed by bone name
 
 interface PoseKeyframe {
   frame: number
   pose: Pose
+  positions?: Record<string, Vector3Data> // local bone positions, keyed by bone name
 }
 
 interface HumanoidBoneDefinition {

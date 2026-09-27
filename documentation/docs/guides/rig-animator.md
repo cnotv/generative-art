@@ -78,8 +78,12 @@ exist, so two poses are already a movement.
   detectors, and running the hand and face ones on crops around the detected body
 - `src/views/Tools/RigAnimator/cameraPoseRetarget.ts` (+ `.test.ts`): turning every bone of the
   rig to match a detected frame, see **How a detected pose drives the rig** below
-- `src/views/Tools/RigAnimator/fixtures/`: the default character's real skeleton and nine
-  frames MediaPipe detected from a dance clip, which the retargeting tests run against
+- `src/views/Tools/RigAnimator/cameraPoseTravel.ts` (+ `.test.ts`): where the performer stands
+  in front of the camera, carrying the rig across the floor to match, and holding planted feet
+  still, see **Travel** below
+- `src/views/Tools/RigAnimator/fixtures/`: the default character's real skeleton, nine frames
+  MediaPipe detected from a dance clip, and every frame of the same clip with where the dancer
+  stood in the picture, which the retargeting and travel tests run against
 - `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs the detectors against a
   playing `<video>` element in a `requestAnimationFrame` loop, shared by the live webcam feed
   and an uploaded video file
@@ -92,7 +96,8 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body, hands and head from a
   single uploaded photo instead of a continuous feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check,
-  the rig's rest pose measured when it is adopted, and applying a detected frame onto the rig
+  the rig's rest pose measured when it is adopted, and applying a detected frame onto the rig:
+  turning the bones, carrying the hips and pinning planted feet, in that order
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
 - `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting one keyframe's
@@ -190,10 +195,11 @@ a whole back into a seated or prone pose means selecting Spine, Spine1, Spine2 a
 and rotating each a little, the same way a real spine's curve is really several vertebrae each
 bending a small amount rather than one joint bending sharply.
 
-Only rotation is part of a keyframe. Typing into Bone Position corrects where a bone sits,
-which is most useful for nudging an auto-rigged skeleton's guessed joint placement, rather than
-authoring an animated translation, so it is not captured by **Add Keyframe** and does not
-appear in the exported clip.
+Only rotation is part of a keyframe you add. Typing into Bone Position corrects where a bone
+sits, which is most useful for nudging an auto-rigged skeleton's guessed joint placement, rather
+than authoring an animated translation, so it is not captured by **Add Keyframe** and does not
+appear in the exported clip. A take recorded from the camera is the one exception: it keeps where
+the hips stood, see **Recording motion** below.
 
 ## Dragging never stretches a segment
 
@@ -468,6 +474,11 @@ filtered from every sample within half a frame of it. With three samples or more
 the rotation closest to all the others, so a misread pose is dropped outright instead of landing
 on the timeline; with only two they are averaged, and a single sample is kept as it is.
 
+Each sample also keeps where the hips stood, averaged over the frame, so a take plays back
+walking across the floor and crouching the way it did live, see **Travel** below. The clip then
+carries a position track for the hips over the recorded frames, which the GLB and JSON exports
+keep. Keyframes added by hand stay rotation only.
+
 ![The canvas buttons mid-recording: the record toggle has turned into a solid red square, between the camera and Camera Preview buttons](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
@@ -573,6 +584,22 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   it claims to be: it is a guess, so legs below a webcam framed on the upper body keep their rest
   pose instead of following it.
 - **Hands.** See **Fingers from the camera** above.
+- **Travel.** The rig walks across the floor with the performer. World landmarks are centred on
+  the hips and cannot say where the body is, so that comes from the picture: how large the body
+  appears against its real size gives the distance, and where the hips appear gives the side
+  position. The rig eases toward that spot over a quarter of a second and moves by the performer's
+  own travel scaled by the ratio of the two leg lengths, measured from where the performer stood
+  when the video, photo or camera session started. Pausing or seeking a video lands the rig
+  straight on the spot for that moment.
+- **Planted feet.** The lower foot is taken as planted where it lands and held there while the
+  body moves over it, the leg bent to reach it. It is let go, easing back over a tenth of a second
+  rather than snapping, once it lifts; if the body moves further than a leg can comfortably hold
+  it, the foot is dragged along at that reach instead of being held until it snaps back.
+
+![The dance clip at five moments (top) beside the default character posed from it with Follow Travel off (middle), staying on one spot, and on (bottom), stepping toward the viewer as the dancer walks up to the camera, back as she backs away, and forward again; the first column is the rest pose before the first detection](/img/animation/rig-camera-travel.webp)
+
+What those two rules are based on, and what the attached clips showed, is in
+[Carrying a Capture Across the Floor](/docs/journey/camera-capture-travel).
 
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
 Merge Target diagram currently has active; see **Merging sources by body part** below. With
@@ -640,8 +667,14 @@ The remaining options tune the result:
 - **Keep Feet on Ground**, on by default, raises or lowers the whole rig so its lowest foot stays
   where it stands at rest. World landmarks are centred on the hips, so nothing in them says how
   high the body is: without this a crouch folds the legs up off the floor instead of bringing the
-  hips down. Recorded keyframes store rotations only, so a recorded take plays the crouch back
-  without the lowered hips.
+  hips down. A recorded take keeps the lowered hips.
+- **Follow Travel**, on by default, carries the rig across the floor as the performer walks
+  toward, away from or across the camera, see **Travel** above. Off, the rig turns and crouches
+  on its own spot. It assumes the camera stays still: a camera that moves reads as the performer
+  moving the other way.
+- **Pin Planted Feet**, on by default, holds a planted foot still while the body moves over it,
+  see **Planted feet** above. Off, the legs point exactly where the capture says and a foot on
+  the floor slides wherever that puts it.
 - **Use Depth (Z Axis)**, on by default, reads every direction in three dimensions. A single photo
   gives MediaPipe far less to judge depth from than a video's own motion does, making z the least
   reliable of the three axes it reports; turning this off reads every body direction flattened
