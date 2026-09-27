@@ -58,6 +58,8 @@ const boneControls = ({
 
 const cameraPoseControls: ConfigControlsSchema = {
   cameraGroundFeet: { checkbox: true, label: 'Keep Feet on Ground' },
+  cameraFollowTravel: { checkbox: true, label: 'Follow Travel' },
+  cameraPinFeet: { checkbox: true, label: 'Pin Planted Feet' },
   cameraUseDepth: { checkbox: true, label: 'Use Depth (Z Axis)' },
   cameraUseViewpoint: { checkbox: true, label: 'Match Camera Angle to Photo' },
   cameraShowPreview: { checkbox: true, label: 'Show Camera Preview' },

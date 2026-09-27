@@ -328,6 +328,29 @@ export const CAMERA_KEYFRAME_ROLL_FLIP_DEGREES = 90
 /** How far, in metres, a smoothed landmark may move in a single frame before the excess past
  * this is clamped off as a sudden jump rather than genuine motion. */
 export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
+/**
+ * How long, in milliseconds, the rig takes to settle on where the performer now stands. The
+ * position read from the picture jitters by a few centimetres of depth a frame, and pose changes
+ * alone move it by a couple of tens of centimetres; a quarter second hides both and still keeps
+ * up with a walk. See the travel journey doc for the clip it was measured on.
+ */
+export const CAMERA_TRAVEL_SMOOTHING_MILLISECONDS = 250
+/** How few in-picture body landmarks are too few to judge how large the performer appears. */
+export const CAMERA_BODY_POSITION_MIN_LANDMARKS = 6
+/**
+ * A foot counts as planted once it sits within this share of the rig's leg length of the lower
+ * foot, measured as how far each has risen from where it stands at rest.
+ */
+export const CAMERA_FOOT_PLANT_LIFT_SHARE = 0.03
+/** A planted foot is let go once it rises this share of the leg length above the lower foot. */
+export const CAMERA_FOOT_RELEASE_LIFT_SHARE = 0.06
+/**
+ * A planted foot is let go once holding it would take it this share of the leg length from
+ * where the leg would otherwise put it: the body has really moved on, or the foot is sliding.
+ */
+export const CAMERA_FOOT_PIN_MAX_STRETCH_SHARE = 0.15
+/** How long, in milliseconds, a let-go foot takes to ease back to where the leg puts it. */
+export const CAMERA_FOOT_RELEASE_MILLISECONDS = 120
 /** Range and step the Config panel's max jump slider offers. */
 export const CAMERA_MAX_JUMP_RANGE = { min: 0.02, max: 0.5, step: 0.01 }
 

@@ -50,6 +50,8 @@ export const buildMappingOptions = (
   limitJoints: true,
   filterBodyFlips: false,
   maxBoneTurnRadiansPerSecond: 0,
+  followTravel: false,
+  pinPlantedFeet: false,
   ...overrides
 })
 

@@ -56,6 +56,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   apply: [frame: CameraPoseFrame]
+  /** A different video, photo or camera session starts: whatever it shows is measured afresh. */
+  newSource: []
   close: []
   toggleRecord: []
   enablePreview: []
@@ -200,6 +202,7 @@ const handleMediaChange = async (event: Event): Promise<void> => {
   if (!file) return
   if (props.isRecording) emit('toggleRecord')
   camera.stop()
+  emit('newSource')
   if (file.type.startsWith('video/')) {
     mode.value = 'video'
     await uploadedVideo.loadVideo(file)
@@ -233,6 +236,7 @@ const toggleCamera = (): void => {
   photo.reset()
   uploadedVideo.stop()
   mode.value = 'camera'
+  emit('newSource')
   camera.start()
 }
 

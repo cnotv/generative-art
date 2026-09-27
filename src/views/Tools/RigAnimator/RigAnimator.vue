@@ -100,6 +100,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   fps: DEFAULT_FPS,
   showBoneMarkers: false,
   cameraGroundFeet: true,
+  cameraFollowTravel: true,
+  cameraPinFeet: true,
   cameraTurnHips: true,
   cameraBendSpine: true,
   cameraTurnHead: true,
@@ -175,7 +177,9 @@ const cameraPoseMappingOptions = computed(
     filterBodyFlips: reactiveConfig.value.cameraFilterBodyFlips,
     maxBoneTurnRadiansPerSecond: THREE.MathUtils.degToRad(
       reactiveConfig.value.cameraBoneMaxTurnSpeed
-    )
+    ),
+    followTravel: reactiveConfig.value.cameraFollowTravel,
+    pinPlantedFeet: reactiveConfig.value.cameraPinFeet
   })
 )
 
@@ -794,6 +798,7 @@ onUnmounted(() => {
     :fps="reactiveConfig.fps"
     :target-group-labels="targetBodyPartGroupLabels"
     @apply="handleCameraApply"
+    @new-source="rig.resetCameraTravel"
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"

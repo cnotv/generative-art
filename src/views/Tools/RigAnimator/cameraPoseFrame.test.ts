@@ -253,7 +253,8 @@ describe('mirrorCameraPoseFrame', () => {
     const frame: CameraPoseFrame = {
       bodyLandmarks: buildBodyLandmarks(),
       handLandmarks: { Left: leftHand },
-      headRotation: quaternionData(new THREE.Vector3(0, 1, 0), 0.4)
+      headRotation: quaternionData(new THREE.Vector3(0, 1, 0), 0.4),
+      bodyPosition: { x: 0.3, y: 0.1, z: -2 }
     }
 
     // Act
@@ -261,6 +262,7 @@ describe('mirrorCameraPoseFrame', () => {
 
     // Assert
     expect(mirrored.bodyLandmarks?.[15].x).toBeCloseTo(0.7)
+    expect(mirrored.bodyPosition).toEqual({ x: -0.3, y: 0.1, z: -2 })
     expect(mirrored.handLandmarks.Left).toBeUndefined()
     expect(mirrored.handLandmarks.Right?.[5].x).toBeCloseTo(-leftHand[5].x)
     expect(
@@ -287,7 +289,8 @@ describe('smoothCameraPoseFrame', () => {
     const next: CameraPoseFrame = {
       ...EMPTY_FRAME,
       bodyLandmarks: shiftedBody,
-      handLandmarks: { Right: rightHand }
+      handLandmarks: { Right: rightHand },
+      bodyPosition: { x: 0, y: 0, z: -2 }
     }
 
     // Act
@@ -301,6 +304,7 @@ describe('smoothCameraPoseFrame', () => {
       rightHand.map((landmark) => ({ ...landmark, velocity: { x: 0, y: 0, z: 0 } }))
     )
     expect(smoothed.timestampMilliseconds).toBe(1033)
+    expect(smoothed.bodyPosition).toEqual({ x: 0, y: 0, z: -2 })
   })
 
   it('drops a part the new reading no longer holds', () => {

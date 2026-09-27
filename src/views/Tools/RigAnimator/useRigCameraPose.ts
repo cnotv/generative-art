@@ -10,13 +10,24 @@ import {
   captureCameraRetargetRest,
   easeBonesFromTransforms
 } from './cameraPoseRetarget'
+import {
+  advanceCameraTravel,
+  cameraLegLength,
+  offsetBoneInWorld,
+  pinPlantedFeet,
+  rigLegLength
+} from './cameraPoseTravel'
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
 import type {
   TurnTracks,
+  CameraFootPins,
   CameraPoseFrame,
   CameraPoseMappingOptions,
-  CameraRetargetRest
+  CameraRetargetRest,
+  CameraTravel
 } from './types'
+
+const HIPS = 'mixamorigHips'
 
 /**
  * Owns the camera-pose-capture readiness check and applies a detected frame to the rig, split out
@@ -37,6 +48,17 @@ export const useRigCameraPose = (
   let lastAppliedAtMilliseconds: number | null = null
   /** How each bone has been rolling, so a reading that flips it over can be spotted. */
   const turnTracks: TurnTracks = new Map()
+  /** How far the current source has carried the rig, null until its first reading. */
+  let travel: CameraTravel | null = null
+  /** Each foot held where it landed. */
+  let footPins: CameraFootPins = {}
+
+  /** Start the next reading from the rig's own spot, as a new video or camera session should. */
+  const resetCameraTravel = (): void => {
+    travel = null
+    footPins = {}
+  }
+
   // Synchronous on purpose: the rig stands at rest the instant its bones are adopted, and a
   // deferred watcher could run after a restored autosave has already posed it.
   watch(
@@ -44,9 +66,33 @@ export const useRigCameraPose = (
     (nextBones) => {
       retargetRest = nextBones.length > 0 ? captureCameraRetargetRest(nextBones) : null
       turnTracks.clear()
+      resetCameraTravel()
     },
     { immediate: true, flush: 'sync' }
   )
+
+  /**
+   * Carry the hips to where the performer now stands. A frame that cannot say where that is,
+   * the hips out of the picture or the legs out of view, keeps the rig where it last was.
+   */
+  const carryHips = (
+    rest: CameraRetargetRest,
+    frame: CameraPoseFrame,
+    elapsedSeconds: number
+  ): void => {
+    const hips = bones.value.find((bone) => bone.name === HIPS)
+    const rigLeg = rigLegLength(rest)
+    const performerLeg = frame.bodyLandmarks && cameraLegLength(frame.bodyLandmarks)
+    if (frame.bodyPosition && rigLeg && performerLeg) {
+      travel = advanceCameraTravel(
+        travel,
+        { bodyPosition: frame.bodyPosition, performerLegLength: performerLeg },
+        rigLeg,
+        elapsedSeconds
+      )
+    }
+    if (hips && travel) offsetBoneInWorld(hips, travel.offset)
+  }
 
   /**
    * Apply a detected frame to the rig: reset whichever bones the frame drives back to rest, then
@@ -60,6 +106,11 @@ export const useRigCameraPose = (
    * for just one limb without disturbing whatever the rest of the rig already carries.
    * With bone smoothing or the joint speed cap on, each driven bone then eases from where the
    * previous frame left it toward its new rotation, see `easeBonesFromTransforms`.
+   *
+   * With `options.followTravel` the hips are then carried across the floor to where the performer
+   * stands, before easing so a smoothed hip eases between two carried positions. With
+   * `options.pinPlantedFeet` the legs are solved last, on the final pose, to hold each planted
+   * foot where it landed.
    * @param frame The detected body, hands and head, from `CameraPoseCapture`
    * @param options Which rules to apply and how, see `CameraPoseMappingOptions`
    * @param targetGroups Which body-part groups this capture is allowed to touch
@@ -93,13 +144,25 @@ export const useRigCameraPose = (
       turnTracks,
       elapsedSeconds
     })
+    if (!options.followTravel) travel = null
+    else if (drivenBoneNames.has(HIPS)) carryHips(retargetRest, frame, elapsedSeconds)
     easeBonesFromTransforms(
       bones.value,
       previousTransforms,
       cameraBoneSmoothingShare(options.boneSmoothingMilliseconds, elapsedSeconds),
       cameraBoneMaxTurnRadians(options.maxBoneTurnRadiansPerSecond, elapsedSeconds)
     )
+    if (!options.pinPlantedFeet) footPins = {}
+    else if (frame.bodyLandmarks) {
+      footPins = pinPlantedFeet(
+        bones.value,
+        retargetRest,
+        footPins,
+        elapsedSeconds,
+        drivenBoneNames
+      )
+    }
   }
 
-  return { canCaptureFromCamera, applyCameraPose }
+  return { canCaptureFromCamera, applyCameraPose, resetCameraTravel }
 }

@@ -3,6 +3,8 @@ import { shallowRef } from 'vue'
 import * as THREE from 'three'
 import { useRigCameraPose } from './useRigCameraPose'
 import { captureRestPoses, resetAllBonesToRest } from './boneDragTarget'
+import { captureCameraRetargetRest } from './cameraPoseRetarget'
+import { rigLegLength } from './cameraPoseTravel'
 import { RIG_BODY_PART_GROUPS, type RigBodyPartGroup } from './bodyPartGroups'
 import {
   buildBodyLandmarks,
@@ -114,5 +116,67 @@ describe('useRigCameraPose', () => {
     // Assert
     expect(bone('mixamorigLeftArm').quaternion.equals(posedArm)).toBe(true)
     expect(bone('mixamorigLeftHandIndex2').quaternion.angleTo(openIndex)).toBeGreaterThan(0.5)
+  })
+
+  describe('travel', () => {
+    const STANDING = buildBodyLandmarks()
+    const FRAME_MILLISECONDS = 1000 / 30
+    /** The performer `metres` closer to the camera than where they started, three metres away. */
+    const standingAt = (metresCloser: number): CameraPoseFrame => ({
+      ...EMPTY_FRAME,
+      bodyLandmarks: STANDING,
+      bodyPosition: { x: 0, y: 0, z: -3 + metresCloser }
+    })
+    /** A walk of `metres` toward the camera over two seconds, then two seconds standing there. */
+    const walkToward = (
+      applyCameraPose: ReturnType<typeof buildWiredRig>['applyCameraPose'],
+      options: ReturnType<typeof buildMappingOptions>,
+      metres: number
+    ): void =>
+      Array.from({ length: 120 }).forEach((_, index) =>
+        applyCameraPose(
+          standingAt(Math.min(1, index / 60) * metres),
+          options,
+          ALL_GROUPS,
+          index * FRAME_MILLISECONDS
+        )
+      )
+
+    it.each([
+      { followTravel: true, expectedLegLengths: 1 / 0.84 },
+      { followTravel: false, expectedLegLengths: 0 }
+    ])(
+      'with Follow Travel $followTravel, a metre toward the camera carries the hips $expectedLegLengths leg lengths toward the viewer',
+      ({ followTravel, expectedLegLengths }) => {
+        // Arrange
+        const { applyCameraPose, bone, restPoses } = buildWiredRig()
+        const legLength = rigLegLength(captureCameraRetargetRest(buildMixamoRig()))!
+
+        // Act
+        walkToward(applyCameraPose, buildMappingOptions({ followTravel }), 1)
+
+        // Assert
+        const restHips = restPoses.get('mixamorigHips')!.position
+        const hips = bone('mixamorigHips').position
+        expect((hips.z - restHips.z) / legLength).toBeCloseTo(expectedLegLengths, 1)
+        expect(hips.x - restHips.x).toBeCloseTo(0)
+      }
+    )
+
+    it('starts the next source from the rig’s own spot, not from where the last one left it', () => {
+      // Arrange
+      const { applyCameraPose, resetCameraTravel, bone, restPoses } = buildWiredRig()
+      const options = buildMappingOptions({ followTravel: true })
+      walkToward(applyCameraPose, options, 1)
+
+      // Act
+      resetCameraTravel()
+      applyCameraPose(standingAt(0.5), options, ALL_GROUPS, 10_000)
+
+      // Assert
+      expect(bone('mixamorigHips').position.z).toBeCloseTo(
+        restPoses.get('mixamorigHips')!.position.z
+      )
+    })
   })
 })

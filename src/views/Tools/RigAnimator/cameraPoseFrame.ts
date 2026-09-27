@@ -220,12 +220,17 @@ export const hasCameraPoseContent = (frame: CameraPoseFrame): boolean =>
 export const mirrorCameraPoseFrame = (frame: CameraPoseFrame): CameraPoseFrame => ({
   bodyLandmarks: frame.bodyLandmarks ? mirrorCameraLandmarks(frame.bodyLandmarks) : null,
   handLandmarks: mirrorCameraHandLandmarks(frame.handLandmarks),
-  headRotation: frame.headRotation ? mirrorHeadRotation(frame.headRotation) : null
+  headRotation: frame.headRotation ? mirrorHeadRotation(frame.headRotation) : null,
+  ...(frame.bodyPosition
+    ? { bodyPosition: { ...frame.bodyPosition, x: -frame.bodyPosition.x } }
+    : {})
 })
 
 /**
  * Smooth every part of a new reading against the previous smoothed frame, body and hands through
- * `filterCameraLandmarks` and the head through `smoothHeadRotation`. A part missing from either
+ * `filterCameraLandmarks` and the head through `smoothHeadRotation`. The body's position passes
+ * through as read: the travel it drives is smoothed on the capture's own clock, see
+ * `advanceCameraTravel`. A part missing from either
  * reading is taken as-is, so something reappearing after a dropout is not blended against a stale
  * position.
  * @param previous The previous smoothed frame, or null for a first reading
@@ -261,7 +266,8 @@ export const smoothCameraPoseFrame = (
         elapsedSeconds,
         settings
       ),
-    timestampMilliseconds
+    timestampMilliseconds,
+    ...(next.bodyPosition ? { bodyPosition: next.bodyPosition } : {})
   }
 }
 

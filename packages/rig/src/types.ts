@@ -8,6 +8,13 @@ export interface QuaternionData {
   w: number
 }
 
+/** A position snapshot, plain data so it survives JSON export/import */
+export interface Vector3Data {
+  x: number
+  y: number
+  z: number
+}
+
 /** One captured rig pose: every posed bone's local rotation, keyed by bone name */
 export type Pose = Record<string, QuaternionData>
 
