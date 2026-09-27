@@ -38,6 +38,8 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   let anchorTimeMs = 0
   let lastSampleStep = 0
   let samplesPerFrame = 1
+  /** Whether the take's starting frame still waits for the first frame the take applies. */
+  let isStartPending = false
   // Appended to in place: a long take gathers thousands of samples, and copying the whole list for
   // each one would make every sample slower than the last.
   const samples: PoseKeyframe[] = []
@@ -50,14 +52,23 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     anchorTimeMs = deps.now()
     lastSampleStep = 0
     samplesPerFrame = Math.max(1, Math.round(deps.samplesPerFrame()))
-    samples.splice(0, samples.length, { frame: anchorFrame, ...deps.captureSample() })
-    // recordFrameIfActive only ever captures a frame strictly past this one (its own guard
-    // below skips anything <= currentFrame, and currentFrame is this very frame until real
-    // time advances past it) — so without this, the anchor frame is left holding whatever
-    // keyframe, if any, already sat there. Scrubbing or playing into the start of a take then
-    // interpolates from that unrelated pose into the first real sample: a visible twitch right
-    // at the seam. Capturing the live pose already on the rig the instant recording arms closes
-    // that gap; it is not counted in `capturedFrameCount` since no time-driven motion happened.
+    samples.splice(0, samples.length)
+    isStartPending = true
+  }
+
+  /**
+   * Key the take's starting frame from the first frame it applies. recordFrameIfActive only ever
+   * captures a frame strictly past this one (its own guard skips anything <= currentFrame, and
+   * currentFrame is this very frame until time moves past it), so without this the starting frame
+   * keeps whatever keyframe already sat there, and scrubbing into the take twitches at the seam.
+   * The pose is taken from the first applied frame rather than the instant Record is pressed: at
+   * that instant the rig still shows the last reading of a paused video, or the rest pose a rewind
+   * left it in, and that stale pose became the take's first keyframe. It is not counted in
+   * `capturedFrameCount` since no time-driven motion happened.
+   */
+  const keyStartingFrame = (): void => {
+    isStartPending = false
+    samples.push({ frame: anchorFrame, ...deps.captureSample() })
     deps.addKeyframe()
   }
 
@@ -91,6 +102,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
    */
   const recordFrameIfActive = (): void => {
     if (!isRecording.value) return
+    if (isStartPending) keyStartingFrame()
     const elapsedSeconds = (deps.now() - anchorTimeMs) / 1000
     sampleIfDue(elapsedSeconds)
     const nextFrame = anchorFrame + Math.round(elapsedSeconds * deps.fps())

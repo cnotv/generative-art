@@ -326,6 +326,12 @@ export const CAMERA_HAND_FLIP_DEGREES_RANGE = { min: 10, max: 180, step: 5 }
 export const CAMERA_HAND_FLIP_CONFIRM_READINGS = 3
 /** A trusted hand reading older than this, in milliseconds, no longer vetoes a sharply turned one. */
 export const CAMERA_HAND_TRACK_RESET_MILLISECONDS = 500
+/**
+ * The furthest, in seconds of the video's own time, a reading may be from the last one and still
+ * count as the pose tracker following on from it. Further than that, a seek or a skip, the reading
+ * is taken from the wrong moment and only primes the tracker, see `continuesPreviousReading`.
+ */
+export const CAMERA_READING_MAX_GAP_SECONDS = 0.5
 /** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
 export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
 /**

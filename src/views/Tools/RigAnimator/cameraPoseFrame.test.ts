@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
   assignHandSides,
+  continuesPreviousReading,
   hideLandmarksOutsideFrame,
   cropLandmarksToFrame,
   cropSquareAroundLandmark,
@@ -401,5 +402,21 @@ describe('steadyCameraHands', () => {
 
     // Assert
     expect(frame.handLandmarks.Left).toEqual(rolled(170))
+  })
+})
+
+describe('continuesPreviousReading', () => {
+  it.each([
+    { label: 'the first reading of a run', previous: null, now: 0.2, expected: false },
+    { label: 'the next frame of a playing video', previous: 1, now: 1.033, expected: true },
+    { label: 'the same frame read twice', previous: 1, now: 1, expected: true },
+    { label: 'the first reading after a rewind', previous: 6, now: 0, expected: false },
+    { label: 'the first reading after a skip ahead', previous: 1, now: 3, expected: false }
+  ])('counts $label as continuing: $expected', ({ previous, now, expected }) => {
+    // Act
+    const continues = continuesPreviousReading(previous, now)
+
+    // Assert
+    expect(continues).toBe(expected)
   })
 })

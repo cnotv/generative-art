@@ -270,6 +270,23 @@ nothing else moving. The first frame of a new video or camera session is the exc
 earlier reading of this performer to hold, a limb it cannot see starts from rest rather than from
 whatever pose the rig was left in.
 
+## A take's malformed first frame
+
+A take recorded from a video began on a pose that matched none of its neighbours, and two causes
+stacked. Pressing Record Motion keyed the pose already on the rig, which was whatever the previous
+playback had left there: after a rewind, a moment from the end of the clip. Across the eight limb
+bones the first step of the take turned 31.7° on average against 14.7° once the take was keyed from
+its own first applied pose instead.
+
+The second cause is the detector. In its video mode the Pose Landmarker tracks each frame from the
+previous one, so a reading taken after a start, a pause or a seek has no valid previous frame: it is
+a fresh detection, or tracked from the moment the video left. Seeking the dance clip back to its
+start and comparing that first reading with the same frame read in sequence, a limb was up to 52°
+off after the rewind and 33° on the very first reading of a session. A reading that does not follow
+the previous one within half a second of video now only primes the tracker, and nothing is applied
+or recorded until the next. The first step of a take is now in line with the rest of it, 0.8 times
+the take's median turn per frame where it had been 1.4 times.
+
 ## Limits
 
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest

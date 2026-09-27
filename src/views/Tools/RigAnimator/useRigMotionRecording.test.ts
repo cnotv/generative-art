@@ -52,16 +52,41 @@ describe('useRigMotionRecording', () => {
     expect(addKeyframeCalls).toEqual([])
   })
 
-  it('captures the anchor frame itself the instant recording starts', () => {
-    const { recorder, addKeyframeCalls } = buildRecorder(30)
+  it('keys the starting frame from the first frame the take applies, not the instant it starts', () => {
+    // Arrange
+    const { recorder, addKeyframeCalls, sampledAt } = buildRecorder(30)
 
+    // Act
+    nowMs = 5
     recorder.startRecording()
+    const keyedAtStart = [...addKeyframeCalls]
+    const sampledAtStart = [...sampledAt]
+    nowMs = 10
+    recorder.recordFrameIfActive()
 
-    // recordFrameIfActive's own guard never captures this frame later (it only fires once
-    // real time reaches a frame strictly past it), so without this the take's start would be
-    // left holding whatever pose, if any, already sat there.
+    // Assert: nothing is taken from the rig as it stood when Record was pressed
+    expect(keyedAtStart).toEqual([])
+    expect(sampledAtStart).toEqual([])
     expect(addKeyframeCalls).toEqual([0])
+    expect(sampledAt.every((time) => time === 10)).toBe(true)
     expect(recorder.capturedFrameCount.value).toBe(0)
+  })
+
+  it('starts the finished take on the first applied pose, not a stale one left on the rig', () => {
+    // Arrange: each sample records when it was taken, so a stale start would read 0
+    const { recorder, replacedTakes } = buildRecorder(30)
+    recorder.startRecording()
+    ;[1, 2].forEach((frames) => {
+      nowMs = (frames * 1000) / 30
+      recorder.recordFrameIfActive()
+    })
+
+    // Act
+    recorder.stopRecording()
+
+    // Assert
+    const firstFrame = replacedTakes[0].keyframes.find(({ frame }) => frame === 0)
+    expect(firstFrame?.positions?.mixamorigHips.x).toBeCloseTo(1000 / 30)
   })
 
   it('samples a keyframe once real elapsed time reaches a new frame at the configured fps', () => {
@@ -198,6 +223,6 @@ describe('useRigMotionRecording', () => {
     recorder.recordFrameIfActive()
 
     expect(frame.value).toBe(0)
-    expect(addKeyframeCalls).toEqual([0])
+    expect(addKeyframeCalls).toEqual([])
   })
 })

@@ -6,7 +6,12 @@ import {
   createCameraLandmarkers,
   detectCameraPose
 } from './cameraPoseDetection'
-import { mirrorCameraPoseFrame, smoothCameraPoseFrame, steadyCameraHands } from './cameraPoseFrame'
+import {
+  continuesPreviousReading,
+  mirrorCameraPoseFrame,
+  smoothCameraPoseFrame,
+  steadyCameraHands
+} from './cameraPoseFrame'
 import type {
   CameraDetectionOptions,
   CameraHandTracks,
@@ -51,6 +56,8 @@ export const useVideoLandmarkDetection = ({
   let landmarkers: CameraLandmarkers | null = null
   let animationFrame: number | null = null
   let handTracks: CameraHandTracks = {}
+  /** The video time of the last reading of this run, null until the run's first reading. */
+  let lastReadingVideoSeconds: number | null = null
 
   const detectFrame = (): void => {
     const video = videoElement.value
@@ -60,8 +67,17 @@ export const useVideoLandmarkDetection = ({
     // A paused or finished video shows the same frame over and over: detecting it again would
     // only keep applying a pose nobody is performing, and keep a recording sampling it.
     isDetecting.value = !options.detectOnlyWhilePlaying || (!video.paused && !video.ended)
-    if (!isDetecting.value) return
+    if (!isDetecting.value) {
+      lastReadingVideoSeconds = null
+      return
+    }
     const timestamp = performance.now()
+    const poseResult = landmarkers.pose.detectForVideo(video, timestamp)
+    const isTracked = continuesPreviousReading(lastReadingVideoSeconds, video.currentTime)
+    lastReadingVideoSeconds = video.currentTime
+    // The first reading after a start, a pause or a seek only primes the pose tracker, see
+    // `continuesPreviousReading`: applied or recorded, it is the malformed first frame of a take.
+    if (!isTracked) return
     const detection = detectCameraPose(
       {
         source: video,
@@ -70,7 +86,7 @@ export const useVideoLandmarkDetection = ({
         cropCanvas,
         options
       },
-      landmarkers.pose.detectForVideo(video, timestamp)
+      poseResult
     )
     previewLandmarks.value = detection.previewLandmarks
     previewHandLandmarks.value =
@@ -106,6 +122,7 @@ export const useVideoLandmarkDetection = ({
     closeCameraLandmarkers(landmarkers)
     landmarkers = null
     handTracks = {}
+    lastReadingVideoSeconds = null
     isDetecting.value = false
     previewLandmarks.value = null
     previewHandLandmarks.value = null

@@ -504,13 +504,19 @@ take ends — since rebuilding it from the whole keyframe list on every one of s
 second made each capture slower than the last and read as the model stuttering, even though
 every frame was still captured correctly underneath it.
 
-Starting a take also captures the live pose already on the rig at that exact instant, before
-any elapsed-time sampling begins. Without that, the take's very first frame carried no
-keyframe of its own — sampling only ever adds one once real time has moved past it — so
-scrubbing or playing into the start of the recording interpolated from whatever pose, if any,
-already sat there instead, a visible twitch right at the seam. Once a take ends, it is added
-to **Presets** — see below — so it can be played back or reloaded the same way a bundled
-mocap clip can.
+A take's first keyframe is the first pose the take itself applies, keyed on the frame recording
+started from. Without one, the take's very first frame carried no keyframe of its own — sampling
+only ever adds one once real time has moved past it — so scrubbing or playing into the start of
+the recording interpolated from whatever pose already sat there, a visible twitch at the seam.
+It is not the pose on the rig the instant **Record Motion** is pressed: that one is left over from
+before, often from a moment the video has since rewound past, and keying it started the take on a
+pose that belongs to no moment of it. Once a take ends, it is added to **Presets** — see below —
+so it can be played back or reloaded the same way a bundled mocap clip can.
+
+A video holds back its first reading after it starts, pauses or seeks. The video mode of the Pose
+Landmarker tracks each frame from the one before, so the first reading after a jump is either a
+fresh detection or tracked from the wrong moment, and can be tens of degrees off on a limb. That
+reading only primes the tracker; the rig, and a take, begin at the next one.
 
 **Upload Photo/Video**, the upload icon in the panel's action row, reads a pose from an uploaded
 file instead of the live feed, useful for
@@ -603,8 +609,8 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   position. The rig eases toward that spot over a quarter of a second and moves by the performer's
   own travel scaled by the ratio of the two leg lengths, measured from where the performer stood
   when the video, photo or camera session started. That start is where the first quarter second of
-  readings agree, with the rig held still meanwhile, since a video's very first reading is a fresh
-  detection whose depth can be off by a hand's width. Pausing or seeking a video lands the rig
+  readings agree, with the rig held still meanwhile, since detection settles over its first
+  readings: a video's very first one had its depth off by a hand's width. Pausing or seeking a video lands the rig
   straight on the spot for that moment.
 - **Planted feet.** The lower foot is taken as planted where it lands and held there while the
   body moves over it, the leg bent to reach it. It is let go, easing back over a tenth of a second
