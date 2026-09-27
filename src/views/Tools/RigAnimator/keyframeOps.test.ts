@@ -556,6 +556,24 @@ describe('cleanUpRecordedTake', () => {
     expect(Math.abs(degreesAt(cleaned, 4) - 20)).toBeLessThan(10)
   })
 
+  it('keeps where the hips stood on every keyframe it keeps', () => {
+    // Arrange
+    const travelling = take.map((keyframe) => ({
+      ...keyframe,
+      positions: { mixamorigHips: { x: 0, y: 100, z: keyframe.frame * 10 } }
+    }))
+
+    // Act
+    const cleaned = cleanUpRecordedTake(travelling, { smoothingPasses: 6, halvingPasses: 2 })
+
+    // Assert
+    expect(cleaned.map(({ frame, positions }) => [frame, positions?.mixamorigHips.z])).toEqual([
+      [0, 0],
+      [4, 40],
+      [8, 80]
+    ])
+  })
+
   it('leaves the first and last keyframe exactly where the take put them', () => {
     // Arrange, Act
     const cleaned = cleanUpRecordedTake(take, { smoothingPasses: 6, halvingPasses: 2 })
