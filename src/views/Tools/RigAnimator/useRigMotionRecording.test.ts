@@ -29,9 +29,12 @@ describe('useRigMotionRecording', () => {
       setFrame: (next) => (frame.value = next),
       setFrameMax: (next) => (frameMaxState.value = next),
       addKeyframe: () => addKeyframeCalls.push(frame.value),
-      capturePose: () => {
+      captureSample: () => {
         sampledAt.push(nowMs)
-        return { mixamorigHips: { x: 0, y: 0, z: 0, w: 1 } }
+        return {
+          pose: { mixamorigHips: { x: 0, y: 0, z: 0, w: 1 } },
+          positions: { mixamorigHips: { x: nowMs, y: 0, z: 0 } }
+        }
       },
       replaceTake: (fromFrame, toFrame, keyframes) =>
         replacedTakes.push({ fromFrame, toFrame, keyframes })
@@ -158,6 +161,23 @@ describe('useRigMotionRecording', () => {
     expect(replacedTakes[0].fromFrame).toBe(0)
     expect(replacedTakes[0].toFrame).toBe(2)
     expect(replacedTakes[0].keyframes.map(({ frame }) => frame)).toEqual([0, 1, 2])
+  })
+
+  it('keeps where the sampled bones stood, averaged over each frame, in the finished take', () => {
+    // Arrange
+    const { recorder, replacedTakes } = buildRecorder(30)
+    recorder.startRecording()
+    ;[0.5, 1].forEach((frames) => {
+      nowMs = (frames * 1000) / 30
+      recorder.recordFrameIfActive()
+    })
+
+    // Act
+    recorder.stopRecording()
+
+    // Assert
+    const secondFrame = replacedTakes[0].keyframes.find(({ frame }) => frame === 1)
+    expect(secondFrame?.positions?.mixamorigHips.x).toBeCloseTo(((0.5 + 1) / 2 / 30) * 1000)
   })
 
   it('leaves the timeline alone when a take stops before any time passed', () => {

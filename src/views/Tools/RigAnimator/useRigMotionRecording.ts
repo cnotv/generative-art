@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { Pose, PoseKeyframe } from '@webgamekit/rig'
+import type { PoseKeyframe } from '@webgamekit/rig'
 import { filterRecordedSamples } from './keyframeOps'
 
 /** Reads and writes the rig timeline state a live-motion recording drives, kept as plain
@@ -17,8 +17,9 @@ export interface RigMotionRecordingDependencies {
   setFrame: (frame: number) => void
   setFrameMax: (frameMax: number) => void
   addKeyframe: () => void
-  /** The rig's pose right now, sampled `samplesPerFrame` times a frame. */
-  capturePose: () => Pose
+  /** The rig's pose right now, and where the bones a capture moves stand, sampled
+   * `samplesPerFrame` times a frame. */
+  captureSample: () => Omit<PoseKeyframe, 'frame'>
   /** Swap the take's keyframes, `fromFrame` to `toFrame`, for the ones filtered from its samples. */
   replaceTake: (fromFrame: number, toFrame: number, keyframes: PoseKeyframe[]) => void
 }
@@ -49,7 +50,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     anchorTimeMs = deps.now()
     lastSampleStep = 0
     samplesPerFrame = Math.max(1, Math.round(deps.samplesPerFrame()))
-    samples.splice(0, samples.length, { frame: anchorFrame, pose: deps.capturePose() })
+    samples.splice(0, samples.length, { frame: anchorFrame, ...deps.captureSample() })
     // recordFrameIfActive only ever captures a frame strictly past this one (its own guard
     // below skips anything <= currentFrame, and currentFrame is this very frame until real
     // time advances past it) — so without this, the anchor frame is left holding whatever
@@ -76,10 +77,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     const step = Math.round(elapsedSeconds * deps.fps() * samplesPerFrame)
     if (step <= lastSampleStep) return
     lastSampleStep = step
-    samples.push({
-      frame: anchorFrame + step / samplesPerFrame,
-      pose: deps.capturePose()
-    })
+    samples.push({ frame: anchorFrame + step / samplesPerFrame, ...deps.captureSample() })
   }
 
   /**

@@ -26,7 +26,8 @@ import type {
   CameraRetargetRest
 } from './types'
 
-const HIPS = 'mixamorigHips'
+/** The bone a capture turns the body by and carries across the floor. */
+export const CAMERA_HIPS_BONE = 'mixamorigHips'
 const NECK = 'mixamorigNeck'
 const HEAD = 'mixamorigHead'
 const RIG_SIDES: HandSide[] = ['Left', 'Right']
@@ -41,7 +42,7 @@ const JOINT_LIMITS = new Map(Object.entries(CAMERA_JOINT_LIMITS_DEGREES))
 
 /** Every bone the body mapping cannot work without; spine, neck, fingers and toes are used when present. */
 export const CAMERA_POSE_REQUIRED_BONES = [
-  HIPS,
+  CAMERA_HIPS_BONE,
   'mixamorigLeftArm',
   'mixamorigRightArm',
   'mixamorigLeftForeArm',
@@ -589,7 +590,9 @@ const spineBoneNames = (context: RetargetContext): string[] => {
   const top = (context.bonesByName.get(NECK) ?? context.bonesByName.get('mixamorigLeftShoulder'))
     ?.parent
   const collect = (node: THREE.Object3D | null | undefined): string[] =>
-    node instanceof THREE.Bone && node.name !== HIPS ? [...collect(node.parent), node.name] : []
+    node instanceof THREE.Bone && node.name !== CAMERA_HIPS_BONE
+      ? [...collect(node.parent), node.name]
+      : []
   return collect(top)
 }
 
@@ -597,7 +600,7 @@ const spineBoneNames = (context: RetargetContext): string[] => {
 const applyTorso = (context: RetargetContext, torso: TorsoRotations): void => {
   // With the hips switched off the pelvis stays at rest and the spine takes the whole turn.
   const pelvis = context.options.turnHips ? torso.pelvis : new THREE.Quaternion()
-  rotateFromRest(context, HIPS, pelvis)
+  rotateFromRest(context, CAMERA_HIPS_BONE, pelvis)
   if (!context.options.bendSpine) return
   const spineNames = spineBoneNames(context)
   const bend = torso.chest.clone().multiply(pelvis.clone().invert())
@@ -882,7 +885,7 @@ const applyLeg = (context: RetargetContext, side: HandSide, point: BodyPointRead
  * the legs up off the floor instead of bringing the hips down.
  */
 const groundFeet = (context: RetargetContext): void => {
-  const hips = drivenBone(context, HIPS)
+  const hips = drivenBone(context, CAMERA_HIPS_BONE)
   const footBones = FOOT_BONE_NAMES.flatMap((name) => {
     const bone = context.bonesByName.get(name)
     const restPosition = context.rest.worldPositions.get(name)

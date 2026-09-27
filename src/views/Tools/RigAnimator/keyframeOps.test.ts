@@ -205,6 +205,36 @@ describe('mergeSampledKeyframesIntoScope', () => {
     expect(result).toEqual(sampled)
   })
 
+  it('takes a bone position from the source only for a bone in scope', () => {
+    // Arrange
+    const existing: PoseKeyframe[] = [
+      {
+        frame: 0,
+        pose: bothBonesPose(),
+        positions: { leftArm: { x: 1, y: 0, z: 0 }, leftLeg: { x: 2, y: 0, z: 0 } }
+      }
+    ]
+    const sampled: PoseKeyframe[] = [
+      {
+        frame: 0,
+        pose: bothBonesPose(),
+        positions: { leftArm: { x: 9, y: 0, z: 0 }, leftLeg: { x: 9, y: 0, z: 0 } }
+      }
+    ]
+
+    // Act
+    const result = mergeSampledKeyframesIntoScope(existing, sampled, new Set(['leftArm']))
+
+    // Assert
+    expect(result).toEqual([
+      {
+        frame: 0,
+        pose: bothBonesPose(),
+        positions: { leftLeg: { x: 2, y: 0, z: 0 }, leftArm: { x: 9, y: 0, z: 0 } }
+      }
+    ])
+  })
+
   it('re-shooting the same group a second time replaces its earlier contribution entirely', () => {
     const firstShoot = mergeSampledKeyframesIntoScope(
       [],
@@ -260,6 +290,36 @@ describe('filterRecordedSamples', () => {
 
     // Assert
     expect(keyframes.map(({ frame }) => frame)).toEqual([0, 1, 2])
+  })
+
+  it('averages the bone positions sampled within a frame', () => {
+    // Arrange
+    const samples = [
+      { frame: 0.5, pose: turned(0), positions: { mixamorigHips: { x: 0, y: 1, z: 2 } } },
+      { frame: 1, pose: turned(0), positions: { mixamorigHips: { x: 2, y: 1, z: 4 } } }
+    ]
+
+    // Act
+    const keyframes = filterRecordedSamples(samples)
+
+    // Assert
+    expect(keyframes.find(({ frame }) => frame === 1)?.positions).toEqual({
+      mixamorigHips: { x: 1, y: 1, z: 3 }
+    })
+    expect(keyframes.find(({ frame }) => frame === 0)?.positions).toEqual({
+      mixamorigHips: { x: 0, y: 1, z: 2 }
+    })
+  })
+
+  it('leaves positions out of a keyframe whose samples carried none', () => {
+    // Arrange
+    const samples = [0, 0.5].map((frame) => ({ frame, pose: turned(0) }))
+
+    // Act
+    const keyframes = filterRecordedSamples(samples)
+
+    // Assert
+    expect(keyframes.every((keyframe) => keyframe.positions === undefined)).toBe(true)
   })
 
   it('drops a single misread sample outvoted by the samples either side of it', () => {

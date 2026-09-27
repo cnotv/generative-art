@@ -5,7 +5,8 @@ import { useRigCameraPose } from './useRigCameraPose'
 import { useRigHandPose } from './useRigHandPose'
 import { useRigRecordedPresets } from './useRigRecordedPresets'
 import { useRigPhysics } from './useRigPhysics'
-import { poseCapture, type Pose, type PoseKeyframe } from '@webgamekit/rig'
+import { poseCapture, type PoseKeyframe } from '@webgamekit/rig'
+import { CAMERA_HIPS_BONE } from './cameraPoseRetarget'
 import { boneNamesInGroups, type RigBodyPartGroup } from './bodyPartGroups'
 import {
   filterKeyframesInList,
@@ -52,8 +53,18 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   const captureKeyframeSilently = (): void =>
     rigKeyframes.captureKeyframeSilently(rigModel.bones.value)
 
-  /** The rig's current pose, for motion recording's in-between samples. */
-  const capturePose = (): Pose => poseCapture(rigModel.bones.value)
+  /**
+   * The rig's current pose, for motion recording's in-between samples, with where the hips stand:
+   * a capture carries them across the floor and lowers them into a crouch, and a take keeps both.
+   * Add Keyframe stays rotation only, see the rig animator guide.
+   */
+  const captureRecordedSample = (): Omit<PoseKeyframe, 'frame'> => {
+    const hips = rigModel.bones.value.find((bone) => bone.name === CAMERA_HIPS_BONE)
+    const pose = poseCapture(rigModel.bones.value)
+    if (!hips) return { pose }
+    const { x, y, z } = hips.position
+    return { pose, positions: { [hips.name]: { x, y, z } } }
+  }
 
   /** Swap a finished take's live keyframes for its filtered ones, before they are committed. */
   const replaceRecordedTake = (
@@ -136,7 +147,7 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     loadModel,
     addKeyframe,
     captureKeyframeSilently,
-    capturePose,
+    captureRecordedSample,
     replaceRecordedTake,
     filterKeyframes,
     reduceKeyframes,

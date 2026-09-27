@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { Pose, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
+import type { Pose, PoseKeyframe, QuaternionData, Vector3Data } from '@webgamekit/rig'
 import { isBoneRollFlip } from './turnTracking'
 import { CAMERA_KEYFRAME_ROLL_FLIP_DEGREES } from './config'
 
@@ -76,12 +76,37 @@ export const insertFrameRangeIntoList = (
   )
 }
 
-const posePickingBones = (pose: Pose, isInScope: (boneName: string) => boolean): Pose =>
-  Object.fromEntries(Object.entries(pose).filter(([boneName]) => isInScope(boneName)))
+const pickingBones = <T>(
+  byBone: Record<string, T>,
+  isInScope: (boneName: string) => boolean
+): Record<string, T> =>
+  Object.fromEntries(Object.entries(byBone).filter(([boneName]) => isInScope(boneName)))
+
+/** A keyframe cut down to the bones in scope, rotations and positions alike, or null if none are. */
+const keyframePickingBones = (
+  keyframe: PoseKeyframe,
+  isInScope: (boneName: string) => boolean
+): PoseKeyframe | null => {
+  const pose = pickingBones(keyframe.pose, isInScope)
+  const positions = pickingBones(keyframe.positions ?? {}, isInScope)
+  const hasPositions = Object.keys(positions).length > 0
+  if (Object.keys(pose).length === 0 && !hasPositions) return null
+  return { frame: keyframe.frame, pose, ...(hasPositions ? { positions } : {}) }
+}
+
+/** Lay one keyframe's bones over another's at the same frame, the second winning where both have one. */
+const overlayKeyframe = (under: PoseKeyframe, over: PoseKeyframe): PoseKeyframe => {
+  const positions = { ...under.positions, ...over.positions }
+  return {
+    frame: under.frame,
+    pose: { ...under.pose, ...over.pose },
+    ...(Object.keys(positions).length > 0 ? { positions } : {})
+  }
+}
 
 /**
  * Merge a source's sampled keyframes into the existing timeline, touching only the bones in
- * `boneNamesInScope`. Every existing keyframe first has its in-scope bones stripped out
+ * `boneNamesInScope`, rotations and positions alike. Every existing keyframe first has its in-scope bones stripped out
  * (dropping a keyframe left with none), so a group already posed from an earlier source is
  * replaced rather than mixed with the new one; the sampled keyframes' own in-scope bones are
  * then merged in at their own frames, alongside whatever an existing keyframe there still
@@ -101,27 +126,20 @@ export const mergeSampledKeyframesIntoScope = (
   const isInScope = (boneName: string): boolean => boneNamesInScope.has(boneName)
   const isOutOfScope = (boneName: string): boolean => !isInScope(boneName)
 
-  const withoutScope = existingKeyframes
-    .map((keyframe) => ({
-      frame: keyframe.frame,
-      pose: posePickingBones(keyframe.pose, isOutOfScope)
-    }))
-    .filter((keyframe) => Object.keys(keyframe.pose).length > 0)
-
-  const scopedSampled = sampledKeyframes
-    .map((keyframe) => ({
-      frame: keyframe.frame,
-      pose: posePickingBones(keyframe.pose, isInScope)
-    }))
-    .filter((keyframe) => Object.keys(keyframe.pose).length > 0)
+  const withoutScope = existingKeyframes.flatMap((keyframe) => {
+    const kept = keyframePickingBones(keyframe, isOutOfScope)
+    return kept ? [kept] : []
+  })
+  const scopedSampled = sampledKeyframes.flatMap((keyframe) => {
+    const scoped = keyframePickingBones(keyframe, isInScope)
+    return scoped ? [scoped] : []
+  })
 
   return scopedSampled.reduce<PoseKeyframe[]>((merged, scopedKeyframe) => {
     const existingAtFrame = merged.find((keyframe) => keyframe.frame === scopedKeyframe.frame)
     if (!existingAtFrame) return [...merged, scopedKeyframe]
     return merged.map((keyframe) =>
-      keyframe.frame === scopedKeyframe.frame
-        ? { frame: keyframe.frame, pose: { ...keyframe.pose, ...scopedKeyframe.pose } }
-        : keyframe
+      keyframe.frame === scopedKeyframe.frame ? overlayKeyframe(keyframe, scopedKeyframe) : keyframe
     )
   }, withoutScope)
 }
@@ -167,11 +185,37 @@ const filterRotationSamples = (rotations: QuaternionData[]): QuaternionData => {
   return { x: filtered.x, y: filtered.y, z: filtered.z, w: filtered.w }
 }
 
+/** One rotation per bone standing for several sampled poses, see `filterRotationSamples`. */
+const filterPoseSamples = (poses: Pose[]): Pose =>
+  Object.fromEntries(
+    [...new Set(poses.flatMap((pose) => Object.keys(pose)))].map((boneName) => [
+      boneName,
+      filterRotationSamples(poses.flatMap((pose) => (pose[boneName] ? [pose[boneName]] : [])))
+    ])
+  )
+
+/**
+ * One position per bone standing for several samples: their mean. A position has no misread
+ * of its own to outvote the way a flipped roll does, it only jitters, which a mean settles.
+ */
+const averagePositionSamples = (
+  samples: Record<string, Vector3Data>[]
+): Record<string, Vector3Data> =>
+  Object.fromEntries(
+    [...new Set(samples.flatMap((positions) => Object.keys(positions)))].map((boneName) => {
+      const positions = samples.flatMap((sample) => (sample[boneName] ? [sample[boneName]] : []))
+      const mean = (axis: keyof Vector3Data): number =>
+        positions.reduce((total, position) => total + position[axis], 0) / positions.length
+      return [boneName, { x: mean('x'), y: mean('y'), z: mean('z') }]
+    })
+  )
+
 /**
  * Turn the poses Record Motion sampled between frames into one keyframe per frame. Each frame
  * takes every sample within half a frame of it, so at two samples per frame a frame is decided by
- * the sample on it and the two either side, see `filterRotationSamples`. A frame with no sample
- * near it gets no keyframe and is interpolated like any other gap.
+ * the sample on it and the two either side, see `filterRotationSamples`; the bone positions a
+ * take carries are averaged, see `averagePositionSamples`. A frame with no sample near it gets no
+ * keyframe and is interpolated like any other gap.
  * @param samples Poses at fractional frames, in any order
  * @returns One filtered keyframe per frame that had samples, in frame order
  */
@@ -181,20 +225,21 @@ export const filterRecordedSamples = (samples: PoseKeyframe[]): PoseKeyframe[] =
       { length: Math.floor(sample.frame + 0.5) - Math.ceil(sample.frame - 0.5) + 1 },
       (_, offset) => Math.ceil(sample.frame - 0.5) + offset
     )
-    frames.forEach((frame) => groups.set(frame, [...(groups.get(frame) ?? []), sample.pose]))
+    frames.forEach((frame) => groups.set(frame, [...(groups.get(frame) ?? []), sample]))
     return groups
-  }, new Map<number, Pose[]>())
+  }, new Map<number, PoseKeyframe[]>())
   return [...byFrame.entries()]
     .sort(([a], [b]) => a - b)
-    .map(([frame, poses]) => ({
-      frame,
-      pose: Object.fromEntries(
-        [...new Set(poses.flatMap((pose) => Object.keys(pose)))].map((boneName) => [
-          boneName,
-          filterRotationSamples(poses.flatMap((pose) => (pose[boneName] ? [pose[boneName]] : [])))
-        ])
+    .map(([frame, frameSamples]) => {
+      const positions = averagePositionSamples(
+        frameSamples.flatMap((sample) => (sample.positions ? [sample.positions] : []))
       )
-    }))
+      return {
+        frame,
+        pose: filterPoseSamples(frameSamples.map((sample) => sample.pose)),
+        ...(Object.keys(positions).length > 0 ? { positions } : {})
+      }
+    })
 }
 
 const toQuaternionData = ({ x, y, z, w }: THREE.Quaternion): QuaternionData => ({ x, y, z, w })

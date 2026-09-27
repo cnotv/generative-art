@@ -1,6 +1,7 @@
 import { computed, watch, type Ref } from 'vue'
 import type * as THREE from 'three'
 import {
+  CAMERA_HIPS_BONE,
   CAMERA_POSE_REQUIRED_BONES,
   applyCameraPoseFrame,
   cameraBoneMaxTurnRadians,
@@ -26,8 +27,6 @@ import type {
   CameraRetargetRest,
   CameraTravel
 } from './types'
-
-const HIPS = 'mixamorigHips'
 
 /**
  * Owns the camera-pose-capture readiness check and applies a detected frame to the rig, split out
@@ -80,7 +79,7 @@ export const useRigCameraPose = (
     frame: CameraPoseFrame,
     elapsedSeconds: number
   ): void => {
-    const hips = bones.value.find((bone) => bone.name === HIPS)
+    const hips = bones.value.find((bone) => bone.name === CAMERA_HIPS_BONE)
     const rigLeg = rigLegLength(rest)
     const performerLeg = frame.bodyLandmarks && cameraLegLength(frame.bodyLandmarks)
     if (frame.bodyPosition && rigLeg && performerLeg) {
@@ -145,7 +144,7 @@ export const useRigCameraPose = (
       elapsedSeconds
     })
     if (!options.followTravel) travel = null
-    else if (drivenBoneNames.has(HIPS)) carryHips(retargetRest, frame, elapsedSeconds)
+    else if (drivenBoneNames.has(CAMERA_HIPS_BONE)) carryHips(retargetRest, frame, elapsedSeconds)
     easeBonesFromTransforms(
       bones.value,
       previousTransforms,

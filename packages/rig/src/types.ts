@@ -22,6 +22,8 @@ export type Pose = Record<string, QuaternionData>
 export interface PoseKeyframe {
   frame: number
   pose: Pose
+  /** Bones this keyframe also moves, their local position keyed by name: a recorded take's hips */
+  positions?: Record<string, Vector3Data>
 }
 
 /** Where a humanoid template bone sits, as fractions of the model's bounding box */

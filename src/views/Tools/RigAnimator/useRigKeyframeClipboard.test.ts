@@ -61,6 +61,21 @@ describe('useRigKeyframeClipboard', () => {
     )
   })
 
+  it('carries a copied keyframe’s bone positions onto the pasted one', () => {
+    const recorded: PoseKeyframe = {
+      frame: 5,
+      pose: pose('stride'),
+      positions: { mixamorigHips: { x: 1, y: 2, z: 3 } }
+    }
+    const { config, keyframesReference, copyKeyframes, pasteKeyframes } = buildClipboard([recorded])
+
+    copyKeyframes([5])
+    config.value.frame = 20
+    pasteKeyframes([])
+
+    expect(keyframesReference.value).toContainEqual({ ...recorded, frame: 20 })
+  })
+
   it('skips frames with no keyframe of their own when copying', () => {
     const { hasClipboard, copyKeyframes } = buildClipboard([{ frame: 4, pose: pose('a') }])
 
