@@ -706,12 +706,16 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Video Slowdown Ratio**, 6 by default, from 1 to 6, sets two things at once for an uploaded
+- **Video Slowdown Ratio**, 6 by default, from 1 to 20, sets two things at once for an uploaded
   video: how many times slower it plays, and how many poses Record Motion samples per frame of it
   before filtering them down to one keyframe. The two go together because a video slowed N times
   gives detection about N readings of each of its frames. Record Motion times a video take by the
   video's own position rather than the clock on the wall, so the recorded clip keeps the video's
   real timing at any ratio. 1 plays at normal speed with one sample a frame and nothing to filter.
+  A browser will not play a video slower than a sixteenth of its speed, and Chromium throws when
+  asked to, so from 17 to 20 the video plays at that sixteenth and the ratio only raises how many
+  poses are sampled a frame: detection runs once per displayed frame, so a fast machine still has
+  that many readings of each video frame to fill them with.
   The smoothing times above still run on the wall clock, so at a ratio of 6 they act on a sixth as
   much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned

@@ -263,7 +263,13 @@ export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0
  * normal speed with one sample a frame and nothing to filter.
  */
 export const CAMERA_VIDEO_SLOWDOWN_RATIO = 6
-export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 6, step: 1 }
+export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 20, step: 1 }
+/**
+ * The slowest a browser plays a video, a sixteenth of its speed: Chromium throws
+ * `NotSupportedError` for any rate below it. A slowdown ratio past 16 plays at this rate and only
+ * raises how many poses Record Motion samples per frame.
+ */
+export const CAMERA_VIDEO_MIN_PLAYBACK_RATE = 0.0625
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
