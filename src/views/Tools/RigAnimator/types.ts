@@ -315,6 +315,10 @@ export interface CameraTravel {
   performerLegLength: number
   /** How far the rig's hips are carried from where they stand at rest, in world units, level. */
   offset: Vector3Data
+  /** How long the source has been read for, in seconds. */
+  sourceSeconds: number
+  /** The readings the start is still being taken from; empty once it is settled. */
+  startReadings: Vector3Data[]
 }
 
 /** One foot held where it landed, and how firmly. */

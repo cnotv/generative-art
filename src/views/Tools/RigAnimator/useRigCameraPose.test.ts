@@ -7,7 +7,10 @@ import { captureCameraRetargetRest } from './cameraPoseRetarget'
 import { rigLegLength } from './cameraPoseTravel'
 import { RIG_BODY_PART_GROUPS, type RigBodyPartGroup } from './bodyPartGroups'
 import { smoothCameraPoseFrame } from './cameraPoseFrame'
-import { CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND } from './config'
+import {
+  CAMERA_BONE_MAX_TURN_DEGREES_PER_SECOND,
+  CAMERA_TRAVEL_ANCHOR_MILLISECONDS
+} from './config'
 import {
   buildBodyLandmarks,
   buildHandLandmarks,
@@ -131,6 +134,31 @@ describe('useRigCameraPose', () => {
     }
   )
 
+  it('starts a limb the first frame of a new source cannot see from rest, not from the last source', () => {
+    // Arrange: the last source left the left arm raised
+    const { applyCameraPose, startNewCameraSource, bone, restPoses } = buildWiredRig()
+    applyCameraPose(
+      {
+        ...EMPTY_FRAME,
+        bodyLandmarks: buildBodyLandmarks({ 13: [0.2, -0.8, 0], 15: [0.22, -1.05, 0] })
+      },
+      OPTIONS,
+      ALL_GROUPS
+    )
+    const elbowLost = buildBodyLandmarks().map((landmark, index) =>
+      index === 13 ? { ...landmark, visibility: 0 } : landmark
+    )
+
+    // Act: a new video starts on a frame that cannot see that elbow
+    startNewCameraSource()
+    applyCameraPose({ ...EMPTY_FRAME, bodyLandmarks: elbowLost }, OPTIONS, ALL_GROUPS)
+
+    // Assert
+    expect(
+      bone('mixamorigLeftArm').quaternion.angleTo(restPoses.get('mixamorigLeftArm')!.quaternion)
+    ).toBeCloseTo(0)
+  })
+
   it('curls the fingers of a hand filmed on its own without resetting the posed body', () => {
     // Arrange: the body is posed by an earlier frame, then only a hand stays in view.
     const { applyCameraPose, bone } = buildWiredRig()
@@ -166,15 +194,17 @@ describe('useRigCameraPose', () => {
       bodyLandmarks: STANDING,
       bodyPosition: { x: 0, y: 0, z: -3 + metresCloser }
     })
-    /** A walk of `metres` toward the camera over two seconds, then two seconds standing there. */
+    /** Frames the performer stands still for before walking, as long as the start is taken over. */
+    const STANDING_FRAMES = Math.ceil(CAMERA_TRAVEL_ANCHOR_MILLISECONDS / FRAME_MILLISECONDS)
+    /** Standing still, a walk of `metres` toward the camera over two seconds, then two seconds there. */
     const walkToward = (
       applyCameraPose: ReturnType<typeof buildWiredRig>['applyCameraPose'],
       options: ReturnType<typeof buildMappingOptions>,
       metres: number
     ): void =>
-      Array.from({ length: 120 }).forEach((_, index) =>
+      Array.from({ length: STANDING_FRAMES + 120 }).forEach((_, index) =>
         applyCameraPose(
-          standingAt(Math.min(1, index / 60) * metres),
+          standingAt(Math.min(1, Math.max(0, index - STANDING_FRAMES) / 60) * metres),
           options,
           ALL_GROUPS,
           index * FRAME_MILLISECONDS
@@ -294,12 +324,12 @@ describe('useRigCameraPose', () => {
 
     it('starts the next source from the rig’s own spot, not from where the last one left it', () => {
       // Arrange
-      const { applyCameraPose, resetCameraTravel, bone, restPoses } = buildWiredRig()
+      const { applyCameraPose, startNewCameraSource, bone, restPoses } = buildWiredRig()
       const options = buildMappingOptions({ followTravel: true })
       walkToward(applyCameraPose, options, 1)
 
       // Act
-      resetCameraTravel()
+      startNewCameraSource()
       applyCameraPose(standingAt(0.5), options, ALL_GROUPS, 10_000)
 
       // Assert

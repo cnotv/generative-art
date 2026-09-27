@@ -13,6 +13,7 @@ import { buildBodyLandmarks, buildMixamoRig } from './fixtures/cameraPoseFixture
 import {
   CAMERA_FOOT_PIN_MAX_STRETCH_SHARE,
   CAMERA_FOOT_RELEASE_MILLISECONDS,
+  CAMERA_TRAVEL_ANCHOR_MILLISECONDS,
   CAMERA_TRAVEL_SMOOTHING_MILLISECONDS
 } from './config'
 import type { CameraFootPins, CameraLandmark, CameraTravel } from './types'
@@ -130,6 +131,13 @@ describe('advanceCameraTravel', () => {
       (travel) => advanceCameraTravel(travel, next, RIG_LEG, FRAME_SECONDS),
       start
     )
+  /** A source whose performer stood three metres away for as long as the start is taken over. */
+  const standingStart = (): CameraTravel =>
+    settle(
+      advanceCameraTravel(null, reading(0, -3), RIG_LEG, Infinity),
+      reading(0, -3),
+      CAMERA_TRAVEL_ANCHOR_MILLISECONDS / 1000
+    )
 
   it('starts where the performer first stands', () => {
     // Act
@@ -139,13 +147,24 @@ describe('advanceCameraTravel', () => {
     expect(travel.offset).toEqual({ x: 0, y: 0, z: 0 })
   })
 
+  it('takes the start from the first readings together, so one misread first reading moves nothing', () => {
+    // Arrange: the very first reading, a fresh detection, puts the performer 20 cm too close
+    const misread = advanceCameraTravel(null, reading(0, -2.8), RIG_LEG, Infinity)
+
+    // Act: the performer actually stands still three metres away throughout
+    const travel = settle(misread, reading(0, -3), 2)
+
+    // Assert
+    expect(travel.offset.z).toBeCloseTo(0, 0)
+  })
+
   it.each([
     { label: 'toward the camera', x: 0, z: -2, expected: { x: 0, z: 100 } },
     { label: 'away from the camera', x: 0, z: -3.5, expected: { x: 0, z: -50 } },
     { label: 'to the right', x: 0.5, z: -3, expected: { x: 50, z: 0 } }
   ])('carries the rig $label, in rig units scaled by leg length', ({ x, z, expected }) => {
     // Arrange
-    const start = advanceCameraTravel(null, reading(0, -3), RIG_LEG, Infinity)
+    const start = standingStart()
 
     // Act
     const travel = settle(start, reading(x, z), (CAMERA_TRAVEL_SMOOTHING_MILLISECONDS / 1000) * 12)
@@ -158,7 +177,7 @@ describe('advanceCameraTravel', () => {
 
   it('eases toward a new position rather than jumping to it', () => {
     // Arrange
-    const start = advanceCameraTravel(null, reading(0, -3), RIG_LEG, Infinity)
+    const start = standingStart()
 
     // Act
     const travel = advanceCameraTravel(start, reading(0, -2), RIG_LEG, FRAME_SECONDS)
@@ -175,7 +194,7 @@ describe('advanceCameraTravel', () => {
     'lands straight on where the performer is after $label, measured from the same start',
     ({ elapsedSeconds }) => {
       // Arrange
-      const start = advanceCameraTravel(null, reading(0, -3), RIG_LEG, Infinity)
+      const start = standingStart()
       const walked = settle(start, reading(0, -2), 3)
 
       // Act

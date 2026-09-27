@@ -602,7 +602,9 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   appears against its real size gives the distance, and where the hips appear gives the side
   position. The rig eases toward that spot over a quarter of a second and moves by the performer's
   own travel scaled by the ratio of the two leg lengths, measured from where the performer stood
-  when the video, photo or camera session started. Pausing or seeking a video lands the rig
+  when the video, photo or camera session started. That start is where the first quarter second of
+  readings agree, with the rig held still meanwhile, since a video's very first reading is a fresh
+  detection whose depth can be off by a hand's width. Pausing or seeking a video lands the rig
   straight on the spot for that moment.
 - **Planted feet.** The lower foot is taken as planted where it lands and held there while the
   body moves over it, the leg bent to reach it. It is let go, easing back over a tenth of a second

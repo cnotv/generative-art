@@ -346,6 +346,13 @@ export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
  * up with a walk. See the travel journey doc for the clip it was measured on.
  */
 export const CAMERA_TRAVEL_SMOOTHING_MILLISECONDS = 250
+/**
+ * How long, in milliseconds, where the performer stands at the start is read over before the rig
+ * travels from it. The first reading of a video is a fresh detection rather than a tracked one, and
+ * on both attached clips its depth was off by 15 to 18 cm: taken alone as the start, it slid the
+ * rig at the first frames and offset the whole take by that much.
+ */
+export const CAMERA_TRAVEL_ANCHOR_MILLISECONDS = 250
 /** How few in-picture body landmarks are too few to judge how large the performer appears. */
 export const CAMERA_BODY_POSITION_MIN_LANDMARKS = 6
 /**

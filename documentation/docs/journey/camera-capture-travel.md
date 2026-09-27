@@ -71,7 +71,15 @@ its changing pose alone. Easing toward it over a quarter of a second keeps the w
 jitter; the rig's movement is the performer's scaled by the ratio of the two leg lengths, so a
 stride is the rig's stride.
 
-![Depth travel over time, in leg lengths toward the camera: on the dance clip the rig follows the raw reading's trend up to about 1.5 as she walks in, back below zero as she backs away and up again; on the running preset it stays in a narrow band around its starting spot](/img/animation/rig-camera-travel-chart.webp)
+The first reading is not like the rest. A video's first frame is a fresh detection rather than a
+tracked one, and its depth was off by 15 cm on the dance clip and 18 cm on the running preset.
+Taken on its own as the start, it slid the rig a fifth of a leg in the first third of a second and
+offset the whole take by as much: the running preset settled a quarter of a leg from where it
+began. The start is now where the readings of the first quarter second agree, their median, with
+the rig held still while they are read; the running preset now stays within an eighth of a leg of
+its spot and ends where it began.
+
+![Depth travel over time, in leg lengths toward the camera: on the dance clip the rig follows the raw reading's trend up to about 1.4 as she walks in, back below zero as she backs away and up again, ignoring the misread first reading; on the running preset it stays in a narrow band around its starting spot](/img/animation/rig-camera-travel-chart.webp)
 
 ## Holding the feet still
 
@@ -104,10 +112,10 @@ keeps the legs within about 18° of the capture while more than halving the slid
 | ---------------------------------------- | ------------------------ | --------------- | ------------------------------------- |
 | Dance, rig on one spot (before)          | 3.2%                     | 7.2%            |                                       |
 | Dance, travel                            | 3.8%                     | 7.8%            |                                       |
-| Dance, travel and pinned feet            | 1.4%                     | 4.5%            | 7.5° mean, 18° at the 95th percentile |
+| Dance, travel and pinned feet            | 1.4%                     | 4.6%            | 7.4° mean, 18° at the 95th percentile |
 | Running preset, rig on one spot (before) | 9.9%                     | 19.1%           |                                       |
-| Running preset, travel                   | 9.8%                     | 18.1%           |                                       |
-| Running preset, travel and pinned feet   | 6.1%                     | 16.6%           | 6.6° mean, 22° at the 95th percentile |
+| Running preset, travel                   | 9.7%                     | 17.9%           |                                       |
+| Running preset, travel and pinned feet   | 6.0%                     | 16.6%           | 6.5° mean, 21° at the 95th percentile |
 
 Travel alone slides a planted foot slightly more than standing still, since the body now moves
 and the leg does not know it. Pinning is what brings it down. The running preset keeps sliding by
@@ -155,7 +163,7 @@ came from tracking background features outside the dancer's outline between fram
   flying, and a contact is judged by height alone.
 - **The focal length is assumed.** A lens wider or narrower than a 53° diagonal scales the whole
   path by the same factor.
-- **The start is one reading.** Its noise offsets the whole take by up to a quarter of a leg; the
-  running preset's chart line sits just below zero for that reason.
+- **The first quarter second does not travel.** The start is read over it, so a performer already
+  walking when the source starts is followed from a quarter second in.
 - **Legs out of view, no travel.** A webcam framed on the upper body has nothing to scale the
   travel by, and the rig stays where it last was.

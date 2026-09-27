@@ -51,11 +51,18 @@ export const useRigCameraPose = (
   let travel: CameraTravel | null = null
   /** Each foot held where it landed. */
   let footPins: CameraFootPins = {}
+  /** Whether no body has been applied since the source started, so there is no pose to hold. */
+  let isFreshSource = true
 
-  /** Start the next reading from the rig's own spot, as a new video or camera session should. */
-  const resetCameraTravel = (): void => {
+  /**
+   * Start the next reading afresh, as a new video, photo or camera session should: travel from the
+   * rig's own spot, no foot held, and a limb the first frame cannot see at rest rather than held in
+   * whatever pose the rig was left in.
+   */
+  const startNewCameraSource = (): void => {
     travel = null
     footPins = {}
+    isFreshSource = true
   }
 
   // Synchronous on purpose: the rig stands at rest the instant its bones are adopted, and a
@@ -65,7 +72,7 @@ export const useRigCameraPose = (
     (nextBones) => {
       retargetRest = nextBones.length > 0 ? captureCameraRetargetRest(nextBones) : null
       turnTracks.clear()
-      resetCameraTravel()
+      startNewCameraSource()
     },
     { immediate: true, flush: 'sync' }
   )
@@ -123,11 +130,14 @@ export const useRigCameraPose = (
     timestampMilliseconds: number = performance.now()
   ): void => {
     if (!retargetRest) return
+    // A cut-off of 0 counts every limb as seen: each is reset to rest, and only the ones really in
+    // view are posed.
     const drivenBoneNames = cameraFrameDrivenBoneNames(
       frame,
       boneNamesInGroups(bones.value, targetGroups),
-      options.visibilityThreshold
+      isFreshSource ? 0 : options.visibilityThreshold
     )
+    if (frame.bodyLandmarks) isFreshSource = false
     const previousTransforms =
       options.boneSmoothingMilliseconds > 0 || options.maxBoneTurnRadiansPerSecond > 0
         ? captureBoneTransforms(bones.value, drivenBoneNames)
@@ -165,5 +175,5 @@ export const useRigCameraPose = (
     }
   }
 
-  return { canCaptureFromCamera, applyCameraPose, resetCameraTravel }
+  return { canCaptureFromCamera, applyCameraPose, startNewCameraSource }
 }

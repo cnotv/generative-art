@@ -812,7 +812,7 @@ onUnmounted(() => {
     :fps="reactiveConfig.fps"
     :target-group-labels="targetBodyPartGroupLabels"
     @apply="handleCameraApply"
-    @new-source="rig.resetCameraTravel"
+    @new-source="rig.startNewCameraSource"
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"

@@ -8,6 +8,7 @@ import {
   CAMERA_FOOT_RELEASE_LIFT_SHARE,
   CAMERA_FOOT_RELEASE_MILLISECONDS,
   CAMERA_LANDMARK_VISIBILITY_THRESHOLD,
+  CAMERA_TRAVEL_ANCHOR_MILLISECONDS,
   CAMERA_TRAVEL_SMOOTHING_MILLISECONDS
 } from './config'
 import {
@@ -141,13 +142,29 @@ export const rigLegLength = (rest: CameraRetargetRest): number | null => {
 const isContinuous = (elapsedSeconds: number): boolean =>
   elapsedSeconds > 0 && elapsedSeconds <= CAMERA_BONE_SMOOTHING_RESET_SECONDS
 
+const median = (values: number[]): number => {
+  const sorted = [...values].sort((a, b) => a - b)
+  const middle = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+}
+
+/** Where a set of readings agree the performer stands, axis by axis, so one misread is outvoted. */
+const medianPosition = (readings: Vector3Data[]): Vector3Data => ({
+  x: median(readings.map(({ x }) => x)),
+  y: median(readings.map(({ y }) => y)),
+  z: median(readings.map(({ z }) => z))
+})
+
 /**
  * Carry the rig across the floor to where the performer now stands, measured from where they
  * stood when the source started and scaled by the two leg lengths, so a performer's stride is the
- * rig's stride. Only the level part is taken: height is grounding's job. The rig eases toward the
- * new spot over `CAMERA_TRAVEL_SMOOTHING_MILLISECONDS`; after a gap in the readings, a paused or
- * seeked video, it lands straight on it, still measured from the same start, so a clip seeked or
- * replayed puts the rig where the performer is at that moment.
+ * rig's stride. Only the level part is taken: height is grounding's job. The start is where the
+ * readings of the first `CAMERA_TRAVEL_ANCHOR_MILLISECONDS` agree the performer stood, and the rig
+ * stays put while it is read, so the misread first frame of a video neither slides the rig nor
+ * offsets the take. The rig then eases toward each new spot over
+ * `CAMERA_TRAVEL_SMOOTHING_MILLISECONDS`; after a gap in the readings, a paused or seeked video, it
+ * lands straight on it, still measured from the same start, so a clip seeked or replayed puts the
+ * rig where the performer is at that moment.
  * @param previous The travel so far, or null for the first reading of a source
  * @param reading Where the performer stands and how long their legs are, this frame
  * @param rigLegLengthUnits The rig's own leg length, from `rigLegLength`
@@ -164,12 +181,32 @@ export const advanceCameraTravel = (
     return {
       origin: reading.bodyPosition,
       performerLegLength: reading.performerLegLength,
-      offset: { x: 0, y: 0, z: 0 }
+      offset: { x: 0, y: 0, z: 0 },
+      sourceSeconds: 0,
+      startReadings: [reading.bodyPosition]
     }
   }
   const share = isContinuous(elapsedSeconds)
     ? lowPassBlendFactor(smoothingCutoffHertz(CAMERA_TRAVEL_SMOOTHING_MILLISECONDS), elapsedSeconds)
     : 1
+  const sourceSeconds = previous.sourceSeconds + (isContinuous(elapsedSeconds) ? elapsedSeconds : 0)
+  if (
+    previous.startReadings.length > 0 &&
+    sourceSeconds < CAMERA_TRAVEL_ANCHOR_MILLISECONDS / 1000
+  ) {
+    const startReadings = [...previous.startReadings, reading.bodyPosition]
+    return {
+      ...previous,
+      origin: medianPosition(startReadings),
+      performerLegLength: THREE.MathUtils.lerp(
+        previous.performerLegLength,
+        reading.performerLegLength,
+        share
+      ),
+      sourceSeconds,
+      startReadings
+    }
+  }
   const performerLegLength = THREE.MathUtils.lerp(
     previous.performerLegLength,
     reading.performerLegLength,
@@ -185,7 +222,9 @@ export const advanceCameraTravel = (
   return {
     origin: previous.origin,
     performerLegLength,
-    offset: { x: toward('x'), y: 0, z: toward('z') }
+    offset: { x: toward('x'), y: 0, z: toward('z') },
+    sourceSeconds,
+    startReadings: []
   }
 }
 
