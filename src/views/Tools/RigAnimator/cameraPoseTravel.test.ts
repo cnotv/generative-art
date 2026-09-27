@@ -257,7 +257,7 @@ describe('pinPlantedFeet', () => {
     expect(ankle('Left').x - lifted.x).toBeCloseTo(0.1 * legLength, 0)
   })
 
-  it('lets go of a foot the body has moved too far from, easing it out rather than snapping', () => {
+  it('drags a planted foot along at the leg’s reach once the body moves further than that', () => {
     // Arrange
     const { frame, ankle, legLength } = buildRig()
     const pins = frame({}, { sideways: 0 })
@@ -265,14 +265,38 @@ describe('pinPlantedFeet', () => {
     const tooFar = CAMERA_FOOT_PIN_MAX_STRETCH_SHARE * 2
 
     // Act
-    const releasing = frame(pins, { sideways: tooFar })
-    const firstStep = ankle('Left').x - planted.x
-    frame(releasing, { sideways: tooFar }, (CAMERA_FOOT_RELEASE_MILLISECONDS / 1000) * 2)
-    const released = ankle('Left').x - planted.x
+    frame(pins, { sideways: tooFar })
 
     // Assert
-    expect(firstStep).toBeGreaterThan(0)
-    expect(firstStep).toBeLessThan(tooFar * legLength * 0.9)
-    expect(released).toBeCloseTo(tooFar * legLength, 0)
+    expect(ankle('Left').x - planted.x).toBeCloseTo(
+      (tooFar - CAMERA_FOOT_PIN_MAX_STRETCH_SHARE) * legLength,
+      0
+    )
+  })
+
+  it('lets go of a foot that lifts, easing it out rather than snapping', () => {
+    // Arrange
+    const { frame, ankle, legLength } = buildRig()
+    const pins = frame({}, { sideways: 0 })
+    const planted = ankle('Left')
+    const sideways = 0.1
+
+    // Act
+    const releasing = frame(pins, { sideways, liftLeftFoot: true })
+    const firstStep = ankle('Left')
+    frame(
+      releasing,
+      { sideways, liftLeftFoot: true },
+      (CAMERA_FOOT_RELEASE_MILLISECONDS / 1000) * 2
+    )
+    const released = ankle('Left')
+    frame({}, { sideways, liftLeftFoot: true })
+    const free = ankle('Left')
+
+    // Assert
+    const shareOfTheWay = (firstStep.x - planted.x) / (free.x - planted.x)
+    expect(shareOfTheWay).toBeGreaterThan(0.1)
+    expect(shareOfTheWay).toBeLessThan(0.9)
+    expect(released.distanceTo(free)).toBeLessThan(legLength * 0.001)
   })
 })

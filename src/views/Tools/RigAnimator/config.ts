@@ -345,8 +345,9 @@ export const CAMERA_FOOT_PLANT_LIFT_SHARE = 0.03
 /** A planted foot is let go once it rises this share of the leg length above the lower foot. */
 export const CAMERA_FOOT_RELEASE_LIFT_SHARE = 0.06
 /**
- * A planted foot is let go once holding it would take it this share of the leg length from
- * where the leg would otherwise put it: the body has really moved on, or the foot is sliding.
+ * The furthest, as a share of the leg length, a planted foot is held from where the leg would
+ * otherwise put it. Past it the foot is dragged along at that reach: the capture's legs and the
+ * travel disagree, and bending the leg further to hide it looks worse than a slow slide.
  */
 export const CAMERA_FOOT_PIN_MAX_STRETCH_SHARE = 0.15
 /** How long, in milliseconds, a let-go foot takes to ease back to where the leg puts it. */

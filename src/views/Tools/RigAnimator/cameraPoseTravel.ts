@@ -235,16 +235,31 @@ const findLegs = (
   })
 }
 
-const levelDistance = (a: Vector3Data, b: Vector3Data): number => Math.hypot(a.x - b.x, a.z - b.z)
-
-/** How much firmer a let-go foot's hold gets weaker over this frame. */
+/** How much weaker a let-go foot's hold gets over this frame. */
 const releaseStep = (elapsedSeconds: number): number =>
   isContinuous(elapsedSeconds) ? elapsedSeconds / (CAMERA_FOOT_RELEASE_MILLISECONDS / 1000) : 1
 
 /**
- * What to hold one foot to this frame. A foot at the floor is taken as planted where it is; one
- * that rises, or that the leg would have to stretch too far from to keep holding, is let go and
- * eases back over `CAMERA_FOOT_RELEASE_MILLISECONDS` rather than snapping.
+ * Keep a held position within reach of where the leg puts the ankle, dragging it along the level
+ * floor when the body has moved further than that: the foot then creeps as fast as the capture
+ * and the travel disagree, instead of holding until it snaps back all at once.
+ */
+const withinReach = (
+  position: Vector3Data,
+  ankle: THREE.Vector3,
+  legLength: number
+): Vector3Data => {
+  const away = new THREE.Vector3(position.x - ankle.x, 0, position.z - ankle.z)
+  const reach = CAMERA_FOOT_PIN_MAX_STRETCH_SHARE * legLength
+  if (away.length() <= reach) return position
+  const held = ankle.clone().add(away.setLength(reach))
+  return { x: held.x, y: position.y, z: held.z }
+}
+
+/**
+ * What to hold one foot to this frame. A foot at the floor is taken as planted where it is and
+ * held there, within the leg's reach; one that rises is let go and eases back over
+ * `CAMERA_FOOT_RELEASE_MILLISECONDS` rather than snapping.
  */
 const nextFootPin = (
   previous: CameraFootPin | undefined,
@@ -253,12 +268,10 @@ const nextFootPin = (
   legLength: number,
   elapsedSeconds: number
 ): CameraFootPin | null => {
-  const letGo =
-    previous &&
-    (previous.releasing ||
-      liftShare > CAMERA_FOOT_RELEASE_LIFT_SHARE ||
-      levelDistance(previous.position, ankle) > CAMERA_FOOT_PIN_MAX_STRETCH_SHARE * legLength)
-  if (previous && !letGo) return previous
+  const letGo = previous && (previous.releasing || liftShare > CAMERA_FOOT_RELEASE_LIFT_SHARE)
+  if (previous && !letGo) {
+    return { ...previous, position: withinReach(previous.position, ankle, legLength) }
+  }
   const weight = previous ? previous.weight - releaseStep(elapsedSeconds) : 0
   if (previous && weight > 0) return { ...previous, weight, releasing: true }
   return liftShare < CAMERA_FOOT_PLANT_LIFT_SHARE
