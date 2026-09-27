@@ -262,7 +262,7 @@ export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0
  * follows the video's own clock, so a take keeps the video's real timing at any ratio. 1 plays at
  * normal speed with one sample a frame and nothing to filter.
  */
-export const CAMERA_VIDEO_SLOWDOWN_RATIO = 6
+export const CAMERA_VIDEO_SLOWDOWN_RATIO = 10
 export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 20, step: 1 }
 /**
  * The slowest a browser plays a video, a sixteenth of its speed: Chromium throws

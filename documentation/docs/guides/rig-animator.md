@@ -523,14 +523,15 @@ file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays through once, slowed down by **Video Slowdown Ratio**, six times by default, and runs the exact same
+plays through once, slowed down by **Video Slowdown Ratio**, ten times by default, and runs the exact same
 live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
 continuously the same way a webcam does. Playing it never records anything by itself: **Play
 Video** / **Pause Video**, a play icon that joins the action row once a video is loaded, plays and
 pauses the clip on its own, without starting a take or moving the timeline, so the mapping can be
-watched first, and it stays on the action row even while the preview is hidden. Record Motion
-then works against it exactly as it does against the camera: clicking it on a paused video plays
+watched first, and it stays on the action row even while the preview is hidden. While the clip
+plays, the preview leaves out the detected skeleton so the video itself can be watched; paused, it
+draws what detection read for the frame on screen. Record Motion then works against it exactly as it does against the camera: clicking it on a paused video plays
 the video too, and the take ends on its own once the video reaches its natural end, the same as a
 manual **Stop Recording** click would. It plays once rather than looping specifically so that end
 has something to trigger on. Detection only runs while the video actually plays:
@@ -712,7 +713,7 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Video Slowdown Ratio**, 6 by default, from 1 to 20, sets two things at once for an uploaded
+- **Video Slowdown Ratio**, 10 by default, from 1 to 20, sets two things at once for an uploaded
   video: how many times slower it plays, and how many poses Record Motion samples per frame of it
   before filtering them down to one keyframe. The two go together because a video slowed N times
   gives detection about N readings of each of its frames. Record Motion times a video take by the
@@ -722,7 +723,7 @@ The remaining options tune the result:
   asked to, so from 17 to 20 the video plays at that sixteenth and the ratio only raises how many
   poses are sampled a frame: detection runs once per displayed frame, so a fast machine still has
   that many readings of each video frame to fill them with.
-  The smoothing times above still run on the wall clock, so at a ratio of 6 they act on a sixth as
+  The smoothing times above still run on the wall clock, so at a ratio of 10 they act on a tenth as
   much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
