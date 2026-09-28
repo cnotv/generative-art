@@ -1,9 +1,10 @@
 import { ref, shallowRef, type Ref, type ShallowRef } from 'vue'
-import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
+import type { NormalizedLandmark, PoseLandmarker } from '@mediapipe/tasks-vision'
 import {
   closeCameraLandmarkers,
   createCameraCropCanvas,
   createCameraLandmarkers,
+  createPoseLandmarker,
   detectCameraPose
 } from './cameraPoseDetection'
 import {
@@ -13,6 +14,7 @@ import {
   steadyCameraHands
 } from './cameraPoseFrame'
 import type {
+  CameraDetection,
   CameraDetectionOptions,
   CameraHandTracks,
   CameraLandmarkers,
@@ -58,15 +60,17 @@ export const useVideoLandmarkDetection = ({
   let handTracks: CameraHandTracks = {}
   /** The video time of the last reading of this run, null until the run's first reading. */
   let lastReadingVideoSeconds: number | null = null
+  /** The still-image pose detector a paused frame is read with, loaded the first time one is. */
+  let stillPose: Promise<PoseLandmarker> | null = null
 
   const detectFrame = (): void => {
     const video = videoElement.value
     if (!video || !landmarkers) return
     animationFrame = requestAnimationFrame(detectFrame)
-    const options = detectionOptions.value
     // A paused or finished video shows the same frame over and over: detecting it again would
     // only keep applying a pose nobody is performing, and keep a recording sampling it.
-    isDetecting.value = !options.detectOnlyWhilePlaying || (!video.paused && !video.ended)
+    isDetecting.value =
+      !detectionOptions.value.detectOnlyWhilePlaying || (!video.paused && !video.ended)
     if (!isDetecting.value) {
       lastReadingVideoSeconds = null
       return
@@ -78,16 +82,31 @@ export const useVideoLandmarkDetection = ({
     // The first reading after a start, a pause or a seek only primes the pose tracker, see
     // `continuesPreviousReading`: applied or recorded, it is the malformed first frame of a take.
     if (!isTracked) return
-    const detection = detectCameraPose(
+    publishDetection(detectInVideo(video, landmarkers, poseResult), timestamp, frame.value)
+  }
+
+  const detectInVideo = (
+    video: HTMLVideoElement,
+    loaded: CameraLandmarkers,
+    poseResult: ReturnType<PoseLandmarker['detect']>
+  ): CameraDetection =>
+    detectCameraPose(
       {
         source: video,
         frameSize: { width: video.videoWidth, height: video.videoHeight },
-        landmarkers,
+        landmarkers: loaded,
         cropCanvas,
-        options
+        options: detectionOptions.value
       },
       poseResult
     )
+
+  /** Show a detection on the preview and hand it to the rig, smoothed against `previous`. */
+  const publishDetection = (
+    detection: CameraDetection,
+    timestamp: number,
+    previous: CameraPoseFrame | null
+  ): void => {
     previewLandmarks.value = detection.previewLandmarks
     previewHandLandmarks.value =
       detection.previewHandLandmarks.length > 0 ? detection.previewHandLandmarks : null
@@ -100,10 +119,31 @@ export const useVideoLandmarkDetection = ({
     )
     handTracks = steadied.tracks
     frame.value = smoothCameraPoseFrame(
-      frame.value,
+      previous,
       steadied.frame,
       timestamp,
       smoothingSettings.value
+    )
+  }
+
+  /**
+   * Read the one frame a paused video shows, as after seeking it, so the rig matches the frame on
+   * screen instead of keeping the last played pose or whatever the timeline holds there. It uses a
+   * still-image pose detector: the video one tracks from the previous reading, and its first
+   * reading after a seek is the malformed one `continuesPreviousReading` skips. Nothing is smoothed
+   * into it, since the last reading was of another moment.
+   */
+  const readStillFrame = async (): Promise<void> => {
+    const video = videoElement.value
+    if (!video || !landmarkers) return
+    stillPose ??= createPoseLandmarker('IMAGE')
+    const detector = await stillPose
+    if (!landmarkers) return
+    handTracks = {}
+    publishDetection(
+      detectInVideo(video, landmarkers, detector.detect(video)),
+      performance.now(),
+      null
     )
   }
 
@@ -121,6 +161,8 @@ export const useVideoLandmarkDetection = ({
     animationFrame = null
     closeCameraLandmarkers(landmarkers)
     landmarkers = null
+    stillPose?.then((detector) => detector.close())
+    stillPose = null
     handTracks = {}
     lastReadingVideoSeconds = null
     isDetecting.value = false
@@ -134,6 +176,7 @@ export const useVideoLandmarkDetection = ({
     previewHandLandmarks,
     frame,
     isDetecting,
+    readStillFrame,
     startDetectionLoop,
     stopDetectionLoop
   }

@@ -264,9 +264,15 @@ const { syncEnabled, handleVideoSeeked: resolveSeekedFrame } = useVideoTimelineS
   isRecording: () => props.isRecording
 })
 
+/** A paused video is not detected frame by frame, so a seek re-reads the frame it lands on: the
+ * rig then shows that frame, not the last played pose or whatever the timeline holds there. A
+ * take in progress keeps sampling its own clock instead. */
 const handleVideoSeeked = (): void => {
   const seekedFrame = resolveSeekedFrame()
   if (seekedFrame !== null) emit('seekFrame', seekedFrame)
+  if (mode.value === 'video' && !props.isRecording && videoReference.value?.paused) {
+    void uploadedVideo.readStillFrame()
+  }
 }
 
 watch(

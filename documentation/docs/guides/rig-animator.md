@@ -535,7 +535,10 @@ Video** / **Pause Video**, a play icon that joins the action row once a video is
 pauses the clip on its own, without starting a take or moving the timeline, so the mapping can be
 watched first, and it stays on the action row even while the preview is hidden. While the clip
 plays, the preview leaves out the detected skeleton so the video itself can be watched; paused, it
-draws what detection read for the frame on screen. Record Motion then works against it exactly as it does against the camera: clicking it on a paused video plays
+draws what detection read for the frame on screen. Seeking a paused video reads the frame it lands
+on once, with the Pose Landmarker's image mode rather than its video mode, whose first reading
+after a seek is unreliable, so the rig shows that frame rather than the last pose played or a
+recorded pose the timeline holds there. Record Motion then works against it exactly as it does against the camera: clicking it on a paused video plays
 the video too, and the take ends on its own once the video reaches its natural end, the same as a
 manual **Stop Recording** click would. It plays once rather than looping specifically so that end
 has something to trigger on. Detection only runs while the video actually plays:
