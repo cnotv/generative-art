@@ -59,15 +59,15 @@ section from becoming a place to invent rules nobody needed.
 ## 3. Open it
 
 ```sh
-gh pr create --draft --title "<type>(#<issue-number>): <summary>" --body-file <file>
+gh pr create --draft --title "<type>: <summary> (#<issue-number>)" --body-file <file>
 ```
 
 `--draft` while the work is still moving; `gh pr ready` once it is validated and green. A
 draft opened at the first commit describes what is being done and why, and is updated as
 the work lands rather than rewritten at the end.
 
-The issue number leads the PR title, as `feat(#6): <summary>`, so GitHub links it to the
-issue and it appears on merge; fix an existing title with `gh pr edit --title`. Only the
+The issue number ends the PR title, as `feat: <summary> (#6)`, so GitHub links it to the
+issue and a squash merge reads `(#6) (#7)`; fix an existing title with `gh pr edit --title`. Only the
 title carries it, never a commit. The body follows
 `.github/pull_request_template.md` and starts with `Closes #<issue-number>`, which links
 and closes the issue automatically. Do not restate the template here — it is the single

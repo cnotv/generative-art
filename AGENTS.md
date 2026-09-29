@@ -82,8 +82,8 @@ owes them before the pull request is marked ready.
 - **Rebase, never merge.** `git fetch origin main && git rebase origin/main`. Never `git pull`,
   which merges by default. After a rebase, `git push --force-with-lease`, never `--force`.
 - **Commit subjects never reference an issue number**, in subject or body, no exception:
-  write `<type>: <summary>`. The PR carries it, linked by GitHub: its title is
-  `<type>(#<issue-number>): <summary>`, e.g. `feat(#6): …`, and its body `Closes #<number>`.
+  write `<type>: <summary>`. The PR carries it, linked by GitHub: its title ends with it,
+  `<type>: <summary> (#<issue-number>)`, and its body starts `Closes #<issue-number>`.
 
 ## Where output goes
 
