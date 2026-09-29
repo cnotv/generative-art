@@ -84,6 +84,10 @@ owes them before the pull request is marked ready.
 - **Commit subjects never reference an issue number** — no `#123`, no `(#123)`, no
   `Closes #123`, in subject or body. The branch name carries it and the PR body carries
   `Closes #<issue-number>`. There is no exception. Write `<type>: <summary>`.
+- **Pull request titles lead with the issue number**: `<type>(#<issue-number>): <summary>`,
+  for example `feat(#6): GitHub sign-in and a cloud deployment behind the server's proxy`.
+  GitHub turns the number into a link to the issue. This is for the title only; commits keep
+  the rule above.
 
 ## Where output goes
 
