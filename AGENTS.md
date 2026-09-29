@@ -81,9 +81,9 @@ owes them before the pull request is marked ready.
   `refactor`, `test`, `chore`), so the number is on the branch from its first commit.
 - **Rebase, never merge.** `git fetch origin main && git rebase origin/main`. Never `git pull`,
   which merges by default. After a rebase, `git push --force-with-lease`, never `--force`.
-- **Commit subjects never reference an issue number** — no `#123`, no `(#123)`, no
-  `Closes #123`, in subject or body. The branch name carries it and the PR body carries
-  `Closes #<issue-number>`. There is no exception. Write `<type>: <summary>`.
+- **Commit subjects never reference an issue number**, in subject or body, no exception:
+  write `<type>: <summary>`. The PR carries it, linked by GitHub: its title is
+  `<type>(#<issue-number>): <summary>`, e.g. `feat(#6): …`, and its body `Closes #<number>`.
 
 ## Where output goes
 
