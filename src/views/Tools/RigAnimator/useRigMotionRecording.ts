@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { Pose, PoseKeyframe } from '@webgamekit/rig'
+import type { PoseKeyframe } from '@webgamekit/rig'
 import { filterRecordedSamples } from './keyframeOps'
 
 /** Reads and writes the rig timeline state a live-motion recording drives, kept as plain
@@ -17,8 +17,9 @@ export interface RigMotionRecordingDependencies {
   setFrame: (frame: number) => void
   setFrameMax: (frameMax: number) => void
   addKeyframe: () => void
-  /** The rig's pose right now, sampled `samplesPerFrame` times a frame. */
-  capturePose: () => Pose
+  /** The rig's pose right now, and where the bones a capture moves stand, sampled
+   * `samplesPerFrame` times a frame. */
+  captureSample: () => Omit<PoseKeyframe, 'frame'>
   /** Swap the take's keyframes, `fromFrame` to `toFrame`, for the ones filtered from its samples. */
   replaceTake: (fromFrame: number, toFrame: number, keyframes: PoseKeyframe[]) => void
 }
@@ -37,6 +38,8 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   let anchorTimeMs = 0
   let lastSampleStep = 0
   let samplesPerFrame = 1
+  /** Whether the take's starting frame still waits for the first frame the take applies. */
+  let isStartPending = false
   // Appended to in place: a long take gathers thousands of samples, and copying the whole list for
   // each one would make every sample slower than the last.
   const samples: PoseKeyframe[] = []
@@ -49,14 +52,23 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     anchorTimeMs = deps.now()
     lastSampleStep = 0
     samplesPerFrame = Math.max(1, Math.round(deps.samplesPerFrame()))
-    samples.splice(0, samples.length, { frame: anchorFrame, pose: deps.capturePose() })
-    // recordFrameIfActive only ever captures a frame strictly past this one (its own guard
-    // below skips anything <= currentFrame, and currentFrame is this very frame until real
-    // time advances past it) — so without this, the anchor frame is left holding whatever
-    // keyframe, if any, already sat there. Scrubbing or playing into the start of a take then
-    // interpolates from that unrelated pose into the first real sample: a visible twitch right
-    // at the seam. Capturing the live pose already on the rig the instant recording arms closes
-    // that gap; it is not counted in `capturedFrameCount` since no time-driven motion happened.
+    samples.splice(0, samples.length)
+    isStartPending = true
+  }
+
+  /**
+   * Key the take's starting frame from the first frame it applies. recordFrameIfActive only ever
+   * captures a frame strictly past this one (its own guard skips anything <= currentFrame, and
+   * currentFrame is this very frame until time moves past it), so without this the starting frame
+   * keeps whatever keyframe already sat there, and scrubbing into the take twitches at the seam.
+   * The pose is taken from the first applied frame rather than the instant Record is pressed: at
+   * that instant the rig still shows the last reading of a paused video, or the rest pose a rewind
+   * left it in, and that stale pose became the take's first keyframe. It is not counted in
+   * `capturedFrameCount` since no time-driven motion happened.
+   */
+  const keyStartingFrame = (): void => {
+    isStartPending = false
+    samples.push({ frame: anchorFrame, ...deps.captureSample() })
     deps.addKeyframe()
   }
 
@@ -76,10 +88,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     const step = Math.round(elapsedSeconds * deps.fps() * samplesPerFrame)
     if (step <= lastSampleStep) return
     lastSampleStep = step
-    samples.push({
-      frame: anchorFrame + step / samplesPerFrame,
-      pose: deps.capturePose()
-    })
+    samples.push({ frame: anchorFrame + step / samplesPerFrame, ...deps.captureSample() })
   }
 
   /**
@@ -93,6 +102,7 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
    */
   const recordFrameIfActive = (): void => {
     if (!isRecording.value) return
+    if (isStartPending) keyStartingFrame()
     const elapsedSeconds = (deps.now() - anchorTimeMs) / 1000
     sampleIfDue(elapsedSeconds)
     const nextFrame = anchorFrame + Math.round(elapsedSeconds * deps.fps())

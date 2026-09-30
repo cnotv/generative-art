@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
   assignHandSides,
+  continuesPreviousReading,
   hideLandmarksOutsideFrame,
   cropLandmarksToFrame,
   cropSquareAroundLandmark,
@@ -253,7 +254,8 @@ describe('mirrorCameraPoseFrame', () => {
     const frame: CameraPoseFrame = {
       bodyLandmarks: buildBodyLandmarks(),
       handLandmarks: { Left: leftHand },
-      headRotation: quaternionData(new THREE.Vector3(0, 1, 0), 0.4)
+      headRotation: quaternionData(new THREE.Vector3(0, 1, 0), 0.4),
+      bodyPosition: { x: 0.3, y: 0.1, z: -2 }
     }
 
     // Act
@@ -261,6 +263,7 @@ describe('mirrorCameraPoseFrame', () => {
 
     // Assert
     expect(mirrored.bodyLandmarks?.[15].x).toBeCloseTo(0.7)
+    expect(mirrored.bodyPosition).toEqual({ x: -0.3, y: 0.1, z: -2 })
     expect(mirrored.handLandmarks.Left).toBeUndefined()
     expect(mirrored.handLandmarks.Right?.[5].x).toBeCloseTo(-leftHand[5].x)
     expect(
@@ -287,7 +290,8 @@ describe('smoothCameraPoseFrame', () => {
     const next: CameraPoseFrame = {
       ...EMPTY_FRAME,
       bodyLandmarks: shiftedBody,
-      handLandmarks: { Right: rightHand }
+      handLandmarks: { Right: rightHand },
+      bodyPosition: { x: 0, y: 0, z: -2 }
     }
 
     // Act
@@ -301,6 +305,7 @@ describe('smoothCameraPoseFrame', () => {
       rightHand.map((landmark) => ({ ...landmark, velocity: { x: 0, y: 0, z: 0 } }))
     )
     expect(smoothed.timestampMilliseconds).toBe(1033)
+    expect(smoothed.bodyPosition).toEqual({ x: 0, y: 0, z: -2 })
   })
 
   it('drops a part the new reading no longer holds', () => {
@@ -397,5 +402,21 @@ describe('steadyCameraHands', () => {
 
     // Assert
     expect(frame.handLandmarks.Left).toEqual(rolled(170))
+  })
+})
+
+describe('continuesPreviousReading', () => {
+  it.each([
+    { label: 'the first reading of a run', previous: null, now: 0.2, expected: false },
+    { label: 'the next frame of a playing video', previous: 1, now: 1.033, expected: true },
+    { label: 'the same frame read twice', previous: 1, now: 1, expected: true },
+    { label: 'the first reading after a rewind', previous: 6, now: 0, expected: false },
+    { label: 'the first reading after a skip ahead', previous: 1, now: 3, expected: false }
+  ])('counts $label as continuing: $expected', ({ previous, now, expected }) => {
+    // Act
+    const continues = continuesPreviousReading(previous, now)
+
+    // Assert
+    expect(continues).toBe(expected)
   })
 })

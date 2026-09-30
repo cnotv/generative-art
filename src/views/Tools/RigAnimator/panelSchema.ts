@@ -58,10 +58,14 @@ const boneControls = ({
 
 const cameraPoseControls: ConfigControlsSchema = {
   cameraGroundFeet: { checkbox: true, label: 'Keep Feet on Ground' },
+  cameraFollowTravel: { checkbox: true, label: 'Follow Travel' },
+  cameraPinFeet: { checkbox: true, label: 'Pin Planted Feet' },
   cameraUseDepth: { checkbox: true, label: 'Use Depth (Z Axis)' },
   cameraUseViewpoint: { checkbox: true, label: 'Match Camera Angle to Photo' },
   cameraShowPreview: { checkbox: true, label: 'Show Camera Preview' },
-  cameraVideoSlowdownRatio: { ...CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE, label: 'Video Slowdown Ratio' }
+  cameraVideoSlowdownRatio: { ...CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE, label: 'Video Slowdown Ratio' },
+  cameraSmoothRecording: { checkbox: true, label: 'Smooth Recording' },
+  cameraThinRecording: { checkbox: true, label: 'Thin Out Recording' }
 }
 
 const cameraSmoothingControls: ConfigControlsSchema = {

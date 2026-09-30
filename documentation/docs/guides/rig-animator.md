@@ -78,8 +78,12 @@ exist, so two poses are already a movement.
   detectors, and running the hand and face ones on crops around the detected body
 - `src/views/Tools/RigAnimator/cameraPoseRetarget.ts` (+ `.test.ts`): turning every bone of the
   rig to match a detected frame, see **How a detected pose drives the rig** below
-- `src/views/Tools/RigAnimator/fixtures/`: the default character's real skeleton and nine
-  frames MediaPipe detected from a dance clip, which the retargeting tests run against
+- `src/views/Tools/RigAnimator/cameraPoseTravel.ts` (+ `.test.ts`): where the performer stands
+  in front of the camera, carrying the rig across the floor to match, and holding planted feet
+  still, see **Travel** below
+- `src/views/Tools/RigAnimator/fixtures/`: the default character's real skeleton, nine frames
+  MediaPipe detected from a dance clip, and every frame of the same clip with where the dancer
+  stood in the picture, which the retargeting and travel tests run against
 - `src/views/Tools/RigAnimator/useVideoLandmarkDetection.ts`: runs the detectors against a
   playing `<video>` element in a `requestAnimationFrame` loop, shared by the live webcam feed
   and an uploaded video file
@@ -92,7 +96,8 @@ exist, so two poses are already a movement.
 - `src/views/Tools/RigAnimator/useCameraPhotoPose.ts`: reading a body, hands and head from a
   single uploaded photo instead of a continuous feed
 - `src/views/Tools/RigAnimator/useRigCameraPose.ts`: the camera-pose-capture readiness check,
-  the rig's rest pose measured when it is adopted, and applying a detected frame onto the rig
+  the rig's rest pose measured when it is adopted, and applying a detected frame onto the rig:
+  turning the bones, carrying the hips and pinning planted feet, in that order
 - `src/views/Tools/RigAnimator/timelineTicks.ts`: picking a readable tick interval for the rig
   timeline's ruler, whatever the frame range happens to be
 - `src/views/Tools/RigAnimator/useRigKeyframeClipboard.ts`: copying and pasting one keyframe's
@@ -115,6 +120,10 @@ exist, so two poses are already a movement.
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
   applying a preset to whichever hand the selected bone belongs to
+- `src/views/Tools/RigAnimator/poseSimilarity.ts` (+ `.test.ts`): pose estimation measures for
+  comparing two skeletons over time, used by `clipReproduction.test.ts` to score a capture against
+  a recording of a preset
+- `scripts/extract-video-landmarks.mjs`: turning a recording into a test fixture
 - `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
 - `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`, `handPose.ts`: the
   framework-agnostic logic. See the [rig package's docs](/docs/packages/rig) for the
@@ -190,10 +199,11 @@ a whole back into a seated or prone pose means selecting Spine, Spine1, Spine2 a
 and rotating each a little, the same way a real spine's curve is really several vertebrae each
 bending a small amount rather than one joint bending sharply.
 
-Only rotation is part of a keyframe. Typing into Bone Position corrects where a bone sits,
-which is most useful for nudging an auto-rigged skeleton's guessed joint placement, rather than
-authoring an animated translation, so it is not captured by **Add Keyframe** and does not
-appear in the exported clip.
+Only rotation is part of a keyframe you add. Typing into Bone Position corrects where a bone
+sits, which is most useful for nudging an auto-rigged skeleton's guessed joint placement, rather
+than authoring an animated translation, so it is not captured by **Add Keyframe** and does not
+appear in the exported clip. A take recorded from the camera is the one exception: it keeps where
+the hips stood, see **Recording motion** below.
 
 ## Dragging never stretches a segment
 
@@ -378,7 +388,11 @@ through with no swap. Only a side the whole frame missed is looked for again, in
 that side's own wrist, because the Hand Landmarker is trained on close-ups and misses a hand that
 is small in a wide shot. A frame showing a hand but no body curls only that hand's fingers and
 leaves the rest of the rig exactly as it was, rather than snapping a body the camera is simply
-not showing back to rest.
+not showing back to rest. The same holds inside a body: a limb whose landmarks fall under
+**Landmark Confidence Needed**, an arm swinging behind the torso, is left where the last frame
+that saw it put it, instead of dropping to its rest pose. An upper arm is held when its shoulder
+or elbow is lost, a forearm and hand when the elbow or wrist is, and likewise for thigh, shin and
+foot.
 
 The Hand Landmarker is also the only source for which way a palm faces. BlazePose reports a
 pinky and an index point of its own, but they sit a hand's width apart and jitter by centimetres,
@@ -468,6 +482,20 @@ filtered from every sample within half a frame of it. With three samples or more
 the rotation closest to all the others, so a misread pose is dropped outright instead of landing
 on the timeline; with only two they are averaged, and a single sample is kept as it is.
 
+Each sample also keeps where the hips stood, averaged over the frame, so a take plays back
+walking across the floor and crouching the way it did live, see **Travel** below. The clip then
+carries a position track for the hips over the recorded frames, which the GLB and JSON exports
+keep. Keyframes added by hand stay rotation only.
+
+Two settings in **Camera Pose**, both on by default, then clean the take up the way the
+timeline's Filter and Halve buttons would, over the take's own keyframes only. **Smooth
+Recording** runs Filter six times (`RECORDING_SMOOTHING_PASSES`), pulling each keyframe toward the
+frames either side of it. **Thin Out Recording** then runs Halve twice (`RECORDING_HALVING_PASSES`),
+so the take keeps one keyframe in four, first and last always included, and interpolates the rest.
+Smoothing goes first so thinning never keeps a misread frame. The counts were measured on a
+recording of the Running preset: six smoothing passes cost nothing, two halvings stay within about a
+degree of the full take, and every further halving loses the stride quickly.
+
 ![The canvas buttons mid-recording: the record toggle has turned into a solid red square, between the camera and Camera Preview buttons](/img/animation/rig-record-motion.webp)
 
 Recording and the rig timeline's own **Play/Pause** both drive the current frame, so starting
@@ -480,27 +508,37 @@ take ends — since rebuilding it from the whole keyframe list on every one of s
 second made each capture slower than the last and read as the model stuttering, even though
 every frame was still captured correctly underneath it.
 
-Starting a take also captures the live pose already on the rig at that exact instant, before
-any elapsed-time sampling begins. Without that, the take's very first frame carried no
-keyframe of its own — sampling only ever adds one once real time has moved past it — so
-scrubbing or playing into the start of the recording interpolated from whatever pose, if any,
-already sat there instead, a visible twitch right at the seam. Once a take ends, it is added
-to **Presets** — see below — so it can be played back or reloaded the same way a bundled
-mocap clip can.
+A take's first keyframe is the first pose the take itself applies, keyed on the frame recording
+started from. Without one, the take's very first frame carried no keyframe of its own — sampling
+only ever adds one once real time has moved past it — so scrubbing or playing into the start of
+the recording interpolated from whatever pose already sat there, a visible twitch at the seam.
+It is not the pose on the rig the instant **Record Motion** is pressed: that one is left over from
+before, often from a moment the video has since rewound past, and keying it started the take on a
+pose that belongs to no moment of it. Once a take ends, it is added to **Presets** — see below —
+so it can be played back or reloaded the same way a bundled mocap clip can.
+
+A video holds back its first reading after it starts, pauses or seeks. The video mode of the Pose
+Landmarker tracks each frame from the one before, so the first reading after a jump is either a
+fresh detection or tracked from the wrong moment, and can be tens of degrees off on a limb. That
+reading only primes the tracker; the rig, and a take, begin at the next one.
 
 **Upload Photo/Video**, the upload icon in the panel's action row, reads a pose from an uploaded
 file instead of the live feed, useful for
 posing from a reference photo, testing against a known performance, or when there is no
 working camera. A photo runs the same Pose Landmarker in its image mode and feeds the result
 through the exact same mapping, applying it once as soon as a person is found. A video instead
-plays through once, slowed down by **Video Slowdown Ratio**, twice by default, and runs the exact same
+plays through once, slowed down by **Video Slowdown Ratio**, ten times by default, and runs the exact same
 live VIDEO-mode detection loop the
 camera feed uses (`useVideoLandmarkDetection`, shared between them), so it drives the rig
 continuously the same way a webcam does. Playing it never records anything by itself: **Play
 Video** / **Pause Video**, a play icon that joins the action row once a video is loaded, plays and
 pauses the clip on its own, without starting a take or moving the timeline, so the mapping can be
-watched first, and it stays on the action row even while the preview is hidden. Record Motion
-then works against it exactly as it does against the camera: clicking it on a paused video plays
+watched first, and it stays on the action row even while the preview is hidden. While the clip
+plays, the preview leaves out the detected skeleton so the video itself can be watched; paused, it
+draws what detection read for the frame on screen. Seeking a paused video reads the frame it lands
+on once, with the Pose Landmarker's image mode rather than its video mode, whose first reading
+after a seek is unreliable, so the rig shows that frame rather than the last pose played or a
+recorded pose the timeline holds there. Record Motion then works against it exactly as it does against the camera: clicking it on a paused video plays
 the video too, and the take ends on its own once the video reaches its natural end, the same as a
 manual **Stop Recording** click would. It plays once rather than looping specifically so that end
 has something to trigger on. Detection only runs while the video actually plays:
@@ -570,14 +608,36 @@ the libraries and papers it draws on, and what the attached dance clip showed ar
   point, and the palm for the forearm and hand. A segment whose landmarks drop out of view is
   skipped on its own, so a wrist behind the body still leaves the upper arm following. A
   landmark the pose detector places outside the image counts as out of view however confident
-  it claims to be: it is a guess, so legs below a webcam framed on the upper body keep their rest
-  pose instead of following it.
+  it claims to be: it is a guess, so legs below a webcam framed on the upper body keep the pose
+  they last had, their rest pose when a session starts, instead of following it.
 - **Hands.** See **Fingers from the camera** above.
+- **Travel.** The rig walks across the floor with the performer. World landmarks are centred on
+  the hips and cannot say where the body is, so that comes from the picture: how large the body
+  appears against its real size gives the distance, and where the hips appear gives the side
+  position. The rig eases toward that spot over a quarter of a second and moves by the performer's
+  own travel scaled by the ratio of the two leg lengths, measured from where the performer stood
+  when the video, photo or camera session started. That start is where the first quarter second of
+  readings agree, with the rig held still meanwhile, since detection settles over its first
+  readings: a video's very first one had its depth off by a hand's width. Pausing or seeking a video lands the rig
+  straight on the spot for that moment.
+- **Planted feet.** The lower foot is taken as planted where it lands and held there while the
+  body moves over it, the leg bent to reach it, as long as the capture keeps it still: a foot the
+  capture sweeps across the floor faster than two leg lengths a second, as a run in place does, is
+  never held. It is let go, easing back over a tenth of a second rather than snapping, once it
+  lifts or moves off faster than four; if the body moves further than a leg can comfortably hold
+  it, the foot is dragged along at that reach instead of being held until it snaps back.
+
+![The dance clip at five moments (top) beside the default character posed from it with Follow Travel off (middle), staying on one spot, and on (bottom), stepping toward the viewer as the dancer walks up to the camera, back as she backs away, and forward again; the first column is the rest pose before the first detection](/img/animation/rig-camera-travel.webp)
+
+What those two rules are based on, and what the attached clips showed, is in
+[Carrying a Capture Across the Floor](/docs/journey/camera-capture-travel).
 
 Applying a captured pose resets to rest, and then drives, only whichever body-part groups the
 Merge Target diagram currently has active; see **Merging sources by body part** below. With
-every region active, the default, that is the whole rig: a bone the mapping does not drive this
-frame never keeps a stale pose left over from an earlier manual edit or a previous capture.
+every region active, the default, that is the whole rig, less any limb the frame cannot see,
+which keeps its last pose. The first frame of a new video, photo or camera session resets every
+bone it may drive, seen or not, so a limb out of view starts from rest rather than from a pose
+left over from an earlier manual edit or a previous capture.
 
 A model with more than one skinned mesh, such as Mixamo's Y Bot, loads with one mesh's skeleton
 hung at zero offset beneath the other's bones of the same name. The tool adopts the topmost bone
@@ -640,8 +700,14 @@ The remaining options tune the result:
 - **Keep Feet on Ground**, on by default, raises or lowers the whole rig so its lowest foot stays
   where it stands at rest. World landmarks are centred on the hips, so nothing in them says how
   high the body is: without this a crouch folds the legs up off the floor instead of bringing the
-  hips down. Recorded keyframes store rotations only, so a recorded take plays the crouch back
-  without the lowered hips.
+  hips down. A recorded take keeps the lowered hips.
+- **Follow Travel**, on by default, carries the rig across the floor as the performer walks
+  toward, away from or across the camera, see **Travel** above. Off, the rig turns and crouches
+  on its own spot. It assumes the camera stays still: a camera that moves reads as the performer
+  moving the other way.
+- **Pin Planted Feet**, on by default, holds a planted foot still while the body moves over it,
+  see **Planted feet** above. Off, the legs point exactly where the capture says and a foot on
+  the floor slides wherever that puts it.
 - **Use Depth (Z Axis)**, on by default, reads every direction in three dimensions. A single photo
   gives MediaPipe far less to judge depth from than a video's own motion does, making z the least
   reliable of the three axes it reports; turning this off reads every body direction flattened
@@ -656,13 +722,17 @@ The remaining options tune the result:
   shoulders sit at the same depth, and turning moves one shoulder closer to the camera than the
   other by exactly the angle turned. Off by default since it moves the view every applied frame,
   which fights any manual orbiting done in between.
-- **Video Slowdown Ratio**, 2 by default, from 1 to 6, sets two things at once for an uploaded
+- **Video Slowdown Ratio**, 10 by default, from 1 to 20, sets two things at once for an uploaded
   video: how many times slower it plays, and how many poses Record Motion samples per frame of it
   before filtering them down to one keyframe. The two go together because a video slowed N times
   gives detection about N readings of each of its frames. Record Motion times a video take by the
   video's own position rather than the clock on the wall, so the recorded clip keeps the video's
   real timing at any ratio. 1 plays at normal speed with one sample a frame and nothing to filter.
-  The smoothing times above still run on the wall clock, so at a ratio of 2 they act on half as
+  A browser will not play a video slower than a sixteenth of its speed, and Chromium throws when
+  asked to, so from 17 to 20 the video plays at that sixteenth and the ratio only raises how many
+  poses are sampled a frame: detection runs once per displayed frame, so a fast machine still has
+  that many readings of each video frame to fill them with.
+  The smoothing times above still run on the wall clock, so at a ratio of 10 they act on a tenth as
   much of the video.
 - **Show Camera Preview**, off by default, shows the mirrored video/photo preview when turned
   on, as does the docked Camera Preview button beside the camera one while capture is open; hidden, the docked panel shrinks down to just its action buttons and the model gets the
@@ -699,13 +769,13 @@ movement by eye:
 | Max Joint Speed (°/s)      | 720     | real fast moves lag; lower it when a limb still flips for a frame          |
 | Hold a Lost Hand (ms)      | 330     | a hand drops out and back; lower it when a hand lingers after leaving      |
 | Palm Turn to Confirm (°)   | 45      | a real quick wrist turn lags; lower it when a palm still flips; 180 is off |
-| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when limbs keep dropping back to rest       |
+| Landmark Confidence Needed | 0.5     | limbs follow guesses; lower it when a limb stays frozen too long           |
 | Roll Starts at Bend (°)    | 10      | a nearly straight arm or leg rolls back and forth                          |
 | Roll Full at Bend (°)      | 30      | the roll changes too abruptly as a limb bends                              |
 
 **Bones Settle** works on the result rather than the landmarks: each bone eases from where the
 last frame left it toward its new rotation, which smooths snaps landmark smoothing cannot see,
-such as a limb whose landmarks drop out falling back to rest. A pose applied after more than half
+such as a limb picked up again after being held. A pose applied after more than half
 a second lands whole, so a new photo or a resumed video is not blended from a stale pose. **Max
 Joint Speed** caps how fast any bone may turn between two readings. A misread frame flipping a
 forearm's roll half a turn asks for thousands of degrees a second, far past any dancer, so it is
@@ -723,6 +793,24 @@ Arrow** and **Shift+Right Arrow** extend the frame selection by one frame in tha
 instead of stepping the playhead — see **Selecting a range of frames** above. These are
 suppressed while a text or number field elsewhere in the panel has focus, so typing a bone
 rotation or a Config value never gets hijacked by the arrow keys moving the cursor within it.
+
+### Scoring a capture against a recording
+
+A recording of the rig playing a preset is a test case with a known answer. The script
+`scripts/extract-video-landmarks.mjs` runs MediaPipe's pose and face detectors over every frame of
+a video in headless Chromium, the pose detector in VIDEO mode as the live capture runs it, and
+writes the readings as a fixture: each frame's world and image landmarks, and the face matrix.
+It needs `ffmpeg` on the path, to cut the video into frames Playwright's Chromium can decode.
+
+```sh
+node scripts/extract-video-landmarks.mjs recording.mp4 src/views/Tools/RigAnimator/fixtures/runningClipFrames.json
+```
+
+`clipReproduction.test.ts` replays that fixture through `useRigCameraPose` with the Config panel's
+defaults, the way the live capture applies each reading, and scores the rig against the preset it
+recorded using the measures in `poseSimilarity.ts`. What the scores mean, and what the first
+recording showed, is in
+[Copying a Performer onto a Rig](../journey/camera-motion-retargeting.md#scoring-a-capture-against-a-recording-of-the-rig-itself).
 
 ## Merging sources by body part
 
