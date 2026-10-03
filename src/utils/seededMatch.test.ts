@@ -90,18 +90,14 @@ describe('remainingPlayerIds', () => {
 
 describe('isLastSurvivor', () => {
   it.each([
-    [
-      'the only player left in a two-player match',
-      ['me', 'rival'],
-      [result('rival', 5, 100)],
-      true
-    ],
-    ['a solo player', ['me'], [], false],
-    ['a player who already reported', ['me', 'rival'], [result('me', 1, null)], false],
-    ['one of two players still going', ['me', 'a', 'b'], [result('a', 5, 100)], false]
-  ])('is %s: %j', (_label, playerIds, results, expected) => {
+    ['the only player left of two', ['me', 'rival'], [result('rival', 5, 100)], 2, true],
+    ['left alone after the rival quit', ['me'], [], 2, true],
+    ['a solo player', ['me'], [], 1, false],
+    ['a player who already reported', ['me', 'rival'], [result('me', 1, null)], 2, false],
+    ['one of two players still going', ['me', 'a', 'b'], [result('a', 5, 100)], 3, false]
+  ])('is %s: %j', (_label, playerIds, results, rosterSize, expected) => {
     // Act
-    const survivor = isLastSurvivor(playerIds, results, 'me')
+    const survivor = isLastSurvivor(playerIds, results, 'me', rosterSize)
 
     // Assert
     expect(survivor).toBe(expected)

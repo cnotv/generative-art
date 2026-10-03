@@ -79,7 +79,24 @@ export type BbScorePopup = {
 
 export type BbGameDeps = {
   canvas: Ref<HTMLCanvasElement | null>
-  onScore: (points: number, xPercent: number, yPercent: number) => void
+  isSolo: Ref<boolean>
+  onScore: (score: number, popup: Omit<BbScorePopup, 'id'>) => void
   onGarbageSent: (rows: number) => void
-  onGameOver: () => void
+  onEnd: (score: number, isEliminated: boolean) => void
+}
+
+export type BbRunState = {
+  seed: number
+  startAt: number
+  durationMs: number | null
+  bricks: Brick[]
+  ball: BallState | null
+  paddle: PaddleState
+  serveSeconds: number
+  level: number
+  destroyedCount: number
+  garbageGeneration: number
+  pendingGarbageRows: number
+  elapsedMs: number
+  isRunning: boolean
 }

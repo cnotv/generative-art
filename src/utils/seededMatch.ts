@@ -34,20 +34,22 @@ export const remainingPlayerIds = (playerIds: string[], results: MatchResult[]):
   playerIds.filter((playerId) => !results.some((result) => result.playerId === playerId))
 
 /**
- * Whether the local player is the last one still playing in a multiplayer match, and should
- * stop and report so the match can end.
- * @param playerIds - Everyone in the match
+ * Whether the local player is the last one still playing in a match that started with others,
+ * and should stop and report so the match can end. Rivals who left count as gone.
+ * @param playerIds - Players from the starting roster who are still in the room
  * @param results - Results reported so far
  * @param localPlayerId - The local player
+ * @param rosterSize - How many players the match started with
  * @returns True for the lone survivor of a match that started with more than one player
  */
 export const isLastSurvivor = (
   playerIds: string[],
   results: MatchResult[],
-  localPlayerId: string
+  localPlayerId: string,
+  rosterSize: number
 ): boolean => {
   const remaining = remainingPlayerIds(playerIds, results)
-  return playerIds.length > 1 && remaining.length === 1 && remaining[0] === localPlayerId
+  return rosterSize > 1 && remaining.length === 1 && remaining[0] === localPlayerId
 }
 
 /**

@@ -48,6 +48,10 @@ export const GARBAGE_BRICK_POINTS = 5
 export const BRICKS_PER_GARBAGE_ROW = 8
 export const GARBAGE_GAP_COUNT = 1
 
+export const BRICK_POOL_SIZE = 160
+export const MAX_FRAME_SECONDS = 0.05
+export const BRICK_ROUGHNESS = 0.85
+
 export const SPRINT_DURATION_MS = 120_000
 export const START_COUNTDOWN_MS = 3000
 export const SCORE_POPUP_DURATION_MS = 900
