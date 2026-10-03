@@ -83,6 +83,7 @@ export type BbGameDeps = {
   onScore: (score: number, popup: Omit<BbScorePopup, 'id'>) => void
   onGarbageSent: (rows: number) => void
   onEnd: (score: number, isEliminated: boolean) => void
+  touchButtonBandPx: number
 }
 
 export type BbRunState = {

@@ -64,9 +64,15 @@ export const TOUGH_BRICK_COLOR = 0x8f7fb8
 export const GARBAGE_BRICK_COLOR = 0x8a8597
 export const ROW_COLORS = [0xe8a5b5, 0xf3c6a5, 0xf2e2a8, 0xb5e3c8, 0xaab8f0, 0xc9a7e4]
 
+export const CAMERA_FOV = 55
+export const CAMERA_TILT_OFFSET = -4.6
+export const CAMERA_FIT_MARGIN = 1.12
+export const MAX_RESERVED_BOTTOM_FRACTION = 0.4
+export const TOUCH_BUTTON_BAND_PX = 148
+
 export const SETUP_CONFIG: SetupConfig = {
   scene: { backgroundColor: BACKGROUND_COLOR },
-  camera: { position: [0, -5, 21], lookAt: [0, -0.4, 0], fov: 55 },
+  camera: { fov: CAMERA_FOV },
   orbit: false,
   ground: false,
   sky: false,

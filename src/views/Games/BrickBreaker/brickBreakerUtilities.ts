@@ -1,18 +1,24 @@
 import { seededRandomValues } from '@webgamekit/threejs'
+import type { CoordinateTuple } from '@webgamekit/animation'
 import {
   BALL_RADIUS,
   BALL_SPEED,
   BALL_SPEED_PER_WALL,
   BRICK_HEIGHT,
   BRICK_WIDTH,
+  CAMERA_FIT_MARGIN,
+  CAMERA_FOV,
+  CAMERA_TILT_OFFSET,
   FIELD_BOTTOM_Y,
   FIELD_HALF_WIDTH,
   FIELD_TOP_Y,
+  FRAME_THICKNESS,
   GARBAGE_BRICK_POINTS,
   GARBAGE_GAP_COUNT,
   GARBAGE_SEED_STRIDE,
   LAUNCH_ANGLE_RADIANS,
   MAX_BOUNCE_ANGLE_RADIANS,
+  MAX_RESERVED_BOTTOM_FRACTION,
   MAX_SUBSTEP_DISTANCE,
   NORMAL_BRICK_POINTS,
   PADDLE_HEIGHT,
@@ -338,3 +344,58 @@ export const servedBall = (paddle: PaddleState, speed: number): BallState => ({
  */
 export const ballSpeedForWall = (clearedWalls: number): number =>
   BALL_SPEED + clearedWalls * BALL_SPEED_PER_WALL
+
+const FRAME_HALF_WIDTH = FIELD_HALF_WIDTH + FRAME_THICKNESS
+const FRAME_TOP_Y = FIELD_TOP_Y + FRAME_THICKNESS
+const FRAME_HALF_HEIGHT = (FRAME_TOP_Y - FIELD_BOTTOM_Y) / 2
+const FRAME_CENTRE_Y = (FRAME_TOP_Y + FIELD_BOTTOM_Y) / 2
+
+// Half the height of the view at the field's plane, large enough for both the width and the
+// height of the frame to fit above the reserved strip. The margin also absorbs the camera's
+// slight upward tilt, which brings the bottom of the field closer than a straight-on fit assumes.
+const visibleHalfHeight = (aspect: number, reservedFraction: number): number =>
+  Math.max(FRAME_HALF_HEIGHT / (1 - reservedFraction), FRAME_HALF_WIDTH / aspect) *
+  CAMERA_FIT_MARGIN
+
+/**
+ * Camera framing that fits the whole field, frame included, on any screen shape. A reserved
+ * strip at the bottom of the screen, kept clear for touch buttons, pushes the field up into the
+ * space above it.
+ * @param aspect - Canvas width divided by height
+ * @param reservedFraction - Share of the screen height to keep clear at the bottom
+ * @returns Camera position and the point it looks at
+ */
+export const fitCameraToField = (
+  aspect: number,
+  reservedFraction: number
+): { position: CoordinateTuple; lookAt: CoordinateTuple } => {
+  const halfHeight = visibleHalfHeight(aspect, reservedFraction)
+  const distance = halfHeight / Math.tan(((CAMERA_FOV / 2) * Math.PI) / 180)
+  const lookAtY = FRAME_CENTRE_Y - reservedFraction * halfHeight
+  return {
+    position: [0, lookAtY + CAMERA_TILT_OFFSET, distance],
+    lookAt: [0, lookAtY, 0]
+  }
+}
+
+/**
+ * How much of the screen height to keep clear for the touch buttons. The strip is needed only
+ * when the buttons would overlap the field: on a wide screen they sit beside it instead.
+ * @param canvasWidth - Canvas width in pixels
+ * @param canvasHeight - Canvas height in pixels
+ * @param buttonBandPx - Space one button needs from its corner, in pixels; 0 without buttons
+ * @returns Share of the height to reserve at the bottom, capped at the maximum
+ */
+export const reservedBottomFraction = (
+  canvasWidth: number,
+  canvasHeight: number,
+  buttonBandPx: number
+): number => {
+  if (buttonBandPx === 0 || canvasHeight === 0) return 0
+  const aspect = canvasWidth / canvasHeight
+  const fieldHalfWidthPx =
+    (FRAME_HALF_WIDTH / (visibleHalfHeight(aspect, 0) * aspect)) * (canvasWidth / 2)
+  const sideClearancePx = canvasWidth / 2 - fieldHalfWidthPx
+  if (sideClearancePx >= buttonBandPx) return 0
+  return Math.min(buttonBandPx / canvasHeight, MAX_RESERVED_BOTTOM_FRACTION)
+}

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import * as THREE from 'three'
 import {
   createWall,
   brickBounds,
@@ -10,7 +11,9 @@ import {
   hasReachedDangerRow,
   movePaddle,
   servedBall,
-  ballSpeedForWall
+  ballSpeedForWall,
+  fitCameraToField,
+  reservedBottomFraction
 } from './brickBreakerUtilities'
 import {
   BALL_RADIUS,
@@ -19,11 +22,14 @@ import {
   BRICK_COLUMN_COUNT,
   BRICK_HEIGHT,
   BRICK_WIDTH,
+  CAMERA_FOV,
   FIELD_BOTTOM_Y,
   FIELD_HALF_WIDTH,
   FIELD_TOP_Y,
+  FRAME_THICKNESS,
   GARBAGE_BRICK_POINTS,
   GARBAGE_GAP_COUNT,
+  MAX_RESERVED_BOTTOM_FRACTION,
   NORMAL_BRICK_POINTS,
   PADDLE_HEIGHT,
   PADDLE_SPEED,
@@ -458,5 +464,86 @@ describe('ballSpeedForWall', () => {
 
     // Assert
     expect(speed).toBe(expected)
+  })
+})
+
+describe('fitCameraToField', () => {
+  const outerX = FIELD_HALF_WIDTH + FRAME_THICKNESS
+  const topY = FIELD_TOP_Y + FRAME_THICKNESS
+  const corners: Array<[number, number]> = [
+    [-outerX, topY],
+    [outerX, topY],
+    [-outerX, FIELD_BOTTOM_Y],
+    [outerX, FIELD_BOTTOM_Y]
+  ]
+
+  const projectCorners = (aspect: number, reservedBottomFraction: number) => {
+    const { position, lookAt } = fitCameraToField(aspect, reservedBottomFraction)
+    const camera = new THREE.PerspectiveCamera(CAMERA_FOV, aspect, 0.1, 1000)
+    camera.position.set(...position)
+    camera.lookAt(...lookAt)
+    camera.updateMatrixWorld()
+    camera.updateProjectionMatrix()
+    return corners.map(([x, y]) => new THREE.Vector3(x, y, 0).project(camera))
+  }
+
+  it.each([0.46, 0.73, 1, 1.6, 2])('keeps the whole field on screen at aspect %f', (aspect) => {
+    // Act
+    const projected = projectCorners(aspect, 0)
+
+    // Assert
+    projected.forEach((point) => {
+      expect(Math.abs(point.x)).toBeLessThanOrEqual(1)
+      expect(Math.abs(point.y)).toBeLessThanOrEqual(1)
+    })
+  })
+
+  it.each([
+    [0.46, 0.18],
+    [0.73, 0.29]
+  ])('keeps the field above a reserved bottom strip (aspect %f, strip %f)', (aspect, strip) => {
+    // Act
+    const projected = projectCorners(aspect, strip)
+
+    // Assert
+    projected.forEach((point) => {
+      expect(point.y).toBeGreaterThan(-1 + 2 * strip)
+      expect(point.y).toBeLessThanOrEqual(1)
+      expect(Math.abs(point.x)).toBeLessThanOrEqual(1)
+    })
+  })
+
+  it('backs the camera off further on a narrower screen', () => {
+    // Act
+    const distances = [2, 1.2, 0.73, 0.46].map((aspect) => fitCameraToField(aspect, 0).position[2])
+
+    // Assert
+    distances.slice(1).forEach((distance, index) => {
+      expect(distance).toBeGreaterThanOrEqual(distances[index])
+    })
+  })
+})
+
+describe('reservedBottomFraction', () => {
+  it.each([
+    ['a portrait phone, where the field spans the width', 374, 512, 148, true],
+    ['a landscape phone, where the buttons sit beside the field', 844, 300, 148, false],
+    ['a screen with no touch buttons', 374, 512, 0, false]
+  ])('on %s reserves a strip: %s', (_label, width, height, bandPx, expectsStrip) => {
+    // Act
+    const fraction = reservedBottomFraction(width, height, bandPx)
+
+    // Assert
+    expect(fraction > 0).toBe(expectsStrip)
+  })
+
+  it('reserves the band as a share of the height, capped at the maximum', () => {
+    // Act
+    const tall = reservedBottomFraction(374, 740, 148)
+    const short = reservedBottomFraction(300, 320, 148)
+
+    // Assert
+    expect(tall).toBeCloseTo(148 / 740)
+    expect(short).toBe(MAX_RESERVED_BOTTOM_FRACTION)
   })
 })

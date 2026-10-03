@@ -45,6 +45,8 @@ import {
   ballSpeedForWall,
   brickBounds,
   createWall,
+  fitCameraToField,
+  reservedBottomFraction,
   garbageRowsToSend,
   hasReachedDangerRow,
   movePaddle,
@@ -223,6 +225,24 @@ const screenPercent = (handles: SceneHandles, x: number, y: number) => {
   }
 }
 
+// The shared resize handler measures the canvas, which the renderer has already pinned to its
+// old pixel size, so the canvas never grows after a phone rotates. Sizing from the container
+// fixes that.
+const fitSceneToContainer = (handles: SceneHandles, touchButtonBandPx: number): void => {
+  if (!handles.tools) return
+  const { camera, renderer } = handles.tools
+  const container = renderer.domElement.parentElement ?? renderer.domElement
+  const { clientWidth, clientHeight } = container
+  if (clientWidth === 0 || clientHeight === 0) return
+  renderer.setSize(clientWidth, clientHeight)
+  camera.aspect = clientWidth / clientHeight
+  camera.updateProjectionMatrix()
+  const reservedFraction = reservedBottomFraction(clientWidth, clientHeight, touchButtonBandPx)
+  const { position, lookAt } = fitCameraToField(camera.aspect, reservedFraction)
+  camera.position.set(...position)
+  camera.lookAt(...lookAt)
+}
+
 const controlDirection = (controls: ControlsExtras | null): number => {
   if (!controls) return 0
   const actions = controls.currentActions
@@ -370,8 +390,10 @@ export const useBrickBreakerGame = (deps: BbGameDeps) => {
   }
   const context: RunContext = { handles, run, hud, deps }
   const currentActions = ref<Record<string, unknown>>({})
+  const reframe = (): void => fitSceneToContainer(handles, deps.touchButtonBandPx)
 
   const destroy = (): void => {
+    window.removeEventListener('resize', reframe)
     handles.controls?.destroyControls()
     handles.tools?.cleanup()
     handles.disposables.forEach((disposable) => disposable.dispose())
@@ -397,6 +419,8 @@ export const useBrickBreakerGame = (deps: BbGameDeps) => {
       config: SETUP_CONFIG,
       defineSetup: () => buildScene(handles, tools.scene)
     })
+    reframe()
+    window.addEventListener('resize', reframe)
     if (run.value) {
       syncBrickMeshes(handles, run.value.bricks)
       syncMovingMeshes(handles, run.value)

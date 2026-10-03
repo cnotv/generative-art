@@ -75,3 +75,18 @@ allowed. The scene instead creates one pool at start, sized for the deepest wall
 survive, and each change of the wall reassigns positions and materials to the first bricks'
 worth of meshes and hides the rest. A tough brick that has taken its first hit swaps to its
 row's colour, which is the only damage feedback the player needs.
+
+## Framing around the touch buttons
+
+On a phone the paddle is steered with two round buttons in the bottom corners. A fixed camera
+put the paddle's track at the same height as the buttons, so thumbs covered the paddle at
+either edge of a portrait screen. The camera is now fitted to the canvas instead: it backs off
+until the whole frame fits, and when the buttons would overlap the field it keeps a strip clear
+at the bottom and lifts the field above it. On a wide screen the buttons sit beside the field,
+so no strip is kept and the field uses the full height.
+
+Fitting to the canvas also exposed that the shared resize handler measures the canvas itself,
+which the renderer has already pinned to its old pixel size, so a rotated phone kept a
+portrait-width canvas. The game sizes the renderer from the canvas's container instead.
+
+![Portrait phone with the paddle at the left edge, clear of the left and right touch buttons in the strip below the field](/img/brick-breaker/phone.webp)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { isMobile } from '@webgamekit/controls'
 import { useBrickBreakerStore } from '@/stores/brickBreaker'
 import { useRoomId } from '@/composables/useRoomId'
 import { useMultiplayerLobbyHandlers } from '@/composables/useMultiplayerLobbyHandlers'
@@ -24,7 +25,7 @@ import BrickBreakerGame from './BrickBreakerGame.vue'
 import BrickBreakerSummary from './BrickBreakerSummary.vue'
 import { useBrickBreakerSession } from './useBrickBreakerSession'
 import { useBrickBreakerGame } from './useBrickBreakerGame'
-import { SCORE_POPUP_DURATION_MS, SPRINT_DURATION_MS } from './config'
+import { SCORE_POPUP_DURATION_MS, SPRINT_DURATION_MS, TOUCH_BUTTON_BAND_PX } from './config'
 import type { BbScorePopup } from './types'
 
 const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
@@ -75,6 +76,7 @@ const { isHost, localPlayerId, ranking } = session
 const game = useBrickBreakerGame({
   canvas,
   isSolo,
+  touchButtonBandPx: isMobile() ? TOUCH_BUTTON_BAND_PX : 0,
   onScore: (score, popup) => {
     session.broadcastScore(score)
     showPopup(popup)
