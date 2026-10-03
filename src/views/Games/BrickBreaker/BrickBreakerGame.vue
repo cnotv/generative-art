@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
-import { KEYBOARD_MAPPING, SCORE_POPUP_DURATION_MS } from './config'
+import { SCORE_POPUP_DURATION_MS, TOUCH_LEFT_BUTTON, TOUCH_RIGHT_BUTTON } from './config'
 import type { BbScorePopup } from './types'
 
 defineProps<{
@@ -53,14 +53,22 @@ const formatClock = (seconds: number): string =>
     >
       +{{ popup.points }}
     </span>
-    <TouchControl
-      v-if="isMobileDevice"
-      class="bb-game__fauxpad"
-      :mapping="KEYBOARD_MAPPING['faux-pad']"
-      :options="{ deadzone: 0.15 }"
-      :current-actions="currentActions"
-      :on-action="() => {}"
-    />
+    <template v-if="isMobileDevice">
+      <TouchControl
+        class="bb-game__touch-button bb-game__touch-button--left"
+        mode="button"
+        :mapping="TOUCH_LEFT_BUTTON"
+        :current-actions="currentActions"
+        :on-action="() => {}"
+      />
+      <TouchControl
+        class="bb-game__touch-button bb-game__touch-button--right"
+        mode="button"
+        :mapping="TOUCH_RIGHT_BUTTON"
+        :current-actions="currentActions"
+        :on-action="() => {}"
+      />
+    </template>
   </div>
 </template>
 
@@ -143,10 +151,17 @@ const formatClock = (seconds: number): string =>
   animation: bb-popup-rise ease-out forwards;
 }
 
-.bb-game__fauxpad {
+.bb-game__touch-button {
   position: absolute;
   bottom: var(--spacing-6);
+}
+
+.bb-game__touch-button--left {
   left: var(--spacing-6);
+}
+
+.bb-game__touch-button--right {
+  right: var(--spacing-6);
 }
 
 @keyframes bb-popup-rise {

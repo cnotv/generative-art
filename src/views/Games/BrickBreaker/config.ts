@@ -95,6 +95,9 @@ export const KEYBOARD_MAPPING = {
   }
 }
 
+export const TOUCH_LEFT_BUTTON: Record<string, string> = { '←': 'left' }
+export const TOUCH_RIGHT_BUTTON: Record<string, string> = { '→': 'right' }
+
 export const CONTROLS_ACTIONS: MapperActionConfig[] = [
   { id: 'left', label: 'Move left', directional: true },
   { id: 'right', label: 'Move right', directional: true }

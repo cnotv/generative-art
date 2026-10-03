@@ -1,7 +1,8 @@
 <template>
   <ul>
     <li>
-      Move the paddle with <strong>A</strong>/<strong>D</strong>, the arrow keys or the left stick
+      Move the paddle with <strong>A</strong>/<strong>D</strong>, the arrow keys, the left stick, or
+      the <strong>←</strong> <strong>→</strong> buttons on a phone
     </li>
     <li>Where the ball lands on the paddle sets the angle it flies off at</li>
     <li>Light bricks break in one hit, dark bricks need two</li>
