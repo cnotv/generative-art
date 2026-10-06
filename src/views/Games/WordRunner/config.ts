@@ -120,6 +120,9 @@ export const SIGN_COLORS = {
 }
 
 export const setupConfig: SetupConfig = {
+  // No orbit controls at all: even disabled, they keep turning the camera back to their own
+  // target, which the chase camera would then fight every frame.
+  orbit: false,
   ground: false,
   sky: false,
   scene: { backgroundColor: SKY_COLOR },

@@ -19,14 +19,7 @@ import {
   LIGHT_DIRECTIONAL_POSITION
 } from '@/views/Games/RockRunner/config'
 import { createDirectionalLightFollowAction } from '@/utils/gameTimelineActions'
-import {
-  CAMERA_TARGET_HEIGHT,
-  CONTROL_MAPPING,
-  GATE_POOL_SIZE,
-  RUN_SPEED,
-  configControls,
-  setupConfig
-} from './config'
+import { CONTROL_MAPPING, GATE_POOL_SIZE, RUN_SPEED, configControls, setupConfig } from './config'
 import { useWordRun } from './game/useWordRun'
 import { createGatePool } from './scene/gatePool'
 import { createCourse } from './scene/course'
@@ -91,14 +84,7 @@ onMounted(async () => {
   })
   destroyControls = controls.destroyControls
 
-  // Orbit is off but still aims the camera at its target on its first update, so the target
-  // is set to the same point the loop looks at, or the first frame frames the origin.
-  const config = {
-    ...setupConfig,
-    orbit: { target: new THREE.Vector3(0, CAMERA_TARGET_HEIGHT, 0), disabled: true }
-  }
-
-  await store.init(canvas.value, config, {
+  await store.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: true, showScene: true, showElements: false },
     playMode: true,
     onProgress: handleProgress,

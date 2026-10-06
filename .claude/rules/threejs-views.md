@@ -161,7 +161,10 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
 - **`camera.lookAt` loses to `orbit.target`, even when orbit is disabled.** Orbit aims the
   camera at its target on its first update regardless, so a `SetupConfig` that sets `lookAt`
   and `orbit: { disabled: true }` frames on the origin instead. Set both, from the same
-  constant. The symptom is a scene framed too low with no obvious cause.
+  constant. The symptom is a scene framed too low with no obvious cause. A view that moves its
+  own camera every frame, such as a chase camera, must use `orbit: false` instead: a disabled
+  orbit set up through the scene store keeps turning the camera back to its fixed target, so the
+  view swings away from whatever it follows as that moves off the origin.
 - **Check a pose from a second angle before believing it.** A rig can be turned the wrong
   way round and still put its hands exactly where the front view wants them — it is then
   presenting over its own shoulders, and the arms are pitched backwards. Confirming the hands
