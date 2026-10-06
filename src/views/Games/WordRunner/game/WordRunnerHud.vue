@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { LobbyUIKeyPill } from '@/components/LobbyUI'
+import { formatRunTime } from './bestTimes'
 import type { RibbonWord, RunPhase } from '../types'
 
 defineProps<{
@@ -13,6 +14,7 @@ defineProps<{
   sentence: string
   translation: string
   upcomingLapNote: string | null
+  runSeconds: number
 }>()
 </script>
 
@@ -23,6 +25,7 @@ defineProps<{
         <span>{{ lapLabel }}</span>
         <span v-if="isShuffledLap" class="word-runner-hud__tag">Lanes shuffled</span>
         <span v-else-if="isRetryLap" class="word-runner-hud__tag">Again, with hints</span>
+        <span class="word-runner-hud__time">{{ formatRunTime(runSeconds) }}</span>
       </p>
       <ol class="word-runner-hud__ribbon" aria-label="Words passed this lap">
         <li
@@ -99,6 +102,10 @@ defineProps<{
   font-size: var(--lui-text-small);
   font-variant-numeric: tabular-nums;
   text-transform: uppercase;
+}
+
+.word-runner-hud__time {
+  font-variant-numeric: tabular-nums;
 }
 
 .word-runner-hud__tag {

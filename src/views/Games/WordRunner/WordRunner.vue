@@ -13,7 +13,14 @@ import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '
 import { useSceneViewStore } from '@/stores/sceneView'
 import spanishPack from './phrases/es.json'
 import {
-  CAMERA_TARGET,
+  FOG_COLOR,
+  FOG_FAR,
+  FOG_NEAR,
+  LIGHT_DIRECTIONAL_POSITION
+} from '@/views/Games/RockRunner/config'
+import { createDirectionalLightFollowAction } from '@/utils/gameTimelineActions'
+import {
+  CAMERA_TARGET_HEIGHT,
   CONTROL_MAPPING,
   GATE_POOL_SIZE,
   RUN_SPEED,
@@ -22,7 +29,7 @@ import {
 } from './config'
 import { useWordRun } from './game/useWordRun'
 import { createGatePool } from './scene/gatePool'
-import { createTrack } from './scene/track'
+import { createCourse } from './scene/course'
 import { spawnRunner } from './scene/runner'
 import WordRunnerStart from './game/WordRunnerStart.vue'
 import WordRunnerHud from './game/WordRunnerHud.vue'
@@ -62,7 +69,10 @@ const {
   nextGloss,
   sentence,
   summary,
-  upcomingLapNote
+  upcomingLapNote,
+  runSeconds,
+  bestSeconds,
+  isNewBest
 } = run
 
 let destroyControls: () => void = () => undefined
@@ -85,7 +95,7 @@ onMounted(async () => {
   // is set to the same point the loop looks at, or the first frame frames the origin.
   const config = {
     ...setupConfig,
-    orbit: { target: new THREE.Vector3(...CAMERA_TARGET), disabled: true }
+    orbit: { target: new THREE.Vector3(0, CAMERA_TARGET_HEIGHT, 0), disabled: true }
   }
 
   await store.init(canvas.value, config, {
@@ -93,19 +103,33 @@ onMounted(async () => {
     playMode: true,
     onProgress: handleProgress,
     defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
-      const track = createTrack(scene)
+      // Rock Runner's haze, so the course fades into the distance the way its track does.
+      scene.fog = new THREE.Fog(FOG_COLOR, FOG_NEAR, FOG_FAR)
       const pool = createGatePool(scene, GATE_POOL_SIZE)
-      const runner = await spawnRunner(scene, world)
-      disposers.push(track.dispose, pool.dispose)
-      run.attachScene({ slots: pool.slots, runner, camera, scrollTrack: track.scroll })
-
-      animate({
-        beforeTimeline: () => run.stepRun(getDelta()),
-        timeline: createTimelineManager()
+      const { runner, footLift } = await spawnRunner(scene, world)
+      disposers.push(pool.dispose)
+      run.attachScene({
+        slots: pool.slots,
+        runner,
+        runnerFootLift: footLift,
+        camera,
+        createCourse: (seed) => createCourse(scene, world, seed)
       })
+
+      const sun = scene.children.find((child) => child instanceof THREE.DirectionalLight)
+      const timeline = createTimelineManager()
+      // The shadow camera covers a patch around its light; it follows the runner down the course.
+      timeline.addAction(
+        createDirectionalLightFollowAction(
+          () => (sun instanceof THREE.DirectionalLight ? sun : null),
+          () => runner,
+          LIGHT_DIRECTIONAL_POSITION
+        )
+      )
+      animate({ beforeTimeline: () => run.stepRun(getDelta()), timeline })
     }
   })
-  // The day cycle would repaint the pastel rig a frame later; the signs have to stay readable.
+  // The day cycle would repaint Rock Runner's light and sky a frame later.
   store.setLightTransitionEnabled(false)
 })
 
@@ -135,6 +159,7 @@ onUnmounted(() => {
       :sentence="sentence"
       :translation="phrase.translation"
       :upcoming-lap-note="upcomingLapNote"
+      :run-seconds="runSeconds"
     />
     <WordRunnerStart
       v-if="phase === 'idle' && !loadingVisible"
@@ -146,6 +171,9 @@ onUnmounted(() => {
       v-if="phase === 'finished'"
       :phrase="phrase"
       :summary="summary"
+      :run-seconds="runSeconds"
+      :best-seconds="bestSeconds"
+      :is-new-best="isNewBest"
       @restart="run.start(phrase.id)"
       @pick="run.backToStart"
     />

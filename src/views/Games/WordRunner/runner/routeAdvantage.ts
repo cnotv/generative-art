@@ -1,6 +1,13 @@
 import { ROUTE_EFFECTS } from '../config'
 import type { ActiveEffect, LaneOutcome, RouteFeature } from '../types'
 
+/** How fast the heading turns, in radians per unit of track, across a stretch of it. */
+export const yawRateBetween = (
+  yawAt: (distance: number) => number,
+  fromDistance: number,
+  toDistance: number
+): number => (yawAt(toDistance) - yawAt(fromDistance)) / (toDistance - fromDistance)
+
 /**
  * The lane on the inside of the bend a gate opens onto, or null on a straight. A positive
  * turn rate turns left, so the inside is the leftmost lane.
@@ -58,3 +65,18 @@ export const effectSpeedRatio = (effect: ActiveEffect | null): number => {
   const { ratio, seconds } = ROUTE_EFFECTS[effect.outcome]
   return 1 + (ratio - 1) * Math.min(1, effect.remaining / seconds)
 }
+
+/**
+ * The inside lane of the stretch after each gate: from the gate to the end of its route
+ * feature, where a bend would be run. Null where that stretch is close enough to straight.
+ */
+export const insideLanesAlong = (
+  yawAt: (distance: number) => number,
+  gateDistances: number[],
+  stretchLength: number,
+  threshold: number,
+  laneCount: number
+): Array<number | null> =>
+  gateDistances.map((from) =>
+    insideLaneFor(yawRateBetween(yawAt, from, from + stretchLength), threshold, laneCount)
+  )

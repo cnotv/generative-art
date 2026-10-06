@@ -75,6 +75,26 @@ describe('buildCorrectLanes', () => {
     }
   )
 
+  it('puts a word on its preferred lane, the inside of the bend its gate opens onto', () => {
+    const preferred = [0, null, 2, null, 0]
+
+    const lanes = buildCorrectLanes(11, 5, LANE_COUNT, preferred)
+
+    expect([lanes[0], lanes[2], lanes[4]]).toEqual([0, 2, 0])
+  })
+
+  it('lays out the same lanes as before wherever nothing is preferred', () => {
+    expect(buildCorrectLanes(5, 12, LANE_COUNT, Array(12).fill(null))).toEqual(
+      buildCorrectLanes(5, 12, LANE_COUNT)
+    )
+  })
+
+  it('still never repeats a lane past the allowed streak, even when it is preferred', () => {
+    const lanes = buildCorrectLanes(2, 6, LANE_COUNT, [0, 0, 0, 0, 0, 0])
+
+    expect(longestSameLaneStreak(lanes)).toBeLessThanOrEqual(MAX_SAME_LANE_STREAK)
+  })
+
   it('uses every lane over a long phrase', () => {
     const lanes = buildCorrectLanes(3, 40, LANE_COUNT)
 

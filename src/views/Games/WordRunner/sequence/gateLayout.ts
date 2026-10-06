@@ -24,11 +24,18 @@ const otherLane = (lane: number, randomValue: number, laneCount: number): number
 
 /**
  * The lane holding each word of the phrase. It never changes between laps, which is what
- * turns the word order into a path, and never repeats past the allowed streak.
+ * turns the word order into a path, and never repeats past the allowed streak. A word may
+ * prefer a lane, the inside of the bend its gate opens onto, and gets it unless that would
+ * break the streak; everywhere else the seed decides.
  */
-export const buildCorrectLanes = (seed: number, wordCount: number, laneCount: number): number[] =>
-  seededRandomValues(seed, wordCount).reduce<number[]>((lanes, randomValue) => {
-    const candidate = Math.floor(randomValue * laneCount)
+export const buildCorrectLanes = (
+  seed: number,
+  wordCount: number,
+  laneCount: number,
+  preferredLanes: Array<number | null> = []
+): number[] =>
+  seededRandomValues(seed, wordCount).reduce<number[]>((lanes, randomValue, position) => {
+    const candidate = preferredLanes[position] ?? Math.floor(randomValue * laneCount)
     const recentLanes = lanes.slice(-MAX_SAME_LANE_STREAK)
     const wouldExtendStreak =
       recentLanes.length === MAX_SAME_LANE_STREAK && recentLanes.every((lane) => lane === candidate)

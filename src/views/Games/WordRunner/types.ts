@@ -1,5 +1,8 @@
 import type * as THREE from 'three'
 import type { ComplexModel } from '@webgamekit/threejs'
+import type { TrackPath, TrackSample } from '@/views/Games/RockRunner/types'
+
+export type { TrackPath, TrackSample }
 
 /** One word of a phrase, with what it means and the look-alikes offered against it. */
 export type PhraseWord = {
@@ -100,11 +103,17 @@ export type SignState = 'idle' | 'hint' | 'right' | 'wrong' | 'reveal'
 export type GateSlot = {
   group: THREE.Group
   signs: GateSign[]
-  landmark: THREE.Mesh
-  landmarkShapes: THREE.BufferGeometry[]
-  landmarkMaterial: THREE.MeshLambertMaterial
+  features: GateFeatures
   frameMaterial: THREE.MeshLambertMaterial
   gateKey: string | null
+}
+
+/** The route pieces a gate leads onto: a ramp, and a rock and a gravel patch per lane. */
+export type GateFeatures = {
+  group: THREE.Group
+  ramp: THREE.Mesh
+  rocks: THREE.Mesh[]
+  gravel: THREE.Mesh[]
 }
 
 /** One lane's word on a gate, drawn into its own canvas so it can be redrawn in place. */
@@ -130,8 +139,9 @@ export type RunPhase = 'idle' | 'running' | 'recap' | 'finished'
 export type RunScene = {
   slots: GateSlot[]
   runner: ComplexModel
+  runnerFootLift: number
   camera: THREE.Camera
-  scrollTrack: (distance: number) => void
+  createCourse: (seed: number) => Course
 }
 
 /** Settings read live from the Config panel, so changing them mid-run takes effect at once. */
@@ -148,7 +158,9 @@ export type RunFeedback = {
 
 /** Where the gates of the current lap stand relative to the runner, for one frame. */
 export type GateView = {
+  path: TrackPath
   gates: Gate[]
+  features: RouteFeature[]
   distances: number[]
   distance: number
   lapSerial: number
@@ -156,10 +168,14 @@ export type GateView = {
 
 /** What the runner and camera need for one frame. */
 export type RunnerFrame = {
+  path: TrackPath
+  distance: number
   targetLane: number
   isMoving: boolean
   deltaSeconds: number
   shake: number
+  hop: number
+  snapCamera: boolean
 }
 
 /**
@@ -175,4 +191,10 @@ export type LaneOutcome = 'boost' | 'stumble' | 'wide' | 'none'
 export type ActiveEffect = {
   outcome: Exclude<LaneOutcome, 'none'>
   remaining: number
+}
+
+/** One phrase's course: the track every lap of it runs on, and how to take it down. */
+export type Course = {
+  path: TrackPath
+  dispose: () => void
 }

@@ -1,27 +1,36 @@
 import * as THREE from 'three'
+import { attachRockStroke } from '@/views/Games/RockRunner/elements/rockStroke'
+import {
+  ROCK_RENDER_ORDER,
+  ROCK_STROKE_WIDTH,
+  ROCK_STROKE_WOBBLE
+} from '@/views/Games/RockRunner/config'
 import {
   GATE_BEAM_DEPTH,
   GATE_BEAM_HEIGHT,
   GATE_POST_HEIGHT,
   GATE_POST_RADIUS,
-  LANDMARK_BALL,
-  LANDMARK_COLORS,
-  LANDMARK_CONE,
-  LANDMARK_GEM,
-  LANDMARK_RING,
-  LANDMARK_SEGMENTS,
-  LANDMARK_SIDE_OFFSET,
-  LANDMARK_TOWER,
+  GRAVEL,
   LANE_COUNT,
   LANE_WIDTH,
   POST_COLOR,
+  RAMP,
+  ROCK,
   SIGN_HEIGHT,
   SIGN_WIDTH,
   SIGN_Y
 } from '../config'
 import { laneOffset } from '../runner/runMotion'
 import { createSignCanvas, drawSign } from './signTexture'
-import type { Gate, GateSign, GateSlot, SignState } from '../types'
+import type {
+  Gate,
+  GateFeatures,
+  GateSign,
+  GateSlot,
+  RouteFeature,
+  SignState,
+  TrackSample
+} from '../types'
 
 const POST_SEGMENTS = 10
 // Posts stand on the lane boundaries, half a lane either side of each lane's centre.
@@ -31,37 +40,16 @@ type SharedGeometry = {
   post: THREE.CylinderGeometry
   beam: THREE.BoxGeometry
   sign: THREE.PlaneGeometry
-  landmarks: THREE.BufferGeometry[]
+  ramp: THREE.BoxGeometry
+  rock: THREE.IcosahedronGeometry
+  gravel: THREE.PlaneGeometry
 }
 
-/**
- * The landmark shapes, one per kind of place: a tree, a tower, a ball on a plinth, a ring and
- * a gem. Each sits with its base on the ground.
- */
-const createLandmarkGeometries = (): THREE.BufferGeometry[] => [
-  new THREE.ConeGeometry(LANDMARK_CONE.radius, LANDMARK_CONE.height, LANDMARK_SEGMENTS).translate(
-    0,
-    LANDMARK_CONE.height / 2,
-    0
-  ),
-  new THREE.BoxGeometry(
-    LANDMARK_TOWER.width,
-    LANDMARK_TOWER.height,
-    LANDMARK_TOWER.width
-  ).translate(0, LANDMARK_TOWER.height / 2, 0),
-  new THREE.SphereGeometry(LANDMARK_BALL.radius, LANDMARK_SEGMENTS, LANDMARK_SEGMENTS).translate(
-    0,
-    LANDMARK_BALL.lift,
-    0
-  ),
-  new THREE.TorusGeometry(
-    LANDMARK_RING.radius,
-    LANDMARK_RING.tube,
-    LANDMARK_SEGMENTS / 2,
-    LANDMARK_SEGMENTS
-  ).translate(0, LANDMARK_RING.lift, 0),
-  new THREE.OctahedronGeometry(LANDMARK_GEM.radius).translate(0, LANDMARK_GEM.lift, 0)
-]
+type SharedMaterials = {
+  ramp: THREE.MeshLambertMaterial
+  rock: THREE.MeshLambertMaterial
+  gravel: THREE.MeshLambertMaterial
+}
 
 const createSharedGeometry = (): SharedGeometry => ({
   post: new THREE.CylinderGeometry(
@@ -76,7 +64,16 @@ const createSharedGeometry = (): SharedGeometry => ({
     GATE_BEAM_DEPTH
   ),
   sign: new THREE.PlaneGeometry(SIGN_WIDTH, SIGN_HEIGHT),
-  landmarks: createLandmarkGeometries()
+  ramp: new THREE.BoxGeometry(RAMP.width, RAMP.thickness, RAMP.length),
+  rock: new THREE.IcosahedronGeometry(ROCK.radius, ROCK.detail),
+  gravel: new THREE.PlaneGeometry(GRAVEL.width, GRAVEL.length).rotateX(-Math.PI / 2)
+})
+
+const createSharedMaterials = (): SharedMaterials => ({
+  ramp: new THREE.MeshLambertMaterial({ color: RAMP.color }),
+  // Transparent so it sorts with its hand-drawn outline, the way Rock Runner's own rock does.
+  rock: new THREE.MeshLambertMaterial({ color: ROCK.color, transparent: true }),
+  gravel: new THREE.MeshLambertMaterial({ color: GRAVEL.color })
 })
 
 const createSign = (geometry: THREE.PlaneGeometry, lane: number): GateSign => {
@@ -105,26 +102,53 @@ const createFrame = (
   return [...posts, beam]
 }
 
-const createSlot = (scene: THREE.Scene, geometry: SharedGeometry, slotIndex: number): GateSlot => {
+const createRock = (geometry: SharedGeometry, materials: SharedMaterials): THREE.Mesh => {
+  const rock = new THREE.Mesh(geometry.rock, materials.rock)
+  rock.position.y = ROCK.radius * ROCK.lift
+  rock.renderOrder = ROCK_RENDER_ORDER
+  rock.castShadow = true
+  attachRockStroke(rock, ROCK_STROKE_WIDTH, ROCK_STROKE_WOBBLE)
+  return rock
+}
+
+/** One of each route piece per lane, shown or hidden as each gate's feature needs. */
+const createFeatures = (geometry: SharedGeometry, materials: SharedMaterials): GateFeatures => {
+  const group = new THREE.Group()
+  const ramp = new THREE.Mesh(geometry.ramp, materials.ramp)
+  // Tilted so its far end is the high one, rising in the direction of travel.
+  ramp.rotation.x = Math.atan2(RAMP.rise, RAMP.length)
+  ramp.position.y = RAMP.rise / 2
+  ramp.castShadow = true
+  const rocks = Array.from({ length: LANE_COUNT }, () => createRock(geometry, materials))
+  const gravel = Array.from({ length: LANE_COUNT }, (_, lane) => {
+    const patch = new THREE.Mesh(geometry.gravel, materials.gravel)
+    patch.position.set(laneOffset(lane, LANE_COUNT, LANE_WIDTH), GRAVEL.lift, 0)
+    return patch
+  })
+  rocks.forEach((rock, lane) => {
+    rock.position.x = laneOffset(lane, LANE_COUNT, LANE_WIDTH)
+  })
+  group.add(ramp, ...rocks, ...gravel)
+  return { group, ramp, rocks, gravel }
+}
+
+const createSlot = (
+  scene: THREE.Scene,
+  geometry: SharedGeometry,
+  materials: SharedMaterials,
+  slotIndex: number
+): GateSlot => {
   const group = new THREE.Group()
   group.name = `word-gate-${slotIndex}`
   const frameMaterial = new THREE.MeshLambertMaterial({ color: POST_COLOR, transparent: true })
-  const landmarkMaterial = new THREE.MeshLambertMaterial({ transparent: true })
   const signs = Array.from({ length: LANE_COUNT }, (_, lane) => createSign(geometry.sign, lane))
-  const landmark = new THREE.Mesh(geometry.landmarks[0], landmarkMaterial)
-  landmark.name = `landmark-${slotIndex}`
-  group.add(...createFrame(geometry, frameMaterial), ...signs.map((sign) => sign.mesh), landmark)
+  group.add(...createFrame(geometry, frameMaterial), ...signs.map((sign) => sign.mesh))
+  const features = createFeatures(geometry, materials)
+  features.group.name = `route-feature-${slotIndex}`
   group.visible = false
-  scene.add(group)
-  return {
-    group,
-    signs,
-    landmark,
-    landmarkShapes: geometry.landmarks,
-    landmarkMaterial,
-    frameMaterial,
-    gateKey: null
-  }
+  features.group.visible = false
+  scene.add(group, features.group)
+  return { group, signs, features, frameMaterial, gateKey: null }
 }
 
 /** Redraws a sign only when its word or state actually changed, since a redraw re-uploads it. */
@@ -137,23 +161,49 @@ export const setSignState = (sign: GateSign, word: string, state: SignState): vo
 }
 
 /**
- * Dresses a pooled slot as one gate of the lap. The landmark follows the word's position in
- * the phrase, not the gate's lanes, so it is the same place on every lap, shuffled or not.
+ * Lays out what each lane leads to: a ramp on the right lane, rocks on every other one, or
+ * gravel on the outside of a bend so only the inside line holds its speed.
  */
-export const assignSlot = (slot: GateSlot, gate: Gate, gateKey: string): void => {
-  slot.gateKey = gateKey
-  gate.options.forEach((word, lane) => setSignState(slot.signs[lane], word, 'idle'))
-  slot.landmark.geometry = slot.landmarkShapes[gate.position % slot.landmarkShapes.length]
-  slot.landmark.position.x = (gate.position % 2 === 0 ? -1 : 1) * LANDMARK_SIDE_OFFSET
-  slot.landmarkMaterial.color.setHex(LANDMARK_COLORS[gate.position % LANDMARK_COLORS.length])
+const showFeature = (features: GateFeatures, feature: RouteFeature, correctLane: number): void => {
+  features.ramp.visible = feature === 'ramp'
+  features.ramp.position.x = laneOffset(correctLane, LANE_COUNT, LANE_WIDTH)
+  features.rocks.forEach((rock, lane) => {
+    rock.visible = feature === 'rocks' && lane !== correctLane
+  })
+  features.gravel.forEach((patch, lane) => {
+    patch.visible = feature === 'bend' && lane !== correctLane
+  })
 }
 
-/** Puts a slot at a point on the track and fades it in or out by the given opacity. */
-export const placeSlot = (slot: GateSlot, z: number, opacity: number): void => {
+/** Dresses a pooled slot as one gate of the lap and the route feature that follows it. */
+export const assignSlot = (
+  slot: GateSlot,
+  gate: Gate,
+  feature: RouteFeature,
+  gateKey: string
+): void => {
+  slot.gateKey = gateKey
+  gate.options.forEach((word, lane) => setSignState(slot.signs[lane], word, 'idle'))
+  showFeature(slot.features, feature, gate.correctLane)
+}
+
+const placeOnTrack = (object: THREE.Object3D, sample: TrackSample): void => {
+  object.position.copy(sample.position)
+  object.rotation.y = sample.yaw
+}
+
+/** Stands a slot's gate and its feature on the track, fading the gate in by the given opacity. */
+export const placeSlot = (
+  slot: GateSlot,
+  gateSample: TrackSample,
+  featureSample: TrackSample,
+  opacity: number
+): void => {
   slot.group.visible = opacity > 0
-  slot.group.position.z = z
+  slot.features.group.visible = opacity > 0
+  placeOnTrack(slot.group, gateSample)
+  placeOnTrack(slot.features.group, featureSample)
   slot.frameMaterial.opacity = opacity
-  slot.landmarkMaterial.opacity = opacity
   slot.signs.forEach((sign) => {
     sign.material.opacity = opacity
   })
@@ -161,6 +211,7 @@ export const placeSlot = (slot: GateSlot, z: number, opacity: number): void => {
 
 export const hideSlot = (slot: GateSlot): void => {
   slot.group.visible = false
+  slot.features.group.visible = false
   slot.gateKey = null
 }
 
@@ -170,22 +221,29 @@ export const createGatePool = (
   poolSize: number
 ): { slots: GateSlot[]; dispose: () => void } => {
   const geometry = createSharedGeometry()
+  const materials = createSharedMaterials()
   const slots = Array.from({ length: poolSize }, (_, slotIndex) =>
-    createSlot(scene, geometry, slotIndex)
+    createSlot(scene, geometry, materials, slotIndex)
   )
   const dispose = (): void => {
     slots.forEach((slot) => {
-      scene.remove(slot.group)
+      scene.remove(slot.group, slot.features.group)
       slot.frameMaterial.dispose()
-      slot.landmarkMaterial.dispose()
+      // Each rock's hand-drawn outline is its own mesh, built by attachRockStroke.
+      slot.features.rocks.forEach((rock) =>
+        rock.children.forEach((outline) => {
+          if (!(outline instanceof THREE.Mesh)) return
+          outline.geometry.dispose()
+          if (outline.material instanceof THREE.Material) outline.material.dispose()
+        })
+      )
       slot.signs.forEach((sign) => {
         sign.texture.dispose()
         sign.material.dispose()
       })
     })
-    ;[geometry.post, geometry.beam, geometry.sign, ...geometry.landmarks].forEach((shared) =>
-      shared.dispose()
-    )
+    Object.values(geometry).forEach((shared) => shared.dispose())
+    Object.values(materials).forEach((shared) => shared.dispose())
   }
   return { slots, dispose }
 }

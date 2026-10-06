@@ -1,9 +1,11 @@
 import * as THREE from 'three'
 import { updateAnimation } from '@webgamekit/animation'
+import { followCameraPlacement } from '@webgamekit/threejs'
 import {
-  CAMERA_FOLLOW_RATIO,
-  CAMERA_POSITION,
-  CAMERA_TARGET,
+  CAMERA_FOLLOW_RATE,
+  CAMERA_TARGET_HEIGHT,
+  CHASE_CAMERA,
+  FEATURE_OFFSET,
   GATE_BEHIND_DISTANCE,
   GATE_FADE_DISTANCE,
   GATE_POOL_SIZE,
@@ -19,6 +21,10 @@ import {
 import { isHintShown, laneOffset, smoothingFactor } from '../runner/runMotion'
 import { assignSlot, hideSlot, placeSlot, setSignState } from '../scene/gatePool'
 import type { Gate, GateSlot, GateView, RunnerFrame, RunScene } from '../types'
+
+// The model faces backwards once loaded, so a heading of zero needs half a turn on top.
+const RUNNER_FACING = Math.PI
+const CENTRE_LANE = Math.floor(LANE_COUNT / 2)
 
 export const gateKey = (lapSerial: number, gateIndex: number): string => `${lapSerial}:${gateIndex}`
 
@@ -39,7 +45,7 @@ const visibleGateFor = (slotIndex: number, view: GateView): number =>
     )
   })
 
-/** Places every gate in view and lights the hint on those still ahead. */
+/** Stands every gate in view on the track, with its route feature, and lights hints ahead. */
 export const drawGates = (slots: GateSlot[], view: GateView): void =>
   slots.forEach((slot, slotIndex) => {
     const gateIndex = visibleGateFor(slotIndex, view)
@@ -49,9 +55,15 @@ export const drawGates = (slots: GateSlot[], view: GateView): void =>
     }
     const gate = view.gates[gateIndex]
     const key = gateKey(view.lapSerial, gateIndex)
-    if (slot.gateKey !== key) assignSlot(slot, gate, key)
-    const distanceAhead = view.distances[gateIndex] - view.distance
-    placeSlot(slot, -distanceAhead, fadeFor(distanceAhead))
+    if (slot.gateKey !== key) assignSlot(slot, gate, view.features[gateIndex], key)
+    const gateDistance = view.distances[gateIndex]
+    const distanceAhead = gateDistance - view.distance
+    placeSlot(
+      slot,
+      view.path.sampleAt(gateDistance),
+      view.path.sampleAt(gateDistance + FEATURE_OFFSET),
+      fadeFor(distanceAhead)
+    )
     if (distanceAhead <= 0) return
     const hinted = isHintShown(gate.hint, distanceAhead, LATE_HINT_DISTANCE)
     setSignState(
@@ -78,29 +90,51 @@ export const markPassedGate = (
 }
 
 /**
- * Slides the runner towards its lane and keeps the camera behind it. The camera follows only
- * part of the way, so a lane change visibly moves the runner across the track.
+ * Carries the runner along the track at its lane's offset, and keeps a chase camera behind
+ * it. The camera aims at the deck rather than the runner, so a hop off a ramp lifts the
+ * runner in frame instead of jolting the whole view.
  */
 export const createRunnerDrawer = (scene: RunScene) => {
-  const lookTarget = new THREE.Vector3(...CAMERA_TARGET)
+  const cameraTarget = new THREE.Vector3()
+  let lateral = laneOffset(CENTRE_LANE, LANE_COUNT, LANE_WIDTH)
   return (frame: RunnerFrame): void => {
-    const { runner, camera } = scene
+    const { runner, camera, runnerFootLift } = scene
+    const sample = frame.path.sampleAt(frame.distance)
     const laneX = laneOffset(frame.targetLane, LANE_COUNT, LANE_WIDTH)
-    runner.position.x +=
-      (laneX - runner.position.x) * smoothingFactor(LANE_SWITCH_RATE, frame.deltaSeconds)
+    lateral += (laneX - lateral) * smoothingFactor(LANE_SWITCH_RATE, frame.deltaSeconds)
+    runner.position.copy(sample.position).addScaledVector(sample.right, lateral)
+    runner.position.y += runnerFootLift + frame.hop
+    runner.rotation.y = sample.yaw + RUNNER_FACING
     updateAnimation({
       actionName: frame.isMoving ? RUNNER_ANIMATION : RUNNER_IDLE_ANIMATION,
       player: runner,
       delta: frame.deltaSeconds,
       speed: RUNNER_ANIMATION_SPEED
     })
-    const follow = runner.position.x * CAMERA_FOLLOW_RATIO
-    camera.position.set(
-      CAMERA_POSITION[0] + follow + frame.shake,
-      CAMERA_POSITION[1],
-      CAMERA_POSITION[2]
-    )
-    lookTarget.set(CAMERA_TARGET[0] + follow, CAMERA_TARGET[1], CAMERA_TARGET[2])
-    camera.lookAt(lookTarget)
+
+    cameraTarget
+      .copy(sample.position)
+      .addScaledVector(sample.right, lateral + frame.shake)
+      .setY(sample.position.y + CAMERA_TARGET_HEIGHT)
+    const placement = followCameraPlacement('third', cameraTarget, sample.forward, CHASE_CAMERA)
+    if (frame.snapCamera) camera.position.copy(placement.position)
+    else {
+      camera.position.lerp(
+        placement.position,
+        smoothingFactor(CAMERA_FOLLOW_RATE, frame.deltaSeconds)
+      )
+    }
+    camera.lookAt(placement.lookAt)
   }
+}
+
+/** One frame of the run: the gates in view, then the runner and the camera behind it. */
+export const drawRunFrame = (
+  slots: GateSlot[],
+  drawRunner: (frame: RunnerFrame) => void,
+  view: GateView,
+  runner: Omit<RunnerFrame, 'path' | 'distance'>
+): void => {
+  drawGates(slots, view)
+  drawRunner({ path: view.path, distance: view.distance, ...runner })
 }

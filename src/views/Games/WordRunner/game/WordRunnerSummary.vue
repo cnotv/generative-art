@@ -2,11 +2,15 @@
 import { computed, onMounted, ref, type ComponentPublicInstance } from 'vue'
 import { LobbyUIButton, LobbyUIFocusHint } from '@/components/LobbyUI'
 import { useDialogFocusTrap } from '@/composables/useDialogFocusTrap'
+import { formatRunTime } from './bestTimes'
 import type { Phrase, WordSummary } from '../types'
 
 const props = defineProps<{
   phrase: Phrase
   summary: WordSummary[]
+  runSeconds: number
+  bestSeconds: number | null
+  isNewBest: boolean
 }>()
 
 const emit = defineEmits<{
@@ -43,6 +47,15 @@ onMounted(() => {
         {{ isFlawless ? 'Not one wrong lane' : 'Phrase run' }}
       </h2>
       <p class="word-runner-summary__translation lui-slide-in">{{ phrase.translation }}</p>
+      <p class="word-runner-summary__time lui-slide-in">
+        <span :class="{ 'word-runner-summary__time--best': isNewBest }">{{
+          formatRunTime(runSeconds)
+        }}</span>
+        <span v-if="isNewBest" class="word-runner-summary__best">New best</span>
+        <span v-else-if="bestSeconds !== null" class="word-runner-summary__best"
+          >Best {{ formatRunTime(bestSeconds) }}</span
+        >
+      </p>
       <ol class="word-runner-summary__list lui-slide-in lui-slide-in--2">
         <li v-for="row in rows" :key="row.position" class="word-runner-summary__row">
           <span
@@ -106,6 +119,7 @@ onMounted(() => {
 
 .word-runner-summary__title,
 .word-runner-summary__translation,
+.word-runner-summary__time,
 .word-runner-summary__row {
   margin: 0;
   font-family: var(--lui-font);
@@ -125,6 +139,23 @@ onMounted(() => {
 
 .word-runner-summary__translation {
   font-size: var(--lui-text-small);
+}
+
+.word-runner-summary__time {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: baseline;
+  font-size: var(--lui-text-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.word-runner-summary__time--best {
+  color: var(--lui-focus-color);
+}
+
+.word-runner-summary__best {
+  font-size: var(--lui-text-tiny);
+  text-transform: uppercase;
 }
 
 .word-runner-summary__list {

@@ -5,7 +5,9 @@ import {
   laneOutcome,
   startEffect,
   tickEffect,
-  effectSpeedRatio
+  effectSpeedRatio,
+  yawRateBetween,
+  insideLanesAlong
 } from './routeAdvantage'
 import { ROUTE_EFFECTS } from '../config'
 
@@ -90,5 +92,35 @@ describe('speed effects', () => {
 
   it('has no effect for a lane that changes nothing', () => {
     expect(startEffect('none')).toBeNull()
+  })
+})
+
+describe('yawRateBetween', () => {
+  it('is the change in heading per unit of track over the stretch', () => {
+    const yawAt = (distance: number) => distance * 0.03
+
+    expect(yawRateBetween(yawAt, 10, 20)).toBeCloseTo(0.03)
+  })
+
+  it('is zero on a straight', () => {
+    expect(yawRateBetween(() => 1.2, 0, 40)).toBe(0)
+  })
+
+  it('is negative on a bend to the right', () => {
+    expect(yawRateBetween((distance) => -distance * 0.02, 5, 15)).toBeLessThan(0)
+  })
+})
+
+describe('insideLanesAlong', () => {
+  it('finds the inside lane of the stretch after each gate, or none on a straight', () => {
+    const yawAt = (distance: number) => {
+      if (distance < 50) return 0
+      if (distance < 100) return (distance - 50) * 0.03
+      return 1.5 - (distance - 100) * 0.03
+    }
+
+    const insideLanes = insideLanesAlong(yawAt, [10, 60, 110], 20, 0.01, 3)
+
+    expect(insideLanes).toEqual([null, 0, 2])
   })
 })

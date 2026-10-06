@@ -4,48 +4,70 @@ sidebar_position: 25
 
 # Word Runner: learning a phrase as a path
 
-Word Runner is a three-lane runner at `/games/WordRunner`. Each gate across the track shows one
-word per lane, and the player runs through the lane holding the next word of a phrase in another
-language. The first language pack is Spanish.
+Word Runner is a three-lane runner at `/games/WordRunner`, set on Rock Runner's course: the same
+seeded track, forest, drawn edges and haze. Each gate across the track shows one word per lane,
+and the player runs through the lane holding the next word of a phrase in another language. The
+first language pack is Spanish.
 
 :::note Source files
 `src/views/Games/WordRunner/phrases/es.json`, `src/views/Games/WordRunner/types.ts`,
-`src/views/Games/WordRunner/config.ts`, `src/views/Games/WordRunner/sequence/`
+`src/views/Games/WordRunner/config.ts`, `src/views/Games/WordRunner/sequence/`,
+`src/views/Games/WordRunner/runner/routeAdvantage.ts`
 :::
 
 <video controls loop muted playsinline width="720" src="/video/word-runner/run.webm">
-  A run through "Caminante, no hay camino": the first lap with the right words glowing, a
-  wrong lane that makes the runner stumble and turns the right word green, the recap between
-  laps, the final lap with every word moved to a new lane, and the end-of-run summary.
+  A run through "Caminante, no hay camino" on Rock Runner's forest course: the first lap with
+  the right words glowing, a ramp that launches the runner, a wrong lane on a bend that runs
+  wide onto gravel, the recap between laps, and the lap that follows with hints.
 </video>
 
 ## How a run teaches the phrase
 
 The order of the words is learned the way a route is learned: by running it again and again
-until the moves are automatic. Three things make that work.
+until the moves are automatic. Four things make that work.
 
-- **Each word keeps its lane.** The lane is picked once from a seed made from the phrase id, and
-  it is the same on every lap. The same lane never comes up three times in a row, so the path has
-  a shape to remember.
-- **Each word has a landmark.** A tree, a tower, a ball, a ring or a gem stands beside its gate,
-  always the same one for the same word. It is the memory-palace idea: the word is remembered at
-  a place.
+- **Every lap is the same course.** A lap restarts at the start of the phrase's own seeded
+  course, so each word's gate stands on the same stretch of track, with the same bends, hills
+  and trees around it, every time.
+- **Each word keeps its lane.** The lane is picked once from a seed made from the phrase id and
+  stays the same on every lap. Where a gate opens onto a bend, its word takes the inside lane.
+  The same lane never comes up three times in a row, so the path has a shape to remember.
+- **The right word is the better route.** Each gate leads onto a ramp, rocks or a bend, as the
+  next section explains, so the path the player memorises is also the fastest way round.
 - **The phrase arrives three words at a time, and the hints fade.** Each new chunk is first run
   with full hints, then with late ones, while the words already learned run with none. Then the
   whole phrase is run without hints, and a final lap moves every word into a different lane.
   Getting through that lap takes knowing the words, not just the moves.
 
-![Four moments of a run: a full hint on the first lap, a wrong lane, the recap between laps, and the shuffled last lap](/img/word-runner/run-beats.webp)
+![Four moments of a run: a full hint on the first lap, a ramp, a wrong lane on a bend, and the recap between laps](/img/word-runner/run-beats.webp)
 
-A wrong lane never ends the run. The runner stumbles, the right word is shown in green, and the lap is run again with stronger hints on the chunk that went wrong, at most twice
-in a row. Each gate's two decoys are chosen to test order as well as meaning: one is a later word
-of the same phrase, the other a look-alike such as _sé_ next to _se_.
+## The right word is the better route
 
-![The laps of a nine-word phrase, and the lane each word keeps](/img/word-runner/sequence-layout.webp)
+Just past each gate stands what its lanes lead onto. The feature belongs to the word's place on
+the course, so a word meets the same one on every lap its lane stays put.
 
-The run ends with a summary of how often each word was met and how often its lane was right.
+| Feature | Right lane                           | Other lanes                        |
+| ------- | ------------------------------------ | ---------------------------------- |
+| Ramp    | launches the runner and speeds it up | plain track                        |
+| Rocks   | clear                                | rocks that make the runner stumble |
+| Bend    | the inside line, at full speed       | run wide onto gravel and slow down |
 
-![The end-of-run summary, one row per word with its meaning and score](/img/word-runner/summary.webp)
+Each effect wears off back to full speed within about a second and a half. A bend is used
+wherever the stretch after a gate turns hard enough. Elsewhere, ramps and rocks alternate along
+the phrase. The laps are timed, so the route advantages are worth chasing, and the best time
+for each phrase is kept in the browser.
+
+A wrong lane never ends the run. The right word is shown in green, and the lap is run again
+with stronger hints on the chunk that went wrong, at most twice in a row. Each gate's two decoys
+are chosen to test order as well as meaning: one is a later word of the same phrase, the other a
+look-alike such as _sé_ next to _se_.
+
+![The laps of a nine-word phrase, the lane each word keeps, and the feature each gate leads onto](/img/word-runner/sequence-layout.webp)
+
+The run ends with the time, the best time for the phrase, and how often each word was met and
+how often its lane was right.
+
+![The end-of-run summary: the time, then one row per word with its meaning and score](/img/word-runner/summary.webp)
 
 ## Playing
 
@@ -85,7 +107,8 @@ A language is one JSON file in `src/views/Games/WordRunner/phrases/`, shaped as 
   different words, and a decoy may be the other one.
 - `decoys` are look-alikes of that word. Two per word is plenty, since the other decoy on each
   gate comes from the phrase itself. A word must never list itself.
-- `id` seeds the lane path, so changing it gives the phrase a different path.
+- `id` seeds both the course and the lane path, so changing it gives the phrase a different
+  route.
 - Phrases are memorised word by word, so prefer short sayings, proverbs and lines of verse
   that are in the public domain.
 
