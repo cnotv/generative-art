@@ -17,8 +17,9 @@ first language pack is Spanish.
 
 <video controls loop muted playsinline width="720" src="/video/word-runner/run.webm">
   A run through "Caminante, no hay camino" on Rock Runner's forest course: the first lap with
-  the right words glowing, a ramp that launches the runner, a wrong lane on a bend that runs
-  wide onto gravel, the recap between laps, and the lap that follows with hints.
+  the right words glowing and a ramp behind the first one, a wrong lane on a bend that is
+  revealed in green while the runner slows on gravel, rocks blocking the wrong lanes on a later
+  lap, and the recap between laps.
 </video>
 
 ## How a run teaches the phrase
@@ -39,7 +40,7 @@ until the moves are automatic. Four things make that work.
   whole phrase is run without hints, and a final lap moves every word into a different lane.
   Getting through that lap takes knowing the words, not just the moves.
 
-![Four moments of a run: a full hint on the first lap, a ramp, a wrong lane on a bend, and the recap between laps](/img/word-runner/run-beats.webp)
+![Four moments of a run: a full hint with a ramp behind the right lane, a wrong lane on a bend, rocks in the wrong lanes, and the recap between laps](/img/word-runner/run-beats.webp)
 
 ## The right word is the better route
 
