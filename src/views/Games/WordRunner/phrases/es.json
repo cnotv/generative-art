@@ -1,0 +1,76 @@
+{
+  "language": "es",
+  "languageName": "Spanish",
+  "speechLanguage": "es-ES",
+  "phrases": [
+    {
+      "id": "caminante",
+      "title": "Caminante, no hay camino",
+      "translation": "Traveller, there is no road; the road is made by walking.",
+      "words": [
+        { "text": "caminante", "gloss": "traveller", "decoys": ["caminando", "camarero"] },
+        { "text": "no", "gloss": "no", "decoys": ["ni", "nos"] },
+        { "text": "hay", "gloss": "there is", "decoys": ["ahí", "ay"] },
+        { "text": "camino", "gloss": "road", "decoys": ["camina", "cambio"] },
+        { "text": "se", "gloss": "itself", "decoys": ["sé", "si"] },
+        { "text": "hace", "gloss": "is made", "decoys": ["hacia", "nace"] },
+        { "text": "camino", "gloss": "road", "decoys": ["camisa", "cambio"] },
+        { "text": "al", "gloss": "by", "decoys": ["el", "a"] },
+        { "text": "andar", "gloss": "walking", "decoys": ["anda", "mandar"] }
+      ]
+    },
+    {
+      "id": "poco-a-poco",
+      "title": "Poco a poco",
+      "translation": "Little by little, one goes far.",
+      "words": [
+        { "text": "poco", "gloss": "little", "decoys": ["pico", "loco"] },
+        { "text": "a", "gloss": "by", "decoys": ["ha", "al"] },
+        { "text": "poco", "gloss": "little", "decoys": ["pozo", "foco"] },
+        { "text": "se", "gloss": "one", "decoys": ["sé", "te"] },
+        { "text": "va", "gloss": "goes", "decoys": ["ve", "vas"] },
+        { "text": "lejos", "gloss": "far", "decoys": ["lejano", "lentos"] }
+      ]
+    },
+    {
+      "id": "no-hay-mal",
+      "title": "No hay mal que por bien no venga",
+      "translation": "Every cloud has a silver lining.",
+      "words": [
+        { "text": "no", "gloss": "there is no", "decoys": ["ni", "nos"] },
+        { "text": "hay", "gloss": "there is", "decoys": ["ahí", "ay"] },
+        { "text": "mal", "gloss": "bad thing", "decoys": ["mar", "más"] },
+        { "text": "que", "gloss": "that", "decoys": ["qué", "quien"] },
+        { "text": "por", "gloss": "for", "decoys": ["para", "pero"] },
+        { "text": "bien", "gloss": "good", "decoys": ["buen", "vine"] },
+        { "text": "no", "gloss": "not", "decoys": ["nos", "ni"] },
+        { "text": "venga", "gloss": "comes", "decoys": ["vengo", "tenga"] }
+      ]
+    },
+    {
+      "id": "quien-madruga",
+      "title": "A quien madruga",
+      "translation": "The early bird catches the worm.",
+      "words": [
+        { "text": "a", "gloss": "to", "decoys": ["ha", "al"] },
+        { "text": "quien", "gloss": "whoever", "decoys": ["quién", "cuando"] },
+        { "text": "madruga", "gloss": "rises early", "decoys": ["madura", "madrugada"] },
+        { "text": "Dios", "gloss": "God", "decoys": ["días", "dos"] },
+        { "text": "le", "gloss": "them", "decoys": ["la", "lo"] },
+        { "text": "ayuda", "gloss": "helps", "decoys": ["ayude", "ayer"] }
+      ]
+    },
+    {
+      "id": "verde",
+      "title": "Verde que te quiero verde",
+      "translation": "Green, how I love you, green.",
+      "words": [
+        { "text": "verde", "gloss": "green", "decoys": ["verte", "vende"] },
+        { "text": "que", "gloss": "how", "decoys": ["qué", "quien"] },
+        { "text": "te", "gloss": "you", "decoys": ["té", "tu"] },
+        { "text": "quiero", "gloss": "I love", "decoys": ["quiere", "quieto"] },
+        { "text": "verde", "gloss": "green", "decoys": ["verdad", "vende"] }
+      ]
+    }
+  ]
+}
