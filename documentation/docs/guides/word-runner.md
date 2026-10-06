@@ -37,8 +37,7 @@ until the moves are automatic. Three things make that work.
 
 ![Four moments of a run: a full hint on the first lap, a wrong lane, the recap between laps, and the shuffled last lap](/img/word-runner/run-beats.webp)
 
-A wrong lane never ends the run. The runner stumbles, the right word is shown in green and
-spoken, and the lap is run again with stronger hints on the chunk that went wrong, at most twice
+A wrong lane never ends the run. The runner stumbles, the right word is shown in green, and the lap is run again with stronger hints on the chunk that went wrong, at most twice
 in a row. Each gate's two decoys are chosen to test order as well as meaning: one is a later word
 of the same phrase, the other a look-alike such as _sé_ next to _se_.
 
@@ -56,9 +55,7 @@ The run ends with a summary of how often each word was met and how often its lan
 | Gamepad  | Left stick or D-pad                 |
 | Touch    | Swipe or tap the left or right side |
 
-The Config panel sets the run speed and turns speech on or off. Words are spoken through the
-browser's Web Speech API, and the game stays silent where a browser has no voice for the
-language.
+The Config panel sets the run speed.
 
 ## Adding a language
 
@@ -69,7 +66,6 @@ A language is one JSON file in `src/views/Games/WordRunner/phrases/`, shaped as 
 {
   "language": "it",
   "languageName": "Italian",
-  "speechLanguage": "it-IT",
   "phrases": [
     {
       "id": "chi-va-piano",

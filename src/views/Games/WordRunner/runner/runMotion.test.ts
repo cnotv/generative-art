@@ -5,8 +5,7 @@ import {
   smoothingFactor,
   gateDistances,
   crossedGateIndices,
-  isHintShown,
-  runSpeed
+  isHintShown
 } from './runMotion'
 
 describe('laneOffset', () => {
@@ -79,19 +78,5 @@ describe('isHintShown', () => {
     ['none', 2, false]
   ] as const)('a %s hint %f ahead is shown: %s', (hint, distanceAhead, expected) => {
     expect(isHintShown(hint, distanceAhead, 14)).toBe(expected)
-  })
-})
-
-describe('runSpeed', () => {
-  it('runs at full speed when not stumbling', () => {
-    expect(runSpeed(20, 0, 1, 0.4)).toBe(20)
-  })
-
-  it('drops to the stumble speed the moment a stumble starts', () => {
-    expect(runSpeed(20, 1, 1, 0.4)).toBeCloseTo(8)
-  })
-
-  it('recovers towards full speed as the stumble wears off', () => {
-    expect(runSpeed(20, 0.5, 1, 0.4)).toBeCloseTo(14)
   })
 })

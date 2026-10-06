@@ -45,17 +45,3 @@ export const isHintShown = (
   distanceAhead: number,
   lateHintDistance: number
 ): boolean => hint === 'full' || (hint === 'late' && distanceAhead <= lateHintDistance)
-
-/**
- * Forward speed while a stumble wears off: it starts at `stumbleSpeedRatio` of full speed and
- * climbs back linearly as `stumbleRemaining` runs out over `stumbleSeconds`.
- */
-export const runSpeed = (
-  baseSpeed: number,
-  stumbleRemaining: number,
-  stumbleSeconds: number,
-  stumbleSpeedRatio: number
-): number => {
-  const stumbleShare = Math.min(1, Math.max(0, stumbleRemaining / stumbleSeconds))
-  return baseSpeed * (1 - stumbleShare * (1 - stumbleSpeedRatio))
-}

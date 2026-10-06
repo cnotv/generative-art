@@ -25,8 +25,15 @@ export const TRACK_DASH_PERIOD = 6
 
 export const RUN_SPEED = 13
 export const LANE_SWITCH_RATE = 14
-export const STUMBLE_SECONDS = 0.9
-export const STUMBLE_SPEED_RATIO = 0.35
+// What each lane does to the runner's speed: the ratio it drops or jumps to, recovering to
+// full speed over the given seconds. The right word's lane is always the better route.
+export const ROUTE_EFFECTS = {
+  boost: { ratio: 1.7, seconds: 1.6 },
+  stumble: { ratio: 0.3, seconds: 1.1 },
+  wide: { ratio: 0.6, seconds: 1.2 }
+}
+// Below this turn rate, in radians per unit of track, a gate is not on a bend worth cutting.
+export const BEND_YAW_RATE_THRESHOLD = 0.012
 export const STUMBLE_SHAKE = 0.18
 export const STUMBLE_SHAKE_FREQUENCY = 47
 
@@ -81,7 +88,6 @@ export const CAMERA_FOLLOW_RATIO = 0.45
 
 export const RECAP_SECONDS = 3.4
 export const FEEDBACK_SECONDS = 0.7
-export const SPEECH_RATE = 0.9
 
 export const BACKGROUND_COLOR = 0xcfe2ee
 export const GRASS_COLOR = 0xc9e4cf
@@ -135,7 +141,6 @@ export const CONTROL_MAPPING: ControlMapping = {
 
 export const configControls = {
   run: {
-    speed: { min: 6, max: 24, step: 1, label: 'Run Speed' },
-    speech: { boolean: true, label: 'Speak Words' }
+    speed: { min: 6, max: 24, step: 1, label: 'Run Speed' }
   }
 }

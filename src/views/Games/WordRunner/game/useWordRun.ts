@@ -7,20 +7,19 @@ import {
   LEAD_IN_DISTANCE,
   MAX_RETRY_ATTEMPTS,
   RECAP_SECONDS,
-  SPEECH_RATE,
-  STUMBLE_SECONDS,
+  ROUTE_EFFECTS,
   STUMBLE_SHAKE,
-  STUMBLE_SHAKE_FREQUENCY,
-  STUMBLE_SPEED_RATIO
+  STUMBLE_SHAKE_FREQUENCY
 } from '../config'
 import { buildLapSchedule } from '../sequence/lapSchedule'
 import { buildCorrectLanes, buildLapGates, phraseSeed } from '../sequence/gateLayout'
 import { createRunState, passGate, summarizeWords } from '../sequence/progress'
-import { crossedGateIndices, gateDistances, runSpeed, stepLane } from '../runner/runMotion'
+import { crossedGateIndices, gateDistances, stepLane } from '../runner/runMotion'
+import { effectSpeedRatio, startEffect, tickEffect } from '../runner/routeAdvantage'
 import { hideSlot } from '../scene/gatePool'
-import { speak, stopSpeaking } from '../speech'
 import { createRunnerDrawer, drawGates, gateKey, markPassedGate } from './drawRun'
 import type {
+  ActiveEffect,
   Gate,
   GateDeal,
   LanguagePack,
@@ -105,17 +104,12 @@ export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
   let distances: number[] = []
   let distance = 0
   let elapsed = 0
-  let stumbleRemaining = 0
+  let effect: ActiveEffect | null = null
   let recapRemaining = 0
   let feedbackRemaining = 0
   // Keys the pooled gates by lap as it is run, not by lap index: the index moves on the
   // moment the last gate is passed, while that gate is still on screen during the recap.
   let lapSerial = 0
-  let hasSpokenRecap = false
-
-  const say = (text: string): void => {
-    if (settings.speechEnabled()) speak(text, pack.speechLanguage, SPEECH_RATE)
-  }
 
   const startLap = (): void => {
     if (!deal) return
@@ -135,7 +129,7 @@ export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
     correctLanes = prepared.correctLanes
     runState.value = prepared.runState
     targetLane.value = CENTRE_LANE
-    stumbleRemaining = 0
+    effect = null
     feedback.value = null
     startLap()
   }
@@ -154,24 +148,17 @@ export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
     feedback.value = { text: word.text, gloss: word.gloss, correct }
     feedbackRemaining = FEEDBACK_SECONDS
     ribbon.value = [...ribbon.value, { text: word.text, correct }]
-    say(word.text)
-    if (!correct) stumbleRemaining = STUMBLE_SECONDS
+    if (!correct) effect = startEffect('stumble')
 
     const previousLap = runState.value.lapIndex
     runState.value = passGate(runState.value, gate, chosenLane, MAX_RETRY_ATTEMPTS)
     if (runState.value.lapIndex === previousLap) return
     phase.value = 'recap'
     recapRemaining = RECAP_SECONDS
-    hasSpokenRecap = false
   }
 
   const advanceRecap = (deltaSeconds: number): void => {
     recapRemaining -= deltaSeconds
-    // The sentence is said once the last word's own voice has had a moment to finish.
-    if (!hasSpokenRecap && recapRemaining <= RECAP_SECONDS - FEEDBACK_SECONDS) {
-      hasSpokenRecap = true
-      say(readouts.sentence.value)
-    }
     if (recapRemaining > 0) return
     if (runState.value.finished) {
       phase.value = 'finished'
@@ -181,8 +168,8 @@ export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
 
   const advance = (deltaSeconds: number): void => {
     const previousDistance = distance
-    stumbleRemaining = Math.max(0, stumbleRemaining - deltaSeconds)
-    const speed = runSpeed(settings.speed(), stumbleRemaining, STUMBLE_SECONDS, STUMBLE_SPEED_RATIO)
+    effect = tickEffect(effect, deltaSeconds)
+    const speed = settings.speed() * effectSpeedRatio(effect)
     distance += speed * deltaSeconds
     if (phase.value === 'recap') advanceRecap(deltaSeconds)
     else crossedGateIndices(previousDistance, distance, distances).forEach(passThrough)
@@ -198,13 +185,13 @@ export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
     if (!scene || !drawRunner) return
     scene.scrollTrack(distance)
     drawGates(scene.slots, { gates: lapGates.value, distances, distance, lapSerial })
-    const stumbleShare = Math.min(1, stumbleRemaining / STUMBLE_SECONDS)
+    const stumbleShare =
+      effect?.outcome === 'stumble' ? effect.remaining / ROUTE_EFFECTS.stumble.seconds : 0
     const shake = Math.sin(elapsed * STUMBLE_SHAKE_FREQUENCY) * STUMBLE_SHAKE * stumbleShare
     drawRunner({ targetLane: targetLane.value, isMoving, deltaSeconds, shake })
   }
 
   const backToStart = (): void => {
-    stopSpeaking()
     ribbon.value = []
     feedback.value = null
     targetLane.value = CENTRE_LANE
@@ -219,7 +206,6 @@ export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
   }
 
   const dispose = (): void => {
-    stopSpeaking()
     scene = null
   }
 

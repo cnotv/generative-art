@@ -72,7 +72,9 @@ const pickDecoys = (
     uniqueTexts(lookAlikes, [correctText, ...(orderDecoy ? [orderDecoy] : [])]),
     randomValues[1]
   )
-  const preferred = [orderDecoy, lookAlikeDecoy].filter((text) => text !== undefined)
+  const preferred = [orderDecoy, lookAlikeDecoy].filter(
+    (text): text is string => text !== undefined
+  )
   const remaining = uniqueTexts(
     [...laterTexts, ...lookAlikes, ...earlierTexts, ...fallbackPool],
     [correctText, ...preferred]

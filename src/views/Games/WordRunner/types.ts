@@ -16,11 +16,10 @@ export type Phrase = {
   words: PhraseWord[]
 }
 
-/** Every phrase of one language, plus what the speech engine needs to pronounce it. */
+/** Every phrase of one language. */
 export type LanguagePack = {
   language: string
   languageName: string
-  speechLanguage: string
   phrases: Phrase[]
 }
 
@@ -138,7 +137,6 @@ export type RunScene = {
 /** Settings read live from the Config panel, so changing them mid-run takes effect at once. */
 export type RunSettings = {
   speed: () => number
-  speechEnabled: () => boolean
 }
 
 /** The word just passed, shown briefly with its meaning and whether the lane was right. */
@@ -162,4 +160,19 @@ export type RunnerFrame = {
   isMoving: boolean
   deltaSeconds: number
   shake: number
+}
+
+/**
+ * What makes the right word's lane the better route at a gate: a ramp that speeds the runner
+ * up, rocks blocking every other lane, or the inside line through a bend.
+ */
+export type RouteFeature = 'ramp' | 'rocks' | 'bend'
+
+/** What running a lane through a gate does to the runner. */
+export type LaneOutcome = 'boost' | 'stumble' | 'wide' | 'none'
+
+/** A speed change in progress, wearing off back to full speed. */
+export type ActiveEffect = {
+  outcome: Exclude<LaneOutcome, 'none'>
+  remaining: number
 }

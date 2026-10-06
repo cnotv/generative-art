@@ -46,11 +46,10 @@ const handleProgress = (progress: LoadProgress): void => {
   loadingDetail.value = progress.detail
 }
 
-const reactiveConfig = createReactiveConfig({ run: { speed: RUN_SPEED, speech: true } })
+const reactiveConfig = createReactiveConfig({ run: { speed: RUN_SPEED } })
 
 const run = useWordRun(pack, {
-  speed: () => reactiveConfig.value.run.speed,
-  speechEnabled: () => reactiveConfig.value.run.speech
+  speed: () => reactiveConfig.value.run.speed
 })
 const {
   phase,
