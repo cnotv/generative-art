@@ -173,6 +173,9 @@
   "Rock Runner": {
     "description": "Endless runner dodging rocks across a procedurally generated course."
   },
+  "Word Runner": {
+    "description": "Lane runner that teaches a Spanish phrase as a path: run through the next word, and every word keeps its lane."
+  },
   "Squares Multiplayer": {
     "description": "Multiplayer grid-claiming game with real-time opponent moves."
   },

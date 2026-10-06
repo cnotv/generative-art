@@ -76,6 +76,11 @@
   --lui-backdrop-tint: rgb(0 0 0 / 0.25);
   --lui-backdrop-blur: 6px;
 
+  // Answer verdicts on an overlay word: right and wrong. Pastel fills, so they
+  // read on the white-outlined text style and never as the gold winner colour.
+  --lui-answer-right: #a6e3c3;
+  --lui-answer-wrong: #f2a9b7;
+
   // Dedicated button tokens — kept separate from the generic text/stroke
   // tokens so button styling can be tuned without affecting plain text.
   --lui-button-text-color: var(--lui-text-color);

@@ -1,3 +1,6 @@
+import type * as THREE from 'three'
+import type { ComplexModel } from '@webgamekit/threejs'
+
 /** One word of a phrase, with what it means and the look-alikes offered against it. */
 export type PhraseWord = {
   text: string
@@ -89,4 +92,74 @@ export type WordSummary = {
   position: number
   attempts: number
   correct: number
+}
+
+/** How a word sign is drawn: plain, glowing as a hint, or the verdict after it is passed. */
+export type SignState = 'idle' | 'hint' | 'right' | 'wrong' | 'reveal'
+
+/** One pooled gate on the track, reused for whichever gate of the lap comes into view. */
+export type GateSlot = {
+  group: THREE.Group
+  signs: GateSign[]
+  landmark: THREE.Mesh
+  landmarkShapes: THREE.BufferGeometry[]
+  landmarkMaterial: THREE.MeshLambertMaterial
+  frameMaterial: THREE.MeshLambertMaterial
+  gateKey: string | null
+}
+
+/** One lane's word on a gate, drawn into its own canvas so it can be redrawn in place. */
+export type GateSign = {
+  mesh: THREE.Mesh
+  material: THREE.MeshBasicMaterial
+  canvas: HTMLCanvasElement
+  texture: THREE.CanvasTexture
+  word: string
+  state: SignState
+}
+
+/** A word the runner has passed this lap, as the sentence along the top shows it. */
+export type RibbonWord = {
+  text: string
+  correct: boolean
+}
+
+/** Where a run is: waiting to start, on a lap, between laps, or over. */
+export type RunPhase = 'idle' | 'running' | 'recap' | 'finished'
+
+/** What a run draws into, handed over once the scene exists. */
+export type RunScene = {
+  slots: GateSlot[]
+  runner: ComplexModel
+  camera: THREE.Camera
+  scrollTrack: (distance: number) => void
+}
+
+/** Settings read live from the Config panel, so changing them mid-run takes effect at once. */
+export type RunSettings = {
+  speed: () => number
+  speechEnabled: () => boolean
+}
+
+/** The word just passed, shown briefly with its meaning and whether the lane was right. */
+export type RunFeedback = {
+  text: string
+  gloss: string
+  correct: boolean
+}
+
+/** Where the gates of the current lap stand relative to the runner, for one frame. */
+export type GateView = {
+  gates: Gate[]
+  distances: number[]
+  distance: number
+  lapSerial: number
+}
+
+/** What the runner and camera need for one frame. */
+export type RunnerFrame = {
+  targetLane: number
+  isMoving: boolean
+  deltaSeconds: number
+  shake: number
 }
