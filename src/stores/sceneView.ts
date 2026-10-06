@@ -743,7 +743,8 @@ interface SceneSetupResult {
   scene: THREE.Scene
   camera: THREE.Camera
   world: import('@dimforge/rapier3d-compat').default.World
-  orbit: OrbitControls
+  /** Null for a scene set up with `orbit: false`, which has no orbit controls at all. */
+  orbit: OrbitControls | null
   ground: { mesh?: THREE.Mesh } | null
   cleanup: () => void
   /** Swaps the render camera and returns the orbit controls now bound to it. */
@@ -1454,7 +1455,7 @@ export const useSceneViewStore = defineStore('sceneView', () => {
     swapActiveCamera.value = setActiveCamera
 
     resolveSceneReferencesFromResult(
-      { scene, camera, world, orbit: orbit ?? ({} as OrbitControls), ground },
+      { scene, camera, world, orbit: orbit ?? null, ground },
       {
         threeScene,
         threeCamera,
