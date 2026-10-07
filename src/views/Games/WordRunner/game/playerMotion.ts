@@ -1,6 +1,6 @@
 import type * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat'
-import { LANE_COUNT, LANE_WIDTH } from '../config'
+import { BRAKE, LANE_COUNT, LANE_WIDTH } from '../config'
 import { followRacer, stepRacer } from '../runner/racer'
 import { effectSpeedRatio } from '../runner/routeAdvantage'
 import { laneAtOffset, laneOffset } from '../runner/runMotion'
@@ -19,7 +19,9 @@ type MotionStep = {
  * under physics and steered freely. Either way it reports the same things, so the race reads
  * one ball whichever it is: how far along it is, which lane it is in, and how far off centre.
  */
-export const createPlayerMotion = (settings: Pick<RunSettings, 'steering' | 'steerInput'>) => {
+export const createPlayerMotion = (
+  settings: Pick<RunSettings, 'steering' | 'steerInput' | 'brakeInput'>
+) => {
   let drive: FreeDrive | null = null
   const physical = (): FreeDrive | null => (settings.steering === 'free' ? drive : null)
 
@@ -30,9 +32,14 @@ export const createPlayerMotion = (settings: Pick<RunSettings, 'steering' | 'ste
   /** Moves the ball on one frame: at the race's speed, or under physics up to that speed. */
   const step = (racer: Racer, path: TrackPath, racing: MotionStep): Racer => {
     const ball = physical()
-    if (!ball) return stepRacer(racer, racing)
+    const braking = settings.brakeInput()
+    if (!ball) {
+      const brakeRatio = braking ? BRAKE.laneSpeedRatio : 1
+      return stepRacer(racer, { ...racing, baseSpeed: racing.baseSpeed * brakeRatio })
+    }
     const moved = ball.drive(path, {
       steer: settings.steerInput(),
+      braking,
       speedCap: racing.baseSpeed * effectSpeedRatio(racer.effect),
       deltaSeconds: racing.deltaSeconds
     })

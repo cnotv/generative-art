@@ -24,6 +24,7 @@ import {
   DIFFICULTY_SPEEDS,
   TOUCH_LEFT_BUTTON,
   TOUCH_RIGHT_BUTTON,
+  TOUCH_BRAKE_BUTTON,
   configControls,
   setupConfig
 } from '../config'
@@ -89,12 +90,15 @@ const run = useWordRun({
   speed: () => reactiveConfig.value.run.speed,
   steering: props.steering,
   steerInput: () => steerDirection(heldActions.value),
+  brakeInput: () => 'brake' in heldActions.value,
   solo: () => props.solo,
   rivals: () => props.rivals,
   onProgress: (distance, lateral) => emit('progress', distance, lateral),
   onFinish: (seconds) => emit('finish', seconds)
 })
-const steerTowards = (action: string): void => run.steer(action === 'left' ? -1 : 1)
+const steerTowards = (action: string): void => {
+  if (action === 'left' || action === 'right') run.steer(action === 'left' ? -1 : 1)
+}
 const { phase, level, report, ribbon, translation, bestSeconds, isNewBest } = run
 
 const nextLevel = computed(() => (level.value ? nextLevelId(level.value.id) : null))
@@ -215,6 +219,14 @@ onUnmounted(() => {
       :current-actions="heldActions"
       :on-action="steerTowards"
     />
+    <TouchControl
+      v-if="isTouchDevice && phase === 'running'"
+      class="word-runner-race__touch word-runner-race__touch--brake"
+      mode="button"
+      :mapping="TOUCH_BRAKE_BUTTON"
+      :current-actions="heldActions"
+      :on-action="steerTowards"
+    />
     <WordRunnerSummary
       v-if="phase === 'finished' && level && report"
       :level="level"
@@ -256,5 +268,10 @@ onUnmounted(() => {
 
 .word-runner-race__touch--right {
   right: var(--spacing-6);
+}
+
+.word-runner-race__touch--brake {
+  left: 50%;
+  transform: translateX(-50%);
 }
 </style>

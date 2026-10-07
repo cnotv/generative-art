@@ -9,13 +9,48 @@ import {
   wallStandoff
 } from '@/views/Games/RockRunner/game/rockMotion'
 import { MAX_LATERAL_SPEED, STEER_IMPULSE, TRACK_WIDTH } from '@/views/Games/RockRunner/config'
-import { BALL, FREE_BALL, ROUTE_EFFECTS } from '../config'
+import { BALL, BRAKE, FREE_BALL, ROUTE_EFFECTS } from '../config'
 import type { LaneOutcome, TrackPath } from '../types'
 
 type DriveStep = {
   steer: number
+  braking: boolean
   speedCap: number
   deltaSeconds: number
+}
+
+type ForwardPush = {
+  forwardSpeed: number
+  speedCap: number
+  mass: number
+  deltaSeconds: number
+  braking: boolean
+}
+
+/**
+ * The push along the track for one frame. Under the cap, the drive, never more than the cap
+ * still allows, so one long frame cannot throw the ball past it. Over the cap, a pull back
+ * towards it. Braking, a steady slowing down to a stop, holding the ball there rather than
+ * letting a slope roll it back.
+ */
+export const forwardImpulse = ({
+  forwardSpeed,
+  speedCap,
+  mass,
+  deltaSeconds,
+  braking
+}: ForwardPush): number => {
+  if (braking) {
+    return (
+      -Math.sign(forwardSpeed) *
+      Math.min(Math.abs(forwardSpeed), BRAKE.deceleration * deltaSeconds) *
+      mass
+    )
+  }
+  if (forwardSpeed > speedCap) {
+    return -(forwardSpeed - speedCap) * mass * Math.min(1, FREE_BALL.overspeedDrag * deltaSeconds)
+  }
+  return Math.min(FREE_BALL.driveForce * deltaSeconds, (speedCap - forwardSpeed) * mass)
 }
 
 /**
@@ -26,10 +61,10 @@ export const gripImpulse = (lateralSpeed: number, mass: number, deltaSeconds: nu
   -lateralSpeed * mass * Math.min(1, FREE_BALL.lateralGrip * deltaSeconds)
 
 /**
- * The player's ball under physics, driven much as Rock Runner drives its rock: pushed along
- * the track up to a speed cap, hard enough to climb its hills, steered sideways with a capped push, and otherwise left to
- * gravity, so it gathers speed downhill and loses it climbing. Its distance along the track
- * is found by projecting its position back onto the path.
+ * The player's ball under physics, driven much as Rock Runner drives its rock: pushed along the
+ * track up to a speed cap, hard enough to climb its hills, steered sideways with a capped push,
+ * and otherwise left to gravity, so it gathers some speed downhill and loses it climbing. Its
+ * distance along the track is found by projecting its position back onto the path.
  */
 export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) => {
   let distance = 0
@@ -66,17 +101,18 @@ export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) =>
     syncMesh()
   }
 
-  const drive = (path: TrackPath, { steer, speedCap, deltaSeconds }: DriveStep) => {
+  const drive = (path: TrackPath, { steer, braking, speedCap, deltaSeconds }: DriveStep) => {
     const sample = path.sampleAt(distance)
     const velocity = body.linvel()
     const position = body.translation()
     lateral = lateralOffset(position, sample.position, sample.right)
-    const forwardSpeed = speedAlong(velocity, sample.forward)
-    // Never more than the cap still allows, so one long frame cannot throw the ball past it.
-    const forward = Math.min(
-      FREE_BALL.driveForce * deltaSeconds,
-      Math.max(0, speedCap - forwardSpeed) * body.mass()
-    )
+    const forward = forwardImpulse({
+      forwardSpeed: speedAlong(velocity, sample.forward),
+      speedCap,
+      mass: body.mass(),
+      deltaSeconds,
+      braking
+    })
     const lateralSpeed = speedAlong(velocity, sample.right)
     const sideways =
       steer === 0

@@ -203,6 +203,8 @@ export type RunSettings = {
   steering: SteeringMode
   /** Which way the player is holding the ball: -1 left, 1 right, 0 straight. */
   steerInput: () => number
+  /** Whether the player is holding the brake. */
+  brakeInput: () => boolean
   /** True with no one else in the room, when the bot is the rival. */
   solo: () => boolean
   /** The other players' balls, as the room last reported them. */

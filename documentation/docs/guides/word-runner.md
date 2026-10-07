@@ -40,7 +40,7 @@ The race is set up in the lobby, which remembers every choice for the next visit
 | ---------- | -------------------------------------------------------------------------- |
 | Language   | German, Spanish, French or Italian. A first visit opens German             |
 | Level      | the levels open in that language: only A1 at first, and winning opens more |
-| Difficulty | the run speed of every ball: Easy 18, Normal 24, Difficult 30, Extreme 35  |
+| Difficulty | the run speed of every ball: Easy 9, Normal 12, Difficult 15, Extreme 17.5 |
 | Steering   | Free, rolling under physics anywhere across the track, or Lanes            |
 
 ![The lobby: name and colour, then the Language, Level, Difficulty and Steering dropdowns above the Start button](/img/word-runner/start.webp)
@@ -69,9 +69,10 @@ only close to the gate, and from the third on the text is the test.
 - **The bot plays by the same rules.** It takes the right word at a rate set for each level,
   from 60% at A1 to 80% at C2, and its ramps, rocks and gravel speed it up and slow it down
   exactly as they do the player. A player who reads the text beats it; one who guesses does not.
-- **Each effect wears off** back to full speed within about a second and a half.
+- **Each effect wears off** back to full speed within about a second. A ramp's boost is a
+  nudge, a quarter faster, not a sprint.
 - **With free steering the ball is a real body**, with Rock Runner's rock handling: it is pushed
-  along the track up to the difficulty's speed, gathers more downhill and keeps the line it is
+  along the track up to the difficulty's speed, gathers a little more downhill and keeps the line it is
   put on. A word counts in the lane nearest the ball as it goes through. A ramp also throws the
   ball into the air, and a slowing lane takes its speed away at once.
 
@@ -94,14 +95,15 @@ only the host chooses what comes next.
 
 ## Playing
 
-| Input    | Steer                                                                     |
-| -------- | ------------------------------------------------------------------------- |
-| Keyboard | Left and right arrows, or A and D                                         |
-| Gamepad  | Left stick or D-pad                                                       |
-| Touch    | The arrow buttons in the bottom corners, a swipe, or a tap on either side |
+| Input    | Steer                                                                     | Brake                    |
+| -------- | ------------------------------------------------------------------------- | ------------------------ |
+| Keyboard | Left and right arrows, or A and D                                         | Down arrow, or S         |
+| Gamepad  | Left stick or D-pad                                                       | Left stick or D-pad down |
+| Touch    | The arrow buttons in the bottom corners, a swipe, or a tap on either side | The down arrow between   |
 
 With free steering the ball turns for as long as a key or button is held; with lanes, each press
-moves it one lane. The Config panel's speed slider starts at the difficulty's speed and tunes it
+moves it one lane. Holding the brake brings the free ball to a stop and holds it there, even on
+a slope, and runs the lanes ball at under half its speed. The Config panel's speed slider starts at the difficulty's speed and tunes it
 for every ball.
 
 ## Adding a language

@@ -30,14 +30,14 @@ export const LANE_WIDTH = 3.6
 export const SCATTER_LANE_CLEARANCE = 8.5
 
 // The run speed of each difficulty, for every ball in the race.
-export const DIFFICULTY_SPEEDS = { easy: 18, normal: 24, difficult: 30, extreme: 35 }
+export const DIFFICULTY_SPEEDS = { easy: 9, normal: 12, difficult: 15, extreme: 17.5 }
 export const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'difficult', 'extreme']
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal'
 export const LANE_SWITCH_RATE = 14
 // What each lane does to the runner's speed: the ratio it drops or jumps to, recovering to
 // full speed over the given seconds. The right word's lane is always the better route.
 export const ROUTE_EFFECTS = {
-  boost: { ratio: 1.7, seconds: 1.6 },
+  boost: { ratio: 1.25, seconds: 1.2 },
   stumble: { ratio: 0.3, seconds: 1.1 },
   wide: { ratio: 0.6, seconds: 1.2 },
   miss: { ratio: 0.5, seconds: 1.2 }
@@ -113,11 +113,17 @@ export const FREE_BALL = {
   // The push along the track, in impulse per second. A rolling ball spends part of it on spin,
   // so this is what still out-climbs the heavy gravity on the steepest hill of a course.
   driveForce: 13000,
+  // How quickly a ball rolling faster than its cap, downhill or off a ramp, is drawn back to
+  // it, per second: enough that a hill adds a little speed rather than doubling it.
+  overspeedDrag: 4,
   // How quickly the ball sheds sideways speed when not steered, per second.
   lateralGrip: 6,
   // Enough to lift the ball about a metre off a ramp against its own heavy gravity.
   hopImpulse: 1500
 }
+// Holding the brake: the free ball sheds this much speed a second, down to a stop, more than
+// the steepest hill can add, and in lanes the ball runs at this share of its speed.
+export const BRAKE = { deceleration: 60, laneSpeedRatio: 0.4 }
 export const STEERING_STORAGE_KEY = 'word-runner-steering'
 export const LANGUAGE_STORAGE_KEY = 'word-runner-language'
 export const DIFFICULTY_STORAGE_KEY = 'word-runner-difficulty'
@@ -174,13 +180,17 @@ export const CONTROL_MAPPING: ControlMapping = {
     ArrowLeft: 'left',
     KeyA: 'left',
     ArrowRight: 'right',
-    KeyD: 'right'
+    KeyD: 'right',
+    ArrowDown: 'brake',
+    KeyS: 'brake'
   },
   gamepad: {
     'axis0-left': 'left',
     'axis0-right': 'right',
     'dpad-left': 'left',
-    'dpad-right': 'right'
+    'dpad-right': 'right',
+    'axis1-down': 'brake',
+    'dpad-down': 'brake'
   },
   pointer: {
     'swipe-left': 'left',
@@ -201,12 +211,13 @@ export const MAX_RIVALS = 4
 // How quickly another player's ball eases towards where the room last reported it.
 export const REMOTE_FOLLOW_RATE = 6
 
-// The on-screen lane buttons on a touch screen, one either side, label to action.
+// The on-screen buttons on a touch screen, label to action: a steer either side, the brake between.
 export const TOUCH_LEFT_BUTTON: Record<string, string> = { '←': 'left' }
 export const TOUCH_RIGHT_BUTTON: Record<string, string> = { '→': 'right' }
+export const TOUCH_BRAKE_BUTTON: Record<string, string> = { '↓': 'brake' }
 
 export const configControls = {
   run: {
-    speed: { min: 10, max: 40, step: 1, label: 'Run Speed' }
+    speed: { min: 5, max: 25, step: 0.5, label: 'Run Speed' }
   }
 }
