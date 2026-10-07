@@ -3,9 +3,10 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
-import { createControls } from '@webgamekit/controls'
+import { createControls, isMobile } from '@webgamekit/controls'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import TouchControl from '@/components/TouchControl.vue'
 import '@/assets/styles/lobby-ui.scss'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { reportInputSource } from '@/composables/useInputDevice'
@@ -26,6 +27,8 @@ import {
   DEFAULT_LANGUAGE,
   GATE_POOL_SIZE,
   RUN_SPEED,
+  TOUCH_LEFT_BUTTON,
+  TOUCH_RIGHT_BUTTON,
   configControls,
   setupConfig
 } from './config'
@@ -39,6 +42,7 @@ import WordRunnerHud from './game/WordRunnerHud.vue'
 import WordRunnerSummary from './game/WordRunnerSummary.vue'
 
 const FONT_KEY = 'word-runner-font'
+const isTouchDevice = isMobile()
 const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
 
 const languageOptions = LANGUAGE_PACKS.map((pack) => ({
@@ -69,6 +73,7 @@ const handleProgress = (progress: LoadProgress): void => {
 const reactiveConfig = createReactiveConfig({ run: { speed: RUN_SPEED } })
 
 const run = useWordRun({ speed: () => reactiveConfig.value.run.speed })
+const steerTowards = (action: string): void => run.steer(action === 'left' ? -1 : 1)
 const {
   phase,
   level,
@@ -107,7 +112,7 @@ onMounted(async () => {
   const controls = createControls({
     mapping: CONTROL_MAPPING,
     pointerTarget: canvas.value,
-    onAction: (action) => run.steer(action === 'left' ? -1 : 1),
+    onAction: steerTowards,
     onInput: (_action, _trigger, device) => reportInputSource(device)
   })
   destroyControls = controls.destroyControls
@@ -175,6 +180,20 @@ onUnmounted(() => {
       :standing="standing"
       :run-seconds="runSeconds"
     />
+    <TouchControl
+      v-if="isTouchDevice && phase === 'running'"
+      class="word-runner__touch word-runner__touch--left"
+      mode="button"
+      :mapping="TOUCH_LEFT_BUTTON"
+      :on-action="steerTowards"
+    />
+    <TouchControl
+      v-if="isTouchDevice && phase === 'running'"
+      class="word-runner__touch word-runner__touch--right"
+      mode="button"
+      :mapping="TOUCH_RIGHT_BUTTON"
+      :on-action="steerTowards"
+    />
     <WordRunnerStart
       v-if="phase === 'idle' && !loadingVisible"
       v-model:language="language"
@@ -204,6 +223,20 @@ onUnmounted(() => {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+}
+
+.word-runner__touch {
+  position: absolute;
+  bottom: var(--spacing-6);
+  z-index: var(--z-dropdown);
+}
+
+.word-runner__touch--left {
+  left: var(--spacing-6);
+}
+
+.word-runner__touch--right {
+  right: var(--spacing-6);
 }
 
 .word-runner__canvas {

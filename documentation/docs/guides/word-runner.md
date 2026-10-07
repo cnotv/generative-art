@@ -79,11 +79,11 @@ and how many words were right. Then it gives:
 
 ## Playing
 
-| Input    | Change lane                         |
-| -------- | ----------------------------------- |
-| Keyboard | Left and right arrows, or A and D   |
-| Gamepad  | Left stick or D-pad                 |
-| Touch    | Swipe or tap the left or right side |
+| Input    | Change lane                                                               |
+| -------- | ------------------------------------------------------------------------- |
+| Keyboard | Left and right arrows, or A and D                                         |
+| Gamepad  | Left stick or D-pad                                                       |
+| Touch    | The arrow buttons in the bottom corners, a swipe, or a tap on either side |
 
 The Config panel sets the speed of both balls.
 

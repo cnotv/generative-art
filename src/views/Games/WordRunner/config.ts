@@ -167,6 +167,10 @@ export const CONTROL_MAPPING: ControlMapping = {
   }
 }
 
+// The on-screen lane buttons on a touch screen, one either side, label to action.
+export const TOUCH_LEFT_BUTTON: Record<string, string> = { '←': 'left' }
+export const TOUCH_RIGHT_BUTTON: Record<string, string> = { '→': 'right' }
+
 export const configControls = {
   run: {
     speed: { min: 6, max: 24, step: 1, label: 'Run Speed' }

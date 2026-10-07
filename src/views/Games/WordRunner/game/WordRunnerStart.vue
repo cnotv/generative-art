@@ -127,4 +127,24 @@ const { focusedHint, inputSource } = useDialogFocusTrap(dialogReference)
 .word-runner-start__level .word-runner-start__situation {
   justify-self: start;
 }
+
+/* A phone on its side has room for the levels, not for the words around them. */
+@media (height <= 520px) {
+  .word-runner-start__dialog {
+    gap: var(--spacing-1);
+  }
+
+  .word-runner-start__hint,
+  .word-runner-start__situation {
+    display: none;
+  }
+
+  .word-runner-start__levels {
+    grid-template-columns: auto;
+  }
+
+  .word-runner-start__level {
+    justify-items: center;
+  }
+}
 </style>
