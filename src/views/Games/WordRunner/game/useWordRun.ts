@@ -137,7 +137,7 @@ const createReadouts = (
   }
 }
 
-/** The race clock and the level's best time. */
+/** The race clock and the level's best time, the fastest race won on it. */
 const createRunScore = () => {
   const runSeconds = ref(0)
   const bestSeconds = ref<number | null>(null)
@@ -147,8 +147,9 @@ const createRunScore = () => {
     bestSeconds.value = loadBestTime(levelId)
     isNewBest.value = false
   }
-  const settle = (levelId: string): void => {
-    isNewBest.value = bestSeconds.value === null || runSeconds.value < bestSeconds.value
+  // A lost race never sets a best time, however fast it was.
+  const settle = (levelId: string, won: boolean): void => {
+    isNewBest.value = won && (bestSeconds.value === null || runSeconds.value < bestSeconds.value)
     if (isNewBest.value) saveBestTime(levelId, runSeconds.value)
   }
   return { runSeconds, bestSeconds, isNewBest, reset, settle }
@@ -386,7 +387,7 @@ export const useWordRun = (settings: RunSettings) => {
 
   const finishRun = (run: LevelRun): void => {
     report.value = settleRace(run, runState.value.results, score.runSeconds.value, bot)
-    score.settle(run.level.id)
+    score.settle(run.level.id, report.value.race.won)
     phase.value = 'finished'
   }
 

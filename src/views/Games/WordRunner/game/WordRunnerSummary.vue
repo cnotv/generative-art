@@ -153,6 +153,7 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--spacing-2);
   align-items: center;
+  width: min(100%, 52rem);
   max-height: 100%;
   text-align: center;
   pointer-events: all;
@@ -197,7 +198,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: var(--spacing-4);
-  width: min(100%, 52rem);
+  width: 100%;
   min-height: 0;
   padding: var(--spacing-2);
   overflow-y: auto;

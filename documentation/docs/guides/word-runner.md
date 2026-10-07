@@ -64,7 +64,7 @@ only close to the gate, and from the third on the text is the test.
 
 ## The feedback at the end
 
-The end screen says who got there first and by how much, the time against the level's best,
+The end screen says who got there first and by how much, the time against the level's best (the fastest race won on it),
 and how many words were right. Then it gives:
 
 - **What the level shows.** A won race clears the level and says what clearing it means, such
