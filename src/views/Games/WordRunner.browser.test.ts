@@ -46,8 +46,9 @@ describe('WordRunner - a race from the lobby', () => {
       )
       expect(wrapper.findAll('.word-runner-hint__word').map((hint) => hint.text())).toEqual([
         'Steer',
+        'Speed up',
         'Brake',
-        'Speed up'
+        'Steer'
       ])
       const canvas = wrapper.find('canvas').element as HTMLCanvasElement
       expect(canvas.width).toBeGreaterThan(0)

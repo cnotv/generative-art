@@ -1,24 +1,34 @@
 <script setup lang="ts">
 import TouchControl from '@/components/TouchControl.vue'
-import { TOUCH_PEDAL_BUTTONS, TOUCH_STEER_BUTTONS } from '../config'
+import { TOUCH_LEFT_BUTTONS, TOUCH_RIGHT_BUTTONS } from '../config'
 import WordRunnerHint from './WordRunnerHint.vue'
 
 defineProps<{
   /** On a touch screen the buttons are real; elsewhere they are drawn keys, shown with hints. */
   touch: boolean
   hints: boolean
+  /** How far the impulse has recharged, 0 to 1. */
+  charge: number
   currentActions: Record<string, unknown>
   onAction: (action: string) => void
 }>()
 
+// The outer button's hint stands higher, so the two hints of a corner never overlap.
 const corners = [
-  { side: 'left', mapping: TOUCH_STEER_BUTTONS, hints: [{ word: 'Steer', far: false }] },
+  {
+    side: 'left',
+    mapping: TOUCH_LEFT_BUTTONS,
+    hints: [
+      { word: 'Steer', far: true },
+      { word: 'Speed up', far: false }
+    ]
+  },
   {
     side: 'right',
-    mapping: TOUCH_PEDAL_BUTTONS,
+    mapping: TOUCH_RIGHT_BUTTONS,
     hints: [
       { word: 'Brake', far: false },
-      { word: 'Speed up', far: true }
+      { word: 'Steer', far: true }
     ]
   }
 ] as const
@@ -31,28 +41,47 @@ const corners = [
     class="word-runner-controls"
     :class="`word-runner-controls--${corner.side}`"
   >
-    <!-- One anchor per hint, laid over the buttons it names: over the pair, or one each. -->
-    <div v-if="hints" class="word-runner-controls__anchors">
-      <div v-for="hint in corner.hints" :key="hint.word" class="word-runner-controls__anchor">
-        <WordRunnerHint :word="hint.word" :side="corner.side" :far="hint.far" />
+    <div v-if="touch || hints" class="word-runner-controls__buttons">
+      <!-- One anchor per button, laid over it, holding that button's hint. -->
+      <div v-if="hints" class="word-runner-controls__anchors">
+        <div
+          v-for="(hint, index) in corner.hints"
+          :key="index"
+          class="word-runner-controls__anchor"
+        >
+          <WordRunnerHint :word="hint.word" :side="corner.side" :far="hint.far" />
+        </div>
+      </div>
+      <TouchControl
+        v-if="touch"
+        inline
+        mode="button"
+        :mapping="corner.mapping"
+        :current-actions="currentActions"
+        :on-action="onAction"
+      />
+      <div v-else class="word-runner-controls__keys">
+        <kbd
+          v-for="label in Object.keys(corner.mapping)"
+          :key="label"
+          class="word-runner-controls__key"
+        >
+          {{ label }}
+        </kbd>
       </div>
     </div>
-    <TouchControl
-      v-if="touch"
-      inline
-      mode="button"
-      :mapping="corner.mapping"
-      :current-actions="currentActions"
-      :on-action="onAction"
-    />
-    <div v-else class="word-runner-controls__keys">
-      <kbd
-        v-for="label in Object.keys(corner.mapping)"
-        :key="label"
-        class="word-runner-controls__key"
-      >
-        {{ label }}
-      </kbd>
+    <!-- The impulse recharging: a bar rising beside its button, gold once it is ready. -->
+    <div
+      v-if="corner.side === 'left'"
+      class="word-runner-controls__charge"
+      :class="{ 'word-runner-controls__charge--ready': charge >= 1 }"
+      role="meter"
+      aria-label="Speed up recharge"
+      aria-valuemin="0"
+      aria-valuemax="1"
+      :aria-valuenow="charge"
+    >
+      <div class="word-runner-controls__charge-fill" :style="{ transform: `scaleY(${charge})` }" />
     </div>
   </div>
 </template>
@@ -62,6 +91,9 @@ const corners = [
   position: absolute;
   bottom: var(--spacing-6);
   z-index: var(--z-dropdown);
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: flex-end;
 }
 
 .word-runner-controls--left {
@@ -70,6 +102,10 @@ const corners = [
 
 .word-runner-controls--right {
   right: var(--spacing-6);
+}
+
+.word-runner-controls__buttons {
+  position: relative;
 }
 
 .word-runner-controls__anchors {
@@ -102,5 +138,27 @@ const corners = [
   text-shadow: var(--lui-text-shadow);
   border: 2px solid var(--lui-stroke);
   border-radius: var(--lui-radius-sketch-small);
+}
+
+.word-runner-controls__charge {
+  display: flex;
+  align-items: flex-end;
+  width: var(--spacing-2);
+  height: var(--spacing-12);
+  overflow: hidden;
+  border: 2px solid var(--lui-outline-color);
+  border-radius: var(--lui-radius-sketch-small);
+  background: var(--lui-stroke-faint);
+}
+
+.word-runner-controls__charge-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--lui-stroke);
+  transform-origin: bottom;
+}
+
+.word-runner-controls__charge--ready .word-runner-controls__charge-fill {
+  background: var(--lui-focus-color);
 }
 </style>

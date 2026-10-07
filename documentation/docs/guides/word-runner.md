@@ -48,14 +48,13 @@ The race is set up in the lobby, which remembers every choice for the next visit
 ## How a race works
 
 The first race after the course loads opens with its controls drawn over the course: a pulsing
-word for each button in the bottom corners, Steer over the pair on the left, Brake and Speed up
-over the pair on the right, each with a hand-drawn arrow down to it, and "Press any key to
-start" ("Tap to start" on a touch screen) in the middle. On a touch screen the buttons are the
-real ones; elsewhere they are drawn keys. The ball waits on the line until a key or a tap, which
-clears the hints. In a room the player counts as ready only once they have pressed, and the race
-still goes after fifteen seconds at most.
+word for each of the four buttons in the bottom corners, each with a hand-drawn arrow down to it,
+and "Press any key to start" ("Tap to start" on a touch screen) in the middle. On a touch screen
+the buttons are the real ones; elsewhere they are drawn keys. The ball waits on the line until a
+key or a tap, which clears the hints. In a room the player counts as ready only once they have
+pressed, and the race still goes after fifteen seconds at most.
 
-![The start of a race: Press any key to start across the middle, Steer pointing at the left and right keys in the bottom-left corner, and Brake and Speed up pointing at the down and up keys in the bottom-right](/img/word-runner/intro.webp)
+![The start of a race: Press any key to start across the middle, Steer and Speed up pointing at the left and up keys bottom left beside the full recharge bar, and Brake and Steer pointing at the down and right keys bottom right](/img/word-runner/intro.webp)
 
 The level is run once, from its first word to its last. Only two lines sit over the course: the
 English of the current sentence, and underneath it the sentence the words passed so far build, a
@@ -107,17 +106,21 @@ only the host chooses what comes next.
 
 ## Playing
 
-| Input    | Steer                                                         | Brake                     | Speed up                   |
-| -------- | ------------------------------------------------------------- | ------------------------- | -------------------------- |
-| Keyboard | Left and right arrows, or A and D                             | Down arrow, or S          | Up arrow, or W             |
-| Gamepad  | Left stick or D-pad                                           | Left stick or D-pad down  | Left stick or D-pad up     |
-| Touch    | The two buttons bottom left, a swipe, or a tap on either side | The left one bottom right | The right one bottom right |
+| Button | Key               | Gamepad                   | Does                                                               |
+| ------ | ----------------- | ------------------------- | ------------------------------------------------------------------ |
+| ←      | Left arrow, or A  | Left stick or D-pad left  | Steers left                                                        |
+| ↑      | Up arrow, or W    | Left stick or D-pad up    | Speed up: an impulse half as fast again, wearing off over a second |
+| ↓      | Down arrow, or S  | Left stick or D-pad down  | Brakes                                                             |
+| →      | Right arrow, or D | Left stick or D-pad right | Steers right                                                       |
 
-With free steering the ball turns for as long as a key or button is held; with lanes, each press
-moves it one lane. Holding the brake brings the free ball to a stop and holds it there, even on
-a slope, and runs the lanes ball at under half its speed. Holding speed up runs either ball
-30% faster than the difficulty's speed. The Config panel's speed slider starts at the difficulty's speed and tunes it
-for every ball.
+On a touch screen ← and ↑ are bottom left, ↓ and → bottom right, and a swipe or a tap on either
+side of the course steers too. With free steering the ball turns for as long as a steer is held;
+with lanes, each press moves it one lane. Holding the brake brings the free ball to a stop and
+holds it there, even on a slope, and runs the lanes ball at under half its speed.
+
+Speed up can be used once every three seconds. A bar beside its button rises as it recharges and
+turns gold once it is ready. The Config panel's speed slider starts at the difficulty's speed and
+tunes it for every ball.
 
 ## Adding a language
 

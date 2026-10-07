@@ -35,13 +35,17 @@ export const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'difficult', 'extre
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal'
 export const LANE_SWITCH_RATE = 14
 // What each lane does to the runner's speed: the ratio it drops or jumps to, recovering to
-// full speed over the given seconds. The right word's lane is always the better route.
+// full speed over the given seconds. The right word's lane is always the better route. The
+// impulse is the player's own speed-up, the same kind of change at the press of a button.
 export const ROUTE_EFFECTS = {
   boost: { ratio: 1.25, seconds: 1.2 },
   stumble: { ratio: 0.3, seconds: 1.1 },
   wide: { ratio: 0.6, seconds: 1.2 },
-  miss: { ratio: 0.5, seconds: 1.2 }
+  miss: { ratio: 0.5, seconds: 1.2 },
+  impulse: { ratio: 1.5, seconds: 1 }
 }
+// The impulse can be used again this long after the last one.
+export const IMPULSE_COOLDOWN_SECONDS = 3
 // How often the bot takes the right word at each level. A player who reads the text beats it;
 // one who guesses does not.
 export const BOT_ACCURACY = { A1: 0.6, A2: 0.64, B1: 0.68, B2: 0.72, C1: 0.76, C2: 0.8 }
@@ -133,8 +137,6 @@ export const FREE_BALL = {
 // Holding the brake: the free ball sheds this much speed a second, down to a stop, more than
 // the steepest hill can add, and in lanes the ball runs at this share of its speed.
 export const BRAKE = { deceleration: 60, laneSpeedRatio: 0.4 }
-// Holding speed-up: the ball runs at this share of its speed, in either steering.
-export const ACCELERATE = { speedRatio: 1.3 }
 export const STEERING_STORAGE_KEY = 'word-runner-steering'
 export const LANGUAGE_STORAGE_KEY = 'word-runner-language'
 export const DIFFICULTY_STORAGE_KEY = 'word-runner-difficulty'
@@ -226,10 +228,10 @@ export const MAX_RIVALS = 4
 // How quickly another player's ball eases towards where the room last reported it.
 export const REMOTE_FOLLOW_RATE = 6
 
-// The on-screen buttons on a touch screen, label to action: steering under the left thumb,
-// brake and speed-up under the right.
-export const TOUCH_STEER_BUTTONS: Record<string, string> = { '←': 'left', '→': 'right' }
-export const TOUCH_PEDAL_BUTTONS: Record<string, string> = { '↓': 'brake', '↑': 'accelerate' }
+// The on-screen buttons on a touch screen, label to action: steer left and the impulse under
+// the left thumb, the brake and steer right under the right.
+export const TOUCH_LEFT_BUTTONS: Record<string, string> = { '←': 'left', '↑': 'accelerate' }
+export const TOUCH_RIGHT_BUTTONS: Record<string, string> = { '↓': 'brake', '→': 'right' }
 
 export const configControls = {
   run: {

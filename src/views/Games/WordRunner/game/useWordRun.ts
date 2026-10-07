@@ -23,7 +23,7 @@ import { createRunState, passGate } from '../sequence/progress'
 import { crossedGateIndices, gateDistances, stepLane } from '../runner/runMotion'
 import { chooseRouteFeature, insideLanesAlong, laneOutcome } from '../runner/routeAdvantage'
 import { planBotLanes } from '../runner/bot'
-import { applyOutcome, createRacer, hopHeight } from '../runner/racer'
+import { applyImpulse, applyOutcome, createRacer, hopHeight, impulseCharge } from '../runner/racer'
 import { createRivals } from './raceRivals'
 import { createPlayerMotion } from './playerMotion'
 import { hideSlot } from '../scene/gatePool'
@@ -319,6 +319,26 @@ const showPassedGate = (
   markPassedGate(scene.slots, key, run.gates[gateIndex], chosenLane, run.features[gateIndex])
 
 /**
+ * The player's impulse: ready again a few seconds after each use, and only mid-race. A new race
+ * restarts the clock behind the last use, which reads as ready, so each race starts charged.
+ */
+const createImpulse = (runSeconds: Ref<number>, running: () => boolean) => {
+  const lastUsedAt = ref(Number.NEGATIVE_INFINITY)
+  const charge = computed(() =>
+    runSeconds.value < lastUsedAt.value ? 1 : impulseCharge(runSeconds.value - lastUsedAt.value)
+  )
+  return {
+    charge,
+    /** Spends the impulse if it is ready, and says whether it did. */
+    use: (): boolean => {
+      if (!running() || charge.value < 1) return false
+      lastUsedAt.value = runSeconds.value
+      return true
+    }
+  }
+}
+
+/**
  * One race through a level: a gate per word of the text, the player's lane through each, every
  * ball slowed or sped up by the lanes it takes, and the scene kept in step every frame. The
  * rival is the bot in a solo race, or the other players in a room. The first ball over the
@@ -336,6 +356,7 @@ export const useWordRun = (settings: RunSettings) => {
   const rivals = createLevelRivals(settings, levelRun)
   const { begin, steer } = createSteering(phase, targetLane, settings.steering)
   const motion = createPlayerMotion(settings)
+  const impulses = createImpulse(score.runSeconds, () => phase.value === 'running')
 
   let scene: RunScene | null = null
   let drawRace: ReturnType<typeof createRaceDrawer> | null = null
@@ -461,9 +482,13 @@ export const useWordRun = (settings: RunSettings) => {
     bestSeconds: score.bestSeconds,
     isNewBest: score.isNewBest,
     ...createReadouts(levelRun, runState),
+    impulseCharge: impulses.charge,
     start,
     begin,
     steer,
+    impulse: (): void => {
+      if (impulses.use()) player = applyImpulse(player)
+    },
     stepRun,
     attachScene,
     dispose

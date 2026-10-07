@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { applyOutcome, createRacer, followRacer, stepRacer } from './racer'
-import { ROUTE_EFFECTS } from '../config'
+import {
+  applyImpulse,
+  applyOutcome,
+  createRacer,
+  followRacer,
+  impulseCharge,
+  stepRacer
+} from './racer'
+import { effectSpeedRatio } from './routeAdvantage'
+import { IMPULSE_COOLDOWN_SECONDS, ROUTE_EFFECTS } from '../config'
 import type { LaneOutcome, Racer } from '../types'
 
 const FRAME = 1 / 60
@@ -112,5 +120,40 @@ describe('followRacer', () => {
     expect(finished.distance).toBe(1000)
     expect(finished.finishSeconds).toBe(3)
     expect(followRacer(finished, 1010, { ...follow, elapsedSeconds: 4 })).toEqual(finished)
+  })
+})
+
+describe('applyImpulse and impulseCharge', () => {
+  it('gives a racing ball a burst of speed that wears off', () => {
+    // Act
+    const pushed = applyImpulse(createRacer())
+
+    // Assert
+    expect(pushed.effect).toEqual({ outcome: 'impulse', remaining: ROUTE_EFFECTS.impulse.seconds })
+    expect(effectSpeedRatio(pushed.effect)).toBeCloseTo(ROUTE_EFFECTS.impulse.ratio)
+  })
+
+  it('leaves a ball that has finished alone', () => {
+    // Arrange
+    const finished = { ...createRacer(), finishSeconds: 40 }
+
+    // Act
+    const pushed = applyImpulse(finished)
+
+    // Assert
+    expect(pushed).toBe(finished)
+  })
+
+  it.each([
+    [0, 0],
+    [IMPULSE_COOLDOWN_SECONDS / 2, 0.5],
+    [IMPULSE_COOLDOWN_SECONDS, 1],
+    [IMPULSE_COOLDOWN_SECONDS * 4, 1]
+  ])('after %f s recharges to %f', (secondsSince, expected) => {
+    // Act
+    const charge = impulseCharge(secondsSince)
+
+    // Assert
+    expect(charge).toBeCloseTo(expected)
   })
 })

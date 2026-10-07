@@ -89,13 +89,12 @@ const run = useWordRun({
   steering: props.steering,
   steerInput: () => steerDirection(heldActions.value),
   brakeInput: () => 'brake' in heldActions.value,
-  accelerateInput: () => 'accelerate' in heldActions.value,
   solo: () => props.solo,
   rivals: () => props.rivals,
   onProgress: (distance, lateral) => emit('progress', distance, lateral),
   onFinish: (seconds) => emit('finish', seconds)
 })
-const { phase, level, report, ribbon, translation, bestSeconds, isNewBest } = run
+const { phase, level, report, ribbon, translation, bestSeconds, isNewBest, impulseCharge } = run
 
 // The first race after the course loads waits behind the intro until any key or tap.
 const introShown = ref(true)
@@ -110,6 +109,7 @@ const dismissIntro = (): void => {
 }
 const handleAction = (action: string): void => {
   if (introVisible.value) dismissIntro()
+  else if (action === 'accelerate') run.impulse()
   else if (action === 'left' || action === 'right') run.steer(action === 'left' ? -1 : 1)
 }
 
@@ -218,9 +218,10 @@ onUnmounted(() => {
     />
     <WordRunnerIntro v-if="introVisible" :touch="isTouchDevice" />
     <WordRunnerControls
-      v-if="introVisible || (isTouchDevice && phase === 'running')"
+      v-if="introVisible || phase === 'running'"
       :touch="isTouchDevice"
       :hints="introVisible"
+      :charge="impulseCharge"
       :current-actions="heldActions"
       :on-action="handleAction"
     />

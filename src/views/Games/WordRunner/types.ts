@@ -205,8 +205,6 @@ export type RunSettings = {
   steerInput: () => number
   /** Whether the player is holding the brake. */
   brakeInput: () => boolean
-  /** Whether the player is holding speed-up. */
-  accelerateInput: () => boolean
   /** True with no one else in the room, when the bot is the rival. */
   solo: () => boolean
   /** The other players' balls, as the room last reported them. */
@@ -266,9 +264,12 @@ export type RoutePiece = 'ramp' | 'rock' | 'gravel'
 /** What running a lane through a gate does to a ball. */
 export type LaneOutcome = 'boost' | 'stumble' | 'wide' | 'miss' | 'none'
 
+/** What changes a ball's speed for a moment: a lane it ran, or the player's own impulse. */
+export type SpeedEffectKind = Exclude<LaneOutcome, 'none'> | 'impulse'
+
 /** A speed change in progress, wearing off back to full speed. */
 export type ActiveEffect = {
-  outcome: Exclude<LaneOutcome, 'none'>
+  outcome: SpeedEffectKind
   remaining: number
 }
 

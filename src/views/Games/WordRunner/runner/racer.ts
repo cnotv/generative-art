@@ -1,4 +1,4 @@
-import { RAMP_HOP } from '../config'
+import { IMPULSE_COOLDOWN_SECONDS, RAMP_HOP, ROUTE_EFFECTS } from '../config'
 import { effectSpeedRatio, startEffect, tickEffect } from './routeAdvantage'
 import type { LaneOutcome, Racer } from '../types'
 
@@ -54,6 +54,16 @@ export const followRacer = (
     finishSeconds: distance >= finishDistance ? elapsedSeconds : null
   }
 }
+
+/** The player's impulse: a burst of speed that wears off like any other change. */
+export const applyImpulse = (racer: Racer): Racer =>
+  racer.finishSeconds === null
+    ? { ...racer, effect: { outcome: 'impulse', remaining: ROUTE_EFFECTS.impulse.seconds } }
+    : racer
+
+/** How far the impulse has recharged, from 0 just used to 1 ready, given the seconds since. */
+export const impulseCharge = (secondsSince: number): number =>
+  Math.min(1, Math.max(0, secondsSince / IMPULSE_COOLDOWN_SECONDS))
 
 /** What a lane did to the ball: a new speed change, and a hop off a ramp. */
 export const applyOutcome = (racer: Racer, outcome: LaneOutcome): Racer => ({

@@ -1,6 +1,6 @@
 import type * as THREE from 'three'
 import type RAPIER from '@dimforge/rapier3d-compat'
-import { ACCELERATE, BRAKE, LANE_COUNT, LANE_WIDTH } from '../config'
+import { BRAKE, LANE_COUNT, LANE_WIDTH } from '../config'
 import { followRacer, stepRacer } from '../runner/racer'
 import { effectSpeedRatio } from '../runner/routeAdvantage'
 import { laneAtOffset, laneOffset } from '../runner/runMotion'
@@ -14,19 +14,13 @@ type MotionStep = {
   finishDistance: number
 }
 
-/** The share of its speed the player asks of the ball: the brake wins over speed-up. */
-export const throttleRatio = (braking: boolean, accelerating: boolean): number => {
-  if (braking) return BRAKE.laneSpeedRatio
-  return accelerating ? ACCELERATE.speedRatio : 1
-}
-
 /**
  * How the player's ball moves: stepped between the lanes at the race's speed, or rolled
  * under physics and steered freely. Either way it reports the same things, so the race reads
  * one ball whichever it is: how far along it is, which lane it is in, and how far off centre.
  */
 export const createPlayerMotion = (
-  settings: Pick<RunSettings, 'steering' | 'steerInput' | 'brakeInput' | 'accelerateInput'>
+  settings: Pick<RunSettings, 'steering' | 'steerInput' | 'brakeInput'>
 ) => {
   let drive: FreeDrive | null = null
   const physical = (): FreeDrive | null => (settings.steering === 'free' ? drive : null)
@@ -39,14 +33,14 @@ export const createPlayerMotion = (
   const step = (racer: Racer, path: TrackPath, racing: MotionStep): Racer => {
     const ball = physical()
     const braking = settings.brakeInput()
-    const throttle = throttleRatio(braking, settings.accelerateInput())
-    if (!ball) return stepRacer(racer, { ...racing, baseSpeed: racing.baseSpeed * throttle })
-    // A braking ball stops under its own brake, so only speed-up moves the physics cap.
-    const capRatio = braking ? 1 : throttle
+    if (!ball) {
+      const brakeRatio = braking ? BRAKE.laneSpeedRatio : 1
+      return stepRacer(racer, { ...racing, baseSpeed: racing.baseSpeed * brakeRatio })
+    }
     const moved = ball.drive(path, {
       steer: settings.steerInput(),
       braking,
-      speedCap: racing.baseSpeed * capRatio * effectSpeedRatio(racer.effect),
+      speedCap: racing.baseSpeed * effectSpeedRatio(racer.effect),
       deltaSeconds: racing.deltaSeconds
     })
     return followRacer(racer, moved.distance, racing)
