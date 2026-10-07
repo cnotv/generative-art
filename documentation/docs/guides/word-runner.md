@@ -15,7 +15,7 @@ next in the text. A bot races alongside, and the first ball over the finish line
 `src/views/Games/WordRunner/runner/`
 :::
 
-![A race on the German A1 level: the English sentence at the top, the three words floating across the lanes, the player's red ball and the bot's green one](/img/word-runner/race.webp)
+![Four moments of a race: the first German sentence with its hint, the player 20 m ahead after taking the right words, a Spanish race with missed words where the bot's ghost ball pulls ahead, and the end screen of a clean run](/img/word-runner/race.webp)
 
 ## Levels
 
@@ -36,7 +36,7 @@ language, so a level is equally hard whichever language it is run in.
 A first visit opens German, and after that the start screen opens on the language picked last.
 Only A1 is open at first: winning a level's race opens the next one in that language.
 
-![The start screen: the language picker with German selected, A1 open and the five levels after it still closed](/img/word-runner/start.webp)
+![The start screen: the language picker with German selected, A1 won and A2 open, and the four levels after it still closed](/img/word-runner/start.webp)
 
 ## How a race works
 

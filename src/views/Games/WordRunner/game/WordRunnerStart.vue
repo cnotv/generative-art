@@ -77,7 +77,7 @@ const { focusedHint, inputSource } = useDialogFocusTrap(dialogReference)
   flex-direction: column;
   gap: var(--spacing-3);
   align-items: center;
-  max-width: 36rem;
+  max-width: 48rem;
   text-align: center;
   pointer-events: all;
 }
@@ -119,10 +119,12 @@ const { focusedHint, inputSource } = useDialogFocusTrap(dialogReference)
   display: grid;
   grid-template-columns: subgrid;
   grid-column: 1 / -1;
+  justify-items: end;
   align-items: center;
+  white-space: nowrap;
 }
 
 .word-runner-start__level .word-runner-start__situation {
-  text-align: left;
+  justify-self: start;
 }
 </style>
