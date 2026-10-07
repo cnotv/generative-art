@@ -4,7 +4,6 @@ import {
   BEND_YAW_RATE_THRESHOLD,
   BOT_ACCURACY,
   FEATURE_OFFSET,
-  FEEDBACK_SECONDS,
   FINISH_RUN_OUT,
   GATE_SPACING,
   GRAVEL,
@@ -17,15 +16,16 @@ import {
   STUMBLE_SHAKE,
   STUMBLE_SHAKE_FREQUENCY
 } from '../config'
-import { LANGUAGE_PACKS, findLevel, nextLevelId } from '../levels/languagePacks'
+import { LANGUAGE_PACKS, findLevel } from '../levels/languagePacks'
 import { levelHints, levelWords, sentenceIndices, sentenceText } from '../sequence/levelText'
 import { buildCorrectLanes, buildRunGates, levelSeed } from '../sequence/gateLayout'
 import { createRunState, passGate } from '../sequence/progress'
 import { crossedGateIndices, gateDistances, stepLane } from '../runner/runMotion'
 import { chooseRouteFeature, insideLanesAlong, laneOutcome } from '../runner/routeAdvantage'
 import { planBotLanes } from '../runner/bot'
-import { applyOutcome, createRacer, hopHeight, stepRacer } from '../runner/racer'
-import { createRivals, leadingRival } from './raceRivals'
+import { applyOutcome, createRacer, hopHeight } from '../runner/racer'
+import { createRivals } from './raceRivals'
+import { createPlayerMotion } from './playerMotion'
 import { hideSlot } from '../scene/gatePool'
 import { placeFinishLine } from '../scene/finishLine'
 import { createRaceDrawer, drawRaceFrame, gateKey, markPassedGate } from './drawRun'
@@ -37,6 +37,7 @@ import type {
   Gate,
   GateResult,
   GateView,
+  LaneOutcome,
   Level,
   LevelWord,
   RaceFrame,
@@ -44,7 +45,6 @@ import type {
   RivalFrame,
   RibbonWord,
   RouteFeature,
-  RunFeedback,
   RunPhase,
   RunReport,
   RunScene,
@@ -104,20 +104,14 @@ const prepareLevelRun = (level: Level, path: TrackPath, attempt: number): LevelR
   }
 }
 
-/** What the HUD reads off a run: the sentence being built, its English, the hint, the race. */
-const createReadouts = (
-  phase: Ref<RunPhase>,
-  levelRun: ShallowRef<LevelRun | null>,
-  runState: ShallowRef<RunState>
-) => {
+/** What the HUD reads off a run: the sentence being built, and its English. */
+const createReadouts = (levelRun: ShallowRef<LevelRun | null>, runState: ShallowRef<RunState>) => {
   const sentenceIndex = computed(() => {
     const run = levelRun.value
     if (!run) return 0
     return run.sentenceOfWord[runState.value.gateIndex] ?? run.level.sentences.length - 1
   })
   return {
-    sentenceIndex,
-    sentenceCount: computed(() => levelRun.value?.level.sentences.length ?? 0),
     translation: computed(
       () => levelRun.value?.level.sentences[sentenceIndex.value]?.translation ?? ''
     ),
@@ -130,12 +124,6 @@ const createReadouts = (
           text: sentenceText([run.words[result.position]]),
           correct: result.correct
         }))
-    }),
-    nextGloss: computed(() => {
-      const run = levelRun.value
-      const gate = run?.gates[runState.value.gateIndex]
-      if (phase.value !== 'running' || !run || !gate || gate.hint !== 'full') return null
-      return run.words[gate.position].gloss
     })
   }
 }
@@ -179,24 +167,6 @@ const createCourseHolder = () => {
   return { current: () => course, useFor, dispose }
 }
 
-/** The word just passed, shown for a moment with its meaning. */
-const createFeedback = () => {
-  const feedback = ref<RunFeedback | null>(null)
-  let remaining = 0
-  const show = (word: LevelWord, correct: boolean): void => {
-    feedback.value = { text: word.text, gloss: word.gloss, correct }
-    remaining = FEEDBACK_SECONDS
-  }
-  const tick = (deltaSeconds: number): void => {
-    remaining = Math.max(0, remaining - deltaSeconds)
-    if (remaining === 0 && feedback.value) feedback.value = null
-  }
-  const clear = (): void => {
-    feedback.value = null
-  }
-  return { feedback, show, tick, clear }
-}
-
 /** The lane the bot holds: the one it planned for the next gate it has not reached. */
 const botLaneAt = (run: LevelRun, distance: number): number => {
   const nextGate = run.gateDistances.findIndex((gateDistance) => gateDistance >= distance)
@@ -212,14 +182,19 @@ const runThroughGates = (
   run: LevelRun,
   racer: Racer,
   fromDistance: number,
-  laneAt: (gateIndex: number) => number
+  laneAt: (gateIndex: number) => number,
+  onOutcome: (outcome: LaneOutcome) => void = () => undefined
 ): Racer =>
   crossedGateIndices(fromDistance, racer.distance, run.gateDistances).reduce(
-    (current, gateIndex) =>
-      applyOutcome(
-        current,
-        laneOutcome(run.features[gateIndex], laneAt(gateIndex), run.gates[gateIndex].correctLane)
-      ),
+    (current, gateIndex) => {
+      const outcome = laneOutcome(
+        run.features[gateIndex],
+        laneAt(gateIndex),
+        run.gates[gateIndex].correctLane
+      )
+      onOutcome(outcome)
+      return applyOutcome(current, outcome)
+    },
     racer
   )
 
@@ -245,8 +220,7 @@ const settleRace = (
     results,
     words: run.words,
     seconds,
-    race,
-    hasNextLevel: nextLevelId(run.level.id) !== null
+    race
   })
 }
 
@@ -255,7 +229,8 @@ type DrawState = {
   path: TrackPath
   player: Racer
   rivals: RivalFrame[]
-  playerLane: number
+  playerLateral: number
+  playerOnPhysics: boolean
   runSerial: number
   deltaSeconds: number
   elapsed: number
@@ -276,27 +251,16 @@ const framesFor = (state: DrawState): { view: GateView; frame: RaceFrame } => ({
     path: state.path,
     player: {
       distance: state.player.distance,
-      lane: state.playerLane,
+      lateral: state.playerLateral,
       hop: hopHeight(state.player)
     },
+    playerOnPhysics: state.playerOnPhysics,
     rivals: state.run ? state.rivals : [],
     deltaSeconds: state.deltaSeconds,
     shake: stumbleShake(state.player, state.elapsed),
     snapCamera: state.snapCamera
   }
 })
-
-/** How far the player leads the rival furthest along, negative when behind, and who that is. */
-const createStanding = () => {
-  const metres = ref(0)
-  const rivalName = ref('')
-  const update = (playerDistance: number, rivals: Rival[]): void => {
-    const leader = leadingRival(rivals)
-    metres.value = leader ? playerDistance - leader.distance : 0
-    rivalName.value = leader?.name ?? ''
-  }
-  return { metres, rivalName, update }
-}
 
 /** Calls back with the ball's place on the course at most once per interval. */
 const createProgressThrottle = (report: (distance: number, lane: number) => void) => {
@@ -313,12 +277,17 @@ const createProgressThrottle = (report: (distance: number, lane: number) => void
  * The player's say in a race: changing lane while it runs, and the start signal that lets the
  * ball roll once the whole room has loaded the course.
  */
-const createSteering = (phase: Ref<RunPhase>, targetLane: Ref<number>) => ({
+const createSteering = (
+  phase: Ref<RunPhase>,
+  targetLane: Ref<number>,
+  steering: RunSettings['steering']
+) => ({
   begin: (): void => {
     if (phase.value === 'waiting') phase.value = 'running'
   },
+  // Free steering is held, not stepped: it reads the player's input every frame instead.
   steer: (direction: number): void => {
-    if (phase.value !== 'running') return
+    if (phase.value !== 'running' || steering !== 'lanes') return
     targetLane.value = stepLane(targetLane.value, direction, LANE_COUNT)
   }
 })
@@ -339,6 +308,16 @@ const createLevelRivals = (
     (distance) => (levelRun.value ? botLaneAt(levelRun.value, distance) : CENTRE_LANE)
   )
 
+/** Lights a passed word's sign and shows the route piece its chosen lane ran onto. */
+const showPassedGate = (
+  scene: RunScene,
+  key: string,
+  run: LevelRun,
+  gateIndex: number,
+  chosenLane: number
+): void =>
+  markPassedGate(scene.slots, key, run.gates[gateIndex], chosenLane, run.features[gateIndex])
+
 /**
  * One race through a level: a gate per word of the text, the player's lane through each, every
  * ball slowed or sped up by the lanes it takes, and the scene kept in step every frame. The
@@ -351,13 +330,12 @@ export const useWordRun = (settings: RunSettings) => {
   const runState = shallowRef<RunState>(createRunState())
   const report = shallowRef<RunReport | null>(null)
   const targetLane = ref(CENTRE_LANE)
-  const standing = createStanding()
-  const flash = createFeedback()
   const score = createRunScore()
   const courses = createCourseHolder()
   const sendProgress = createProgressThrottle(settings.onProgress)
   const rivals = createLevelRivals(settings, levelRun)
-  const { begin, steer } = createSteering(phase, targetLane)
+  const { begin, steer } = createSteering(phase, targetLane, settings.steering)
+  const motion = createPlayerMotion(settings)
 
   let scene: RunScene | null = null
   let drawRace: ReturnType<typeof createRaceDrawer> | null = null
@@ -381,22 +359,19 @@ export const useWordRun = (settings: RunSettings) => {
     player = createRacer()
     rivals.reset()
     targetLane.value = CENTRE_LANE
-    standing.update(0, [])
     snapCamera = true
-    flash.clear()
     score.reset(run.level.id)
     scene.slots.forEach(hideSlot)
     placeFinishLine(scene.finishLine, course.path.sampleAt(run.finishDistance))
+    motion.holdAtStart(course.path)
     phase.value = settings.solo() ? 'running' : 'waiting'
   }
 
   /** The verdict on a word, given the moment the player's ball goes through its gate. */
   const passThrough = (run: LevelRun, gateIndex: number): void => {
-    const gate = run.gates[gateIndex]
-    const chosenLane = targetLane.value
-    if (scene) markPassedGate(scene.slots, gateKey(runSerial, gateIndex), gate, chosenLane)
-    flash.show(run.words[gate.position], chosenLane === gate.correctLane)
-    runState.value = passGate(runState.value, gate, chosenLane)
+    const chosenLane = motion.lane(targetLane.value)
+    if (scene) showPassedGate(scene, gateKey(runSerial, gateIndex), run, gateIndex, chosenLane)
+    runState.value = passGate(runState.value, run.gates[gateIndex], chosenLane)
   }
 
   const finishRun = (run: LevelRun): void => {
@@ -412,7 +387,7 @@ export const useWordRun = (settings: RunSettings) => {
   }
 
   /** Moves every ball on, judges every gate the player went through, and settles the finish. */
-  const advance = (run: LevelRun, deltaSeconds: number): void => {
+  const advance = (run: LevelRun, path: TrackPath, deltaSeconds: number): void => {
     score.runSeconds.value += deltaSeconds
     const racing = {
       baseSpeed: settings.speed(),
@@ -420,18 +395,18 @@ export const useWordRun = (settings: RunSettings) => {
       elapsedSeconds: score.runSeconds.value,
       finishDistance: run.finishDistance
     }
-    const moved = stepRacer(player, racing)
-    // A gate stands before its route feature, so the word is judged in the lane it was run in.
+    const moved = motion.step(player, path, racing)
+    // A word is judged, and its route settled, in the lane the ball went through it in.
     crossedGateIndices(player.distance, moved.distance, run.gateDistances).forEach((gateIndex) =>
       passThrough(run, gateIndex)
     )
-    player = runThroughGates(run, moved, player.distance, () => targetLane.value)
+    const lane = motion.lane(targetLane.value)
+    player = runThroughGates(run, moved, player.distance, () => lane, motion.react)
     rivals.step(racing)
     const field = rivals.standings()
     const distances = [player.distance, ...field.map((rival) => rival.distance)]
     courses.current()?.advance(Math.max(...distances), Math.min(...distances))
-    standing.update(player.distance, field)
-    sendProgress(deltaSeconds, player.distance, targetLane.value)
+    sendProgress(deltaSeconds, player.distance, motion.lateral(targetLane.value))
     if (player.finishSeconds !== null) finishRun(run)
   }
 
@@ -439,17 +414,19 @@ export const useWordRun = (settings: RunSettings) => {
   const stepRun = (frameSeconds: number): void => {
     const deltaSeconds = Math.min(frameSeconds, MAX_FRAME_SECONDS)
     elapsed += deltaSeconds
-    flash.tick(deltaSeconds)
     const run = levelRun.value
-    if (phase.value === 'running' && run) advance(run, deltaSeconds)
     const course = courses.current()
     if (!scene || !drawRace || !course) return
+    if (phase.value === 'running' && run) advance(run, course.path, deltaSeconds)
+    else if (phase.value === 'finished') motion.stop()
+    else motion.holdAtStart(course.path)
     const { view, frame } = framesFor({
       run: phase.value === 'idle' ? null : run,
       path: course.path,
       player,
       rivals: rivals.frames(),
-      playerLane: targetLane.value,
+      playerLateral: motion.lateral(targetLane.value),
+      playerOnPhysics: motion.onPhysics(),
       runSerial,
       deltaSeconds,
       elapsed,
@@ -463,6 +440,7 @@ export const useWordRun = (settings: RunSettings) => {
   const attachScene = (runScene: RunScene): void => {
     scene = runScene
     drawRace = createRaceDrawer(runScene)
+    motion.attach(runScene.playerBody, runScene.player)
     const firstLevel = LANGUAGE_PACKS[0]?.levels[0]
     if (firstLevel) courses.useFor(runScene, levelSeed(firstLevel.id))
   }
@@ -476,13 +454,10 @@ export const useWordRun = (settings: RunSettings) => {
     phase,
     level: computed(() => levelRun.value?.level ?? null),
     report,
-    feedback: flash.feedback,
-    standing: standing.metres,
-    rivalName: standing.rivalName,
     runSeconds: score.runSeconds,
     bestSeconds: score.bestSeconds,
     isNewBest: score.isNewBest,
-    ...createReadouts(phase, levelRun, runState),
+    ...createReadouts(levelRun, runState),
     start,
     begin,
     steer,

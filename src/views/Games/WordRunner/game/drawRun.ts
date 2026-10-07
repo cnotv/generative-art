@@ -10,13 +10,12 @@ import {
   GATE_FADE_DISTANCE,
   GATE_POOL_SIZE,
   GATE_SPAWN_DISTANCE,
-  LANE_COUNT,
   LANE_SWITCH_RATE,
-  LANE_WIDTH,
   LATE_HINT_DISTANCE
 } from '../config'
-import { isHintShown, laneOffset, smoothingFactor } from '../runner/runMotion'
-import { assignSlot, hideSlot, placeSlot, setSignState } from '../scene/gatePool'
+import { isHintShown, smoothingFactor } from '../runner/runMotion'
+import { assignSlot, hideSlot, placeSlot, revealPiece, setSignState } from '../scene/gatePool'
+import { revealedPiece } from '../runner/routeAdvantage'
 import type {
   BallFrame,
   Gate,
@@ -24,11 +23,11 @@ import type {
   GateView,
   RaceFrame,
   RivalFrame,
+  RouteFeature,
   RunScene,
   TrackPath
 } from '../types'
 
-const CENTRE_LANE = Math.floor(LANE_COUNT / 2)
 const UNTINTED = '#ffffff'
 
 export const gateKey = (runSerial: number, gateIndex: number): string => `${runSerial}:${gateIndex}`
@@ -60,7 +59,7 @@ export const drawGates = (slots: GateSlot[], view: GateView): void =>
     }
     const gate = view.gates[gateIndex]
     const key = gateKey(view.runSerial, gateIndex)
-    if (slot.gateKey !== key) assignSlot(slot, gate, view.features[gateIndex], key)
+    if (slot.gateKey !== key) assignSlot(slot, gate, key)
     const gateDistance = view.distances[gateIndex]
     const distanceAhead = gateDistance - view.distance
     placeSlot(
@@ -78,16 +77,22 @@ export const drawGates = (slots: GateSlot[], view: GateView): void =>
     )
   })
 
-/** Colours the lane just run through, and shows where the right word was if it was not that one. */
+/**
+ * Colours the lane just run through, shows where the right word was if it was not that one,
+ * and brings up the piece of route that lane leads onto.
+ */
 export const markPassedGate = (
   slots: GateSlot[],
   key: string,
   gate: Gate,
-  chosenLane: number
+  chosenLane: number,
+  feature: RouteFeature
 ): void => {
   const slot = slots.find((candidate) => candidate.gateKey === key)
   if (!slot) return
   const correct = chosenLane === gate.correctLane
+  const piece = revealedPiece(feature, chosenLane, gate.correctLane)
+  if (piece) revealPiece(slot.features, piece, chosenLane)
   setSignState(slot.signs[chosenLane], gate.options[chosenLane], correct ? 'right' : 'wrong')
   if (!correct) {
     setSignState(slot.signs[gate.correctLane], gate.options[gate.correctLane], 'reveal')
@@ -95,21 +100,21 @@ export const markPassedGate = (
 }
 
 /**
- * Rolls one ball along the track at its lane's offset, sliding between lanes rather than
+ * Rolls one ball along the track at its sideways offset, sliding towards it rather than
  * jumping, and turning about its own axis by exactly the distance it has covered.
  */
 const createBallDrawer = (ball: THREE.Mesh) => {
-  let lateral = laneOffset(CENTRE_LANE, LANE_COUNT, LANE_WIDTH)
+  let lateral = 0
   return (path: TrackPath, frame: BallFrame, deltaSeconds: number, snap: boolean): number => {
     const sample = path.sampleAt(frame.distance)
-    const laneX = laneOffset(frame.lane, LANE_COUNT, LANE_WIDTH)
     lateral = snap
-      ? laneX
-      : lateral + (laneX - lateral) * smoothingFactor(LANE_SWITCH_RATE, deltaSeconds)
+      ? frame.lateral
+      : lateral + (frame.lateral - lateral) * smoothingFactor(LANE_SWITCH_RATE, deltaSeconds)
     ball.position.copy(sample.position).addScaledVector(sample.right, lateral)
     ball.position.y += BALL.radius + frame.hop
     ball.rotation.y = sample.yaw
-    ball.rotation.x = frame.distance / BALL.radius
+    // Forward is the ball's own -Z, so rolling onwards turns it backwards about its X axis.
+    ball.rotation.x = -frame.distance / BALL.radius
     return lateral
   }
 }
@@ -142,7 +147,10 @@ export const createRaceDrawer = (scene: RunScene) => {
   const drawGhosts = scene.ghosts.map(createGhostDrawer)
   return (frame: RaceFrame): void => {
     const { camera } = scene
-    const lateral = drawPlayer(frame.path, frame.player, frame.deltaSeconds, frame.snapCamera)
+    // A ball under physics is placed by its own body; the camera only needs where it is.
+    const lateral = frame.playerOnPhysics
+      ? frame.player.lateral
+      : drawPlayer(frame.path, frame.player, frame.deltaSeconds, frame.snapCamera)
     drawGhosts.forEach((drawGhost, index) =>
       drawGhost(frame.path, frame.rivals[index], frame.deltaSeconds, frame.snapCamera)
     )

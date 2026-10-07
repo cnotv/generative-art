@@ -3,6 +3,7 @@ import {
   insideLaneFor,
   chooseRouteFeature,
   laneOutcome,
+  revealedPiece,
   startEffect,
   tickEffect,
   effectSpeedRatio,
@@ -122,5 +123,31 @@ describe('insideLanesAlong', () => {
     const insideLanes = insideLanesAlong(yawAt, [10, 60, 110], 20, 0.01, 3)
 
     expect(insideLanes).toEqual([null, 0, 2])
+  })
+})
+
+describe('revealedPiece', () => {
+  it.each([
+    ['ramp', 1, 1, 'ramp'],
+    ['ramp', 0, 1, 'gravel'],
+    ['rocks', 2, 2, null],
+    ['rocks', 0, 2, 'rock'],
+    ['bend', 0, 0, null],
+    ['bend', 2, 0, 'gravel']
+  ] as const)(
+    'on a %s gate, lane %i with the right word on lane %i reveals %s',
+    (feature, lane, correctLane, expected) => {
+      expect(revealedPiece(feature, lane, correctLane)).toBe(expected)
+    }
+  )
+
+  it('reveals exactly what the lane does: something to slow it, or the ramp that speeds it', () => {
+    const outcomes = (['ramp', 'rocks', 'bend'] as const).flatMap((feature) =>
+      [0, 1].map((lane) => [laneOutcome(feature, lane, 1), revealedPiece(feature, lane, 1)])
+    )
+
+    outcomes.forEach(([outcome, piece]) => {
+      expect(piece === null).toBe(outcome === 'none')
+    })
   })
 })

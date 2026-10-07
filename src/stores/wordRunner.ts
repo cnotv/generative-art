@@ -1,16 +1,15 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { ChatMessage } from '@webgamekit/chat'
-import type { WrPhase, WrPlayer } from '@/views/Games/WordRunner/types'
+import type { Difficulty, WrPhase, WrPlayer } from '@/views/Games/WordRunner/types'
 
-const START_LANE = 1
 const MAX_MESSAGES = 200
 
 /** A player as they stand on the start line, before any of their race has arrived. */
 const onStartLine = (player: Pick<WrPlayer, 'id' | 'name' | 'color'>): WrPlayer => ({
   ...player,
   distance: 0,
-  lane: START_LANE,
+  lateral: 0,
   finishSeconds: null,
   ready: false
 })
@@ -21,6 +20,7 @@ export const useWordRunnerStore = defineStore('wordRunner', () => {
   const phase = ref<WrPhase>('lobby')
   const solo = ref(true)
   const levelId = ref('')
+  const difficulty = ref<Difficulty>('normal')
   // Counts races, so racing the same level again still reads as a new race.
   const raceSerial = ref(0)
   // The room has been told to go: every ball may roll.
@@ -53,17 +53,18 @@ export const useWordRunnerStore = defineStore('wordRunner', () => {
     players.value = { ...players.value, [id]: { ...player, ...change } }
   }
 
-  const setProgress = (id: string, distance: number, lane: number): void =>
-    updatePlayer(id, { distance, lane })
+  const setProgress = (id: string, distance: number, lateral: number): void =>
+    updatePlayer(id, { distance, lateral })
   const setFinish = (id: string, finishSeconds: number): void => updatePlayer(id, { finishSeconds })
   const setReady = (id: string): void => updatePlayer(id, { ready: true })
 
   /** Takes the room into a race of a level, everyone back on the start line. */
-  const startRace = (nextLevelId: string): void => {
+  const startRace = (nextLevelId: string, nextDifficulty: Difficulty): void => {
     players.value = Object.fromEntries(
       Object.entries(players.value).map(([id, player]) => [id, onStartLine(player)])
     )
     levelId.value = nextLevelId
+    difficulty.value = nextDifficulty
     raceSerial.value += 1
     started.value = false
     phase.value = 'race'
@@ -92,6 +93,7 @@ export const useWordRunnerStore = defineStore('wordRunner', () => {
     phase,
     solo,
     levelId,
+    difficulty,
     raceSerial,
     started,
     playerList,

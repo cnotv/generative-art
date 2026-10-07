@@ -3,7 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
-import { createControls, isMobile } from '@webgamekit/controls'
+import { createControls, isMobile, type ControlsCurrents } from '@webgamekit/controls'
+import { steerDirection } from '@/views/Games/RockRunner/game/rockMotion'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import TouchControl from '@/components/TouchControl.vue'
@@ -20,21 +21,22 @@ import {
 import {
   CONTROL_MAPPING,
   GATE_POOL_SIZE,
-  RUN_SPEED,
+  DIFFICULTY_SPEEDS,
   TOUCH_LEFT_BUTTON,
   TOUCH_RIGHT_BUTTON,
   configControls,
   setupConfig
 } from '../config'
-import { CEFR_DESCRIPTIONS, nextLevelId } from '../levels/languagePacks'
+import { nextLevelId } from '../levels/languagePacks'
 import { createGatePool } from '../scene/gatePool'
 import { createCourse } from '../scene/course'
 import { createBalls } from '../scene/balls'
 import { createFinishLine } from '../scene/finishLine'
 import { useWordRun } from './useWordRun'
+import { catchUpSteps, createTickClock } from './tickClock'
 import WordRunnerHud from './WordRunnerHud.vue'
 import WordRunnerSummary from './WordRunnerSummary.vue'
-import type { RemoteRival } from '../types'
+import type { Difficulty, RemoteRival, SteeringMode } from '../types'
 
 const props = defineProps<{
   levelId: string
@@ -43,11 +45,13 @@ const props = defineProps<{
   started: boolean
   canRestart: boolean
   rivals: RemoteRival[]
+  steering: SteeringMode
+  difficulty: Difficulty
 }>()
 
 const emit = defineEmits<{
   ready: []
-  progress: [distance: number, lane: number]
+  progress: [distance: number, lateral: number]
   finish: [seconds: number]
   restart: [levelId: string]
   lobby: []
@@ -67,32 +71,31 @@ const handleProgress = (progress: LoadProgress): void => {
   loadingDetail.value = progress.detail
 }
 
-const reactiveConfig = createReactiveConfig({ run: { speed: RUN_SPEED } })
+const reactiveConfig = createReactiveConfig({
+  run: { speed: DIFFICULTY_SPEEDS[props.difficulty] }
+})
+// Every race starts at its difficulty's speed; the panel slider tunes it from there.
+watch(
+  () => props.difficulty,
+  (difficulty) => {
+    reactiveConfig.value.run.speed = DIFFICULTY_SPEEDS[difficulty]
+  }
+)
+
+// The keys and buttons held right now, read every frame for free steering.
+const heldActions = ref<ControlsCurrents>({})
 
 const run = useWordRun({
   speed: () => reactiveConfig.value.run.speed,
+  steering: props.steering,
+  steerInput: () => steerDirection(heldActions.value),
   solo: () => props.solo,
   rivals: () => props.rivals,
-  onProgress: (distance, lane) => emit('progress', distance, lane),
+  onProgress: (distance, lateral) => emit('progress', distance, lateral),
   onFinish: (seconds) => emit('finish', seconds)
 })
 const steerTowards = (action: string): void => run.steer(action === 'left' ? -1 : 1)
-const {
-  phase,
-  level,
-  report,
-  ribbon,
-  feedback,
-  standing,
-  rivalName,
-  nextGloss,
-  translation,
-  sentenceIndex,
-  sentenceCount,
-  runSeconds,
-  bestSeconds,
-  isNewBest
-} = run
+const { phase, level, report, ribbon, translation, bestSeconds, isNewBest } = run
 
 const nextLevel = computed(() => (level.value ? nextLevelId(level.value.id) : null))
 const isRacing = computed(() => phase.value === 'running' || phase.value === 'waiting')
@@ -127,21 +130,23 @@ onMounted(async () => {
     onInput: (_action, _trigger, device) => reportInputSource(device)
   })
   destroyControls = controls.destroyControls
+  heldActions.value = controls.currentActions
 
   await sceneStore.init(canvas.value, setupConfig, {
     viewPanels: { showConfig: true, showScene: true, showElements: false },
     playMode: true,
     onProgress: handleProgress,
-    defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
+    defineSetup: async ({ scene, camera, world, animate }) => {
       // Rock Runner's haze, so the course fades into the distance the way its track does.
       scene.fog = new THREE.Fog(FOG_COLOR, FOG_NEAR, FOG_FAR)
       const pool = createGatePool(scene, GATE_POOL_SIZE)
-      const balls = createBalls(scene)
+      const balls = createBalls(scene, props.steering === 'free' ? world : null)
       const finish = createFinishLine(scene)
       disposers.push(pool.dispose, balls.dispose, finish.dispose)
       run.attachScene({
         slots: pool.slots,
         player: balls.player,
+        playerBody: balls.playerBody,
         ghosts: balls.ghosts,
         finishLine: finish.finishLine,
         camera,
@@ -158,7 +163,15 @@ onMounted(async () => {
           LIGHT_DIRECTIONAL_POSITION
         )
       )
-      animate({ beforeTimeline: () => run.stepRun(getDelta()), timeline })
+      const tickSeconds = createTickClock()
+      animate({
+        beforeTimeline: () => {
+          const seconds = tickSeconds()
+          Array.from({ length: catchUpSteps(seconds) }).forEach(() => world.step())
+          run.stepRun(seconds)
+        },
+        timeline
+      })
     }
   })
   // The day cycle would repaint Rock Runner's light and sky a frame later.
@@ -181,24 +194,17 @@ onUnmounted(() => {
     <canvas ref="canvas" class="word-runner-race__canvas"></canvas>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
     <WordRunnerHud
-      v-if="isRacing && level"
-      :level="level"
+      v-if="isRacing"
       :waiting="phase === 'waiting'"
-      :sentence-index="sentenceIndex"
-      :sentence-count="sentenceCount"
       :translation="translation"
       :ribbon="ribbon"
-      :next-gloss="nextGloss"
-      :feedback="feedback"
-      :standing="standing"
-      :rival-name="rivalName"
-      :run-seconds="runSeconds"
     />
     <TouchControl
       v-if="isTouchDevice && phase === 'running'"
       class="word-runner-race__touch word-runner-race__touch--left"
       mode="button"
       :mapping="TOUCH_LEFT_BUTTON"
+      :current-actions="heldActions"
       :on-action="steerTowards"
     />
     <TouchControl
@@ -206,13 +212,13 @@ onUnmounted(() => {
       class="word-runner-race__touch word-runner-race__touch--right"
       mode="button"
       :mapping="TOUCH_RIGHT_BUTTON"
+      :current-actions="heldActions"
       :on-action="steerTowards"
     />
     <WordRunnerSummary
       v-if="phase === 'finished' && level && report"
       :level="level"
       :report="report"
-      :description="CEFR_DESCRIPTIONS[level.cefr]"
       :best-seconds="bestSeconds"
       :is-new-best="isNewBest"
       :has-next-level="nextLevel !== null"

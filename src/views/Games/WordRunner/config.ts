@@ -11,7 +11,7 @@ import {
   LIGHT_SHADOW_CAMERA,
   LIGHT_SHADOW_RADIUS
 } from '@/views/Games/MarbleMadness/config'
-import type { CefrLevel } from './types'
+import type { CefrLevel, Difficulty } from './types'
 
 // The language a first visit starts in; after that the start screen remembers the last pick.
 export const DEFAULT_LANGUAGE = 'de'
@@ -29,7 +29,10 @@ export const LANE_WIDTH = 3.6
 // Scattered illustrations keep at least this far from the centreline, clear of the lanes.
 export const SCATTER_LANE_CLEARANCE = 8.5
 
-export const RUN_SPEED = 13
+// The run speed of each difficulty, for every ball in the race.
+export const DIFFICULTY_SPEEDS = { easy: 18, normal: 24, difficult: 30, extreme: 35 }
+export const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'difficult', 'extreme']
+export const DEFAULT_DIFFICULTY: Difficulty = 'normal'
 export const LANE_SWITCH_RATE = 14
 // What each lane does to the runner's speed: the ratio it drops or jumps to, recovering to
 // full speed over the given seconds. The right word's lane is always the better route.
@@ -82,9 +85,9 @@ export const SIGN_FONT_MIN_SIZE = 56
 export const SIGN_CORNER_RADIUS = 36
 export const SIGN_BORDER_WIDTH = 10
 
-// The route feature lies this far in front of its word, so the ball runs over it on the way in
-// and the lane it is judged in is the one the word was taken in.
-export const FEATURE_OFFSET = -3
+// The route piece of a lane appears this far past its word once the word is picked, so the
+// ball runs straight onto it. Its effect is settled at the word, in the lane it was taken in.
+export const FEATURE_OFFSET = 4
 export const RAMP = { width: 2.8, length: 3.4, rise: 0.8, thickness: 0.3, color: 0xe9c46a }
 // lift is how much of the radius stands above the deck: the rest is sunk into it.
 export const ROCK = { radius: 0.95, detail: 1, color: 0x9a8f82, lift: 0.55 }
@@ -97,6 +100,27 @@ export const BALL = { radius: 1.1, segments: 32 }
 export const PLAYER_SURFACE = 'red-stone'
 export const BOT_SURFACE = 'mossy-stone'
 export const BOT_GHOST_OPACITY = 0.45
+// Free steering: the player's ball rolls under physics like Rock Runner's rock, with its mass,
+// grip and gravity, so the impulses tuned there handle the same here.
+export const FREE_BALL = {
+  mass: 100,
+  gravityScale: 20,
+  restitution: -0.3,
+  friction: 10,
+  linearDamping: 0.35,
+  angularDamping: 0.05,
+  spawnLift: 0.05,
+  // The push along the track, in impulse per second. A rolling ball spends part of it on spin,
+  // so this is what still out-climbs the heavy gravity on the steepest hill of a course.
+  driveForce: 13000,
+  // How quickly the ball sheds sideways speed when not steered, per second.
+  lateralGrip: 6,
+  // Enough to lift the ball about a metre off a ramp against its own heavy gravity.
+  hopImpulse: 1500
+}
+export const STEERING_STORAGE_KEY = 'word-runner-steering'
+export const LANGUAGE_STORAGE_KEY = 'word-runner-language'
+export const DIFFICULTY_STORAGE_KEY = 'word-runner-difficulty'
 
 // A chase camera like Rock Runner's, lower so the word signs fill more of the view.
 export const CHASE_CAMERA = {
@@ -118,8 +142,6 @@ export const CAMERA_START_POSITION: [number, number, number] = [0, 7, 10.5]
 // The longest frame the run will take as one step. A hitch longer than this slows the run
 // for a moment instead of carrying the runner past a gate before the lane could change.
 export const MAX_FRAME_SECONDS = 0.1
-
-export const FEEDBACK_SECONDS = 0.7
 
 export const SIGN_COLORS = {
   idle: { fill: '#fffaf1', ink: '#4a4560', border: '#d8cfbd' },
@@ -185,6 +207,6 @@ export const TOUCH_RIGHT_BUTTON: Record<string, string> = { '→': 'right' }
 
 export const configControls = {
   run: {
-    speed: { min: 6, max: 24, step: 1, label: 'Run Speed' }
+    speed: { min: 10, max: 40, step: 1, label: 'Run Speed' }
   }
 }

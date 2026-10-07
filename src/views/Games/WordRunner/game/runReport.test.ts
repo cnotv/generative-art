@@ -61,41 +61,22 @@ describe('raceResult', () => {
 })
 
 describe('buildRunReport', () => {
-  it('counts the right words and lists the missed ones', () => {
+  it('counts the right words and gives every pick', () => {
     const report = buildRunReport({
       gates,
       results: resultsWithMistakes(2),
       words,
       seconds: 63,
-      race: { won: true, metresAhead: 12, rivalName: 'the bot' },
-      hasNextLevel: true
+      race: { won: true, metresAhead: 12, rivalName: 'the bot' }
     })
 
     expect(report.correctCount).toBe(8)
     expect(report.wordCount).toBe(10)
-    expect(report.missed.map((word) => word.text)).toEqual(['word0', 'word1'])
+    expect(report.picks).toHaveLength(10)
+    expect(report.picks.filter((pick) => !pick.correct).map((pick) => pick.text)).toEqual([
+      'word0',
+      'word1'
+    ])
     expect(report.seconds).toBe(63)
   })
-
-  it.each([
-    [0, { won: true, metresAhead: 30, rivalName: 'the bot' }, true, 'next level is open'],
-    [0, { won: true, metresAhead: 30, rivalName: 'the bot' }, false, 'every level'],
-    [3, { won: true, metresAhead: 2, rivalName: 'the bot' }, true, 'words below'],
-    [1, { won: false, secondsBehind: 1, rivalName: 'the bot' }, true, 'ramps'],
-    [6, { won: false, secondsBehind: 9, rivalName: 'the bot' }, true, 'Read the text']
-  ] as const)(
-    'with %i mistakes and %j (next level: %s) advises "%s"',
-    (mistakeCount, race, hasNextLevel, advice) => {
-      const report = buildRunReport({
-        gates,
-        results: resultsWithMistakes(mistakeCount),
-        words,
-        seconds: 60,
-        race,
-        hasNextLevel
-      })
-
-      expect(report.tip).toContain(advice)
-    }
-  )
 })

@@ -22,7 +22,7 @@ import type {
   GateFeatures,
   GateSign,
   GateSlot,
-  RouteFeature,
+  RoutePiece,
   SignState,
   TrackSample
 } from '../types'
@@ -124,31 +124,34 @@ export const setSignState = (sign: GateSign, word: string, state: SignState): vo
   sign.texture.needsUpdate = true
 }
 
-/**
- * Lays out what each lane leads to: a ramp on the right lane, rocks on every other one, or
- * gravel on the outside of a bend so only the inside line holds its speed.
- */
-const showFeature = (features: GateFeatures, feature: RouteFeature, correctLane: number): void => {
-  features.ramp.visible = feature === 'ramp'
-  features.ramp.position.x = laneOffset(correctLane, LANE_COUNT, LANE_WIDTH)
-  features.rocks.forEach((rock, lane) => {
-    rock.visible = feature === 'rocks' && lane !== correctLane
+const hideFeatures = (features: GateFeatures): void => {
+  features.ramp.visible = false
+  features.rocks.forEach((rock) => {
+    rock.visible = false
   })
-  features.gravel.forEach((patch, lane) => {
-    patch.visible = feature === 'bend' && lane !== correctLane
+  features.gravel.forEach((patch) => {
+    patch.visible = false
   })
 }
 
-/** Dresses a pooled slot as one gate of the text and the route feature that follows it. */
-export const assignSlot = (
-  slot: GateSlot,
-  gate: Gate,
-  feature: RouteFeature,
-  gateKey: string
-): void => {
+/**
+ * Brings up the piece of route in the lane just taken: the ramp, a rock or gravel. Nothing on
+ * the course gives a word away before it is picked.
+ */
+export const revealPiece = (features: GateFeatures, piece: RoutePiece, lane: number): void => {
+  if (piece === 'ramp') {
+    features.ramp.position.x = laneOffset(lane, LANE_COUNT, LANE_WIDTH)
+    features.ramp.visible = true
+  }
+  if (piece === 'rock') features.rocks[lane].visible = true
+  if (piece === 'gravel') features.gravel[lane].visible = true
+}
+
+/** Dresses a pooled slot as one gate of the text, its route still hidden. */
+export const assignSlot = (slot: GateSlot, gate: Gate, gateKey: string): void => {
   slot.gateKey = gateKey
   gate.options.forEach((word, lane) => setSignState(slot.signs[lane], word, 'idle'))
-  showFeature(slot.features, feature, gate.correctLane)
+  hideFeatures(slot.features)
 }
 
 const placeOnTrack = (object: THREE.Object3D, sample: TrackSample): void => {

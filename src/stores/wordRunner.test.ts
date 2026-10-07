@@ -31,7 +31,7 @@ describe('useWordRunnerStore', () => {
 
     expect(store.players['peer-a']).toMatchObject({
       distance: 0,
-      lane: 1,
+      lateral: 0,
       finishSeconds: null,
       ready: false
     })
@@ -42,29 +42,30 @@ describe('useWordRunnerStore', () => {
     join(store, 'peer-a', 'Quick Otter')
     join(store, 'peer-b', 'Calm Heron')
 
-    store.setProgress('peer-a', 120, 2)
-    store.setProgress('peer-b', 300, 0)
+    store.setProgress('peer-a', 120, 3.6)
+    store.setProgress('peer-b', 300, -3.6)
     store.setFinish('peer-b', 61.5)
 
     expect(store.playerList.map((player) => player.id)).toEqual(['peer-b', 'peer-a'])
-    expect(store.players['peer-a']).toMatchObject({ distance: 120, lane: 2 })
+    expect(store.players['peer-a']).toMatchObject({ distance: 120, lateral: 3.6 })
     expect(store.players['peer-b'].finishSeconds).toBe(61.5)
   })
 
   it('puts everyone back on the start line, not ready, for a new race', () => {
     const store = useWordRunnerStore()
     join(store, 'peer-a', 'Quick Otter')
-    store.setProgress('peer-a', 120, 2)
+    store.setProgress('peer-a', 120, 3.6)
     store.setFinish('peer-a', 50)
     store.setReady('peer-a')
 
-    store.startRace('de-a1')
+    store.startRace('de-a1', 'extreme')
 
     expect(store.phase).toBe('race')
     expect(store.levelId).toBe('de-a1')
+    expect(store.difficulty).toBe('extreme')
     expect(store.players['peer-a']).toMatchObject({
       distance: 0,
-      lane: 1,
+      lateral: 0,
       finishSeconds: null,
       ready: false
     })
@@ -72,10 +73,10 @@ describe('useWordRunnerStore', () => {
 
   it('counts every race, so the same level raced again is a new race, not yet started', () => {
     const store = useWordRunnerStore()
-    store.startRace('de-a1')
+    store.startRace('de-a1', 'normal')
     store.markStarted()
 
-    store.startRace('de-a1')
+    store.startRace('de-a1', 'normal')
 
     expect(store.raceSerial).toBe(2)
     expect(store.started).toBe(false)

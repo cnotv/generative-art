@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applyOutcome, createRacer, stepRacer } from './racer'
+import { applyOutcome, createRacer, followRacer, stepRacer } from './racer'
 import { ROUTE_EFFECTS } from '../config'
 import type { LaneOutcome, Racer } from '../types'
 
@@ -88,5 +88,29 @@ describe('a race', () => {
     ])
 
     expect(raceTo(650, rightEverywhere)).toBeLessThan(raceTo(650, wrongOnAThird))
+  })
+})
+
+describe('followRacer', () => {
+  const follow = { deltaSeconds: FRAME, elapsedSeconds: 3, finishDistance: 1000 }
+
+  it('takes its distance from the ball it follows, not from a speed', () => {
+    expect(followRacer(createRacer(), 42, follow).distance).toBe(42)
+  })
+
+  it('wears its effect off as time passes', () => {
+    const stumbling = applyOutcome(createRacer(), 'stumble')
+
+    expect(followRacer(stumbling, 10, follow).effect?.remaining).toBeCloseTo(
+      ROUTE_EFFECTS.stumble.seconds - FRAME
+    )
+  })
+
+  it('finishes on the line and stays finished there', () => {
+    const finished = followRacer(createRacer(), 1003, follow)
+
+    expect(finished.distance).toBe(1000)
+    expect(finished.finishSeconds).toBe(3)
+    expect(followRacer(finished, 1010, { ...follow, elapsedSeconds: 4 })).toEqual(finished)
   })
 })

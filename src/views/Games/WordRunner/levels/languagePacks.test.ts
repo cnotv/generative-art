@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CEFR_DESCRIPTIONS, LANGUAGE_PACKS, findLevel, nextLevelId, packFor } from './languagePacks'
+import { LANGUAGE_PACKS, findLevel, nextLevelId, packFor } from './languagePacks'
 import { DEFAULT_LANGUAGE } from '../config'
 
 const CEFR_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
@@ -100,12 +100,6 @@ describe('the language packs', () => {
     const ids = everyLevel.map(([id]) => id)
 
     expect(new Set(ids).size).toBe(ids.length)
-  })
-
-  it('describes what clearing each CEFR level shows', () => {
-    CEFR_ORDER.forEach((cefr) => {
-      expect(CEFR_DESCRIPTIONS[cefr as keyof typeof CEFR_DESCRIPTIONS].canDo.trim()).not.toBe('')
-    })
   })
 })
 

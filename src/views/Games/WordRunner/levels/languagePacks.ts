@@ -1,6 +1,5 @@
 import { CEFR_LEVELS, DEFAULT_LANGUAGE } from '../config'
-import type { CefrDescription, CefrLevel, LanguagePack, Level } from '../types'
-import cefrDescriptions from './cefr.json'
+import type { CefrLevel, LanguagePack, Level } from '../types'
 import germanPack from './de.json'
 import spanishPack from './es.json'
 import frenchPack from './fr.json'
@@ -27,9 +26,6 @@ export const LANGUAGE_PACKS: LanguagePack[] = [
   frenchPack,
   italianPack
 ].map(readPack)
-
-/** What each CEFR level means, the same in every language. */
-export const CEFR_DESCRIPTIONS: Record<CefrLevel, CefrDescription> = cefrDescriptions
 
 /** The pack for a language, or the default one when that language is not offered. */
 export const packFor = (language: string): LanguagePack =>

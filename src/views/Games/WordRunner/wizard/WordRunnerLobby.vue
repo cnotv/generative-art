@@ -15,6 +15,10 @@ const props = defineProps<{
   languageOptions: LobbyConfigSelectOption[]
   levelId: string
   levelOptions: LobbyConfigSelectOption[]
+  steering: string
+  steeringOptions: LobbyConfigSelectOption[]
+  difficulty: string
+  difficultyOptions: LobbyConfigSelectOption[]
 }>()
 
 const emit = defineEmits<{
@@ -41,6 +45,20 @@ const configFields = computed((): LobbyConfigField[] => [
     label: 'Level',
     value: props.levelId,
     options: props.levelOptions
+  },
+  {
+    type: 'select',
+    key: 'difficulty',
+    label: 'Difficulty',
+    value: props.difficulty,
+    options: props.difficultyOptions
+  },
+  {
+    type: 'select',
+    key: 'steering',
+    label: 'Steering',
+    value: props.steering,
+    options: props.steeringOptions
   }
 ])
 </script>

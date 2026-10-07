@@ -34,6 +34,27 @@ export const stepRacer = (
   }
 }
 
+type RacerFollow = Omit<RacerStep, 'baseSpeed'>
+
+/**
+ * Keeps a racer in step with a ball that moves on its own, under physics: its distance is the
+ * ball's, while its speed change still wears off and its finish is still recorded.
+ */
+export const followRacer = (
+  racer: Racer,
+  ballDistance: number,
+  { deltaSeconds, elapsedSeconds, finishDistance }: RacerFollow
+): Racer => {
+  if (racer.finishSeconds !== null) return racer
+  const distance = Math.min(finishDistance, ballDistance)
+  return {
+    distance,
+    effect: tickEffect(racer.effect, deltaSeconds),
+    hopRemaining: Math.max(0, racer.hopRemaining - deltaSeconds),
+    finishSeconds: distance >= finishDistance ? elapsedSeconds : null
+  }
+}
+
 /** What a lane did to the ball: a new speed change, and a hop off a ramp. */
 export const applyOutcome = (racer: Racer, outcome: LaneOutcome): Racer => ({
   ...racer,

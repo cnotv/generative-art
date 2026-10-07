@@ -1,4 +1,5 @@
 import type * as THREE from 'three'
+import type RAPIER from '@dimforge/rapier3d-compat'
 import type { TrackPath, TrackSample } from '@/views/Games/RockRunner/types'
 
 export type { TrackPath, TrackSample }
@@ -39,12 +40,6 @@ export type LanguagePack = {
   levels: Level[]
 }
 
-/** What a CEFR level means, the same in every language: its name and what clearing it shows. */
-export type CefrDescription = {
-  label: string
-  canDo: string
-}
-
 /**
  * How much help a gate gives: `full` glows the right lane from afar and shows the gloss,
  * `late` glows it only close to the gate, `none` gives nothing away.
@@ -80,12 +75,12 @@ export type RunState = {
   results: GateResult[]
 }
 
-/** A word the player went through the wrong lane for, and what they took instead. */
-export type MissedWord = {
+/** A word as the player picked it: the right word, the one taken, and whether they match. */
+export type PickedWord = {
   position: number
   text: string
-  gloss: string
   chosen: string
+  correct: boolean
 }
 
 /**
@@ -112,14 +107,18 @@ export type WrPlayer = {
   name: string
   color: string
   distance: number
-  lane: number
+  /** How far the ball is off the centreline, positive to the right. */
+  lateral: number
   finishSeconds: number | null
   ready: boolean
 }
 
 export type WrAvatarPayload = { name: string; color: string }
-export type WrStartPayload = { levelId: string }
-export type WrProgressPayload = { distance: number; lane: number }
+/** How fast a race runs, for every ball in it: the player's, the bot's and every rival's. */
+export type Difficulty = 'easy' | 'normal' | 'difficult' | 'extreme'
+
+export type WrStartPayload = { levelId: string; difficulty: Difficulty }
+export type WrProgressPayload = { distance: number; lateral: number }
 export type WrFinishPayload = { seconds: number }
 
 /** Who the local player is, and the room their session joins. */
@@ -135,8 +134,7 @@ export type RunReport = {
   seconds: number
   correctCount: number
   wordCount: number
-  missed: MissedWord[]
-  tip: string
+  picks: PickedWord[]
 }
 
 /** How a word sign is drawn: plain, glowing as a hint, or the verdict after it is passed. */
@@ -184,6 +182,8 @@ export type RunPhase = 'idle' | 'waiting' | 'running' | 'finished'
 export type RunScene = {
   slots: GateSlot[]
   player: THREE.Mesh
+  /** The player's ball in the physics world, for free steering; null when it steps lanes. */
+  playerBody: RAPIER.RigidBody | null
   /** See-through balls for the rivals: the bot alone, or the other players in a room. */
   ghosts: THREE.Mesh[]
   finishLine: THREE.Object3D
@@ -191,28 +191,30 @@ export type RunScene = {
   createCourse: (seed: number) => Course
 }
 
+/**
+ * How the ball is steered: rolling freely under gravity anywhere across the track, or stepping
+ * between the three lanes.
+ */
+export type SteeringMode = 'free' | 'lanes'
+
 /** Settings read live from the Config panel, so changing them mid-run takes effect at once. */
 export type RunSettings = {
   speed: () => number
+  steering: SteeringMode
+  /** Which way the player is holding the ball: -1 left, 1 right, 0 straight. */
+  steerInput: () => number
   /** True with no one else in the room, when the bot is the rival. */
   solo: () => boolean
   /** The other players' balls, as the room last reported them. */
   rivals: () => RemoteRival[]
-  onProgress: (distance: number, lane: number) => void
+  onProgress: (distance: number, lateral: number) => void
   onFinish: (seconds: number) => void
 }
 
 /** Another player's ball, as the room last reported it. */
 export type RemoteRival = Rival & {
   color: string
-  lane: number
-}
-
-/** The word just passed, shown briefly with its meaning and whether the lane was right. */
-export type RunFeedback = {
-  text: string
-  gloss: string
-  correct: boolean
+  lateral: number
 }
 
 /** Where the gates of the level stand relative to the player, for one frame. */
@@ -228,7 +230,8 @@ export type GateView = {
 /** Where one ball is this frame, and how it moves. */
 export type BallFrame = {
   distance: number
-  lane: number
+  /** How far the ball is off the centreline, positive to the right. */
+  lateral: number
   hop: number
 }
 
@@ -239,6 +242,8 @@ export type RivalFrame = BallFrame & { color: string | null }
 export type RaceFrame = {
   path: TrackPath
   player: BallFrame
+  /** The player's ball moves under physics, so it is placed by its body, not by this frame. */
+  playerOnPhysics: boolean
   rivals: RivalFrame[]
   deltaSeconds: number
   shake: number
@@ -250,6 +255,9 @@ export type RaceFrame = {
  * up, rocks blocking every other lane, or the inside line through a bend.
  */
 export type RouteFeature = 'ramp' | 'rocks' | 'bend'
+
+/** A piece of route that can appear in a lane once its word is picked. */
+export type RoutePiece = 'ramp' | 'rock' | 'gravel'
 
 /** What running a lane through a gate does to a ball. */
 export type LaneOutcome = 'boost' | 'stumble' | 'wide' | 'miss' | 'none'

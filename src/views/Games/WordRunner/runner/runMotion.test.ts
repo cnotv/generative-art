@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  laneAtOffset,
   laneOffset,
   stepLane,
   smoothingFactor,
@@ -78,5 +79,25 @@ describe('isHintShown', () => {
     ['none', 2, false]
   ] as const)('a %s hint %f ahead is shown: %s', (hint, distanceAhead, expected) => {
     expect(isHintShown(hint, distanceAhead, 14)).toBe(expected)
+  })
+})
+
+describe('laneAtOffset', () => {
+  it.each([
+    [0, 1],
+    [-3.6, 0],
+    [3.6, 2],
+    [-1.7, 1],
+    [1.9, 2],
+    [-9, 0],
+    [9, 2]
+  ])('a ball %f off the centreline is in lane %i', (offset, expected) => {
+    expect(laneAtOffset(offset, 3, 3.6)).toBe(expected)
+  })
+
+  it('is the lane whose centre laneOffset gives', () => {
+    expect([0, 1, 2].map((lane) => laneAtOffset(laneOffset(lane, 3, 3.6), 3, 3.6))).toEqual([
+      0, 1, 2
+    ])
   })
 })

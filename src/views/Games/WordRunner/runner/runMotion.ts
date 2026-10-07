@@ -4,6 +4,10 @@ import type { HintLevel } from '../types'
 export const laneOffset = (lane: number, laneCount: number, laneWidth: number): number =>
   (lane - (laneCount - 1) / 2) * laneWidth
 
+/** The lane a ball sits in, from how far it is off the centreline: the nearest lane centre. */
+export const laneAtOffset = (offset: number, laneCount: number, laneWidth: number): number =>
+  Math.min(laneCount - 1, Math.max(0, Math.round(offset / laneWidth + (laneCount - 1) / 2)))
+
 /** One lane over in the given direction, staying on the track at either edge. */
 export const stepLane = (lane: number, direction: number, laneCount: number): number =>
   Math.min(laneCount - 1, Math.max(0, lane + direction))

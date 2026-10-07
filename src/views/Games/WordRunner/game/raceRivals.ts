@@ -1,5 +1,5 @@
-import { CENTRE_LANE, PROGRESS_INTERVAL_SECONDS, REMOTE_FOLLOW_RATE } from '../config'
-import { smoothingFactor } from '../runner/runMotion'
+import { LANE_COUNT, LANE_WIDTH, PROGRESS_INTERVAL_SECONDS, REMOTE_FOLLOW_RATE } from '../config'
+import { laneOffset, smoothingFactor } from '../runner/runMotion'
 import { createRacer, hopHeight, stepRacer } from '../runner/racer'
 import type { RemoteRival, Rival, RivalFrame, Racer, RunSettings } from '../types'
 
@@ -28,13 +28,6 @@ export const followRemote = (
   const predicted = Math.min(furthest, shown + baseSpeed * deltaSeconds)
   return predicted + (reported - predicted) * smoothingFactor(REMOTE_FOLLOW_RATE, deltaSeconds)
 }
-
-/** The rival furthest along, or null with no rival at all. */
-export const leadingRival = <T extends Rival>(rivals: T[]): T | null =>
-  rivals.reduce<T | null>(
-    (leader, rival) => (leader === null || rival.distance > leader.distance ? rival : leader),
-    null
-  )
 
 /**
  * Everyone the player races: the bot in a solo race, run here like the player's own ball,
@@ -89,14 +82,14 @@ export const createRivals = (
       ? [
           {
             distance: bot.distance,
-            lane: botLaneAt(bot.distance),
+            lateral: laneOffset(botLaneAt(bot.distance), LANE_COUNT, LANE_WIDTH),
             hop: hopHeight(bot),
             color: null
           }
         ]
       : remote().map((rival) => ({
           distance: rival.shown,
-          lane: rival.lane ?? CENTRE_LANE,
+          lateral: rival.lateral,
           hop: 0,
           color: rival.color
         }))

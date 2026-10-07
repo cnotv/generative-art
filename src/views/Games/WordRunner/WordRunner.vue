@@ -17,21 +17,29 @@ import LobbyLayout from '@/layout/LobbyLayout.vue'
 import GameHeader from '@/components/GameHeader.vue'
 import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
 import GameTabBar from '@/components/GameTabBar.vue'
-import { DEFAULT_LANGUAGE, READY_TIMEOUT_MS } from './config'
+import {
+  DEFAULT_DIFFICULTY,
+  DIFFICULTIES,
+  DIFFICULTY_STORAGE_KEY,
+  DEFAULT_LANGUAGE,
+  LANGUAGE_STORAGE_KEY,
+  READY_TIMEOUT_MS,
+  STEERING_STORAGE_KEY
+} from './config'
 import { LANGUAGE_PACKS, packFor } from './levels/languagePacks'
-import { loadLanguage, saveLanguage } from './game/languagePreference'
+import { loadChoice, oneOf, saveChoice } from './game/preferences'
 import { unlockedLevelCount } from './game/levelProgress'
 import { useWordRunnerSession } from './useWordRunnerSession'
 import WordRunnerLobby from './wizard/WordRunnerLobby.vue'
 import WordRunnerRules from './wizard/WordRunnerRules.vue'
 import WordRunnerRace from './game/WordRunnerRace.vue'
-import type { RemoteRival } from './types'
+import type { RemoteRival, SteeringMode } from './types'
 
 const FONT_KEY = 'word-runner-font'
 const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
 
 const store = useWordRunnerStore()
-const { phase, playerList, messages, hostId, levelId, raceSerial, started, solo } =
+const { phase, playerList, messages, hostId, levelId, difficulty, raceSerial, started, solo } =
   storeToRefs(store)
 
 const storedProfile = loadProfile()
@@ -45,12 +53,32 @@ const languageOptions = LANGUAGE_PACKS.map((pack) => ({
   label: pack.languageName
 }))
 const language = ref(
-  loadLanguage(
+  loadChoice(
+    LANGUAGE_STORAGE_KEY,
     languageOptions.map((option) => option.value),
     DEFAULT_LANGUAGE
   )
 )
-watch(language, saveLanguage)
+watch(language, (choice) => saveChoice(LANGUAGE_STORAGE_KEY, choice))
+
+const STEERING_MODES: SteeringMode[] = ['free', 'lanes']
+const steeringOptions = [
+  { value: 'free', label: 'Free' },
+  { value: 'lanes', label: 'Lanes' }
+]
+// Free by default: the ball rolls where the player steers it. Lanes snaps it between three.
+const steering = ref<SteeringMode>(loadChoice(STEERING_STORAGE_KEY, STEERING_MODES, 'free'))
+watch(steering, (choice) => saveChoice(STEERING_STORAGE_KEY, choice))
+
+const difficultyOptions = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'difficult', label: 'Difficult' },
+  { value: 'extreme', label: 'Extreme' }
+]
+// The lobby's pick. A race runs at the difficulty it was started with, the host's in a room.
+const chosenDifficulty = ref(loadChoice(DIFFICULTY_STORAGE_KEY, DIFFICULTIES, DEFAULT_DIFFICULTY))
+watch(chosenDifficulty, (choice) => saveChoice(DIFFICULTY_STORAGE_KEY, choice))
 
 // Read again on every return to the lobby, since a race won there opens the next level.
 const openLevels = computed(() => {
@@ -85,11 +113,11 @@ const canRestart = computed(() => solo.value || isHost.value)
 const rivals = computed((): RemoteRival[] =>
   playerList.value
     .filter((player) => player.id !== localPeerId.value)
-    .map(({ name, color, distance, lane, finishSeconds }) => ({
+    .map(({ name, color, distance, lateral, finishSeconds }) => ({
       name,
       color,
       distance,
-      lane,
+      lateral,
       finishSeconds
     }))
 )
@@ -97,12 +125,16 @@ const rivals = computed((): RemoteRival[] =>
 const handleConfigChange = (key: string, value: string | number): void => {
   if (key === 'language') language.value = packFor(String(value)).language
   if (key === 'levelId') selectedLevelId.value = String(value)
+  if (key === 'steering') steering.value = oneOf(value, STEERING_MODES, steering.value)
+  if (key === 'difficulty') {
+    chosenDifficulty.value = oneOf(value, DIFFICULTIES, chosenDifficulty.value)
+  }
 }
 
 /** Races a level: alone against the bot, or with everyone in the room. */
 const raceLevel = (nextLevelId: string): void => {
-  if (solo.value) store.startRace(nextLevelId)
-  else session.startRace(nextLevelId)
+  if (solo.value) store.startRace(nextLevelId, chosenDifficulty.value)
+  else session.startRace(nextLevelId, chosenDifficulty.value)
 }
 
 const handleStartGame = (): void => {
@@ -147,8 +179,8 @@ watch(
   }
 )
 
-const handleProgress = (distance: number, lane: number): void => {
-  if (!solo.value) session.broadcastProgress(distance, lane)
+const handleProgress = (distance: number, lateral: number): void => {
+  if (!solo.value) session.broadcastProgress(distance, lateral)
 }
 const handleFinish = (seconds: number): void => {
   if (!solo.value) session.broadcastFinish(seconds)
@@ -211,6 +243,10 @@ onUnmounted(() => {
       :language-options="languageOptions"
       :level-id="selectedLevelId"
       :level-options="levelOptions"
+      :steering="steering"
+      :steering-options="steeringOptions"
+      :difficulty="chosenDifficulty"
+      :difficulty-options="difficultyOptions"
       @update:player-name="playerName = $event"
       @update:player-color="handleColorChange"
       @name-change="handleNameChange"
@@ -227,6 +263,8 @@ onUnmounted(() => {
       :started="started"
       :can-restart="canRestart"
       :rivals="rivals"
+      :steering="steering"
+      :difficulty="difficulty"
       @ready="handleReady"
       @progress="handleProgress"
       @finish="handleFinish"

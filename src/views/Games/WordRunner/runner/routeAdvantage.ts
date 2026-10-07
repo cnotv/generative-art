@@ -1,5 +1,5 @@
 import { ROUTE_EFFECTS } from '../config'
-import type { ActiveEffect, LaneOutcome, RouteFeature } from '../types'
+import type { ActiveEffect, LaneOutcome, RouteFeature, RoutePiece } from '../types'
 
 /** How fast the heading turns, in radians per unit of track, across a stretch of it. */
 export const yawRateBetween = (
@@ -40,6 +40,23 @@ const OUTCOMES: Record<RouteFeature, { right: LaneOutcome; wrong: LaneOutcome }>
   rocks: { right: 'none', wrong: 'stumble' },
   bend: { right: 'none', wrong: 'wide' }
 }
+
+const PIECES: Record<RouteFeature, { right: RoutePiece | null; wrong: RoutePiece | null }> = {
+  ramp: { right: 'ramp', wrong: 'gravel' },
+  rocks: { right: null, wrong: 'rock' },
+  bend: { right: null, wrong: 'gravel' }
+}
+
+/**
+ * The piece of route that appears in the lane a ball took, once its word is picked and not
+ * before: the ramp that launches it, or the rock or gravel that slows it. Nothing for a lane
+ * that changes nothing.
+ */
+export const revealedPiece = (
+  feature: RouteFeature,
+  lane: number,
+  correctLane: number
+): RoutePiece | null => PIECES[feature][lane === correctLane ? 'right' : 'wrong']
 
 export const laneOutcome = (
   feature: RouteFeature,

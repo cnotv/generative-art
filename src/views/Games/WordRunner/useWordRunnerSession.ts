@@ -11,7 +11,10 @@ import {
 } from '@webgamekit/multiplayer-p2p'
 import { chatMessageCreate, type ChatMessage } from '@webgamekit/chat'
 import { useWordRunnerStore } from '@/stores/wordRunner'
+import { DEFAULT_DIFFICULTY, DIFFICULTIES } from './config'
+import { oneOf } from './game/preferences'
 import type {
+  Difficulty,
   WrAvatarPayload,
   WrFinishPayload,
   WrProgressPayload,
@@ -87,15 +90,18 @@ const bindPeerEvents = (context: SessionContext, joined: P2PSession): void => {
 
 const bindRaceEvents = (context: SessionContext, joined: P2PSession): void => {
   p2pOnData<ChatMessage>(joined, CHAT_CHANNEL, (message) => context.store.appendMessage(message))
-  // A level is laid out from its id alone, so naming it is all every peer needs.
+  // A level is laid out from its id alone, so naming it and its speed is all every peer needs.
   p2pOnData<WrStartPayload>(joined, START_CHANNEL, (payload) => {
     context.store.solo = false
-    context.store.startRace(payload.levelId)
+    context.store.startRace(
+      payload.levelId,
+      oneOf(payload.difficulty, DIFFICULTIES, DEFAULT_DIFFICULTY)
+    )
   })
   p2pOnData(joined, READY_CHANNEL, (_payload, peerId) => context.store.setReady(peerId))
   p2pOnData(joined, GO_CHANNEL, () => context.callbacks.onGo())
   p2pOnData<WrProgressPayload>(joined, PROGRESS_CHANNEL, (payload, peerId) =>
-    context.store.setProgress(peerId, payload.distance, payload.lane)
+    context.store.setProgress(peerId, payload.distance, payload.lateral)
   )
   p2pOnData<WrFinishPayload>(joined, FINISH_CHANNEL, (payload, peerId) =>
     context.store.setFinish(peerId, payload.seconds)
@@ -120,9 +126,9 @@ export const useWordRunnerSession = (options: WrSessionOptions, callbacks: Sessi
     if (session.value) p2pSendData(session.value, channel, payload)
   }
 
-  const startRace = (levelId: string): void => {
-    store.startRace(levelId)
-    const payload: WrStartPayload = { levelId }
+  const startRace = (levelId: string, difficulty: Difficulty): void => {
+    store.startRace(levelId, difficulty)
+    const payload: WrStartPayload = { levelId, difficulty }
     send(START_CHANNEL, payload)
   }
 
@@ -137,9 +143,9 @@ export const useWordRunnerSession = (options: WrSessionOptions, callbacks: Sessi
     callbacks.onGo()
   }
 
-  const broadcastProgress = (distance: number, lane: number): void => {
-    if (localPeerId.value) store.setProgress(localPeerId.value, distance, lane)
-    const payload: WrProgressPayload = { distance, lane }
+  const broadcastProgress = (distance: number, lateral: number): void => {
+    if (localPeerId.value) store.setProgress(localPeerId.value, distance, lateral)
+    const payload: WrProgressPayload = { distance, lateral }
     send(PROGRESS_CHANNEL, payload)
   }
 
