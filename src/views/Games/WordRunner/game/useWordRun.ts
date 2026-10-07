@@ -345,8 +345,11 @@ export const useWordRun = (settings: RunSettings) => {
   let snapCamera = true
   let elapsed = 0
 
-  /** Lays a level out on its course with every ball on the start line. A room waits for go. */
-  const start = (levelId: string): void => {
+  /**
+   * Lays a level out on its course with every ball on the start line. A room waits for go, and
+   * a held race for the player to say they are ready.
+   */
+  const start = (levelId: string, hold = false): void => {
     const found = findLevel(levelId)
     if (!found || !scene) return
     const course = courses.useFor(scene, levelSeed(found.level.id))
@@ -364,7 +367,7 @@ export const useWordRun = (settings: RunSettings) => {
     scene.slots.forEach(hideSlot)
     placeFinishLine(scene.finishLine, course.path.sampleAt(run.finishDistance))
     motion.holdAtStart(course.path)
-    phase.value = settings.solo() ? 'running' : 'waiting'
+    phase.value = settings.solo() && !hold ? 'running' : 'waiting'
   }
 
   /** The verdict on a word, given the moment the player's ball goes through its gate. */

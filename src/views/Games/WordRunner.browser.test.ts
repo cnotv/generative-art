@@ -22,7 +22,7 @@ describe('WordRunner - a race from the lobby', () => {
   beforeEach(() => localStorage.clear())
 
   it(
-    'offers German A1 alone in the lobby, then loads the course and races it',
+    'offers German A1 alone in the lobby, loads the course, and races it on any key',
     async () => {
       const wrapper = mountWordRunner()
 
@@ -45,6 +45,18 @@ describe('WordRunner - a race from the lobby', () => {
       expect(wrapper.find('.word-runner-hud__translation').text()).toBe('Good morning!')
       const canvas = wrapper.find('canvas').element as HTMLCanvasElement
       expect(canvas.width).toBeGreaterThan(0)
+
+      // The first race waits behind its intro until any key, then the intro gives way.
+      await vi.waitFor(
+        () =>
+          expect(wrapper.find('.word-runner-intro__prompt').text()).toBe('Press any key to start'),
+        { timeout: SCENE_READY_TIMEOUT, interval: 500 }
+      )
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+      await vi.waitFor(() => expect(wrapper.find('.word-runner-intro').exists()).toBe(false), {
+        timeout: 5000,
+        interval: 100
+      })
 
       wrapper.unmount()
     },

@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { forwardImpulse, gripImpulse } from './freeDrive'
+import {
+  cushionImpulse,
+  forwardImpulse,
+  gripImpulse,
+  needsRescue,
+  rescueLateral,
+  stalledFor
+} from './freeDrive'
 import { BRAKE, FREE_BALL } from '../config'
 
 const MASS = 100
@@ -70,5 +77,81 @@ describe('gripImpulse', () => {
 
     // Assert
     expect(impulse / MASS).toBeCloseTo(-6)
+  })
+})
+
+describe('cushionImpulse', () => {
+  it.each([0, 3.6, -3.6, 5.1])(
+    'leaves a ball %f off centre alone, outer lanes included',
+    (lateral) => {
+      // Act
+      const impulse = cushionImpulse(lateral, 4, MASS, FRAME)
+
+      // Assert
+      expect(impulse).toBe(0)
+    }
+  )
+
+  it.each([
+    [6.5, 1],
+    [-6.5, -1]
+  ])('stops a ball at %f drifting into the wall and pushes it back', (lateral, outwards) => {
+    // Act
+    const impulse = cushionImpulse(lateral, 3 * outwards, MASS, FRAME)
+
+    // Assert
+    expect((3 * outwards + impulse / MASS) * outwards).toBeLessThan(0)
+  })
+
+  it('only pushes back, with nothing for its drift, a ball already leaving the wall', () => {
+    // Arrange
+    const depth = 6.5 - (6.7 - FREE_BALL.wallCushion)
+
+    // Act
+    const impulse = cushionImpulse(6.5, -2, MASS, FRAME)
+
+    // Assert
+    expect(impulse / MASS).toBeCloseTo(-depth * FREE_BALL.cushionStiffness * FRAME)
+  })
+})
+
+describe('needsRescue, stalledFor and rescueLateral', () => {
+  it.each([
+    [{ heightAboveDeck: 0, forwardSpeed: 12, braking: false, stalledSeconds: 0 }, false],
+    [{ heightAboveDeck: 1.2, forwardSpeed: 12, braking: false, stalledSeconds: 0 }, false],
+    [{ heightAboveDeck: -3, forwardSpeed: 12, braking: false, stalledSeconds: 0 }, true],
+    [{ heightAboveDeck: 0, forwardSpeed: 0, braking: false, stalledSeconds: 1.2 }, true],
+    [{ heightAboveDeck: 0, forwardSpeed: 0, braking: true, stalledSeconds: 1.2 }, false]
+  ])('for %o is %s', (check, expected) => {
+    // Act
+    const rescue = needsRescue(check)
+
+    // Assert
+    expect(rescue).toBe(expected)
+  })
+
+  it.each([
+    [{ forwardSpeed: 0.5, braking: false }, 0.6],
+    [{ forwardSpeed: 0.5, braking: true }, 0],
+    [{ forwardSpeed: 12, braking: false }, 0]
+  ])('counts a stall for %o as %f s after half a second', (motion, expected) => {
+    // Act
+    const seconds = stalledFor(motion, 0.5, 0.1)
+
+    // Assert
+    expect(seconds).toBeCloseTo(expected)
+  })
+
+  it.each([
+    [0, 0],
+    [3.6, 3.6],
+    [6.6, 5.2],
+    [-9, -5.2]
+  ])('puts a ball at %f back at %f, clear of the wall cushion', (lateral, expected) => {
+    // Act
+    const backAt = rescueLateral(lateral)
+
+    // Assert
+    expect(backAt).toBeCloseTo(expected)
   })
 })

@@ -57,11 +57,11 @@ const emit = defineEmits<{
 
   <slot name="profile-extra" />
 
-  <LobbyUIRow v-for="field in configFields" :key="field.key" :label="field.label">
+  <LobbyUIRow v-for="field in configFields" :key="field.key" :label="field.label" inline>
     <LobbyUIConfigField :field="field" @change="(key, value) => emit('configChange', key, value)" />
   </LobbyUIRow>
 
-  <LobbyUIRow label="Private">
+  <LobbyUIRow label="Private" inline>
     <LobbyUIPrivateToggle
       :model-value="isPrivate"
       @update:model-value="emit('update:isPrivate', $event)"

@@ -40,12 +40,19 @@ The race is set up in the lobby, which remembers every choice for the next visit
 | ---------- | -------------------------------------------------------------------------- |
 | Language   | German, Spanish, French or Italian. A first visit opens German             |
 | Level      | the levels open in that language: only A1 at first, and winning opens more |
-| Difficulty | the run speed of every ball: Easy 9, Normal 12, Difficult 15, Extreme 17.5 |
+| Difficulty | the run speed of every ball: Easy 15, Normal 18, Difficult 22, Extreme 25  |
 | Steering   | Free, rolling under physics anywhere across the track, or Lanes            |
 
 ![The lobby: name and colour, then the Language, Level, Difficulty and Steering dropdowns above the Start button](/img/word-runner/start.webp)
 
 ## How a race works
+
+The first race after the course loads opens on a card: the level and its situation, the rules,
+the controls, and "Press any key to start" ("Tap to start" on a touch screen). The ball waits on
+the line until then. In a room the player counts as ready only once they have pressed, and the
+race still goes after fifteen seconds at most.
+
+![The intro card over the course: A1, Ordering at a café, three lines of rules, the steer and brake keys, and Press any key to start](/img/word-runner/intro.webp)
 
 The level is run once, from its first word to its last. Only two lines sit over the course: the
 English of the current sentence, and underneath it the sentence the words passed so far build, a
@@ -74,7 +81,9 @@ only close to the gate, and from the third on the text is the test.
 - **With free steering the ball is a real body**, with Rock Runner's rock handling: it is pushed
   along the track up to the difficulty's speed, gathers a little more downhill and keeps the line it is
   put on. A word counts in the lane nearest the ball as it goes through. A ramp also throws the
-  ball into the air, and a slowing lane takes its speed away at once.
+  ball into the air, and a slowing lane takes its speed away at once. A soft cushion along each
+  wall turns it back before it touches, and a ball knocked through the deck or caught on
+  something for a second is set back on the track where it was, clear of the wall.
 
 ## The end screen
 

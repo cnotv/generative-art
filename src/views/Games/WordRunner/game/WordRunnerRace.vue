@@ -37,6 +37,7 @@ import { useWordRun } from './useWordRun'
 import { catchUpSteps, createTickClock } from './tickClock'
 import WordRunnerHud from './WordRunnerHud.vue'
 import WordRunnerSummary from './WordRunnerSummary.vue'
+import WordRunnerIntro from './WordRunnerIntro.vue'
 import type { Difficulty, RemoteRival, SteeringMode } from '../types'
 
 const props = defineProps<{
@@ -96,10 +97,23 @@ const run = useWordRun({
   onProgress: (distance, lateral) => emit('progress', distance, lateral),
   onFinish: (seconds) => emit('finish', seconds)
 })
-const steerTowards = (action: string): void => {
-  if (action === 'left' || action === 'right') run.steer(action === 'left' ? -1 : 1)
-}
 const { phase, level, report, ribbon, translation, bestSeconds, isNewBest } = run
+
+// The first race after the course loads waits behind the intro until any key or tap.
+const introShown = ref(true)
+const introVisible = computed(
+  () =>
+    introShown.value && !loadingVisible.value && phase.value === 'waiting' && level.value !== null
+)
+const dismissIntro = (): void => {
+  introShown.value = false
+  if (props.solo || props.started) run.begin()
+  emit('ready')
+}
+const handleAction = (action: string): void => {
+  if (introVisible.value) dismissIntro()
+  else if (action === 'left' || action === 'right') run.steer(action === 'left' ? -1 : 1)
+}
 
 const nextLevel = computed(() => (level.value ? nextLevelId(level.value.id) : null))
 const isRacing = computed(() => phase.value === 'running' || phase.value === 'waiting')
@@ -108,7 +122,8 @@ let sceneReady = false
 /** Lays the level the room is on out on the course, and says so once it stands ready. */
 const startRace = (): void => {
   if (!sceneReady) return
-  run.start(props.levelId)
+  run.start(props.levelId, introShown.value)
+  if (introShown.value) return
   if (props.started) run.begin()
   emit('ready')
 }
@@ -117,7 +132,7 @@ watch(() => props.raceSerial, startRace)
 watch(
   () => props.started,
   (started) => {
-    if (started) run.begin()
+    if (started && !introShown.value) run.begin()
   }
 )
 
@@ -130,7 +145,7 @@ onMounted(async () => {
   const controls = createControls({
     mapping: CONTROL_MAPPING,
     pointerTarget: canvas.value,
-    onAction: steerTowards,
+    onAction: handleAction,
     onInput: (_action, _trigger, device) => reportInputSource(device)
   })
   destroyControls = controls.destroyControls
@@ -198,10 +213,16 @@ onUnmounted(() => {
     <canvas ref="canvas" class="word-runner-race__canvas"></canvas>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
     <WordRunnerHud
-      v-if="isRacing"
-      :waiting="phase === 'waiting'"
+      v-if="isRacing && !introVisible"
+      :waiting="phase === 'waiting' && !introShown"
       :translation="translation"
       :ribbon="ribbon"
+    />
+    <WordRunnerIntro
+      v-if="introVisible && level"
+      :level="level"
+      :solo="solo"
+      :touch="isTouchDevice"
     />
     <TouchControl
       v-if="isTouchDevice && phase === 'running'"
@@ -209,7 +230,7 @@ onUnmounted(() => {
       mode="button"
       :mapping="TOUCH_LEFT_BUTTON"
       :current-actions="heldActions"
-      :on-action="steerTowards"
+      :on-action="handleAction"
     />
     <TouchControl
       v-if="isTouchDevice && phase === 'running'"
@@ -217,7 +238,7 @@ onUnmounted(() => {
       mode="button"
       :mapping="TOUCH_RIGHT_BUTTON"
       :current-actions="heldActions"
-      :on-action="steerTowards"
+      :on-action="handleAction"
     />
     <TouchControl
       v-if="isTouchDevice && phase === 'running'"
@@ -225,7 +246,7 @@ onUnmounted(() => {
       mode="button"
       :mapping="TOUCH_BRAKE_BUTTON"
       :current-actions="heldActions"
-      :on-action="steerTowards"
+      :on-action="handleAction"
     />
     <WordRunnerSummary
       v-if="phase === 'finished' && level && report"
@@ -245,6 +266,9 @@ onUnmounted(() => {
 <style scoped>
 .word-runner-race {
   position: relative;
+
+  /* Steering is held down, so a long press or a drag would otherwise select the words. */
+  user-select: none;
   width: 100%;
   height: 100%;
   overflow: hidden;

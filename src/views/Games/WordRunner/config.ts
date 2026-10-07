@@ -30,7 +30,7 @@ export const LANE_WIDTH = 3.6
 export const SCATTER_LANE_CLEARANCE = 8.5
 
 // The run speed of each difficulty, for every ball in the race.
-export const DIFFICULTY_SPEEDS = { easy: 9, normal: 12, difficult: 15, extreme: 17.5 }
+export const DIFFICULTY_SPEEDS = { easy: 15, normal: 18, difficult: 22, extreme: 25 }
 export const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'difficult', 'extreme']
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal'
 export const LANE_SWITCH_RATE = 14
@@ -116,6 +116,15 @@ export const FREE_BALL = {
   // How quickly a ball rolling faster than its cap, downhill or off a ramp, is drawn back to
   // it, per second: enough that a hill adds a little speed rather than doubling it.
   overspeedDrag: 4,
+  // How far inside the point of touching a wall its cushion starts, and how hard it pushes back
+  // per metre of depth: firmer than steering, so the ball settles clear of the wall.
+  wallCushion: 1.5,
+  cushionStiffness: 80,
+  // A ball this far below the deck has been knocked through it, and one slower than the stall
+  // speed for this long without braking is caught on something: either goes back on the track.
+  fallDepth: 2,
+  stallSpeed: 1.5,
+  stallSeconds: 1,
   // How quickly the ball sheds sideways speed when not steered, per second.
   lateralGrip: 6,
   // Enough to lift the ball about a metre off a ramp against its own heavy gravity.
@@ -218,6 +227,6 @@ export const TOUCH_BRAKE_BUTTON: Record<string, string> = { '↓': 'brake' }
 
 export const configControls = {
   run: {
-    speed: { min: 5, max: 25, step: 0.5, label: 'Run Speed' }
+    speed: { min: 10, max: 30, step: 1, label: 'Run Speed' }
   }
 }

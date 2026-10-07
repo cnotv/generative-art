@@ -52,6 +52,15 @@ on. Rock Runner leaves this to the player's steering. Here the ball sheds its si
 it is not steered, so it holds the line it was put on, and its push is strong enough to out-climb
 the heavy gravity, since a rolling ball spends part of any push on spin.
 
+Grip alone did not keep it off the walls: a player holding a steer still drove it against one, and
+at speed the bump either caught it on a joint between two wall pieces at a bend or shoved it down
+through the deck. Two things together hold. A soft cushion starts a metre and a half inside each
+wall: it takes away any drift towards the wall and pushes back harder than steering can push out,
+so a held steer settles clear of the wall rather than against it. Behind it, a ball found below the
+deck, or stalled for a second while the player is not braking, is set back on the track at its
+own distance, clear of the cushion and rolling at its speed cap, since no collider fix reaches
+every joint of a streamed course.
+
 ## The drawn ball rolled backwards
 
 The track's forward is a ball's own negative Z, so rolling onwards is a negative turn about its X
