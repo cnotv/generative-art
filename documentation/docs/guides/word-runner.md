@@ -4,18 +4,19 @@ sidebar_position: 25
 
 # Word Runner: racing a text, one word at a time
 
-Word Runner is a three-lane race at `/games/WordRunner`, run on Rock Runner's course: the same
-seeded track, forest, drawn edges and haze. The player is a ball. Across the track, one gate per
-word, float three words in another language, and the player rolls through the one that comes
-next in the text. A bot races alongside, and the first ball over the finish line wins.
+Word Runner is a race at `/games/WordRunner`, run on Rock Runner's course: the same seeded
+track, forest, drawn edges and haze. The player is a ball. Across the track, one gate per word,
+float three words in another language, and the player rolls through the one that comes next in
+the text. A bot races alongside, or everyone else in the room, and the first ball over the
+finish line wins.
 
 :::note Source files
 `src/views/Games/WordRunner/levels/`, `src/views/Games/WordRunner/types.ts`,
 `src/views/Games/WordRunner/config.ts`, `src/views/Games/WordRunner/sequence/`,
-`src/views/Games/WordRunner/runner/`
+`src/views/Games/WordRunner/runner/`, `src/views/Games/WordRunner/game/`
 :::
 
-![Four moments of a race: the first German sentence with its hint, the player 20 m ahead after taking the right words, a Spanish race with missed words where the bot's ghost ball pulls ahead, and the end screen of a clean run](/img/word-runner/race.webp)
+![Four moments of a German race: the first sentence glowing its next word, the ramp showing under the ball once that word is picked, a wrong pick marked red in the sentence being built, and a new sentence with nothing built yet](/img/word-runner/race.webp)
 
 ## Levels
 
@@ -33,59 +34,75 @@ language, so a level is equally hard whichever language it is run in.
 | C1    | Discussing remote work                 | 45–49 |
 | C2    | Reflecting on language and thought     | 43–49 |
 
-A first visit opens German, and after that the start screen opens on the language picked last.
-Only A1 is open at first: winning a level's race opens the next one in that language.
+The race is set up in the lobby, which remembers every choice for the next visit:
 
-![The start screen: the language picker with German selected, A1 won and A2 open, and the four levels after it still closed](/img/word-runner/start.webp)
+| Choice     | Options                                                                    |
+| ---------- | -------------------------------------------------------------------------- |
+| Language   | German, Spanish, French or Italian. A first visit opens German             |
+| Level      | the levels open in that language: only A1 at first, and winning opens more |
+| Difficulty | the run speed of every ball: Easy 18, Normal 24, Difficult 30, Extreme 35  |
+| Steering   | Free, rolling under physics anywhere across the track, or Lanes            |
+
+![The lobby: name and colour, then the Language, Level, Difficulty and Steering dropdowns above the Start button](/img/word-runner/start.webp)
 
 ## How a race works
 
-The level is run once, from its first word to its last. The English of the current sentence
-stands at the top of the screen, and the words already passed build the sentence underneath it.
+The level is run once, from its first word to its last. Only two lines sit over the course: the
+English of the current sentence, and underneath it the sentence the words passed so far build, a
+wrong pick shown in red with the word it should have been.
 The first sentence glows the right word from afar and shows its meaning, the second glows it
 only close to the gate, and from the third on the text is the test.
 
 - **Each word keeps its lane.** The lane comes from a seed made from the level id, so it is the
   same on every attempt and the route can be learned as well as the text. Where a gate opens onto
   a bend, its word takes the inside lane. The same lane never comes up three times in a row.
-- **The right word is the faster route, and a wrong one slows the ball.** Just in front of each word
-  lies what its lanes run over:
+- **The right word is the faster route, and a wrong one slows the ball.** Just past each word
+  lies what its lanes run over, hidden until the word is picked and then shown in the lane taken
+  alone, so the route never gives the answer away:
 
 | Feature | Right lane                         | Other lanes                        |
 | ------- | ---------------------------------- | ---------------------------------- |
-| Ramp    | launches the ball and speeds it up | slows it down                      |
-| Rocks   | clear                              | rocks that make the ball stumble   |
+| Ramp    | launches the ball and speeds it up | gravel that slows it down          |
+| Rocks   | clear                              | a rock that makes the ball stumble |
 | Bend    | the inside line, at full speed     | run wide onto gravel and slow down |
 
 - **The bot plays by the same rules.** It takes the right word at a rate set for each level,
   from 60% at A1 to 80% at C2, and its ramps, rocks and gravel speed it up and slow it down
   exactly as they do the player. A player who reads the text beats it; one who guesses does not.
 - **Each effect wears off** back to full speed within about a second and a half.
+- **With free steering the ball is a real body**, with Rock Runner's rock handling: it is pushed
+  along the track up to the difficulty's speed, gathers more downhill and keeps the line it is
+  put on. A word counts in the lane nearest the ball as it goes through. A ramp also throws the
+  ball into the air, and a slowing lane takes its speed away at once.
 
-## The feedback at the end
+## The end screen
 
-The end screen says who got there first and by how much, the time against the level's best (the fastest race won on it),
-and how many words were right. Then it gives:
+From the top: a small line saying whether the next level is now open, the result ("Level
+complete", or who got there first), and the time against the level's best (the fastest race won
+on it), the words right and the margin. Under it, every sentence of the text as the player picked
+it, with its English: a wrong word is struck through in red with the right one beside it in green.
+The buttons come last.
 
-- **What the level shows.** A won race clears the level and says what clearing it means, such
-  as "You can handle a routine task such as buying a ticket". A lost one says the race has to be
-  won to open the next level.
-- **One line of advice**, from how the race went: a clean run, a win with mistakes to go over,
-  a close loss, or a loss to read up on.
-- **The words to go over**: each missed word with its meaning and the word taken instead.
-- **The whole text with its English**, after a lost race.
+![The end screen of a won race: next level unlocked, level complete, the time and margin, and the text as picked with the wrong words struck through and corrected](/img/word-runner/summary.webp)
 
-![The end screen after a lost race: the bot's margin, the score, the words to go over and the text with its translation](/img/word-runner/summary.webp)
+## Racing a room
+
+Anyone joining the lobby's room races too, in place of the bot, each ball a ghost in its player's
+colour. The host picks the level and the difficulty, and the race starts once everyone has loaded
+the course, or after fifteen seconds, so a slow device cannot hold the room at the line. At the end
+only the host chooses what comes next.
 
 ## Playing
 
-| Input    | Change lane                                                               |
+| Input    | Steer                                                                     |
 | -------- | ------------------------------------------------------------------------- |
 | Keyboard | Left and right arrows, or A and D                                         |
 | Gamepad  | Left stick or D-pad                                                       |
 | Touch    | The arrow buttons in the bottom corners, a swipe, or a tap on either side |
 
-The Config panel sets the speed of both balls.
+With free steering the ball turns for as long as a key or button is held; with lanes, each press
+moves it one lane. The Config panel's speed slider starts at the difficulty's speed and tunes it
+for every ball.
 
 ## Adding a language
 
