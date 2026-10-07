@@ -1,7 +1,7 @@
 import * as THREE from 'three'
-import { updateAnimation } from '@webgamekit/animation'
 import { followCameraPlacement } from '@webgamekit/threejs'
 import {
+  BALL,
   CAMERA_FOLLOW_RATE,
   CAMERA_TARGET_HEIGHT,
   CHASE_CAMERA,
@@ -13,20 +13,15 @@ import {
   LANE_COUNT,
   LANE_SWITCH_RATE,
   LANE_WIDTH,
-  LATE_HINT_DISTANCE,
-  RUNNER_ANIMATION,
-  RUNNER_ANIMATION_SPEED,
-  RUNNER_IDLE_ANIMATION
+  LATE_HINT_DISTANCE
 } from '../config'
 import { isHintShown, laneOffset, smoothingFactor } from '../runner/runMotion'
 import { assignSlot, hideSlot, placeSlot, setSignState } from '../scene/gatePool'
-import type { Gate, GateSlot, GateView, RunnerFrame, RunScene } from '../types'
+import type { BallFrame, Gate, GateSlot, GateView, RaceFrame, RunScene, TrackPath } from '../types'
 
-// The model faces backwards once loaded, so a heading of zero needs half a turn on top.
-const RUNNER_FACING = Math.PI
 const CENTRE_LANE = Math.floor(LANE_COUNT / 2)
 
-export const gateKey = (lapSerial: number, gateIndex: number): string => `${lapSerial}:${gateIndex}`
+export const gateKey = (runSerial: number, gateIndex: number): string => `${runSerial}:${gateIndex}`
 
 /** Gates fade in as they come over the horizon and out as they pass the camera. */
 const fadeFor = (distanceAhead: number): number =>
@@ -34,7 +29,7 @@ const fadeFor = (distanceAhead: number): number =>
     ? Math.max(0, 1 + distanceAhead / GATE_BEHIND_DISTANCE)
     : Math.min(1, Math.max(0, (GATE_SPAWN_DISTANCE - distanceAhead) / GATE_FADE_DISTANCE))
 
-/** The lap's gate this pooled slot should show now, or -1 when none of its gates is in view. */
+/** The level's gate this pooled slot should show now, or -1 when none of its gates is in view. */
 const visibleGateFor = (slotIndex: number, view: GateView): number =>
   view.distances.findIndex((gateDistance, gateIndex) => {
     const distanceAhead = gateDistance - view.distance
@@ -54,7 +49,7 @@ export const drawGates = (slots: GateSlot[], view: GateView): void =>
       return
     }
     const gate = view.gates[gateIndex]
-    const key = gateKey(view.lapSerial, gateIndex)
+    const key = gateKey(view.runSerial, gateIndex)
     if (slot.gateKey !== key) assignSlot(slot, gate, view.features[gateIndex], key)
     const gateDistance = view.distances[gateIndex]
     const distanceAhead = gateDistance - view.distance
@@ -90,28 +85,39 @@ export const markPassedGate = (
 }
 
 /**
- * Carries the runner along the track at its lane's offset, and keeps a chase camera behind
- * it. The camera aims at the deck rather than the runner, so a hop off a ramp lifts the
- * runner in frame instead of jolting the whole view.
+ * Rolls one ball along the track at its lane's offset, sliding between lanes rather than
+ * jumping, and turning about its own axis by exactly the distance it has covered.
  */
-export const createRunnerDrawer = (scene: RunScene) => {
-  const cameraTarget = new THREE.Vector3()
+const createBallDrawer = (ball: THREE.Mesh) => {
   let lateral = laneOffset(CENTRE_LANE, LANE_COUNT, LANE_WIDTH)
-  return (frame: RunnerFrame): void => {
-    const { runner, camera, runnerFootLift } = scene
-    const sample = frame.path.sampleAt(frame.distance)
-    const laneX = laneOffset(frame.targetLane, LANE_COUNT, LANE_WIDTH)
-    lateral += (laneX - lateral) * smoothingFactor(LANE_SWITCH_RATE, frame.deltaSeconds)
-    runner.position.copy(sample.position).addScaledVector(sample.right, lateral)
-    runner.position.y += runnerFootLift + frame.hop
-    runner.rotation.y = sample.yaw + RUNNER_FACING
-    updateAnimation({
-      actionName: frame.isMoving ? RUNNER_ANIMATION : RUNNER_IDLE_ANIMATION,
-      player: runner,
-      delta: frame.deltaSeconds,
-      speed: RUNNER_ANIMATION_SPEED
-    })
+  return (path: TrackPath, frame: BallFrame, deltaSeconds: number, snap: boolean): number => {
+    const sample = path.sampleAt(frame.distance)
+    const laneX = laneOffset(frame.lane, LANE_COUNT, LANE_WIDTH)
+    lateral = snap
+      ? laneX
+      : lateral + (laneX - lateral) * smoothingFactor(LANE_SWITCH_RATE, deltaSeconds)
+    ball.position.copy(sample.position).addScaledVector(sample.right, lateral)
+    ball.position.y += BALL.radius + frame.hop
+    ball.rotation.y = sample.yaw
+    ball.rotation.x = frame.distance / BALL.radius
+    return lateral
+  }
+}
 
+/**
+ * Draws both balls and keeps a chase camera behind the player's. The camera aims at the deck
+ * rather than the ball, so a hop off a ramp lifts the ball in frame instead of jolting the view.
+ */
+export const createRaceDrawer = (scene: RunScene) => {
+  const cameraTarget = new THREE.Vector3()
+  const drawPlayer = createBallDrawer(scene.player)
+  const drawBot = createBallDrawer(scene.bot)
+  return (frame: RaceFrame): void => {
+    const { camera } = scene
+    const lateral = drawPlayer(frame.path, frame.player, frame.deltaSeconds, frame.snapCamera)
+    drawBot(frame.path, frame.bot, frame.deltaSeconds, frame.snapCamera)
+
+    const sample = frame.path.sampleAt(frame.player.distance)
     cameraTarget
       .copy(sample.position)
       .addScaledVector(sample.right, lateral + frame.shake)
@@ -128,13 +134,13 @@ export const createRunnerDrawer = (scene: RunScene) => {
   }
 }
 
-/** One frame of the run: the gates in view, then the runner and the camera behind it. */
-export const drawRunFrame = (
+/** One frame of the race: the gates in view, then the balls and the camera behind the player. */
+export const drawRaceFrame = (
   slots: GateSlot[],
-  drawRunner: (frame: RunnerFrame) => void,
+  drawRace: (frame: RaceFrame) => void,
   view: GateView,
-  runner: Omit<RunnerFrame, 'path' | 'distance'>
+  frame: RaceFrame
 ): void => {
   drawGates(slots, view)
-  drawRunner({ path: view.path, distance: view.distance, ...runner })
+  drawRace(frame)
 }

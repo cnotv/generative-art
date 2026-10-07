@@ -23,8 +23,8 @@ export const insideLaneFor = (
 
 /**
  * The advantage a gate's right lane gives. A bend is used only when the right word already
- * sits on its inside line; otherwise ramps and rocks alternate along the phrase, so the same
- * word meets the same feature on every lap the lanes stay put.
+ * sits on its inside line; otherwise ramps and rocks alternate along the text, so a word
+ * meets the same feature on every attempt.
  */
 export const chooseRouteFeature = (
   position: number,
@@ -36,7 +36,7 @@ export const chooseRouteFeature = (
 }
 
 const OUTCOMES: Record<RouteFeature, { right: LaneOutcome; wrong: LaneOutcome }> = {
-  ramp: { right: 'boost', wrong: 'none' },
+  ramp: { right: 'boost', wrong: 'miss' },
   rocks: { right: 'none', wrong: 'stumble' },
   bend: { right: 'none', wrong: 'wide' }
 }

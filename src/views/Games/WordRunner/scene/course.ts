@@ -22,9 +22,10 @@ import { SCATTER_LANE_CLEARANCE } from '../config'
 import type { Course } from '../types'
 
 /**
- * Rock Runner's world for one phrase: its seeded track, the terrain and drawn edges either
- * side, and the scattered illustrations, all in its fog. Every lap restarts on this same
- * course, so it is built once, far enough ahead to hold the longest lap, and never streamed.
+ * Rock Runner's world for one level: its seeded track, the terrain and drawn edges either
+ * side, and the scattered illustrations, all in its fog. A level is longer than one build
+ * reaches, so it streams like Rock Runner's own track: built ahead of the leading ball one
+ * chunk a frame, and taken down behind the trailing one.
  */
 export const createCourse = (scene: THREE.Scene, world: RAPIER.World, seed: number): Course => {
   const path = createTrackPath(seed)
@@ -53,9 +54,19 @@ export const createCourse = (scene: THREE.Scene, world: RAPIER.World, seed: numb
   track.ensureAhead(0)
   scatter.forEach((area) => area.ensureAhead(0))
 
+  const advance = (leadingDistance: number, trailingDistance: number): void => {
+    track.pump(leadingDistance)
+    scatter.forEach((area) => area.pump(leadingDistance))
+    track.prune(trailingDistance)
+    scatter.forEach((area) => area.prune(trailingDistance))
+  }
+  const restart = (): void => {
+    track.rebuild(0)
+    scatter.forEach((area) => area.rebuild(0))
+  }
   const dispose = (): void => {
     scatter.forEach((area) => area.teardown())
     track.teardown()
   }
-  return { path, dispose }
+  return { path, advance, restart, dispose }
 }

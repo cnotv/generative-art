@@ -11,22 +11,17 @@ import {
   LIGHT_SHADOW_CAMERA,
   LIGHT_SHADOW_RADIUS
 } from '@/views/Games/MarbleMadness/config'
+import type { CefrLevel } from './types'
 
 // The language a first visit starts in; after that the start screen remembers the last pick.
 export const DEFAULT_LANGUAGE = 'de'
 
-export const LANE_COUNT = 3
+export const CEFR_LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
-// Three words is about what a player can hold while also steering; the next chunk only
-// arrives once the previous one is being answered without hints.
-export const CHUNK_SIZE = 3
+export const LANE_COUNT = 3
 
 // The same lane three times running reads as "stay put" rather than as part of a path.
 export const MAX_SAME_LANE_STREAK = 2
-
-// A lap with a mistake is re-run with stronger hints at most this many times in a row,
-// so a stubborn word cannot trap the player on one lap forever.
-export const MAX_RETRY_ATTEMPTS = 2
 
 // Rock Runner's deck is 16 wide; three lanes of this width leave a margin inside its edges.
 export const LANE_WIDTH = 3.6
@@ -40,31 +35,44 @@ export const LANE_SWITCH_RATE = 14
 export const ROUTE_EFFECTS = {
   boost: { ratio: 1.7, seconds: 1.6 },
   stumble: { ratio: 0.3, seconds: 1.1 },
-  wide: { ratio: 0.6, seconds: 1.2 }
+  wide: { ratio: 0.6, seconds: 1.2 },
+  miss: { ratio: 0.5, seconds: 1.2 }
 }
+// How often the bot takes the right word at each level. A player who reads the text beats it;
+// one who guesses does not.
+export const BOT_ACCURACY = { A1: 0.6, A2: 0.64, B1: 0.68, B2: 0.72, C1: 0.76, C2: 0.8 }
 // Below this turn rate, in radians per unit of track, a gate is not on a bend worth cutting.
 export const BEND_YAW_RATE_THRESHOLD = 0.009
 export const STUMBLE_SHAKE = 0.18
 export const STUMBLE_SHAKE_FREQUENCY = 47
 
-// Long enough to read three words and choose; short enough that the next gate is already
-// in view before the last one is passed, so the run reads as a path, not a quiz.
-export const GATE_SPACING = 20
+// Room for the ball to roll between words: long enough to read the next three and settle
+// into a lane, while the next gate still comes into view before the last one is passed.
+export const GATE_SPACING = 44
 export const LEAD_IN_DISTANCE = 34
 export const GATE_SPAWN_DISTANCE = 78
 // Gates fade in over this stretch before the spawn distance, instead of popping in.
 export const GATE_FADE_DISTANCE = 20
-export const GATE_BEHIND_DISTANCE = 8
+// A passed gate fades within this far, before it can come between the camera and the ball.
+export const GATE_BEHIND_DISTANCE = 2.5
 export const LATE_HINT_DISTANCE = 18
 export const GATE_POOL_SIZE = 6
+// The finish line stands this far past the last word, so the last gate is not the line itself.
+export const FINISH_RUN_OUT = 36
+export const FINISH_LINE = {
+  depth: 2.4,
+  margin: 1.2,
+  lift: 0.06,
+  columns: 12,
+  rows: 2,
+  squarePixels: 32,
+  colors: ['#fffaf1', '#4a4560']
+}
 
-export const GATE_POST_HEIGHT = 5.2
-export const GATE_POST_RADIUS = 0.2
-export const GATE_BEAM_HEIGHT = 0.36
-export const GATE_BEAM_DEPTH = 0.34
 export const SIGN_WIDTH = 3.2
 export const SIGN_HEIGHT = 1.32
-export const SIGN_Y = 4.2
+// Low enough that the ball rolls through the word rather than under a sign.
+export const SIGN_Y = 2
 export const SIGN_CANVAS_WIDTH = 512
 export const SIGN_CANVAS_HEIGHT = 212
 export const SIGN_FONT_FAMILY = '"Darumadrop One", system-ui, sans-serif'
@@ -82,11 +90,11 @@ export const GRAVEL = { width: 3.2, length: 8, lift: 0.05, color: 0xc9a77a }
 // The hop off a ramp: how long the runner is airborne and how high it goes.
 export const RAMP_HOP = { seconds: 0.6, height: 1.2 }
 
-export const RUNNER_MODEL_PATH = 'stickboy.glb'
-export const RUNNER_HEIGHT = 1.9
-export const RUNNER_ANIMATION = 'run'
-export const RUNNER_IDLE_ANIMATION = 'idle'
-export const RUNNER_ANIMATION_SPEED = 14
+// The player and the bot are balls, small enough to sit inside one lane.
+export const BALL = { radius: 1.1, segments: 32 }
+export const PLAYER_SURFACE = 'red-stone'
+export const BOT_SURFACE = 'mossy-stone'
+export const BOT_GHOST_OPACITY = 0.45
 
 // A chase camera like Rock Runner's, lower so the word signs fill more of the view.
 export const CHASE_CAMERA = {
@@ -100,8 +108,8 @@ export const CHASE_CAMERA = {
   transitionSeconds: 0.6,
   followRotation: true
 }
-// The camera aims this far above the runner's feet, and eases towards its goal at this rate.
-export const CAMERA_TARGET_HEIGHT = 2.4
+// The camera aims this far above the deck, and eases towards its goal at this rate.
+export const CAMERA_TARGET_HEIGHT = 1.8
 export const CAMERA_FOLLOW_RATE = 6
 export const CAMERA_START_POSITION: [number, number, number] = [0, 7, 10.5]
 
@@ -109,10 +117,7 @@ export const CAMERA_START_POSITION: [number, number, number] = [0, 7, 10.5]
 // for a moment instead of carrying the runner past a gate before the lane could change.
 export const MAX_FRAME_SECONDS = 0.1
 
-export const RECAP_SECONDS = 3.4
 export const FEEDBACK_SECONDS = 0.7
-
-export const POST_COLOR = 0xb7aed0
 
 export const SIGN_COLORS = {
   idle: { fill: '#fffaf1', ink: '#4a4560', border: '#d8cfbd' },

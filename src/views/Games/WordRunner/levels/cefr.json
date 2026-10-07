@@ -1,0 +1,26 @@
+{
+  "A1": {
+    "label": "Beginner",
+    "canDo": "You can get through a simple everyday exchange, such as ordering and paying in a café, with short set phrases."
+  },
+  "A2": {
+    "label": "Elementary",
+    "canDo": "You can handle a routine task such as buying a ticket: asking for times, places and prices, and understanding the answers."
+  },
+  "B1": {
+    "label": "Intermediate",
+    "canDo": "You can tell someone what happened, in order, and say what you thought of it and what you would like to do next."
+  },
+  "B2": {
+    "label": "Upper intermediate",
+    "canDo": "You can explain a problem, give reasons, and ask for something politely but firmly, setting out what follows if nothing changes."
+  },
+  "C1": {
+    "label": "Advanced",
+    "canDo": "You can weigh both sides of an issue, follow a line of argument across sentences, and say what should be done instead."
+  },
+  "C2": {
+    "label": "Proficient",
+    "canDo": "You can follow abstract, idiomatic writing and the fine distinctions in meaning it relies on."
+  }
+}

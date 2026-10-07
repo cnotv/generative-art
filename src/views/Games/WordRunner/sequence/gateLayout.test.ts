@@ -1,29 +1,26 @@
 import { describe, it, expect } from 'vitest'
-import {
-  phraseSeed,
-  buildCorrectLanes,
-  buildShuffledLanes,
-  buildGate,
-  buildLapGates
-} from './gateLayout'
+import { levelSeed, buildCorrectLanes, buildGate, buildRunGates } from './gateLayout'
 import { LANE_COUNT, MAX_SAME_LANE_STREAK } from '../config'
-import spanishPack from '../phrases/es.json'
-import type { GateDeal, LanguagePack, Lap, Phrase } from '../types'
+import type { GateDeal, HintLevel, LevelWord } from '../types'
 
-const pack: LanguagePack = spanishPack
-const [caminante] = pack.phrases
+const caminante: LevelWord[] = [
+  { text: 'caminante', gloss: 'traveller', decoys: ['caminando', 'camarero'] },
+  { text: 'no', gloss: 'no', decoys: ['ni', 'nos'] },
+  { text: 'hay', gloss: 'there is', decoys: ['ahí', 'ay'] },
+  { text: 'camino', gloss: 'road', decoys: ['camina', 'cambio'] },
+  { text: 'se', gloss: 'itself', decoys: ['sé', 'si'] },
+  { text: 'hace', gloss: 'is made', decoys: ['hacia', 'nace'] },
+  { text: 'camino', gloss: 'road', decoys: ['camisa', 'cambio'] },
+  { text: 'al', gloss: 'by', decoys: ['el', 'a'] },
+  { text: 'andar', gloss: 'walking', decoys: ['anda', 'mandar'] }
+]
 
 const deal = (
-  phrase: Phrase,
+  words: LevelWord[],
   seed: number,
   laneCount: number,
   fallbackPool: string[]
-): GateDeal => ({
-  phrase,
-  seed,
-  laneCount,
-  fallbackPool
-})
+): GateDeal => ({ words, seed, laneCount, fallbackPool })
 
 const longestSameLaneStreak = (lanes: number[]): number =>
   lanes.reduce(
@@ -34,17 +31,17 @@ const longestSameLaneStreak = (lanes: number[]): number =>
     { streak: 0, longest: 0 }
   ).longest
 
-describe('phraseSeed', () => {
-  it('gives the same seed for the same phrase id', () => {
-    expect(phraseSeed('caminante')).toBe(phraseSeed('caminante'))
+describe('levelSeed', () => {
+  it('gives the same seed for the same level id', () => {
+    expect(levelSeed('caminante')).toBe(levelSeed('caminante'))
   })
 
-  it('gives different seeds for different phrase ids', () => {
-    expect(phraseSeed('caminante')).not.toBe(phraseSeed('verde'))
+  it('gives different seeds for different level ids', () => {
+    expect(levelSeed('caminante')).not.toBe(levelSeed('verde'))
   })
 
   it('stays an unsigned 32-bit integer', () => {
-    const seed = phraseSeed('a phrase id long enough to overflow a naive hash many times over')
+    const seed = levelSeed('a phrase id long enough to overflow a naive hash many times over')
 
     expect(Number.isInteger(seed)).toBe(true)
     expect(seed).toBeGreaterThanOrEqual(0)
@@ -102,23 +99,6 @@ describe('buildCorrectLanes', () => {
   })
 })
 
-describe('buildShuffledLanes', () => {
-  it.each(Array.from({ length: 20 }, (_, seed) => [seed]))(
-    'moves every correct word off its usual lane (seed %i)',
-    (seed) => {
-      const usualLanes = buildCorrectLanes(seed, 12, LANE_COUNT)
-
-      const shuffledLanes = buildShuffledLanes(seed, usualLanes, LANE_COUNT)
-
-      shuffledLanes.forEach((lane, position) => {
-        expect(lane).not.toBe(usualLanes[position])
-        expect(lane).toBeGreaterThanOrEqual(0)
-        expect(lane).toBeLessThan(LANE_COUNT)
-      })
-    }
-  )
-})
-
 describe('buildGate', () => {
   it('puts the correct word in the correct lane', () => {
     const gate = buildGate(deal(caminante, 99, LANE_COUNT, []), 3, 2, 'full')
@@ -136,7 +116,7 @@ describe('buildGate', () => {
     expect(new Set(gate.options).size).toBe(LANE_COUNT)
   })
 
-  it.each(caminante.words.map((word, position) => [position, word.text]))(
+  it.each(caminante.map((word, position) => [position, word.text]))(
     'never offers the correct word as a decoy (position %i, %s)',
     (position, text) => {
       const gate = buildGate(deal(caminante, 11, LANE_COUNT, []), position, 0, 'none')
@@ -147,8 +127,8 @@ describe('buildGate', () => {
     }
   )
 
-  it('offers a later word of the phrase so knowing words out of order still fails', () => {
-    const laterWords = caminante.words.slice(1).map((word) => word.text)
+  it('offers a later word of the text so knowing words out of order still fails', () => {
+    const laterWords = caminante.slice(1).map((word) => word.text)
 
     const gate = buildGate(deal(caminante, 3, LANE_COUNT, []), 0, 0, 'none')
 
@@ -162,8 +142,8 @@ describe('buildGate', () => {
   })
 
   it('falls back to an earlier word on the last gate, where no later word exists', () => {
-    const lastPosition = caminante.words.length - 1
-    const earlierWords = caminante.words.slice(0, lastPosition).map((word) => word.text)
+    const lastPosition = caminante.length - 1
+    const earlierWords = caminante.slice(0, lastPosition).map((word) => word.text)
 
     const gate = buildGate(deal(caminante, 3, LANE_COUNT, []), lastPosition, 0, 'none')
 
@@ -171,27 +151,17 @@ describe('buildGate', () => {
   })
 
   it('treats an accented word as different from its plain spelling', () => {
-    const phrase: Phrase = {
-      id: 'accent',
-      title: 'accent',
-      translation: '',
-      words: [{ text: 'se', gloss: 'itself', decoys: ['sé'] }]
-    }
+    const words: LevelWord[] = [{ text: 'se', gloss: 'itself', decoys: ['sé'] }]
 
-    const gate = buildGate(deal(phrase, 1, 2, []), 0, 0, 'none')
+    const gate = buildGate(deal(words, 1, 2, []), 0, 0, 'none')
 
     expect(gate.options).toEqual(['se', 'sé'])
   })
 
-  it('borrows from the fallback pool when the phrase runs out of decoys', () => {
-    const phrase: Phrase = {
-      id: 'tiny',
-      title: 'tiny',
-      translation: '',
-      words: [{ text: 'hola', gloss: 'hello', decoys: [] }]
-    }
+  it('borrows from the fallback pool when the text runs out of decoys', () => {
+    const words: LevelWord[] = [{ text: 'hola', gloss: 'hello', decoys: [] }]
 
-    const gate = buildGate(deal(phrase, 1, LANE_COUNT, ['hola', 'adiós', 'gracias']), 0, 1, 'none')
+    const gate = buildGate(deal(words, 1, LANE_COUNT, ['hola', 'adiós', 'gracias']), 0, 1, 'none')
 
     expect(gate.options[1]).toBe('hola')
     expect([...gate.options].sort()).toEqual(['adiós', 'gracias', 'hola'])
@@ -204,46 +174,26 @@ describe('buildGate', () => {
   })
 })
 
-describe('buildLapGates', () => {
-  const lap: Lap = {
-    shuffled: false,
-    attempt: 0,
-    words: [
-      { position: 0, chunk: 0, hint: 'full' },
-      { position: 1, chunk: 0, hint: 'late' },
-      { position: 2, chunk: 0, hint: 'none' }
-    ]
-  }
-  const seed = phraseSeed(caminante.id)
-  const correctLanes = buildCorrectLanes(seed, caminante.words.length, LANE_COUNT)
-  const caminanteDeal = deal(caminante, seed, LANE_COUNT, [])
+describe('buildRunGates', () => {
+  const seed = levelSeed('es-a1')
+  const correctLanes = buildCorrectLanes(seed, caminante.length, LANE_COUNT)
+  const hints: HintLevel[] = caminante.map((_, position) => (position < 3 ? 'full' : 'none'))
 
-  it('builds one gate per lap word, in order, with that word’s hint', () => {
-    const gates = buildLapGates(caminanteDeal, lap, 0, correctLanes)
+  it('builds one gate per word, in order, each in its lane and with its hint', () => {
+    const gates = buildRunGates(deal(caminante, seed, LANE_COUNT, []), hints, correctLanes)
 
-    expect(gates.map((gate) => gate.position)).toEqual([0, 1, 2])
-    expect(gates.map((gate) => gate.hint)).toEqual(['full', 'late', 'none'])
-  })
-
-  it('keeps every gate identical from one lap to the next', () => {
-    const firstLap = buildLapGates(caminanteDeal, lap, 0, correctLanes)
-    const fourthLap = buildLapGates(caminanteDeal, lap, 3, correctLanes)
-
-    expect(fourthLap).toEqual(firstLap)
-  })
-
-  it('uses the usual lanes on a plain lap', () => {
-    const gates = buildLapGates(caminanteDeal, lap, 0, correctLanes)
-
-    expect(gates.map((gate) => gate.correctLane)).toEqual(correctLanes.slice(0, 3))
-  })
-
-  it('moves every correct word off its usual lane on a shuffled lap', () => {
-    const gates = buildLapGates(caminanteDeal, { ...lap, shuffled: true }, 7, correctLanes)
-
+    expect(gates.map((gate) => gate.position)).toEqual(caminante.map((_, position) => position))
+    expect(gates.map((gate) => gate.correctLane)).toEqual(correctLanes)
+    expect(gates.map((gate) => gate.hint)).toEqual(hints)
     gates.forEach((gate) => {
-      expect(gate.correctLane).not.toBe(correctLanes[gate.position])
-      expect(gate.options[gate.correctLane]).toBe(caminante.words[gate.position].text)
+      expect(gate.options[gate.correctLane]).toBe(caminante[gate.position].text)
     })
+  })
+
+  it('deals the same gates on every attempt, so the route can be learned', () => {
+    const firstAttempt = buildRunGates(deal(caminante, seed, LANE_COUNT, []), hints, correctLanes)
+    const secondAttempt = buildRunGates(deal(caminante, seed, LANE_COUNT, []), hints, correctLanes)
+
+    expect(secondAttempt).toEqual(firstAttempt)
   })
 })

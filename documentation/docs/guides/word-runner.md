@@ -2,80 +2,82 @@
 sidebar_position: 25
 ---
 
-# Word Runner: learning a phrase as a path
+# Word Runner: racing a text, one word at a time
 
-Word Runner is a three-lane runner at `/games/WordRunner`, set on Rock Runner's course: the same
-seeded track, forest, drawn edges and haze. Each gate across the track shows one word per lane,
-and the player runs through the lane holding the next word of a phrase in another language: German,
-Spanish, French or Italian.
+Word Runner is a three-lane race at `/games/WordRunner`, run on Rock Runner's course: the same
+seeded track, forest, drawn edges and haze. The player is a ball. Across the track, one gate per
+word, float three words in another language, and the player rolls through the one that comes
+next in the text. A bot races alongside, and the first ball over the finish line wins.
 
 :::note Source files
-`src/views/Games/WordRunner/phrases/`, `src/views/Games/WordRunner/types.ts`,
+`src/views/Games/WordRunner/levels/`, `src/views/Games/WordRunner/types.ts`,
 `src/views/Games/WordRunner/config.ts`, `src/views/Games/WordRunner/sequence/`,
-`src/views/Games/WordRunner/runner/routeAdvantage.ts`
+`src/views/Games/WordRunner/runner/`
 :::
 
-<video controls loop muted playsinline width="720" src="/video/word-runner/run.webm">
-  A run through "Caminante, no hay camino" on Rock Runner's forest course: the first lap with
-  the right words glowing and a ramp behind the first one, a wrong lane on a bend that is
-  revealed in green while the runner slows on gravel, rocks blocking the wrong lanes on a later
-  lap, and the recap between laps.
-</video>
+![A race on the German A1 level: the English sentence at the top, the three words floating across the lanes, the player's red ball and the bot's green one](/img/word-runner/race.webp)
 
-## How a run teaches the phrase
+## Levels
 
-The order of the words is learned the way a route is learned: by running it again and again
-until the moves are automatic. Four things make that work.
+Every language has six levels, one for each step of the Common European Framework of Reference
+(CEFR), the scale language exams such as the Goethe-Zertifikat, DELE, DELF and CELI are graded
+on. Each level is one connected text about one situation, and the text means the same in every
+language, so a level is equally hard whichever language it is run in.
 
-- **Every lap is the same course.** A lap restarts at the start of the phrase's own seeded
-  course, so each word's gate stands on the same stretch of track, with the same bends, hills
-  and trees around it, every time.
-- **Each word keeps its lane.** The lane is picked once from a seed made from the phrase id and
-  stays the same on every lap. Where a gate opens onto a bend, its word takes the inside lane.
-  The same lane never comes up three times in a row, so the path has a shape to remember.
-- **The right word is the better route.** Each gate leads onto a ramp, rocks or a bend, as the
-  next section explains, so the path the player memorises is also the fastest way round.
-- **The phrase arrives three words at a time, and the hints fade.** Each new chunk is first run
-  with full hints, then with late ones, while the words already learned run with none. Then the
-  whole phrase is run without hints, and a final lap moves every word into a different lane.
-  Getting through that lap takes knowing the words, not just the moves.
+| Level | Situation                              | Words |
+| ----- | -------------------------------------- | ----- |
+| A1    | Ordering at a café                     | 25–28 |
+| A2    | Buying a train ticket                  | 41–47 |
+| B1    | Telling a friend about the weekend     | 46–54 |
+| B2    | Calling the landlord about the heating | 50–54 |
+| C1    | Discussing remote work                 | 45–49 |
+| C2    | Reflecting on language and thought     | 43–49 |
 
-![Four moments of a run: a full hint with a ramp behind the right lane, a wrong lane on a bend, rocks in the wrong lanes, and the recap between laps](/img/word-runner/run-beats.webp)
+A first visit opens German, and after that the start screen opens on the language picked last.
+Only A1 is open at first: winning a level's race opens the next one in that language.
 
-## The right word is the better route
+![The start screen: the language picker with German selected, A1 open and the five levels after it still closed](/img/word-runner/start.webp)
 
-Just past each gate stands what its lanes lead onto. The feature belongs to the word's place on
-the course, so a word meets the same one on every lap its lane stays put.
+## How a race works
 
-| Feature | Right lane                           | Other lanes                        |
-| ------- | ------------------------------------ | ---------------------------------- |
-| Ramp    | launches the runner and speeds it up | plain track                        |
-| Rocks   | clear                                | rocks that make the runner stumble |
-| Bend    | the inside line, at full speed       | run wide onto gravel and slow down |
+The level is run once, from its first word to its last. The English of the current sentence
+stands at the top of the screen, and the words already passed build the sentence underneath it.
+The first sentence glows the right word from afar and shows its meaning, the second glows it
+only close to the gate, and from the third on the text is the test.
 
-Each effect wears off back to full speed within about a second and a half. A bend is used
-wherever the stretch after a gate turns hard enough. Elsewhere, ramps and rocks alternate along
-the phrase. The laps are timed, so the route advantages are worth chasing, and the best time
-for each phrase is kept in the browser.
+- **Each word keeps its lane.** The lane comes from a seed made from the level id, so it is the
+  same on every attempt and the route can be learned as well as the text. Where a gate opens onto
+  a bend, its word takes the inside lane. The same lane never comes up three times in a row.
+- **The right word is the faster route, and a wrong one slows the ball.** Just past each gate
+  stands what its lanes lead onto:
 
-A wrong lane never ends the run. The right word is shown in green, and the lap is run again
-with stronger hints on the chunk that went wrong, at most twice in a row. Each gate's two decoys
-are chosen to test order as well as meaning: one is a later word of the same phrase, the other a
-look-alike such as _sé_ next to _se_.
+| Feature | Right lane                         | Other lanes                        |
+| ------- | ---------------------------------- | ---------------------------------- |
+| Ramp    | launches the ball and speeds it up | slows it down                      |
+| Rocks   | clear                              | rocks that make the ball stumble   |
+| Bend    | the inside line, at full speed     | run wide onto gravel and slow down |
 
-![The laps of a nine-word phrase, the lane each word keeps, and the feature each gate leads onto](/img/word-runner/sequence-layout.webp)
+- **The bot plays by the same rules.** It takes the right word at a rate set for each level,
+  from 60% at A1 to 80% at C2, and its ramps, rocks and gravel speed it up and slow it down
+  exactly as they do the player. A player who reads the text beats it; one who guesses does not.
+- **Each effect wears off** back to full speed within about a second and a half.
 
-The run ends with the time, the best time for the phrase, and how often each word was met and
-how often its lane was right.
+## The feedback at the end
 
-![The end-of-run summary: the time, then one row per word with its meaning and score](/img/word-runner/summary.webp)
+The end screen says who got there first and by how much, the time against the level's best,
+and how many words were right. Then it gives:
+
+- **What the level shows.** A won race clears the level and says what clearing it means, such
+  as "You can handle a routine task such as buying a ticket". A lost one says the race has to be
+  won to open the next level.
+- **One line of advice**, from how the race went: a clean run, a win with mistakes to go over,
+  a close loss, or a loss to read up on.
+- **The words to go over**: each missed word with its meaning and the word taken instead.
+- **The whole text with its English**, after a lost race.
+
+![The end screen after a lost race: the bot's margin, the score, the words to go over and the text with its translation](/img/word-runner/summary.webp)
 
 ## Playing
-
-The start screen picks the language, then the phrase. A first visit starts in German, and after
-that the start screen opens on the language picked last.
-
-![The start screen: the language picker with German selected, and the five German phrases](/img/word-runner/start.webp)
 
 | Input    | Change lane                         |
 | -------- | ----------------------------------- |
@@ -83,46 +85,52 @@ that the start screen opens on the language picked last.
 | Gamepad  | Left stick or D-pad                 |
 | Touch    | Swipe or tap the left or right side |
 
-The Config panel sets the run speed.
+The Config panel sets the speed of both balls.
 
 ## Adding a language
 
-A language is one JSON file in `src/views/Games/WordRunner/phrases/`, shaped as the
-`LanguagePack` type in `types.ts`, and listed in `LANGUAGE_PACKS` in
-`phrases/languagePacks.ts`, whose order is the order of the picker:
+A language is one JSON file in `src/views/Games/WordRunner/levels/`, shaped as the
+`LanguagePack` type in `types.ts`, and listed in `LANGUAGE_PACKS` in `levels/languagePacks.ts`,
+whose order is the order of the picker. It carries all six levels, translating the same six
+texts as the other languages:
 
 ```json
 {
   "language": "pt",
   "languageName": "Portuguese",
-  "phrases": [
+  "levels": [
     {
-      "id": "devagar-se-vai",
-      "title": "Devagar se vai ao longe",
-      "translation": "Slowly, one goes far.",
-      "words": [
-        { "text": "Devagar", "gloss": "slowly", "decoys": ["Devagarinho", "Divagar"] },
-        { "text": "se", "gloss": "one", "decoys": ["sé", "si"] },
-        { "text": "vai", "gloss": "goes", "decoys": ["vá", "vais"] },
-        { "text": "ao", "gloss": "to the", "decoys": ["o", "à"] },
-        { "text": "longe", "gloss": "far", "decoys": ["longo", "lance"] }
+      "id": "pt-a1",
+      "cefr": "A1",
+      "title": "No café",
+      "situation": "Ordering at a café",
+      "sentences": [
+        {
+          "translation": "Good morning!",
+          "words": [
+            { "text": "Bom", "gloss": "good", "decoys": ["Boa", "Bem"] },
+            { "text": "dia", "gloss": "day", "decoys": ["dias", "tia"], "punctuation": "!" }
+          ]
+        }
       ]
     }
   ]
 }
 ```
 
-- `text` is the word exactly as it should be read, accents included: _se_ and _sé_ are
-  different words, and a decoy may be the other one.
-- `decoys` are look-alikes of that word. Two per word is plenty, since the other decoy on each
-  gate comes from the phrase itself. A word must never list itself.
-- `id` seeds both the course and the lane path, so changing it gives the phrase a different
-  route. It also keys the best time, so it has to be unique across every language, not just
-  its own.
-- Phrases are memorised word by word, so prefer short sayings, proverbs and lines of verse
-  that are in the public domain.
+- `text` is the word exactly as it is read, accents and capitals included, with no spaces and
+  no punctuation: whatever follows it goes in `punctuation`, which the sentence shows and the sign
+  does not. An elision such as French _l'eau_ stays one word.
+- `decoys` are two words a learner could take for the right one at that place: a near spelling,
+  or the wrong gender, case, tense or person of the same word. Neither may also be correct there.
+- Keep each word to about fourteen letters, or it will not fit on a sign.
+- `id` is the language code and the level, such as `pt-a1`. It seeds the course and the lanes,
+  and keys the best time, so it has to be unique across every language.
+- Where the language marks the speaker's gender, pick one for each text and keep the decoys
+  clear of the other: the Italian B1 narrator is a woman, the French B1 and B2 one a man.
 
-The unit tests in `phrases/languagePacks.test.ts` check every listed pack for empty words, phrase
-ids shared anywhere across the languages, and words listed as their own decoy, so a new pack is
-covered as soon as it is listed. The test that names the offered languages needs the new code
-added.
+The unit tests in `levels/languagePacks.test.ts` check every listed pack: the six levels in
+order, the same situation and sentence count as the other languages at each level, two decoys
+per word that are neither the word nor punctuated, and ids unique across all of them. A new pack
+is covered as soon as it is listed, though the test that names the offered languages needs the
+new code added.

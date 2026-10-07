@@ -1,0 +1,662 @@
+{
+  "language": "it",
+  "languageName": "Italian",
+  "levels": [
+    {
+      "id": "it-a1",
+      "cefr": "A1",
+      "title": "Al bar",
+      "situation": "Ordering at a café",
+      "sentences": [
+        {
+          "translation": "Good morning!",
+          "words": [
+            {
+              "text": "Buongiorno",
+              "gloss": "good morning",
+              "decoys": ["Buongiorni", "Buonasera"],
+              "punctuation": "!"
+            }
+          ]
+        },
+        {
+          "translation": "A coffee and a croissant, please.",
+          "words": [
+            { "text": "Un", "gloss": "a", "decoys": ["Una", "Uno"] },
+            { "text": "caffè", "gloss": "coffee", "decoys": ["caffeina", "caffetteria"] },
+            { "text": "e", "gloss": "and", "decoys": ["è", "i"] },
+            { "text": "un", "gloss": "a", "decoys": ["uno", "una"] },
+            {
+              "text": "cornetto",
+              "gloss": "croissant",
+              "decoys": ["cornetti", "corretto"],
+              "punctuation": ","
+            },
+            { "text": "per", "gloss": "for", "decoys": ["pur", "pero"] },
+            {
+              "text": "favore",
+              "gloss": "favour",
+              "decoys": ["favori", "fervore"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "With milk?",
+          "words": [
+            { "text": "Con", "gloss": "with", "decoys": ["Come", "Cono"] },
+            { "text": "il", "gloss": "the", "decoys": ["lo", "la"] },
+            { "text": "latte", "gloss": "milk", "decoys": ["lette", "latta"], "punctuation": "?" }
+          ]
+        },
+        {
+          "translation": "Yes, please.",
+          "words": [
+            { "text": "Sì", "gloss": "yes", "decoys": ["Si", "Se"], "punctuation": "," },
+            {
+              "text": "grazie",
+              "gloss": "thank you",
+              "decoys": ["grazia", "graziose"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Anything else?",
+          "words": [
+            { "text": "Desidera", "gloss": "(you) wish", "decoys": ["Desidero", "Desideri"] },
+            {
+              "text": "altro",
+              "gloss": "anything else",
+              "decoys": ["alto", "altra"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "No, thank you.",
+          "words": [
+            { "text": "No", "gloss": "no", "decoys": ["Non", "Ne"], "punctuation": "," },
+            {
+              "text": "grazie",
+              "gloss": "thank you",
+              "decoys": ["grazia", "grazioso"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "That comes to five euros.",
+          "words": [
+            { "text": "Sono", "gloss": "(they) are", "decoys": ["Siamo", "Sei"] },
+            { "text": "cinque", "gloss": "five", "decoys": ["cinquanta", "cinesi"] },
+            { "text": "euro", "gloss": "euros", "decoys": ["euri", "ero"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Here you are.",
+          "words": [
+            { "text": "Ecco", "gloss": "here is", "decoys": ["Eco", "Echi"] },
+            { "text": "a", "gloss": "to", "decoys": ["al", "ha"] },
+            { "text": "Lei", "gloss": "you (formal)", "decoys": ["lui", "lì"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Have a nice day!",
+          "words": [
+            { "text": "Buona", "gloss": "good", "decoys": ["Buono", "Buon"] },
+            {
+              "text": "giornata",
+              "gloss": "day",
+              "decoys": ["giornale", "giorno"],
+              "punctuation": "!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "it-a2",
+      "cefr": "A2",
+      "title": "Alla stazione",
+      "situation": "Buying a train ticket",
+      "sentences": [
+        {
+          "translation": "Excuse me, when does the next train to Roma leave?",
+          "words": [
+            {
+              "text": "Scusi",
+              "gloss": "excuse me",
+              "decoys": ["Scuso", "Scusò"],
+              "punctuation": ","
+            },
+            { "text": "quando", "gloss": "when", "decoys": ["quanto", "quindi"] },
+            { "text": "parte", "gloss": "leaves", "decoys": ["parti", "porta"] },
+            { "text": "il", "gloss": "the", "decoys": ["lo", "la"] },
+            { "text": "prossimo", "gloss": "next", "decoys": ["prossima", "prossimi"] },
+            { "text": "treno", "gloss": "train", "decoys": ["treni", "tremo"] },
+            { "text": "per", "gloss": "to", "decoys": ["pur", "pero"] },
+            { "text": "Roma", "gloss": "Rome", "decoys": ["Rame", "Rima"], "punctuation": "?" }
+          ]
+        },
+        {
+          "translation": "At ten past nine, from platform four.",
+          "words": [
+            { "text": "Alle", "gloss": "at the", "decoys": ["Allo", "Alla"] },
+            { "text": "nove", "gloss": "nine", "decoys": ["nuove", "nave"] },
+            { "text": "e", "gloss": "and", "decoys": ["è", "i"] },
+            { "text": "dieci", "gloss": "ten", "decoys": ["dice", "dieta"], "punctuation": "," },
+            { "text": "dal", "gloss": "from the", "decoys": ["del", "dai"] },
+            { "text": "binario", "gloss": "platform", "decoys": ["binari", "bancario"] },
+            {
+              "text": "quattro",
+              "gloss": "four",
+              "decoys": ["quarto", "quadro"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "I would like a return ticket, please.",
+          "words": [
+            { "text": "Vorrei", "gloss": "I would like", "decoys": ["Vorrebbe", "Vorresti"] },
+            { "text": "un", "gloss": "a", "decoys": ["uno", "una"] },
+            { "text": "biglietto", "gloss": "ticket", "decoys": ["biglietti", "bigliardo"] },
+            { "text": "di", "gloss": "of", "decoys": ["da", "del"] },
+            { "text": "andata", "gloss": "outward journey", "decoys": ["andato", "andava"] },
+            { "text": "e", "gloss": "and", "decoys": ["è", "ei"] },
+            {
+              "text": "ritorno",
+              "gloss": "return",
+              "decoys": ["ritorni", "ritardo"],
+              "punctuation": ","
+            },
+            { "text": "per", "gloss": "for", "decoys": ["pur", "pero"] },
+            {
+              "text": "favore",
+              "gloss": "favour",
+              "decoys": ["favori", "fervore"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Do you have a discount card?",
+          "words": [
+            { "text": "Ha", "gloss": "(you) have", "decoys": ["Ho", "Ah"] },
+            { "text": "una", "gloss": "a", "decoys": ["uno", "un"] },
+            { "text": "carta", "gloss": "card", "decoys": ["carte", "certa"] },
+            {
+              "text": "sconto",
+              "gloss": "discount",
+              "decoys": ["sconti", "scontro"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "No, unfortunately not.",
+          "words": [
+            { "text": "No", "gloss": "no", "decoys": ["Non", "Ne"], "punctuation": "," },
+            { "text": "purtroppo", "gloss": "unfortunately", "decoys": ["pertanto", "purché"] },
+            { "text": "no", "gloss": "not", "decoys": ["non", "né"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Then it costs forty-two euros.",
+          "words": [
+            { "text": "Allora", "gloss": "then", "decoys": ["Ancora", "Allori"] },
+            { "text": "costa", "gloss": "it costs", "decoys": ["costo", "coste"] },
+            {
+              "text": "quarantadue",
+              "gloss": "forty-two",
+              "decoys": ["quarantatré", "quattrocento"]
+            },
+            { "text": "euro", "gloss": "euros", "decoys": ["euri", "ero"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Can I pay by card?",
+          "words": [
+            { "text": "Posso", "gloss": "can I", "decoys": ["Puoi", "Possa"] },
+            { "text": "pagare", "gloss": "pay", "decoys": ["pagato", "piegare"] },
+            { "text": "con", "gloss": "with", "decoys": ["come", "cono"] },
+            { "text": "la", "gloss": "the", "decoys": ["le", "lo"] },
+            { "text": "carta", "gloss": "card", "decoys": ["carte", "certa"], "punctuation": "?" }
+          ]
+        },
+        {
+          "translation": "Of course. Have a good trip!",
+          "words": [
+            {
+              "text": "Certo",
+              "gloss": "of course",
+              "decoys": ["Certa", "Certi"],
+              "punctuation": "."
+            },
+            { "text": "Buon", "gloss": "good", "decoys": ["Buona", "Buono"] },
+            {
+              "text": "viaggio",
+              "gloss": "trip",
+              "decoys": ["viaggi", "viaggia"],
+              "punctuation": "!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "it-b1",
+      "cefr": "B1",
+      "title": "Un weekend in montagna",
+      "situation": "Telling a friend about the weekend",
+      "sentences": [
+        {
+          "translation": "Last weekend I went to the mountains with my sister.",
+          "words": [
+            { "text": "Lo", "gloss": "the", "decoys": ["Il", "La"] },
+            { "text": "scorso", "gloss": "last", "decoys": ["scorsa", "scorse"] },
+            { "text": "fine", "gloss": "end", "decoys": ["fino", "fini"] },
+            { "text": "settimana", "gloss": "week", "decoys": ["settimane", "settembre"] },
+            { "text": "sono", "gloss": "(I) have", "decoys": ["siamo", "sei"] },
+            { "text": "andata", "gloss": "gone", "decoys": ["andare", "andavo"] },
+            { "text": "in", "gloss": "to", "decoys": ["a", "al"] },
+            { "text": "montagna", "gloss": "mountains", "decoys": ["montagne", "montano"] },
+            { "text": "con", "gloss": "with", "decoys": ["come", "cono"] },
+            { "text": "mia", "gloss": "my", "decoys": ["mio", "mie"] },
+            {
+              "text": "sorella",
+              "gloss": "sister",
+              "decoys": ["sorelle", "fratello"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "On Saturday it rained all day, so we stayed in the hut and played cards.",
+          "words": [
+            { "text": "Sabato", "gloss": "on Saturday", "decoys": ["Sabati", "Sabbia"] },
+            { "text": "è", "gloss": "(it) has", "decoys": ["e", "sei"] },
+            { "text": "piovuto", "gloss": "rained", "decoys": ["piovere", "piove"] },
+            { "text": "tutto", "gloss": "all", "decoys": ["tutta", "tutti"] },
+            { "text": "il", "gloss": "the", "decoys": ["lo", "la"] },
+            {
+              "text": "giorno",
+              "gloss": "day",
+              "decoys": ["giorni", "giornata"],
+              "punctuation": ","
+            },
+            { "text": "quindi", "gloss": "so", "decoys": ["quando", "quindici"] },
+            { "text": "siamo", "gloss": "(we) have", "decoys": ["sono", "siete"] },
+            { "text": "rimaste", "gloss": "stayed", "decoys": ["rimasto", "rimanere"] },
+            { "text": "nel", "gloss": "in the", "decoys": ["nella", "del"] },
+            { "text": "rifugio", "gloss": "hut", "decoys": ["rifugi", "rifiuto"] },
+            { "text": "a", "gloss": "to", "decoys": ["da", "ha"] },
+            { "text": "giocare", "gloss": "play", "decoys": ["giocato", "giacere"] },
+            { "text": "a", "gloss": "at", "decoys": ["al", "ha"] },
+            { "text": "carte", "gloss": "cards", "decoys": ["carta", "certe"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "On Sunday the sun came out and we climbed up to the summit.",
+          "words": [
+            { "text": "Domenica", "gloss": "on Sunday", "decoys": ["Domeniche", "Domestica"] },
+            { "text": "è", "gloss": "(it) has", "decoys": ["e", "ha"] },
+            { "text": "uscito", "gloss": "come out", "decoys": ["uscita", "uscire"] },
+            { "text": "il", "gloss": "the", "decoys": ["lo", "la"] },
+            { "text": "sole", "gloss": "sun", "decoys": ["sale", "suole"] },
+            { "text": "e", "gloss": "and", "decoys": ["è", "i"] },
+            { "text": "siamo", "gloss": "(we) have", "decoys": ["sono", "siete"] },
+            { "text": "salite", "gloss": "climbed", "decoys": ["salito", "salire"] },
+            { "text": "fino", "gloss": "up", "decoys": ["fine", "vino"] },
+            { "text": "alla", "gloss": "to the", "decoys": ["allo", "alle"] },
+            { "text": "cima", "gloss": "summit", "decoys": ["cime", "cena"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "The view was wonderful, and I would like to go back next summer.",
+          "words": [
+            { "text": "La", "gloss": "the", "decoys": ["Lo", "Le"] },
+            { "text": "vista", "gloss": "view", "decoys": ["viste", "visto"] },
+            { "text": "era", "gloss": "was", "decoys": ["ero", "erano"] },
+            {
+              "text": "meravigliosa",
+              "gloss": "wonderful",
+              "decoys": ["meraviglioso", "meraviglia"]
+            },
+            { "text": "e", "gloss": "and", "decoys": ["è", "i"] },
+            { "text": "vorrei", "gloss": "I would like", "decoys": ["vorrebbe", "volerei"] },
+            { "text": "tornarci", "gloss": "to go back there", "decoys": ["tornarti", "tornata"] },
+            { "text": "l'estate", "gloss": "the summer", "decoys": ["l'estasi", "l'estero"] },
+            {
+              "text": "prossima",
+              "gloss": "next",
+              "decoys": ["prossimo", "prossime"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "it-b2",
+      "cefr": "B2",
+      "title": "Il riscaldamento guasto",
+      "situation": "Calling the landlord about the heating",
+      "sentences": [
+        {
+          "translation": "I am calling because the heating in my flat has not been working for a week.",
+          "words": [
+            { "text": "La", "gloss": "you (formal)", "decoys": ["Le", "Gli"] },
+            { "text": "chiamo", "gloss": "I call", "decoys": ["chiama", "chiamato"] },
+            { "text": "perché", "gloss": "because", "decoys": ["perciò", "purché"] },
+            { "text": "il", "gloss": "the", "decoys": ["lo", "la"] },
+            {
+              "text": "riscaldamento",
+              "gloss": "heating",
+              "decoys": ["riscaldamenti", "riscaldare"]
+            },
+            { "text": "del", "gloss": "of the", "decoys": ["dal", "dei"] },
+            { "text": "mio", "gloss": "my", "decoys": ["mia", "miei"] },
+            { "text": "appartamento", "gloss": "flat", "decoys": ["appartamenti", "appuntamento"] },
+            { "text": "non", "gloss": "not", "decoys": ["no", "nel"] },
+            { "text": "funziona", "gloss": "works", "decoys": ["funzionano", "funzione"] },
+            { "text": "da", "gloss": "for", "decoys": ["di", "dà"] },
+            { "text": "ormai", "gloss": "by now", "decoys": ["ora", "mai"] },
+            { "text": "una", "gloss": "a", "decoys": ["uno", "un"] },
+            {
+              "text": "settimana",
+              "gloss": "week",
+              "decoys": ["settimane", "settembre"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "I have already reported the problem twice, but nobody has come yet.",
+          "words": [
+            { "text": "Ho", "gloss": "I have", "decoys": ["Ha", "Hai"] },
+            { "text": "già", "gloss": "already", "decoys": ["giù", "gita"] },
+            { "text": "segnalato", "gloss": "reported", "decoys": ["segnalata", "sognato"] },
+            { "text": "il", "gloss": "the", "decoys": ["lo", "la"] },
+            { "text": "problema", "gloss": "problem", "decoys": ["problemi", "proclama"] },
+            { "text": "due", "gloss": "two", "decoys": ["dove", "dei"] },
+            { "text": "volte", "gloss": "times", "decoys": ["volta", "volti"], "punctuation": "," },
+            { "text": "ma", "gloss": "but", "decoys": ["mai", "me"] },
+            { "text": "fino", "gloss": "until", "decoys": ["fine", "vino"] },
+            { "text": "a", "gloss": "to", "decoys": ["al", "ha"] },
+            { "text": "oggi", "gloss": "today", "decoys": ["ogni", "oggetti"] },
+            { "text": "non", "gloss": "not", "decoys": ["no", "né"] },
+            { "text": "è", "gloss": "has", "decoys": ["e", "ha"] },
+            { "text": "venuto", "gloss": "come", "decoys": ["venuta", "venire"] },
+            {
+              "text": "nessuno",
+              "gloss": "nobody",
+              "decoys": ["nessun", "nesso"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Since it is getting colder, I would ask you to send a technician as soon as possible.",
+          "words": [
+            { "text": "Dato", "gloss": "given", "decoys": ["Data", "Dati"] },
+            { "text": "che", "gloss": "that", "decoys": ["chi", "cui"] },
+            { "text": "fa", "gloss": "(it) makes", "decoys": ["fai", "fanno"] },
+            { "text": "sempre", "gloss": "ever", "decoys": ["semplice", "sopra"] },
+            { "text": "più", "gloss": "more", "decoys": ["pio", "pure"] },
+            {
+              "text": "freddo",
+              "gloss": "cold",
+              "decoys": ["fredda", "freddi"],
+              "punctuation": ","
+            },
+            { "text": "Le", "gloss": "you (formal)", "decoys": ["La", "Lo"] },
+            { "text": "chiederei", "gloss": "I would ask", "decoys": ["chiederebbe", "chiuderei"] },
+            { "text": "cortesemente", "gloss": "kindly", "decoys": ["cortese", "cortesia"] },
+            { "text": "di", "gloss": "to", "decoys": ["da", "ad"] },
+            { "text": "mandare", "gloss": "send", "decoys": ["mandato", "mangiare"] },
+            { "text": "un", "gloss": "a", "decoys": ["uno", "una"] },
+            { "text": "tecnico", "gloss": "technician", "decoys": ["tecnica", "tecnici"] },
+            { "text": "il", "gloss": "the", "decoys": ["al", "lo"] },
+            { "text": "prima", "gloss": "soonest", "decoys": ["primo", "primi"] },
+            {
+              "text": "possibile",
+              "gloss": "possible",
+              "decoys": ["possibili", "passabile"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Otherwise I will unfortunately have to reduce the rent.",
+          "words": [
+            {
+              "text": "Altrimenti",
+              "gloss": "otherwise",
+              "decoys": ["Altrettanti", "Altrove"],
+              "punctuation": ","
+            },
+            {
+              "text": "purtroppo",
+              "gloss": "unfortunately",
+              "decoys": ["pertanto", "purché"],
+              "punctuation": ","
+            },
+            { "text": "dovrò", "gloss": "I will have to", "decoys": ["dovrà", "doveri"] },
+            { "text": "ridurre", "gloss": "reduce", "decoys": ["ridotto", "ridere"] },
+            {
+              "text": "l'affitto",
+              "gloss": "the rent",
+              "decoys": ["l'affetto", "l'effetto"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "it-c1",
+      "cefr": "C1",
+      "title": "Il lavoro da casa",
+      "situation": "Discussing remote work",
+      "sentences": [
+        {
+          "translation": "Although working from home saves time, people often underestimate how much informal exchange is lost.",
+          "words": [
+            { "text": "Sebbene", "gloss": "although", "decoys": ["Siccome", "Sempre"] },
+            { "text": "lavorare", "gloss": "working", "decoys": ["lavorato", "lavorava"] },
+            { "text": "da", "gloss": "from", "decoys": ["di", "dà"] },
+            { "text": "casa", "gloss": "home", "decoys": ["cosa", "case"] },
+            { "text": "faccia", "gloss": "makes", "decoys": ["faccio", "facciata"] },
+            { "text": "risparmiare", "gloss": "save", "decoys": ["risparmiato", "risparmio"] },
+            { "text": "tempo", "gloss": "time", "decoys": ["tempi", "tempio"], "punctuation": "," },
+            { "text": "spesso", "gloss": "often", "decoys": ["spessa", "spesa"] },
+            { "text": "si", "gloss": "one", "decoys": ["sì", "se"] },
+            {
+              "text": "sottovaluta",
+              "gloss": "underestimates",
+              "decoys": ["sottovalutato", "sopravvaluta"]
+            },
+            { "text": "quanto", "gloss": "how much", "decoys": ["quando", "quanti"] },
+            { "text": "scambio", "gloss": "exchange", "decoys": ["scambi", "cambio"] },
+            { "text": "informale", "gloss": "informal", "decoys": ["informali", "informato"] },
+            { "text": "vada", "gloss": "goes", "decoys": ["vado", "vadano"] },
+            {
+              "text": "perduto",
+              "gloss": "lost",
+              "decoys": ["perduta", "perdono"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Many ideas do not arise in meetings, but over a coffee in the corridor.",
+          "words": [
+            { "text": "Molte", "gloss": "many", "decoys": ["Molti", "Molto"] },
+            { "text": "idee", "gloss": "ideas", "decoys": ["idea", "ideali"] },
+            { "text": "non", "gloss": "not", "decoys": ["no", "né"] },
+            { "text": "nascono", "gloss": "arise", "decoys": ["nascondono", "nasce"] },
+            { "text": "durante", "gloss": "during", "decoys": ["dunque", "durata"] },
+            { "text": "le", "gloss": "the", "decoys": ["la", "gli"] },
+            {
+              "text": "riunioni",
+              "gloss": "meetings",
+              "decoys": ["riunione", "unioni"],
+              "punctuation": ","
+            },
+            { "text": "ma", "gloss": "but", "decoys": ["mai", "mi"] },
+            { "text": "davanti", "gloss": "in front", "decoys": ["dentro", "davvero"] },
+            { "text": "a", "gloss": "of", "decoys": ["al", "ha"] },
+            { "text": "un", "gloss": "a", "decoys": ["uno", "una"] },
+            { "text": "caffè", "gloss": "coffee", "decoys": ["caffeina", "caffetteria"] },
+            { "text": "in", "gloss": "in", "decoys": ["a", "ne"] },
+            {
+              "text": "corridoio",
+              "gloss": "corridor",
+              "decoys": ["corridoi", "corriere"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Companies should therefore not simply abolish the office, but rethink it as a place for working together.",
+          "words": [
+            { "text": "Le", "gloss": "the", "decoys": ["La", "Gli"] },
+            {
+              "text": "aziende",
+              "gloss": "companies",
+              "decoys": ["azienda", "agende"],
+              "punctuation": ","
+            },
+            {
+              "text": "quindi",
+              "gloss": "therefore",
+              "decoys": ["quando", "quindici"],
+              "punctuation": ","
+            },
+            { "text": "non", "gloss": "not", "decoys": ["no", "né"] },
+            { "text": "dovrebbero", "gloss": "should", "decoys": ["dovrebbe", "dovevano"] },
+            { "text": "semplicemente", "gloss": "simply", "decoys": ["semplice", "similmente"] },
+            { "text": "abolire", "gloss": "abolish", "decoys": ["abolito", "abitare"] },
+            {
+              "text": "l'ufficio",
+              "gloss": "the office",
+              "decoys": ["l'ufficiale", "l'edificio"],
+              "punctuation": ","
+            },
+            { "text": "ma", "gloss": "but", "decoys": ["mai", "mi"] },
+            { "text": "ripensarlo", "gloss": "rethink it", "decoys": ["ripensarla", "ripensato"] },
+            { "text": "come", "gloss": "as", "decoys": ["con", "cosa"] },
+            { "text": "un", "gloss": "a", "decoys": ["uno", "una"] },
+            { "text": "luogo", "gloss": "place", "decoys": ["luoghi", "lungo"] },
+            { "text": "in", "gloss": "in", "decoys": ["a", "di"] },
+            { "text": "cui", "gloss": "which", "decoys": ["chi", "cuoi"] },
+            { "text": "lavorare", "gloss": "to work", "decoys": ["lavorato", "lavorano"] },
+            {
+              "text": "insieme",
+              "gloss": "together",
+              "decoys": ["insomma", "insegne"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "it-c2",
+      "cefr": "C2",
+      "title": "Lingua e pensiero",
+      "situation": "Reflecting on language and thought",
+      "sentences": [
+        {
+          "translation": "Whoever learns a language acquires not merely words, but a way of seeing the world.",
+          "words": [
+            { "text": "Chi", "gloss": "whoever", "decoys": ["Che", "Cui"] },
+            { "text": "impara", "gloss": "learns", "decoys": ["imparare", "impera"] },
+            { "text": "una", "gloss": "a", "decoys": ["uno", "un"] },
+            { "text": "lingua", "gloss": "language", "decoys": ["lingue", "linguaggio"] },
+            { "text": "non", "gloss": "not", "decoys": ["no", "né"] },
+            { "text": "acquisisce", "gloss": "acquires", "decoys": ["acquisisca", "acquisito"] },
+            { "text": "soltanto", "gloss": "merely", "decoys": ["solitario", "sottotono"] },
+            {
+              "text": "parole",
+              "gloss": "words",
+              "decoys": ["parola", "parere"],
+              "punctuation": ","
+            },
+            { "text": "ma", "gloss": "but", "decoys": ["mai", "mi"] },
+            { "text": "un", "gloss": "a", "decoys": ["uno", "una"] },
+            { "text": "modo", "gloss": "way", "decoys": ["moda", "moto"] },
+            { "text": "di", "gloss": "of", "decoys": ["da", "del"] },
+            { "text": "vedere", "gloss": "seeing", "decoys": ["vedendo", "vendere"] },
+            { "text": "il", "gloss": "the", "decoys": ["lo", "al"] },
+            { "text": "mondo", "gloss": "world", "decoys": ["mondi", "monte"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Every idiom carries traces of a history that no dictionary fully captures.",
+          "words": [
+            { "text": "Ogni", "gloss": "every", "decoys": ["Ognuno", "Oggi"] },
+            {
+              "text": "espressione",
+              "gloss": "expression",
+              "decoys": ["espressioni", "espulsione"]
+            },
+            { "text": "idiomatica", "gloss": "idiomatic", "decoys": ["idiomatico", "ideologica"] },
+            { "text": "porta", "gloss": "carries", "decoys": ["porti", "parte"] },
+            { "text": "con", "gloss": "with", "decoys": ["come", "cono"] },
+            { "text": "sé", "gloss": "itself", "decoys": ["se", "si"] },
+            { "text": "tracce", "gloss": "traces", "decoys": ["traccia", "trecce"] },
+            { "text": "di", "gloss": "of", "decoys": ["da", "dei"] },
+            { "text": "una", "gloss": "a", "decoys": ["uno", "un"] },
+            { "text": "storia", "gloss": "history", "decoys": ["storie", "scoria"] },
+            { "text": "che", "gloss": "that", "decoys": ["chi", "cui"] },
+            { "text": "nessun", "gloss": "no", "decoys": ["nessuno", "nessuna"] },
+            { "text": "dizionario", "gloss": "dictionary", "decoys": ["dizionari", "visionario"] },
+            { "text": "coglie", "gloss": "captures", "decoys": ["colto", "cogli"] },
+            { "text": "fino", "gloss": "right", "decoys": ["fine", "vino"] },
+            { "text": "in", "gloss": "to", "decoys": ["a", "nel"] },
+            {
+              "text": "fondo",
+              "gloss": "the bottom",
+              "decoys": ["fonda", "fonte"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Perhaps that is why we only truly master a language once we can play with its ambiguities.",
+          "words": [
+            { "text": "Forse", "gloss": "perhaps", "decoys": ["Forze", "Forte"] },
+            { "text": "è", "gloss": "it is", "decoys": ["e", "ha"] },
+            { "text": "per", "gloss": "for", "decoys": ["pur", "pero"] },
+            { "text": "questo", "gloss": "this", "decoys": ["questi", "questa"] },
+            { "text": "che", "gloss": "that", "decoys": ["chi", "cui"] },
+            {
+              "text": "padroneggiamo",
+              "gloss": "we master",
+              "decoys": ["padroneggiano", "padroneggiato"]
+            },
+            { "text": "davvero", "gloss": "truly", "decoys": ["davanti", "dovere"] },
+            { "text": "una", "gloss": "a", "decoys": ["uno", "un"] },
+            { "text": "lingua", "gloss": "language", "decoys": ["lingue", "linguaggio"] },
+            { "text": "solo", "gloss": "only", "decoys": ["sola", "suolo"] },
+            { "text": "quando", "gloss": "when", "decoys": ["quanto", "quindi"] },
+            { "text": "sappiamo", "gloss": "we can", "decoys": ["sappiano", "sapevamo"] },
+            { "text": "giocare", "gloss": "play", "decoys": ["giocato", "giacere"] },
+            { "text": "con", "gloss": "with", "decoys": ["come", "cono"] },
+            { "text": "le", "gloss": "the", "decoys": ["la", "lo"] },
+            { "text": "sue", "gloss": "its", "decoys": ["suoi", "suo"] },
+            {
+              "text": "ambiguità",
+              "gloss": "ambiguities",
+              "decoys": ["ambiguo", "ambizione"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

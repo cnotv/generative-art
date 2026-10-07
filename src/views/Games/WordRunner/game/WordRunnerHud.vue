@@ -1,33 +1,42 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { LobbyUIKeyPill } from '@/components/LobbyUI'
 import { formatRunTime } from './bestTimes'
-import type { RibbonWord, RunPhase } from '../types'
+import type { Level, RibbonWord, RunFeedback } from '../types'
 
-defineProps<{
-  phase: RunPhase
-  lapLabel: string
-  isShuffledLap: boolean
-  isRetryLap: boolean
+const props = defineProps<{
+  level: Level
+  sentenceIndex: number
+  sentenceCount: number
+  translation: string
   ribbon: RibbonWord[]
   nextGloss: string | null
-  feedback: { text: string; gloss: string; correct: boolean } | null
-  sentence: string
-  translation: string
-  upcomingLapNote: string | null
+  feedback: RunFeedback | null
+  standing: number
   runSeconds: number
 }>()
+
+const isLeading = computed(() => props.standing >= 0)
+const standingLabel = computed(() => {
+  const metres = Math.round(Math.abs(props.standing))
+  return isLeading.value ? `You lead by ${metres} m` : `Bot ahead by ${metres} m`
+})
 </script>
 
 <template>
   <div class="word-runner-hud">
     <header class="word-runner-hud__top">
-      <p class="word-runner-hud__lap">
-        <span>{{ lapLabel }}</span>
-        <span v-if="isShuffledLap" class="word-runner-hud__tag">Lanes shuffled</span>
-        <span v-else-if="isRetryLap" class="word-runner-hud__tag">Again, with hints</span>
+      <p class="word-runner-hud__status">
+        <span>{{ level.cefr }} · {{ level.title }}</span>
+        <span>Sentence {{ sentenceIndex + 1 }} / {{ sentenceCount }}</span>
         <span class="word-runner-hud__time">{{ formatRunTime(runSeconds) }}</span>
+        <span
+          :class="isLeading ? 'word-runner-hud__word--right' : 'word-runner-hud__word--wrong'"
+          >{{ standingLabel }}</span
+        >
       </p>
-      <ol class="word-runner-hud__ribbon" aria-label="Words passed this lap">
+      <p class="word-runner-hud__translation">{{ translation }}</p>
+      <ol class="word-runner-hud__ribbon" aria-label="This sentence so far">
         <li
           v-for="(word, index) in ribbon"
           :key="index"
@@ -46,12 +55,6 @@ defineProps<{
       >
       <span class="word-runner-hud__gloss">{{ feedback.gloss }}</span>
     </p>
-
-    <section v-if="phase === 'recap'" class="word-runner-hud__recap lui-slide-in">
-      <p class="word-runner-hud__sentence">{{ sentence }}</p>
-      <p class="word-runner-hud__translation">{{ translation }}</p>
-      <p v-if="upcomingLapNote" class="word-runner-hud__upcoming">{{ upcomingLapNote }}</p>
-    </section>
 
     <footer class="word-runner-hud__bottom">
       <p v-if="nextGloss" class="word-runner-hud__prompt">
@@ -94,10 +97,12 @@ defineProps<{
   align-items: center;
 }
 
-.word-runner-hud__lap {
+.word-runner-hud__status {
   display: flex;
   gap: var(--spacing-3);
   align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
   margin: 0;
   font-size: var(--lui-text-small);
   font-variant-numeric: tabular-nums;
@@ -106,11 +111,6 @@ defineProps<{
 
 .word-runner-hud__time {
   font-variant-numeric: tabular-nums;
-}
-
-.word-runner-hud__tag {
-  font-size: var(--lui-text-tiny);
-  color: var(--lui-focus-color);
 }
 
 .word-runner-hud__ribbon {
@@ -148,31 +148,11 @@ defineProps<{
   font-size: var(--lui-text-small);
 }
 
-.word-runner-hud__recap {
-  display: flex;
-  flex-direction: column;
-  grid-area: middle;
-  gap: var(--spacing-2);
-  align-items: center;
-  align-self: center;
-  text-align: center;
-}
-
-.word-runner-hud__sentence {
-  margin: 0;
-  font-size: var(--lui-text-important);
-}
-
 .word-runner-hud__translation {
+  max-width: 40rem;
   margin: 0;
-  font-size: var(--lui-text-small);
-}
-
-.word-runner-hud__upcoming {
-  margin: 0;
-  font-size: var(--lui-text-tiny);
-  color: var(--lui-focus-color);
-  text-transform: uppercase;
+  font-size: var(--lui-text-medium);
+  text-align: center;
 }
 
 .word-runner-hud__bottom {

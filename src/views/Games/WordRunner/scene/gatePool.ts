@@ -6,14 +6,9 @@ import {
   ROCK_STROKE_WOBBLE
 } from '@/views/Games/RockRunner/config'
 import {
-  GATE_BEAM_DEPTH,
-  GATE_BEAM_HEIGHT,
-  GATE_POST_HEIGHT,
-  GATE_POST_RADIUS,
   GRAVEL,
   LANE_COUNT,
   LANE_WIDTH,
-  POST_COLOR,
   RAMP,
   ROCK,
   SIGN_HEIGHT,
@@ -32,13 +27,7 @@ import type {
   TrackSample
 } from '../types'
 
-const POST_SEGMENTS = 10
-// Posts stand on the lane boundaries, half a lane either side of each lane's centre.
-const HALF_LANE = 0.5
-
 type SharedGeometry = {
-  post: THREE.CylinderGeometry
-  beam: THREE.BoxGeometry
   sign: THREE.PlaneGeometry
   ramp: THREE.BoxGeometry
   rock: THREE.IcosahedronGeometry
@@ -52,17 +41,6 @@ type SharedMaterials = {
 }
 
 const createSharedGeometry = (): SharedGeometry => ({
-  post: new THREE.CylinderGeometry(
-    GATE_POST_RADIUS,
-    GATE_POST_RADIUS,
-    GATE_POST_HEIGHT,
-    POST_SEGMENTS
-  ).translate(0, GATE_POST_HEIGHT / 2, 0),
-  beam: new THREE.BoxGeometry(
-    LANE_COUNT * LANE_WIDTH + GATE_POST_RADIUS * 2,
-    GATE_BEAM_HEIGHT,
-    GATE_BEAM_DEPTH
-  ),
   sign: new THREE.PlaneGeometry(SIGN_WIDTH, SIGN_HEIGHT),
   ramp: new THREE.BoxGeometry(RAMP.width, RAMP.thickness, RAMP.length),
   rock: new THREE.IcosahedronGeometry(ROCK.radius, ROCK.detail),
@@ -86,20 +64,6 @@ const createSign = (geometry: THREE.PlaneGeometry, lane: number): GateSign => {
   mesh.name = `word-sign-${lane}`
   mesh.position.set(laneOffset(lane, LANE_COUNT, LANE_WIDTH), SIGN_Y, 0)
   return { mesh, material, canvas, texture, word: '', state: 'idle' }
-}
-
-const createFrame = (
-  geometry: SharedGeometry,
-  material: THREE.MeshLambertMaterial
-): THREE.Mesh[] => {
-  const posts = Array.from({ length: LANE_COUNT + 1 }, (_, edge) => {
-    const post = new THREE.Mesh(geometry.post, material)
-    post.position.x = laneOffset(edge - HALF_LANE, LANE_COUNT, LANE_WIDTH)
-    return post
-  })
-  const beam = new THREE.Mesh(geometry.beam, material)
-  beam.position.y = GATE_POST_HEIGHT
-  return [...posts, beam]
 }
 
 const createRock = (geometry: SharedGeometry, materials: SharedMaterials): THREE.Mesh => {
@@ -140,15 +104,15 @@ const createSlot = (
 ): GateSlot => {
   const group = new THREE.Group()
   group.name = `word-gate-${slotIndex}`
-  const frameMaterial = new THREE.MeshLambertMaterial({ color: POST_COLOR, transparent: true })
+  // The gate is its words alone, floating across the lanes for the ball to roll through.
   const signs = Array.from({ length: LANE_COUNT }, (_, lane) => createSign(geometry.sign, lane))
-  group.add(...createFrame(geometry, frameMaterial), ...signs.map((sign) => sign.mesh))
+  group.add(...signs.map((sign) => sign.mesh))
   const features = createFeatures(geometry, materials)
   features.group.name = `route-feature-${slotIndex}`
   group.visible = false
   features.group.visible = false
   scene.add(group, features.group)
-  return { group, signs, features, frameMaterial, gateKey: null }
+  return { group, signs, features, gateKey: null }
 }
 
 /** Redraws a sign only when its word or state actually changed, since a redraw re-uploads it. */
@@ -175,7 +139,7 @@ const showFeature = (features: GateFeatures, feature: RouteFeature, correctLane:
   })
 }
 
-/** Dresses a pooled slot as one gate of the lap and the route feature that follows it. */
+/** Dresses a pooled slot as one gate of the text and the route feature that follows it. */
 export const assignSlot = (
   slot: GateSlot,
   gate: Gate,
@@ -203,7 +167,6 @@ export const placeSlot = (
   slot.features.group.visible = opacity > 0
   placeOnTrack(slot.group, gateSample)
   placeOnTrack(slot.features.group, featureSample)
-  slot.frameMaterial.opacity = opacity
   slot.signs.forEach((sign) => {
     sign.material.opacity = opacity
   })
@@ -228,7 +191,6 @@ export const createGatePool = (
   const dispose = (): void => {
     slots.forEach((slot) => {
       scene.remove(slot.group, slot.features.group)
-      slot.frameMaterial.dispose()
       // Each rock's hand-drawn outline is its own mesh, built by attachRockStroke.
       slot.features.rocks.forEach((rock) =>
         rock.children.forEach((outline) => {

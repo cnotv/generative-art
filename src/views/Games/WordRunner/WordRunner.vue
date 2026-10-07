@@ -11,8 +11,9 @@ import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { reportInputSource } from '@/composables/useInputDevice'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
-import { LANGUAGE_PACKS, packFor } from './phrases/languagePacks'
+import { CEFR_DESCRIPTIONS, LANGUAGE_PACKS, nextLevelId, packFor } from './levels/languagePacks'
 import { loadLanguage, saveLanguage } from './game/languagePreference'
+import { unlockedLevelCount } from './game/levelProgress'
 import {
   FOG_COLOR,
   FOG_FAR,
@@ -31,7 +32,8 @@ import {
 import { useWordRun } from './game/useWordRun'
 import { createGatePool } from './scene/gatePool'
 import { createCourse } from './scene/course'
-import { spawnRunner } from './scene/runner'
+import { createBalls } from './scene/balls'
+import { createFinishLine } from './scene/finishLine'
 import WordRunnerStart from './game/WordRunnerStart.vue'
 import WordRunnerHud from './game/WordRunnerHud.vue'
 import WordRunnerSummary from './game/WordRunnerSummary.vue'
@@ -66,28 +68,33 @@ const handleProgress = (progress: LoadProgress): void => {
 
 const reactiveConfig = createReactiveConfig({ run: { speed: RUN_SPEED } })
 
-const run = useWordRun(
-  LANGUAGE_PACKS.flatMap((pack) => pack.phrases),
-  {
-    speed: () => reactiveConfig.value.run.speed
-  }
-)
+const run = useWordRun({ speed: () => reactiveConfig.value.run.speed })
 const {
   phase,
-  phrase,
+  level,
+  report,
   ribbon,
   feedback,
-  lapLabel,
-  isShuffledLap,
-  isRetryLap,
+  standing,
   nextGloss,
-  sentence,
-  summary,
-  upcomingLapNote,
+  translation,
+  sentenceIndex,
+  sentenceCount,
   runSeconds,
   bestSeconds,
   isNewBest
 } = run
+
+// Read again whenever a race ends, since winning one opens the next level.
+const unlockedCount = computed(() =>
+  phase.value === 'running'
+    ? 0
+    : unlockedLevelCount(language.value, languagePack.value.levels.length)
+)
+const nextLevel = computed(() => (level.value ? nextLevelId(level.value.id) : null))
+const startNextLevel = (): void => {
+  if (nextLevel.value) run.start(nextLevel.value)
+}
 
 let destroyControls: () => void = () => undefined
 const disposers: Array<() => void> = []
@@ -113,12 +120,14 @@ onMounted(async () => {
       // Rock Runner's haze, so the course fades into the distance the way its track does.
       scene.fog = new THREE.Fog(FOG_COLOR, FOG_NEAR, FOG_FAR)
       const pool = createGatePool(scene, GATE_POOL_SIZE)
-      const { runner, footLift } = await spawnRunner(scene, world)
-      disposers.push(pool.dispose)
+      const balls = createBalls(scene)
+      const finish = createFinishLine(scene)
+      disposers.push(pool.dispose, balls.dispose, finish.dispose)
       run.attachScene({
         slots: pool.slots,
-        runner,
-        runnerFootLift: footLift,
+        player: balls.player,
+        bot: balls.bot,
+        finishLine: finish.finishLine,
         camera,
         createCourse: (seed) => createCourse(scene, world, seed)
       })
@@ -129,7 +138,7 @@ onMounted(async () => {
       timeline.addAction(
         createDirectionalLightFollowAction(
           () => (sun instanceof THREE.DirectionalLight ? sun : null),
-          () => runner,
+          () => balls.player,
           LIGHT_DIRECTIONAL_POSITION
         )
       )
@@ -155,34 +164,35 @@ onUnmounted(() => {
     <canvas ref="canvas" class="word-runner__canvas"></canvas>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
     <WordRunnerHud
-      v-if="phase === 'running' || phase === 'recap'"
-      :phase="phase"
-      :lap-label="lapLabel"
-      :is-shuffled-lap="isShuffledLap"
-      :is-retry-lap="isRetryLap"
+      v-if="phase === 'running' && level"
+      :level="level"
+      :sentence-index="sentenceIndex"
+      :sentence-count="sentenceCount"
+      :translation="translation"
       :ribbon="ribbon"
       :next-gloss="nextGloss"
       :feedback="feedback"
-      :sentence="sentence"
-      :translation="phrase.translation"
-      :upcoming-lap-note="upcomingLapNote"
+      :standing="standing"
       :run-seconds="runSeconds"
     />
     <WordRunnerStart
       v-if="phase === 'idle' && !loadingVisible"
       v-model:language="language"
-      :phrases="languagePack.phrases"
+      :levels="languagePack.levels"
+      :unlocked-count="unlockedCount"
       :languages="languageOptions"
       @start="run.start"
     />
     <WordRunnerSummary
-      v-if="phase === 'finished'"
-      :phrase="phrase"
-      :summary="summary"
-      :run-seconds="runSeconds"
+      v-if="phase === 'finished' && level && report"
+      :level="level"
+      :report="report"
+      :description="CEFR_DESCRIPTIONS[level.cefr]"
       :best-seconds="bestSeconds"
       :is-new-best="isNewBest"
-      @restart="run.start(phrase.id)"
+      :has-next-level="nextLevel !== null"
+      @next="startNextLevel"
+      @restart="run.start(level.id)"
       @pick="run.backToStart"
     />
   </div>

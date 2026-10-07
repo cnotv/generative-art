@@ -50,7 +50,7 @@ describe('chooseRouteFeature', () => {
 describe('laneOutcome', () => {
   it.each([
     ['ramp', 1, 1, 'boost'],
-    ['ramp', 0, 1, 'none'],
+    ['ramp', 0, 1, 'miss'],
     ['rocks', 2, 2, 'none'],
     ['rocks', 0, 2, 'stumble'],
     ['bend', 0, 0, 'none'],
@@ -68,7 +68,7 @@ describe('speed effects', () => {
     expect(effectSpeedRatio(null)).toBe(1)
   })
 
-  it.each(['boost', 'stumble', 'wide'] as const)(
+  it.each(['boost', 'stumble', 'wide', 'miss'] as const)(
     'a fresh %s effect runs at its own ratio',
     (outcome) => {
       const effect = startEffect(outcome)
