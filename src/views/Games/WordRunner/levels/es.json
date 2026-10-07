@@ -1,0 +1,1612 @@
+{
+  "language": "es",
+  "languageName": "Spanish",
+  "levels": [
+    {
+      "id": "es-a1",
+      "cefr": "A1",
+      "title": "En la cafetería",
+      "situation": "Ordering at a café",
+      "sentences": [
+        {
+          "translation": "Good morning!",
+          "words": [
+            {
+              "opening": "¡",
+              "text": "Buenos",
+              "gloss": "good",
+              "decoys": ["Buenas", "Bueno"]
+            },
+            {
+              "text": "días",
+              "gloss": "morning",
+              "decoys": ["día", "tías"],
+              "punctuation": "!"
+            }
+          ]
+        },
+        {
+          "translation": "A coffee and a croissant, please.",
+          "words": [
+            {
+              "text": "Un",
+              "gloss": "a",
+              "decoys": ["Una", "Uno"]
+            },
+            {
+              "text": "café",
+              "gloss": "coffee",
+              "decoys": ["cafés", "cafetera"]
+            },
+            {
+              "text": "y",
+              "gloss": "and",
+              "decoys": ["e", "o"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["una", "uno"]
+            },
+            {
+              "text": "cruasán",
+              "gloss": "croissant",
+              "decoys": ["cruasanes", "cruzan"],
+              "punctuation": ","
+            },
+            {
+              "text": "por",
+              "gloss": "for",
+              "decoys": ["para", "pero"]
+            },
+            {
+              "text": "favor",
+              "gloss": "please",
+              "decoys": ["favores", "sabor"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "With milk?",
+          "words": [
+            {
+              "opening": "¿",
+              "text": "Con",
+              "gloss": "with",
+              "decoys": ["Como", "Son"]
+            },
+            {
+              "text": "leche",
+              "gloss": "milk",
+              "decoys": ["leches", "lecho"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "Yes, please.",
+          "words": [
+            {
+              "text": "Sí",
+              "gloss": "yes",
+              "decoys": ["Si", "Se"],
+              "punctuation": ","
+            },
+            {
+              "text": "por",
+              "gloss": "for",
+              "decoys": ["para", "pero"]
+            },
+            {
+              "text": "favor",
+              "gloss": "please",
+              "decoys": ["favores", "sabor"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Anything else?",
+          "words": [
+            {
+              "opening": "¿",
+              "text": "Algo",
+              "gloss": "anything",
+              "decoys": ["Alga", "Algún"]
+            },
+            {
+              "text": "más",
+              "gloss": "else",
+              "decoys": ["mas", "mes"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "No, thank you.",
+          "words": [
+            {
+              "text": "No",
+              "gloss": "no",
+              "decoys": ["Ni", "Nos"],
+              "punctuation": ","
+            },
+            {
+              "text": "gracias",
+              "gloss": "thank you",
+              "decoys": ["gracia", "grasas"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "That comes to five euros.",
+          "words": [
+            {
+              "text": "Son",
+              "gloss": "(they) are",
+              "decoys": ["Es", "Sois"]
+            },
+            {
+              "text": "cinco",
+              "gloss": "five",
+              "decoys": ["quince", "cinto"]
+            },
+            {
+              "text": "euros",
+              "gloss": "euros",
+              "decoys": ["euro", "eros"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Here you are.",
+          "words": [
+            {
+              "text": "Aquí",
+              "gloss": "here",
+              "decoys": ["Aquel", "Así"]
+            },
+            {
+              "text": "tiene",
+              "gloss": "(you) have",
+              "decoys": ["tienen", "viene"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Have a nice day!",
+          "words": [
+            {
+              "opening": "¡",
+              "text": "Que",
+              "gloss": "may",
+              "decoys": ["Qué", "Quien"]
+            },
+            {
+              "text": "tenga",
+              "gloss": "(you) have",
+              "decoys": ["tiene", "tengo"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["una", "uno"]
+            },
+            {
+              "text": "buen",
+              "gloss": "nice",
+              "decoys": ["bueno", "buena"]
+            },
+            {
+              "text": "día",
+              "gloss": "day",
+              "decoys": ["días", "tía"],
+              "punctuation": "!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-a2",
+      "cefr": "A2",
+      "title": "En la estación",
+      "situation": "Buying a train ticket",
+      "sentences": [
+        {
+          "translation": "Excuse me, when does the next train to Madrid leave?",
+          "words": [
+            {
+              "text": "Perdone",
+              "gloss": "excuse me",
+              "decoys": ["Perdono", "Perdido"],
+              "punctuation": ","
+            },
+            {
+              "opening": "¿",
+              "text": "cuándo",
+              "gloss": "when",
+              "decoys": ["cuando", "cuanto"]
+            },
+            {
+              "text": "sale",
+              "gloss": "leaves",
+              "decoys": ["salte", "sala"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "próximo",
+              "gloss": "next",
+              "decoys": ["próxima", "prójimo"]
+            },
+            {
+              "text": "tren",
+              "gloss": "train",
+              "decoys": ["tres", "trenes"]
+            },
+            {
+              "text": "a",
+              "gloss": "to",
+              "decoys": ["al", "ha"]
+            },
+            {
+              "text": "Madrid",
+              "gloss": "Madrid",
+              "decoys": ["Madera", "Medina"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "At ten past nine, from platform four.",
+          "words": [
+            {
+              "text": "A",
+              "gloss": "at",
+              "decoys": ["Al", "Ha"]
+            },
+            {
+              "text": "las",
+              "gloss": "the",
+              "decoys": ["los", "la"]
+            },
+            {
+              "text": "nueve",
+              "gloss": "nine",
+              "decoys": ["nueva", "nieve"]
+            },
+            {
+              "text": "y",
+              "gloss": "and",
+              "decoys": ["e", "o"]
+            },
+            {
+              "text": "diez",
+              "gloss": "ten",
+              "decoys": ["dice", "doce"],
+              "punctuation": ","
+            },
+            {
+              "text": "desde",
+              "gloss": "from",
+              "decoys": ["después", "dentro"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "andén",
+              "gloss": "platform",
+              "decoys": ["anden", "andes"]
+            },
+            {
+              "text": "cuatro",
+              "gloss": "four",
+              "decoys": ["cuarto", "catorce"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "I would like a return ticket, please.",
+          "words": [
+            {
+              "text": "Quisiera",
+              "gloss": "I would like",
+              "decoys": ["Quisieron", "Quisiste"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["una", "uno"]
+            },
+            {
+              "text": "billete",
+              "gloss": "ticket",
+              "decoys": ["billetes", "billar"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "ida",
+              "gloss": "outward",
+              "decoys": ["idea", "ido"]
+            },
+            {
+              "text": "y",
+              "gloss": "and",
+              "decoys": ["e", "o"]
+            },
+            {
+              "text": "vuelta",
+              "gloss": "return",
+              "decoys": ["vuelto", "vuelva"],
+              "punctuation": ","
+            },
+            {
+              "text": "por",
+              "gloss": "for",
+              "decoys": ["para", "pero"]
+            },
+            {
+              "text": "favor",
+              "gloss": "please",
+              "decoys": ["favores", "sabor"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Do you have a discount card?",
+          "words": [
+            {
+              "opening": "¿",
+              "text": "Tiene",
+              "gloss": "(you) have",
+              "decoys": ["Tienes", "Viene"]
+            },
+            {
+              "text": "tarjeta",
+              "gloss": "card",
+              "decoys": ["tarjetas", "tarea"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "descuento",
+              "gloss": "discount",
+              "decoys": ["descuenta", "descubierto"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "No, unfortunately not.",
+          "words": [
+            {
+              "text": "No",
+              "gloss": "no",
+              "decoys": ["Ni", "Nos"],
+              "punctuation": ","
+            },
+            {
+              "text": "por",
+              "gloss": "by",
+              "decoys": ["para", "pero"]
+            },
+            {
+              "text": "desgracia",
+              "gloss": "unfortunately",
+              "decoys": ["desgracias", "gracia"]
+            },
+            {
+              "text": "no",
+              "gloss": "not",
+              "decoys": ["ni", "nos"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Then it costs forty-two euros.",
+          "words": [
+            {
+              "text": "Entonces",
+              "gloss": "then",
+              "decoys": ["Entonar", "Enfrente"]
+            },
+            {
+              "text": "cuesta",
+              "gloss": "costs",
+              "decoys": ["cuestan", "cuenta"]
+            },
+            {
+              "text": "cuarenta",
+              "gloss": "forty",
+              "decoys": ["cuarto", "catorce"]
+            },
+            {
+              "text": "y",
+              "gloss": "and",
+              "decoys": ["e", "o"]
+            },
+            {
+              "text": "dos",
+              "gloss": "two",
+              "decoys": ["doce", "dios"]
+            },
+            {
+              "text": "euros",
+              "gloss": "euros",
+              "decoys": ["euro", "eros"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Can I pay by card?",
+          "words": [
+            {
+              "opening": "¿",
+              "text": "Puedo",
+              "gloss": "can I",
+              "decoys": ["Puede", "Pudo"]
+            },
+            {
+              "text": "pagar",
+              "gloss": "pay",
+              "decoys": ["pegar", "pago"]
+            },
+            {
+              "text": "con",
+              "gloss": "with",
+              "decoys": ["como", "son"]
+            },
+            {
+              "text": "tarjeta",
+              "gloss": "card",
+              "decoys": ["tarjetas", "tarea"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "Of course. Have a good trip!",
+          "words": [
+            {
+              "text": "Claro",
+              "gloss": "of course",
+              "decoys": ["Clara", "Caro"],
+              "punctuation": "."
+            },
+            {
+              "opening": "¡",
+              "text": "Buen",
+              "gloss": "good",
+              "decoys": ["Bueno", "Buena"]
+            },
+            {
+              "text": "viaje",
+              "gloss": "trip",
+              "decoys": ["viejo", "viajes"],
+              "punctuation": "!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-b1",
+      "cefr": "B1",
+      "title": "El fin de semana",
+      "situation": "Telling a friend about the weekend",
+      "sentences": [
+        {
+          "translation": "Last weekend I went to the mountains with my sister.",
+          "words": [
+            {
+              "text": "El",
+              "gloss": "the",
+              "decoys": ["Lo", "La"]
+            },
+            {
+              "text": "fin",
+              "gloss": "end",
+              "decoys": ["fino", "fines"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "semana",
+              "gloss": "week",
+              "decoys": ["semanas", "semanal"]
+            },
+            {
+              "text": "pasado",
+              "gloss": "last",
+              "decoys": ["pasada", "pesado"]
+            },
+            {
+              "text": "fui",
+              "gloss": "I went",
+              "decoys": ["fue", "fuimos"]
+            },
+            {
+              "text": "a",
+              "gloss": "to",
+              "decoys": ["al", "ha"]
+            },
+            {
+              "text": "la",
+              "gloss": "the",
+              "decoys": ["el", "las"]
+            },
+            {
+              "text": "montaña",
+              "gloss": "mountains",
+              "decoys": ["montañas", "mañana"]
+            },
+            {
+              "text": "con",
+              "gloss": "with",
+              "decoys": ["como", "son"]
+            },
+            {
+              "text": "mi",
+              "gloss": "my",
+              "decoys": ["me", "mí"]
+            },
+            {
+              "text": "hermana",
+              "gloss": "sister",
+              "decoys": ["hermano", "hermanas"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "On Saturday it rained all day, so we stayed in the hut and played cards.",
+          "words": [
+            {
+              "text": "El",
+              "gloss": "on (the)",
+              "decoys": ["Lo", "La"]
+            },
+            {
+              "text": "sábado",
+              "gloss": "Saturday",
+              "decoys": ["sábana", "sabido"]
+            },
+            {
+              "text": "llovió",
+              "gloss": "it rained",
+              "decoys": ["llueve", "llovido"]
+            },
+            {
+              "text": "todo",
+              "gloss": "all",
+              "decoys": ["toda", "todos"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "día",
+              "gloss": "day",
+              "decoys": ["días", "tía"],
+              "punctuation": ","
+            },
+            {
+              "text": "así",
+              "gloss": "so",
+              "decoys": ["aquí", "asa"]
+            },
+            {
+              "text": "que",
+              "gloss": "that",
+              "decoys": ["qué", "quien"]
+            },
+            {
+              "text": "nos",
+              "gloss": "ourselves",
+              "decoys": ["no", "os"]
+            },
+            {
+              "text": "quedamos",
+              "gloss": "(we) stayed",
+              "decoys": ["quedemos", "quedaron"]
+            },
+            {
+              "text": "en",
+              "gloss": "in",
+              "decoys": ["un", "es"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "refugio",
+              "gloss": "hut",
+              "decoys": ["refrigerio", "refugiado"]
+            },
+            {
+              "text": "y",
+              "gloss": "and",
+              "decoys": ["e", "o"]
+            },
+            {
+              "text": "jugamos",
+              "gloss": "(we) played",
+              "decoys": ["jugaremos", "juzgamos"]
+            },
+            {
+              "text": "a",
+              "gloss": "at",
+              "decoys": ["al", "ha"]
+            },
+            {
+              "text": "las",
+              "gloss": "the",
+              "decoys": ["los", "la"]
+            },
+            {
+              "text": "cartas",
+              "gloss": "cards",
+              "decoys": ["cartera", "carta"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "On Sunday the sun came out and we climbed up to the summit.",
+          "words": [
+            {
+              "text": "El",
+              "gloss": "on (the)",
+              "decoys": ["Lo", "La"]
+            },
+            {
+              "text": "domingo",
+              "gloss": "Sunday",
+              "decoys": ["dominó", "dominio"]
+            },
+            {
+              "text": "salió",
+              "gloss": "came out",
+              "decoys": ["sale", "salido"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "sol",
+              "gloss": "sun",
+              "decoys": ["sal", "sola"]
+            },
+            {
+              "text": "y",
+              "gloss": "and",
+              "decoys": ["e", "o"]
+            },
+            {
+              "text": "subimos",
+              "gloss": "(we) climbed",
+              "decoys": ["subieron", "sabemos"]
+            },
+            {
+              "text": "hasta",
+              "gloss": "up to",
+              "decoys": ["asta", "gasta"]
+            },
+            {
+              "text": "la",
+              "gloss": "the",
+              "decoys": ["el", "las"]
+            },
+            {
+              "text": "cumbre",
+              "gloss": "summit",
+              "decoys": ["cumbres", "costumbre"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "The view was wonderful, and I would like to go back next summer.",
+          "words": [
+            {
+              "text": "La",
+              "gloss": "the",
+              "decoys": ["El", "Las"]
+            },
+            {
+              "text": "vista",
+              "gloss": "view",
+              "decoys": ["visto", "pista"]
+            },
+            {
+              "text": "era",
+              "gloss": "was",
+              "decoys": ["eras", "eran"]
+            },
+            {
+              "text": "maravillosa",
+              "gloss": "wonderful",
+              "decoys": ["maravilloso", "maravillas"],
+              "punctuation": ","
+            },
+            {
+              "text": "y",
+              "gloss": "and",
+              "decoys": ["e", "o"]
+            },
+            {
+              "text": "me",
+              "gloss": "to me",
+              "decoys": ["mi", "mí"]
+            },
+            {
+              "text": "gustaría",
+              "gloss": "would like",
+              "decoys": ["gustarían", "gustaba"]
+            },
+            {
+              "text": "volver",
+              "gloss": "go back",
+              "decoys": ["volar", "volví"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "próximo",
+              "gloss": "next",
+              "decoys": ["próxima", "prójimo"]
+            },
+            {
+              "text": "verano",
+              "gloss": "summer",
+              "decoys": ["veranos", "ventana"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-b2",
+      "cefr": "B2",
+      "title": "Llamada al casero",
+      "situation": "Calling the landlord about the heating",
+      "sentences": [
+        {
+          "translation": "I am calling because the heating in my flat has not been working for a week.",
+          "words": [
+            {
+              "text": "Le",
+              "gloss": "you (formal)",
+              "decoys": ["Les", "Se"]
+            },
+            {
+              "text": "llamo",
+              "gloss": "I am calling",
+              "decoys": ["llama", "llamé"]
+            },
+            {
+              "text": "porque",
+              "gloss": "because",
+              "decoys": ["porqué", "parque"]
+            },
+            {
+              "text": "la",
+              "gloss": "the",
+              "decoys": ["el", "las"]
+            },
+            {
+              "text": "calefacción",
+              "gloss": "heating",
+              "decoys": ["calefactor", "calificación"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "mi",
+              "gloss": "my",
+              "decoys": ["me", "mí"]
+            },
+            {
+              "text": "piso",
+              "gloss": "flat",
+              "decoys": ["peso", "pisó"]
+            },
+            {
+              "text": "no",
+              "gloss": "not",
+              "decoys": ["ni", "nos"]
+            },
+            {
+              "text": "funciona",
+              "gloss": "works",
+              "decoys": ["funcionan", "función"]
+            },
+            {
+              "text": "desde",
+              "gloss": "since",
+              "decoys": ["después", "dentro"]
+            },
+            {
+              "text": "hace",
+              "gloss": "ago",
+              "decoys": ["hacía", "hice"]
+            },
+            {
+              "text": "una",
+              "gloss": "a",
+              "decoys": ["un", "uno"]
+            },
+            {
+              "text": "semana",
+              "gloss": "week",
+              "decoys": ["semanas", "semanal"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "I have already reported the problem twice, but nobody has come yet.",
+          "words": [
+            {
+              "text": "Ya",
+              "gloss": "already",
+              "decoys": ["Yo", "Va"]
+            },
+            {
+              "text": "he",
+              "gloss": "I have",
+              "decoys": ["ha", "has"]
+            },
+            {
+              "text": "avisado",
+              "gloss": "reported",
+              "decoys": ["avisada", "aviso"]
+            },
+            {
+              "text": "del",
+              "gloss": "of the",
+              "decoys": ["de", "al"]
+            },
+            {
+              "text": "problema",
+              "gloss": "problem",
+              "decoys": ["problemas", "programa"]
+            },
+            {
+              "text": "dos",
+              "gloss": "two",
+              "decoys": ["doce", "dios"]
+            },
+            {
+              "text": "veces",
+              "gloss": "times",
+              "decoys": ["vez", "voces"],
+              "punctuation": ","
+            },
+            {
+              "text": "pero",
+              "gloss": "but",
+              "decoys": ["perro", "para"]
+            },
+            {
+              "text": "todavía",
+              "gloss": "yet",
+              "decoys": ["toda", "todas"]
+            },
+            {
+              "text": "no",
+              "gloss": "not",
+              "decoys": ["ni", "nos"]
+            },
+            {
+              "text": "ha",
+              "gloss": "has",
+              "decoys": ["he", "a"]
+            },
+            {
+              "text": "venido",
+              "gloss": "come",
+              "decoys": ["venida", "vendido"]
+            },
+            {
+              "text": "nadie",
+              "gloss": "nobody",
+              "decoys": ["nada", "nadar"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Since it is getting colder, I would ask you to send a technician as soon as possible.",
+          "words": [
+            {
+              "text": "Como",
+              "gloss": "since",
+              "decoys": ["Cómo", "Coma"]
+            },
+            {
+              "text": "hace",
+              "gloss": "it is",
+              "decoys": ["hacen", "hice"]
+            },
+            {
+              "text": "cada",
+              "gloss": "each",
+              "decoys": ["cara", "casa"]
+            },
+            {
+              "text": "vez",
+              "gloss": "time",
+              "decoys": ["voz", "veces"]
+            },
+            {
+              "text": "más",
+              "gloss": "more",
+              "decoys": ["mas", "mes"]
+            },
+            {
+              "text": "frío",
+              "gloss": "cold",
+              "decoys": ["frió", "fríos"],
+              "punctuation": ","
+            },
+            {
+              "text": "le",
+              "gloss": "you (formal)",
+              "decoys": ["les", "se"]
+            },
+            {
+              "text": "pediría",
+              "gloss": "I would ask",
+              "decoys": ["pedirías", "podría"]
+            },
+            {
+              "text": "que",
+              "gloss": "that",
+              "decoys": ["qué", "quien"]
+            },
+            {
+              "text": "enviara",
+              "gloss": "(you) send",
+              "decoys": ["enviaba", "enviará"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["una", "uno"]
+            },
+            {
+              "text": "técnico",
+              "gloss": "technician",
+              "decoys": ["técnica", "tónico"]
+            },
+            {
+              "text": "lo",
+              "gloss": "as",
+              "decoys": ["la", "le"]
+            },
+            {
+              "text": "antes",
+              "gloss": "soon",
+              "decoys": ["ante", "entes"]
+            },
+            {
+              "text": "posible",
+              "gloss": "possible",
+              "decoys": ["posibles", "pasable"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Otherwise I will unfortunately have to reduce the rent.",
+          "words": [
+            {
+              "text": "De",
+              "gloss": "of",
+              "decoys": ["Del", "Des"]
+            },
+            {
+              "text": "lo",
+              "gloss": "the",
+              "decoys": ["la", "le"]
+            },
+            {
+              "text": "contrario",
+              "gloss": "otherwise",
+              "decoys": ["contraria", "contrato"],
+              "punctuation": ","
+            },
+            {
+              "text": "por",
+              "gloss": "by",
+              "decoys": ["para", "pero"]
+            },
+            {
+              "text": "desgracia",
+              "gloss": "unfortunately",
+              "decoys": ["desgracias", "gracia"],
+              "punctuation": ","
+            },
+            {
+              "text": "tendré",
+              "gloss": "I will have",
+              "decoys": ["tendrá", "tendrán"]
+            },
+            {
+              "text": "que",
+              "gloss": "to",
+              "decoys": ["qué", "quien"]
+            },
+            {
+              "text": "reducir",
+              "gloss": "reduce",
+              "decoys": ["reduzca", "reducido"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "alquiler",
+              "gloss": "rent",
+              "decoys": ["alquilar", "alquimia"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-c1",
+      "cefr": "C1",
+      "title": "El teletrabajo",
+      "situation": "Discussing remote work",
+      "sentences": [
+        {
+          "translation": "Although working from home saves time, people often underestimate how much informal exchange is lost.",
+          "words": [
+            {
+              "text": "Aunque",
+              "gloss": "although",
+              "decoys": ["Aun", "Así"]
+            },
+            {
+              "text": "trabajar",
+              "gloss": "working",
+              "decoys": ["trabajo", "trabajara"]
+            },
+            {
+              "text": "desde",
+              "gloss": "from",
+              "decoys": ["después", "dentro"]
+            },
+            {
+              "text": "casa",
+              "gloss": "home",
+              "decoys": ["caza", "cosa"]
+            },
+            {
+              "text": "ahorra",
+              "gloss": "saves",
+              "decoys": ["ahorre", "ahora"]
+            },
+            {
+              "text": "tiempo",
+              "gloss": "time",
+              "decoys": ["tiento", "templo"],
+              "punctuation": ","
+            },
+            {
+              "text": "a",
+              "gloss": "(often)",
+              "decoys": ["al", "ha"]
+            },
+            {
+              "text": "menudo",
+              "gloss": "often",
+              "decoys": ["menuda", "minuto"]
+            },
+            {
+              "text": "se",
+              "gloss": "one (impers.)",
+              "decoys": ["si", "sé"]
+            },
+            {
+              "text": "subestima",
+              "gloss": "underestimates",
+              "decoys": ["subestiman", "sobrestima"]
+            },
+            {
+              "text": "cuánto",
+              "gloss": "how much",
+              "decoys": ["cuanto", "cuánta"]
+            },
+            {
+              "text": "intercambio",
+              "gloss": "exchange",
+              "decoys": ["intercambia", "intercambios"]
+            },
+            {
+              "text": "informal",
+              "gloss": "informal",
+              "decoys": ["informe", "informales"]
+            },
+            {
+              "text": "se",
+              "gloss": "itself",
+              "decoys": ["si", "sé"]
+            },
+            {
+              "text": "pierde",
+              "gloss": "is lost",
+              "decoys": ["pierden", "pierda"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Many ideas do not arise in meetings, but over a coffee in the corridor.",
+          "words": [
+            {
+              "text": "Muchas",
+              "gloss": "many",
+              "decoys": ["Muchos", "Mucha"]
+            },
+            {
+              "text": "ideas",
+              "gloss": "ideas",
+              "decoys": ["idea", "idas"]
+            },
+            {
+              "text": "no",
+              "gloss": "not",
+              "decoys": ["ni", "nos"]
+            },
+            {
+              "text": "surgen",
+              "gloss": "arise",
+              "decoys": ["surge", "surjan"]
+            },
+            {
+              "text": "en",
+              "gloss": "in",
+              "decoys": ["un", "es"]
+            },
+            {
+              "text": "las",
+              "gloss": "the",
+              "decoys": ["los", "la"]
+            },
+            {
+              "text": "reuniones",
+              "gloss": "meetings",
+              "decoys": ["reunión", "reúnen"],
+              "punctuation": ","
+            },
+            {
+              "text": "sino",
+              "gloss": "but rather",
+              "decoys": ["pero", "sido"]
+            },
+            {
+              "text": "tomando",
+              "gloss": "over (having)",
+              "decoys": ["tomado", "tomamos"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["una", "uno"]
+            },
+            {
+              "text": "café",
+              "gloss": "coffee",
+              "decoys": ["cafés", "cafetera"]
+            },
+            {
+              "text": "en",
+              "gloss": "in",
+              "decoys": ["un", "es"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "pasillo",
+              "gloss": "corridor",
+              "decoys": ["pasillos", "pastilla"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Companies should therefore not simply abolish the office, but rethink it as a place for working together.",
+          "words": [
+            {
+              "text": "Por",
+              "gloss": "for",
+              "decoys": ["Para", "Pero"]
+            },
+            {
+              "text": "eso",
+              "gloss": "that",
+              "decoys": ["esa", "ese"],
+              "punctuation": ","
+            },
+            {
+              "text": "las",
+              "gloss": "the",
+              "decoys": ["los", "la"]
+            },
+            {
+              "text": "empresas",
+              "gloss": "companies",
+              "decoys": ["empresa", "impresas"]
+            },
+            {
+              "text": "no",
+              "gloss": "not",
+              "decoys": ["ni", "nos"]
+            },
+            {
+              "text": "deberían",
+              "gloss": "should",
+              "decoys": ["debería", "deberíais"]
+            },
+            {
+              "text": "simplemente",
+              "gloss": "simply",
+              "decoys": ["simple", "simples"]
+            },
+            {
+              "text": "suprimir",
+              "gloss": "abolish",
+              "decoys": ["suprimen", "oprimir"]
+            },
+            {
+              "text": "la",
+              "gloss": "the",
+              "decoys": ["el", "las"]
+            },
+            {
+              "text": "oficina",
+              "gloss": "office",
+              "decoys": ["oficio", "oficinas"],
+              "punctuation": ","
+            },
+            {
+              "text": "sino",
+              "gloss": "but rather",
+              "decoys": ["pero", "sido"]
+            },
+            {
+              "text": "repensarla",
+              "gloss": "rethink it",
+              "decoys": ["repensarlo", "repasarla"]
+            },
+            {
+              "text": "como",
+              "gloss": "as",
+              "decoys": ["cómo", "coma"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["una", "uno"]
+            },
+            {
+              "text": "espacio",
+              "gloss": "space",
+              "decoys": ["espacios", "especie"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "trabajo",
+              "gloss": "work",
+              "decoys": ["trabaja", "trabajar"]
+            },
+            {
+              "text": "en",
+              "gloss": "in",
+              "decoys": ["un", "es"]
+            },
+            {
+              "text": "equipo",
+              "gloss": "team",
+              "decoys": ["equipa", "equipaje"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "es-c2",
+      "cefr": "C2",
+      "title": "Lengua y pensamiento",
+      "situation": "Reflecting on language and thought",
+      "sentences": [
+        {
+          "translation": "Whoever learns a language acquires not merely words, but a way of seeing the world.",
+          "words": [
+            {
+              "text": "Quien",
+              "gloss": "whoever",
+              "decoys": ["Quién", "Quienes"]
+            },
+            {
+              "text": "aprende",
+              "gloss": "learns",
+              "decoys": ["aprenden", "emprende"]
+            },
+            {
+              "text": "una",
+              "gloss": "a",
+              "decoys": ["un", "uno"]
+            },
+            {
+              "text": "lengua",
+              "gloss": "language",
+              "decoys": ["lenguaje", "lengüeta"]
+            },
+            {
+              "text": "no",
+              "gloss": "not",
+              "decoys": ["ni", "nos"]
+            },
+            {
+              "text": "adquiere",
+              "gloss": "acquires",
+              "decoys": ["adquiera", "adquieren"]
+            },
+            {
+              "text": "solo",
+              "gloss": "merely",
+              "decoys": ["sola", "suelo"]
+            },
+            {
+              "text": "palabras",
+              "gloss": "words",
+              "decoys": ["palabra", "parábolas"],
+              "punctuation": ","
+            },
+            {
+              "text": "sino",
+              "gloss": "but rather",
+              "decoys": ["pero", "sido"]
+            },
+            {
+              "text": "una",
+              "gloss": "a",
+              "decoys": ["un", "uno"]
+            },
+            {
+              "text": "manera",
+              "gloss": "way",
+              "decoys": ["maneras", "madera"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "ver",
+              "gloss": "seeing",
+              "decoys": ["vez", "veo"]
+            },
+            {
+              "text": "el",
+              "gloss": "the",
+              "decoys": ["la", "lo"]
+            },
+            {
+              "text": "mundo",
+              "gloss": "world",
+              "decoys": ["mudo", "mundos"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Every idiom carries traces of a history that no dictionary fully captures.",
+          "words": [
+            {
+              "text": "Cada",
+              "gloss": "every",
+              "decoys": ["Cara", "Casa"]
+            },
+            {
+              "text": "modismo",
+              "gloss": "idiom",
+              "decoys": ["modismos", "modernismo"]
+            },
+            {
+              "text": "lleva",
+              "gloss": "carries",
+              "decoys": ["llevan", "lleve"]
+            },
+            {
+              "text": "huellas",
+              "gloss": "traces",
+              "decoys": ["huelgas", "huevas"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "una",
+              "gloss": "a",
+              "decoys": ["un", "uno"]
+            },
+            {
+              "text": "historia",
+              "gloss": "history",
+              "decoys": ["histeria", "historial"]
+            },
+            {
+              "text": "que",
+              "gloss": "that",
+              "decoys": ["qué", "quien"]
+            },
+            {
+              "text": "ningún",
+              "gloss": "no",
+              "decoys": ["ninguna", "ninguno"]
+            },
+            {
+              "text": "diccionario",
+              "gloss": "dictionary",
+              "decoys": ["diccionarios", "dicción"]
+            },
+            {
+              "text": "recoge",
+              "gloss": "captures",
+              "decoys": ["recogen", "escoge"]
+            },
+            {
+              "text": "del",
+              "gloss": "(fully)",
+              "decoys": ["de", "al"]
+            },
+            {
+              "text": "todo",
+              "gloss": "fully",
+              "decoys": ["toda", "todos"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Perhaps that is why we only truly master a language once we can play with its ambiguities.",
+          "words": [
+            {
+              "text": "Quizá",
+              "gloss": "perhaps",
+              "decoys": ["Quiso", "Quise"]
+            },
+            {
+              "text": "por",
+              "gloss": "for",
+              "decoys": ["para", "pero"]
+            },
+            {
+              "text": "eso",
+              "gloss": "that",
+              "decoys": ["esa", "ese"]
+            },
+            {
+              "text": "solo",
+              "gloss": "only",
+              "decoys": ["sola", "suelo"]
+            },
+            {
+              "text": "dominamos",
+              "gloss": "(we) master",
+              "decoys": ["dominan", "domamos"]
+            },
+            {
+              "text": "de",
+              "gloss": "(truly)",
+              "decoys": ["del", "des"]
+            },
+            {
+              "text": "verdad",
+              "gloss": "truly",
+              "decoys": ["verdades", "verdugo"]
+            },
+            {
+              "text": "una",
+              "gloss": "a",
+              "decoys": ["un", "uno"]
+            },
+            {
+              "text": "lengua",
+              "gloss": "language",
+              "decoys": ["lenguaje", "lengüeta"]
+            },
+            {
+              "text": "cuando",
+              "gloss": "when",
+              "decoys": ["cuándo", "cuanto"]
+            },
+            {
+              "text": "sabemos",
+              "gloss": "we can",
+              "decoys": ["sabremos", "sabéis"]
+            },
+            {
+              "text": "jugar",
+              "gloss": "play",
+              "decoys": ["juzgar", "jugado"]
+            },
+            {
+              "text": "con",
+              "gloss": "with",
+              "decoys": ["como", "son"]
+            },
+            {
+              "text": "sus",
+              "gloss": "its",
+              "decoys": ["su", "tus"]
+            },
+            {
+              "text": "ambigüedades",
+              "gloss": "ambiguities",
+              "decoys": ["ambigüedad", "ambiguas"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

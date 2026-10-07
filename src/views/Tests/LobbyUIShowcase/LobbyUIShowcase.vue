@@ -477,7 +477,7 @@ const closeDialog = (outcome: string): void => {
           />
         </LobbyUIRow>
 
-        <LobbyUIRow v-for="field in configFields" :key="field.key" :label="field.label">
+        <LobbyUIRow v-for="field in configFields" :key="field.key" :label="field.label" inline>
           <LobbyUIConfigField :field="field" @change="onFieldChange" />
         </LobbyUIRow>
 

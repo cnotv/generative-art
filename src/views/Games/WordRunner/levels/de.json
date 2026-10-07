@@ -1,0 +1,658 @@
+{
+  "language": "de",
+  "languageName": "German",
+  "levels": [
+    {
+      "id": "de-a1",
+      "cefr": "A1",
+      "title": "Im Café",
+      "situation": "Ordering at a café",
+      "sentences": [
+        {
+          "translation": "Good morning!",
+          "words": [
+            { "text": "Guten", "gloss": "good", "decoys": ["Gute", "Guter"] },
+            {
+              "text": "Morgen",
+              "gloss": "morning",
+              "decoys": ["Morgens", "Borgen"],
+              "punctuation": "!"
+            }
+          ]
+        },
+        {
+          "translation": "A coffee and a croissant, please.",
+          "words": [
+            { "text": "Einen", "gloss": "a", "decoys": ["Einem", "Eine"] },
+            { "text": "Kaffee", "gloss": "coffee", "decoys": ["Kaffees", "Café"] },
+            { "text": "und", "gloss": "and", "decoys": ["um", "uns"] },
+            { "text": "ein", "gloss": "a", "decoys": ["eins", "einer"] },
+            {
+              "text": "Croissant",
+              "gloss": "croissant",
+              "decoys": ["Croissants", "Croisant"],
+              "punctuation": ","
+            },
+            {
+              "text": "bitte",
+              "gloss": "please",
+              "decoys": ["bitten", "bitter"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "With milk?",
+          "words": [
+            { "text": "Mit", "gloss": "with", "decoys": ["Mir", "Mitte"] },
+            { "text": "Milch", "gloss": "milk", "decoys": ["Milz", "Mulch"], "punctuation": "?" }
+          ]
+        },
+        {
+          "translation": "Yes, please.",
+          "words": [
+            { "text": "Ja", "gloss": "yes", "decoys": ["Je", "Da"], "punctuation": "," },
+            {
+              "text": "gerne",
+              "gloss": "gladly",
+              "decoys": ["ferne", "gerade"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Anything else?",
+          "words": [
+            { "text": "Sonst", "gloss": "else", "decoys": ["Sonne", "Sanft"] },
+            { "text": "noch", "gloss": "still", "decoys": ["nach", "doch"] },
+            { "text": "etwas", "gloss": "anything", "decoys": ["etwa", "echt"], "punctuation": "?" }
+          ]
+        },
+        {
+          "translation": "No, thank you.",
+          "words": [
+            { "text": "Nein", "gloss": "no", "decoys": ["Neun", "Kein"], "punctuation": "," },
+            {
+              "text": "danke",
+              "gloss": "thank you",
+              "decoys": ["Dank", "denke"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "That comes to five euros.",
+          "words": [
+            { "text": "Das", "gloss": "that", "decoys": ["Der", "Dass"] },
+            { "text": "macht", "gloss": "comes to", "decoys": ["mach", "machst"] },
+            { "text": "fünf", "gloss": "five", "decoys": ["fünfte", "Funk"] },
+            { "text": "Euro", "gloss": "euros", "decoys": ["Euros", "Eure"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Here you are.",
+          "words": [
+            { "text": "Hier", "gloss": "here", "decoys": ["Heer", "Ihr"], "punctuation": "," },
+            {
+              "text": "bitte",
+              "gloss": "please",
+              "decoys": ["bitten", "Butter"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Have a nice day!",
+          "words": [
+            { "text": "Einen", "gloss": "a", "decoys": ["Einem", "Einer"] },
+            { "text": "schönen", "gloss": "nice", "decoys": ["schöne", "schönem"] },
+            { "text": "Tag", "gloss": "day", "decoys": ["Tage", "Tal"] },
+            { "text": "noch", "gloss": "still", "decoys": ["nach", "nicht"], "punctuation": "!" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "de-a2",
+      "cefr": "A2",
+      "title": "Am Bahnhof",
+      "situation": "Buying a train ticket",
+      "sentences": [
+        {
+          "translation": "Excuse me, when does the next train to Berlin leave?",
+          "words": [
+            {
+              "text": "Entschuldigung",
+              "gloss": "excuse me",
+              "decoys": ["Entschuldigen", "Entschädigung"],
+              "punctuation": ","
+            },
+            { "text": "wann", "gloss": "when", "decoys": ["wenn", "dann"] },
+            { "text": "fährt", "gloss": "leaves", "decoys": ["fahrt", "fährst"] },
+            { "text": "der", "gloss": "the", "decoys": ["die", "den"] },
+            { "text": "nächste", "gloss": "next", "decoys": ["nächsten", "nächster"] },
+            { "text": "Zug", "gloss": "train", "decoys": ["Zeug", "Züge"] },
+            { "text": "nach", "gloss": "to", "decoys": ["noch", "nah"] },
+            {
+              "text": "Berlin",
+              "gloss": "Berlin",
+              "decoys": ["Berliner", "Berlins"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "At ten past nine, from platform four.",
+          "words": [
+            { "text": "Um", "gloss": "at", "decoys": ["Am", "Im"] },
+            { "text": "zehn", "gloss": "ten", "decoys": ["zehnte", "Zahn"] },
+            { "text": "nach", "gloss": "past", "decoys": ["noch", "nah"] },
+            { "text": "neun", "gloss": "nine", "decoys": ["nein", "neue"], "punctuation": "," },
+            { "text": "von", "gloss": "from", "decoys": ["vor", "voll"] },
+            { "text": "Gleis", "gloss": "platform", "decoys": ["Gleise", "Glas"] },
+            { "text": "vier", "gloss": "four", "decoys": ["vierte", "Bier"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "I would like a return ticket, please.",
+          "words": [
+            { "text": "Ich", "gloss": "I", "decoys": ["Ihr", "Mich"] },
+            { "text": "möchte", "gloss": "would like", "decoys": ["möchten", "mochte"] },
+            { "text": "eine", "gloss": "a", "decoys": ["einen", "ein"] },
+            {
+              "text": "Rückfahrkarte",
+              "gloss": "return ticket",
+              "decoys": ["Rückfahrkarten", "Hinfahrkarte"],
+              "punctuation": ","
+            },
+            {
+              "text": "bitte",
+              "gloss": "please",
+              "decoys": ["bitten", "bitter"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Do you have a discount card?",
+          "words": [
+            { "text": "Haben", "gloss": "(do you) have", "decoys": ["Habe", "Hast"] },
+            { "text": "Sie", "gloss": "you", "decoys": ["Sei", "Sich"] },
+            { "text": "eine", "gloss": "a", "decoys": ["einen", "einer"] },
+            {
+              "text": "Rabattkarte",
+              "gloss": "discount card",
+              "decoys": ["Rabattkarten", "Rabatte"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "No, unfortunately not.",
+          "words": [
+            { "text": "Nein", "gloss": "no", "decoys": ["Neun", "Kein"], "punctuation": "," },
+            { "text": "leider", "gloss": "unfortunately", "decoys": ["Leiter", "leiden"] },
+            { "text": "nicht", "gloss": "not", "decoys": ["Nacht", "nichtig"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Then it costs forty-two euros.",
+          "words": [
+            { "text": "Dann", "gloss": "then", "decoys": ["Denn", "Wann"] },
+            { "text": "kostet", "gloss": "costs", "decoys": ["kosten", "kostest"] },
+            { "text": "die", "gloss": "the", "decoys": ["der", "das"] },
+            { "text": "Karte", "gloss": "ticket", "decoys": ["Karten", "Kante"] },
+            {
+              "text": "zweiundvierzig",
+              "gloss": "forty-two",
+              "decoys": ["zweiundzwanzig", "zweiunddreißig"]
+            },
+            { "text": "Euro", "gloss": "euros", "decoys": ["Euros", "Eure"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Can I pay by card?",
+          "words": [
+            { "text": "Kann", "gloss": "can", "decoys": ["Kannst", "Kanne"] },
+            { "text": "ich", "gloss": "I", "decoys": ["mich", "ihr"] },
+            { "text": "mit", "gloss": "by", "decoys": ["mir", "Mitte"] },
+            { "text": "Karte", "gloss": "card", "decoys": ["Kante", "Kasse"] },
+            { "text": "zahlen", "gloss": "pay", "decoys": ["zählen", "zahle"], "punctuation": "?" }
+          ]
+        },
+        {
+          "translation": "Of course. Have a good trip!",
+          "words": [
+            {
+              "text": "Natürlich",
+              "gloss": "of course",
+              "decoys": ["Nämlich", "Nützlich"],
+              "punctuation": "."
+            },
+            { "text": "Gute", "gloss": "good", "decoys": ["Guten", "Guter"] },
+            { "text": "Reise", "gloss": "trip", "decoys": ["Riese", "Reisen"], "punctuation": "!" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "de-b1",
+      "cefr": "B1",
+      "title": "Ein Wochenende in den Bergen",
+      "situation": "Telling a friend about the weekend",
+      "sentences": [
+        {
+          "translation": "Last weekend I went to the mountains with my sister.",
+          "words": [
+            { "text": "Letztes", "gloss": "last", "decoys": ["Letzte", "Letzten"] },
+            { "text": "Wochenende", "gloss": "weekend", "decoys": ["Wochenenden", "Wochentage"] },
+            { "text": "bin", "gloss": "(I) have", "decoys": ["bist", "habe"] },
+            { "text": "ich", "gloss": "I", "decoys": ["mich", "mir"] },
+            { "text": "mit", "gloss": "with", "decoys": ["mir", "Mitte"] },
+            { "text": "meiner", "gloss": "my", "decoys": ["meine", "meinem"] },
+            { "text": "Schwester", "gloss": "sister", "decoys": ["Schwestern", "Schwager"] },
+            { "text": "in", "gloss": "to", "decoys": ["im", "ins"] },
+            { "text": "die", "gloss": "the", "decoys": ["den", "der"] },
+            { "text": "Berge", "gloss": "mountains", "decoys": ["Berg", "Bergen"] },
+            {
+              "text": "gefahren",
+              "gloss": "gone",
+              "decoys": ["fuhren", "fahrend"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "On Saturday it rained all day, so we stayed in the hut and played cards.",
+          "words": [
+            { "text": "Am", "gloss": "on", "decoys": ["Um", "Im"] },
+            { "text": "Samstag", "gloss": "Saturday", "decoys": ["Samstags", "Sonntag"] },
+            { "text": "hat", "gloss": "has", "decoys": ["hast", "ist"] },
+            { "text": "es", "gloss": "it", "decoys": ["er", "sie"] },
+            { "text": "den", "gloss": "the", "decoys": ["der", "dem"] },
+            { "text": "ganzen", "gloss": "whole", "decoys": ["ganze", "ganzem"] },
+            { "text": "Tag", "gloss": "day", "decoys": ["Tage", "Tal"] },
+            {
+              "text": "geregnet",
+              "gloss": "rained",
+              "decoys": ["geredet", "gerechnet"],
+              "punctuation": ","
+            },
+            { "text": "deshalb", "gloss": "so", "decoys": ["weshalb", "trotzdem"] },
+            { "text": "sind", "gloss": "(we) have", "decoys": ["seid", "haben"] },
+            { "text": "wir", "gloss": "we", "decoys": ["wie", "mir"] },
+            { "text": "in", "gloss": "in", "decoys": ["im", "ins"] },
+            { "text": "der", "gloss": "the", "decoys": ["die", "dem"] },
+            { "text": "Hütte", "gloss": "hut", "decoys": ["Hüte", "Hütten"] },
+            { "text": "geblieben", "gloss": "stayed", "decoys": ["geblüht", "blieben"] },
+            { "text": "und", "gloss": "and", "decoys": ["um", "uns"] },
+            { "text": "haben", "gloss": "(we) have", "decoys": ["habe", "habt"] },
+            { "text": "Karten", "gloss": "cards", "decoys": ["Karte", "Garten"] },
+            {
+              "text": "gespielt",
+              "gloss": "played",
+              "decoys": ["gespült", "spielten"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "On Sunday the sun came out and we climbed up to the summit.",
+          "words": [
+            { "text": "Am", "gloss": "on", "decoys": ["Im", "Um"] },
+            { "text": "Sonntag", "gloss": "Sunday", "decoys": ["Sonntags", "Samstag"] },
+            { "text": "kam", "gloss": "came", "decoys": ["kamen", "kann"] },
+            { "text": "die", "gloss": "the", "decoys": ["der", "das"] },
+            { "text": "Sonne", "gloss": "sun", "decoys": ["Sonnen", "Tonne"] },
+            { "text": "heraus", "gloss": "out", "decoys": ["herein", "hinaus"] },
+            { "text": "und", "gloss": "and", "decoys": ["um", "uns"] },
+            { "text": "wir", "gloss": "we", "decoys": ["wie", "mir"] },
+            { "text": "sind", "gloss": "(we) have", "decoys": ["seid", "haben"] },
+            { "text": "auf", "gloss": "up to", "decoys": ["aus", "auch"] },
+            { "text": "den", "gloss": "the", "decoys": ["dem", "der"] },
+            { "text": "Gipfel", "gloss": "summit", "decoys": ["Gipfeln", "Giebel"] },
+            {
+              "text": "gestiegen",
+              "gloss": "climbed",
+              "decoys": ["geschwiegen", "stiegen"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "The view was wonderful, and I would like to go back next summer.",
+          "words": [
+            { "text": "Die", "gloss": "the", "decoys": ["Der", "Das"] },
+            { "text": "Aussicht", "gloss": "view", "decoys": ["Ansicht", "Absicht"] },
+            { "text": "war", "gloss": "was", "decoys": ["wahr", "waren"] },
+            {
+              "text": "wunderbar",
+              "gloss": "wonderful",
+              "decoys": ["wunderlich", "Wunder"],
+              "punctuation": ","
+            },
+            { "text": "und", "gloss": "and", "decoys": ["um", "uns"] },
+            { "text": "ich", "gloss": "I", "decoys": ["mich", "mir"] },
+            { "text": "möchte", "gloss": "would like", "decoys": ["mochte", "möchten"] },
+            { "text": "nächsten", "gloss": "next", "decoys": ["nächster", "nächstes"] },
+            { "text": "Sommer", "gloss": "summer", "decoys": ["Sommern", "Zimmer"] },
+            { "text": "wieder", "gloss": "again", "decoys": ["wider", "weder"] },
+            {
+              "text": "hinfahren",
+              "gloss": "go there",
+              "decoys": ["hinführen", "hinfährt"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "de-b2",
+      "cefr": "B2",
+      "title": "Die kaputte Heizung",
+      "situation": "Calling the landlord about the heating",
+      "sentences": [
+        {
+          "translation": "I am calling because the heating in my flat has not been working for a week.",
+          "words": [
+            { "text": "Ich", "gloss": "I", "decoys": ["Mich", "Ihr"] },
+            { "text": "rufe", "gloss": "call", "decoys": ["rufen", "rufst"] },
+            { "text": "an", "gloss": "(call) up", "decoys": ["am", "auf"], "punctuation": "," },
+            { "text": "weil", "gloss": "because", "decoys": ["weit", "will"] },
+            { "text": "die", "gloss": "the", "decoys": ["der", "das"] },
+            { "text": "Heizung", "gloss": "heating", "decoys": ["Heizungen", "Zeitung"] },
+            { "text": "in", "gloss": "in", "decoys": ["im", "ins"] },
+            { "text": "meiner", "gloss": "my", "decoys": ["meine", "meinem"] },
+            { "text": "Wohnung", "gloss": "flat", "decoys": ["Wohnungen", "Währung"] },
+            { "text": "seit", "gloss": "for", "decoys": ["seid", "Seite"] },
+            { "text": "einer", "gloss": "a", "decoys": ["einem", "eine"] },
+            { "text": "Woche", "gloss": "week", "decoys": ["Wochen", "Wache"] },
+            { "text": "nicht", "gloss": "not", "decoys": ["nichts", "nach"] },
+            {
+              "text": "funktioniert",
+              "gloss": "works",
+              "decoys": ["funktionieren", "fungiert"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "I have already reported the problem twice, but nobody has come yet.",
+          "words": [
+            { "text": "Ich", "gloss": "I", "decoys": ["Mich", "Ihr"] },
+            { "text": "habe", "gloss": "(I) have", "decoys": ["habt", "haben"] },
+            { "text": "das", "gloss": "the", "decoys": ["dass", "der"] },
+            { "text": "Problem", "gloss": "problem", "decoys": ["Probleme", "Probe"] },
+            { "text": "schon", "gloss": "already", "decoys": ["schön", "schonen"] },
+            { "text": "zweimal", "gloss": "twice", "decoys": ["zweite", "Zweifel"] },
+            {
+              "text": "gemeldet",
+              "gloss": "reported",
+              "decoys": ["gemietet", "gemieden"],
+              "punctuation": ","
+            },
+            { "text": "aber", "gloss": "but", "decoys": ["oder", "über"] },
+            { "text": "bisher", "gloss": "so far", "decoys": ["bis", "bisschen"] },
+            { "text": "ist", "gloss": "has", "decoys": ["isst", "hat"] },
+            { "text": "niemand", "gloss": "nobody", "decoys": ["jemand", "niemals"] },
+            {
+              "text": "gekommen",
+              "gloss": "come",
+              "decoys": ["bekommen", "kommen"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Since it is getting colder, I would ask you to send a technician as soon as possible.",
+          "words": [
+            { "text": "Da", "gloss": "since", "decoys": ["Dass", "Dann"] },
+            { "text": "es", "gloss": "it", "decoys": ["er", "ihn"] },
+            { "text": "immer", "gloss": "ever", "decoys": ["Zimmer", "nimmer"] },
+            { "text": "kälter", "gloss": "colder", "decoys": ["kalter", "Kälte"] },
+            { "text": "wird", "gloss": "gets", "decoys": ["werde", "wirst"], "punctuation": "," },
+            { "text": "möchte", "gloss": "would", "decoys": ["mochte", "möchten"] },
+            { "text": "ich", "gloss": "I", "decoys": ["mich", "mir"] },
+            { "text": "Sie", "gloss": "you", "decoys": ["Ihnen", "Ihr"] },
+            { "text": "bitten", "gloss": "ask", "decoys": ["bieten", "beten"], "punctuation": "," },
+            { "text": "so", "gloss": "as", "decoys": ["zu", "sehr"] },
+            { "text": "schnell", "gloss": "quickly", "decoys": ["schnelle", "schnelles"] },
+            { "text": "wie", "gloss": "as", "decoys": ["wir", "wo"] },
+            { "text": "möglich", "gloss": "possible", "decoys": ["möglichst", "mögliche"] },
+            { "text": "einen", "gloss": "a", "decoys": ["einem", "einer"] },
+            { "text": "Techniker", "gloss": "technician", "decoys": ["Technik", "Technikern"] },
+            { "text": "zu", "gloss": "to", "decoys": ["so", "zum"] },
+            {
+              "text": "schicken",
+              "gloss": "send",
+              "decoys": ["schicke", "schickten"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Otherwise I will unfortunately have to reduce the rent.",
+          "words": [
+            { "text": "Andernfalls", "gloss": "otherwise", "decoys": ["Ebenfalls", "Allenfalls"] },
+            { "text": "sehe", "gloss": "see", "decoys": ["sehen", "siehe"] },
+            { "text": "ich", "gloss": "I", "decoys": ["mich", "mir"] },
+            { "text": "mich", "gloss": "myself", "decoys": ["mir", "mein"] },
+            { "text": "leider", "gloss": "unfortunately", "decoys": ["Leiter", "leiden"] },
+            {
+              "text": "gezwungen",
+              "gloss": "forced",
+              "decoys": ["gezwängt", "gezogen"],
+              "punctuation": ","
+            },
+            { "text": "die", "gloss": "the", "decoys": ["der", "den"] },
+            { "text": "Miete", "gloss": "rent", "decoys": ["Mitte", "Mieter"] },
+            { "text": "zu", "gloss": "to", "decoys": ["so", "zur"] },
+            {
+              "text": "mindern",
+              "gloss": "reduce",
+              "decoys": ["minder", "mildern"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "de-c1",
+      "cefr": "C1",
+      "title": "Arbeiten im Homeoffice",
+      "situation": "Discussing remote work",
+      "sentences": [
+        {
+          "translation": "Although working from home saves time, people often underestimate how much informal exchange is lost.",
+          "words": [
+            { "text": "Obwohl", "gloss": "although", "decoys": ["Trotz", "Sowohl"] },
+            { "text": "das", "gloss": "the", "decoys": ["dass", "der"] },
+            {
+              "text": "Homeoffice",
+              "gloss": "working from home",
+              "decoys": ["Homeoffices", "Haushalt"]
+            },
+            { "text": "Zeit", "gloss": "time", "decoys": ["Zeile", "Zeug"] },
+            {
+              "text": "spart",
+              "gloss": "saves",
+              "decoys": ["spürt", "sperrt"],
+              "punctuation": ","
+            },
+            {
+              "text": "unterschätzt",
+              "gloss": "underestimates",
+              "decoys": ["unterstützt", "überschätzt"]
+            },
+            { "text": "man", "gloss": "people", "decoys": ["Mann", "mal"] },
+            { "text": "oft", "gloss": "often", "decoys": ["Ort", "ob"], "punctuation": "," },
+            { "text": "wie", "gloss": "how", "decoys": ["wo", "wir"] },
+            { "text": "viel", "gloss": "much", "decoys": ["viele", "fiel"] },
+            { "text": "informeller", "gloss": "informal", "decoys": ["informelle", "informellen"] },
+            { "text": "Austausch", "gloss": "exchange", "decoys": ["Ausdruck", "Aufbruch"] },
+            { "text": "dabei", "gloss": "in the process", "decoys": ["beim", "beide"] },
+            { "text": "verloren", "gloss": "lost", "decoys": ["verlogen", "verlieren"] },
+            { "text": "geht", "gloss": "goes", "decoys": ["gibt", "gehen"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Many ideas do not arise in meetings, but over a coffee in the corridor.",
+          "words": [
+            { "text": "Viele", "gloss": "many", "decoys": ["Vielen", "Volle"] },
+            { "text": "Ideen", "gloss": "ideas", "decoys": ["Idee", "Ideal"] },
+            { "text": "entstehen", "gloss": "arise", "decoys": ["entstellen", "entsteht"] },
+            { "text": "nämlich", "gloss": "after all", "decoys": ["nämliche", "ähnlich"] },
+            { "text": "nicht", "gloss": "not", "decoys": ["nichts", "nach"] },
+            { "text": "in", "gloss": "in", "decoys": ["im", "ins"] },
+            {
+              "text": "Besprechungen",
+              "gloss": "meetings",
+              "decoys": ["Bestrebungen", "Versprechungen"],
+              "punctuation": ","
+            },
+            { "text": "sondern", "gloss": "but", "decoys": ["aber", "sonst"] },
+            { "text": "beim", "gloss": "over a", "decoys": ["vom", "Bein"] },
+            { "text": "Kaffee", "gloss": "coffee", "decoys": ["Kaffees", "Käfer"] },
+            { "text": "auf", "gloss": "in", "decoys": ["aus", "auch"] },
+            { "text": "dem", "gloss": "the", "decoys": ["den", "der"] },
+            { "text": "Flur", "gloss": "corridor", "decoys": ["Flug", "Fluss"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Companies should therefore not simply abolish the office, but rethink it as a place for working together.",
+          "words": [
+            {
+              "text": "Unternehmen",
+              "gloss": "companies",
+              "decoys": ["Unternehmer", "Unternehmens"]
+            },
+            { "text": "sollten", "gloss": "should", "decoys": ["sollte", "solltet"] },
+            { "text": "das", "gloss": "the", "decoys": ["dass", "den"] },
+            { "text": "Büro", "gloss": "office", "decoys": ["Büros", "Bürde"] },
+            { "text": "daher", "gloss": "therefore", "decoys": ["daheim", "dahin"] },
+            { "text": "nicht", "gloss": "not", "decoys": ["nichts", "nach"] },
+            { "text": "einfach", "gloss": "simply", "decoys": ["einfältig", "Einfall"] },
+            {
+              "text": "abschaffen",
+              "gloss": "abolish",
+              "decoys": ["anschaffen", "abschalten"],
+              "punctuation": ","
+            },
+            { "text": "sondern", "gloss": "but", "decoys": ["aber", "sonst"] },
+            { "text": "es", "gloss": "it", "decoys": ["er", "ihn"] },
+            { "text": "als", "gloss": "as", "decoys": ["wie", "also"] },
+            { "text": "Ort", "gloss": "place", "decoys": ["Wort", "Ost"] },
+            { "text": "des", "gloss": "of the", "decoys": ["der", "dem"] },
+            { "text": "gemeinsamen", "gloss": "shared", "decoys": ["gemeinsam", "gemeinsames"] },
+            { "text": "Arbeitens", "gloss": "working", "decoys": ["Arbeiten", "Arbeiters"] },
+            { "text": "neu", "gloss": "anew", "decoys": ["neun", "neue"] },
+            {
+              "text": "denken",
+              "gloss": "think",
+              "decoys": ["danken", "denkt"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "de-c2",
+      "cefr": "C2",
+      "title": "Sprache und Denken",
+      "situation": "Reflecting on language and thought",
+      "sentences": [
+        {
+          "translation": "Whoever learns a language acquires not merely words, but a way of seeing the world.",
+          "words": [
+            { "text": "Wer", "gloss": "whoever", "decoys": ["Wen", "Wenn"] },
+            { "text": "eine", "gloss": "a", "decoys": ["einer", "einen"] },
+            { "text": "Sprache", "gloss": "language", "decoys": ["Sprachen", "Spruch"] },
+            {
+              "text": "lernt",
+              "gloss": "learns",
+              "decoys": ["lehrt", "lernen"],
+              "punctuation": ","
+            },
+            { "text": "erwirbt", "gloss": "acquires", "decoys": ["erwirkt", "erwerbt"] },
+            { "text": "nicht", "gloss": "not", "decoys": ["nichts", "noch"] },
+            { "text": "bloß", "gloss": "merely", "decoys": ["blass", "groß"] },
+            {
+              "text": "Wörter",
+              "gloss": "words",
+              "decoys": ["Wörtern", "Werte"],
+              "punctuation": ","
+            },
+            { "text": "sondern", "gloss": "but", "decoys": ["aber", "sonst"] },
+            { "text": "eine", "gloss": "a", "decoys": ["einen", "einer"] },
+            { "text": "Art", "gloss": "way", "decoys": ["Arten", "Ort"], "punctuation": "," },
+            { "text": "die", "gloss": "the", "decoys": ["der", "das"] },
+            { "text": "Welt", "gloss": "world", "decoys": ["Wert", "Wald"] },
+            { "text": "zu", "gloss": "to", "decoys": ["so", "zur"] },
+            { "text": "sehen", "gloss": "see", "decoys": ["säen", "sehnen"], "punctuation": "." }
+          ]
+        },
+        {
+          "translation": "Every idiom carries traces of a history that no dictionary fully captures.",
+          "words": [
+            { "text": "Jede", "gloss": "every", "decoys": ["Jeder", "Jedes"] },
+            { "text": "Redewendung", "gloss": "idiom", "decoys": ["Redewendungen", "Redeverbot"] },
+            { "text": "trägt", "gloss": "carries", "decoys": ["tragt", "trägst"] },
+            { "text": "die", "gloss": "the", "decoys": ["der", "den"] },
+            { "text": "Spuren", "gloss": "traces", "decoys": ["Sporen", "Sparen"] },
+            { "text": "einer", "gloss": "of a", "decoys": ["eine", "einem"] },
+            { "text": "Geschichte", "gloss": "history", "decoys": ["Geschichten", "Gerichte"] },
+            { "text": "in", "gloss": "in", "decoys": ["im", "ins"] },
+            { "text": "sich", "gloss": "itself", "decoys": ["sie", "dich"], "punctuation": "," },
+            { "text": "die", "gloss": "that", "decoys": ["der", "das"] },
+            { "text": "kein", "gloss": "no", "decoys": ["keine", "klein"] },
+            {
+              "text": "Wörterbuch",
+              "gloss": "dictionary",
+              "decoys": ["Wörterbücher", "Wortbruch"]
+            },
+            { "text": "vollständig", "gloss": "fully", "decoys": ["vollständige", "selbständig"] },
+            {
+              "text": "erfasst",
+              "gloss": "captures",
+              "decoys": ["verfasst", "erfassen"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Perhaps that is why we only truly master a language once we can play with its ambiguities.",
+          "words": [
+            { "text": "Vielleicht", "gloss": "perhaps", "decoys": ["Vielfalt", "Vielmehr"] },
+            { "text": "beherrschen", "gloss": "master", "decoys": ["beherbergen", "beherrscht"] },
+            { "text": "wir", "gloss": "we", "decoys": ["wie", "mir"] },
+            { "text": "eine", "gloss": "a", "decoys": ["einer", "einen"] },
+            { "text": "Sprache", "gloss": "language", "decoys": ["Sprachen", "Sprüche"] },
+            { "text": "deshalb", "gloss": "that is why", "decoys": ["weshalb", "jedoch"] },
+            { "text": "erst", "gloss": "only", "decoys": ["ernst", "erste"] },
+            { "text": "dann", "gloss": "then", "decoys": ["denn", "wann"] },
+            {
+              "text": "wirklich",
+              "gloss": "truly",
+              "decoys": ["wörtlich", "wirksam"],
+              "punctuation": ","
+            },
+            { "text": "wenn", "gloss": "once", "decoys": ["wann", "wen"] },
+            { "text": "wir", "gloss": "we", "decoys": ["wie", "ihr"] },
+            { "text": "mit", "gloss": "with", "decoys": ["mir", "mittels"] },
+            { "text": "ihren", "gloss": "its", "decoys": ["ihrem", "ihrer"] },
+            {
+              "text": "Ambiguitäten",
+              "gloss": "ambiguities",
+              "decoys": ["Ambitionen", "Antiquitäten"]
+            },
+            { "text": "spielen", "gloss": "play", "decoys": ["spiegeln", "spülen"] },
+            { "text": "können", "gloss": "can", "decoys": ["kennen", "könne"], "punctuation": "." }
+          ]
+        }
+      ]
+    }
+  ]
+}

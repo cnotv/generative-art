@@ -1,9 +1,13 @@
 <script setup lang="ts">
-defineProps<{ label?: string }>()
+defineProps<{
+  label?: string
+  /** Keeps the label and a short control side by side on a narrow screen instead of stacking. */
+  inline?: boolean
+}>()
 </script>
 
 <template>
-  <div class="lui-row" data-lui-row>
+  <div class="lui-row" :class="{ 'lui-row--inline': inline }" data-lui-row>
     <span v-if="label" class="lui-row__label">{{ label }}</span>
     <div class="lui-row__control">
       <slot />
@@ -41,12 +45,12 @@ defineProps<{ label?: string }>()
 }
 
 @media (width <= 480px) {
-  .lui-row {
+  .lui-row:not(.lui-row--inline) {
     grid-template-columns: 1fr;
     gap: var(--spacing-1);
   }
 
-  .lui-row__control {
+  .lui-row:not(.lui-row--inline) .lui-row__control {
     justify-content: flex-start;
   }
 }

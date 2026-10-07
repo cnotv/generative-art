@@ -1,0 +1,1616 @@
+{
+  "language": "fr",
+  "languageName": "French",
+  "levels": [
+    {
+      "id": "fr-a1",
+      "cefr": "A1",
+      "title": "Au café",
+      "situation": "Ordering at a café",
+      "sentences": [
+        {
+          "translation": "Good morning!",
+          "words": [
+            {
+              "text": "Bonjour",
+              "gloss": "good morning",
+              "decoys": ["Bonsoir", "Bonne"],
+              "punctuation": "!"
+            }
+          ]
+        },
+        {
+          "translation": "A coffee and a croissant, please.",
+          "words": [
+            {
+              "text": "Un",
+              "gloss": "a",
+              "decoys": ["Une", "Des"]
+            },
+            {
+              "text": "café",
+              "gloss": "coffee",
+              "decoys": ["cafés", "carré"]
+            },
+            {
+              "text": "et",
+              "gloss": "and",
+              "decoys": ["est", "es"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["une", "des"]
+            },
+            {
+              "text": "croissant",
+              "gloss": "croissant",
+              "decoys": ["croissants", "croisant"],
+              "punctuation": ","
+            },
+            {
+              "text": "s'il",
+              "gloss": "if it",
+              "decoys": ["s'ils", "si"]
+            },
+            {
+              "text": "vous",
+              "gloss": "you",
+              "decoys": ["vos", "veux"]
+            },
+            {
+              "text": "plaît",
+              "gloss": "pleases",
+              "decoys": ["plaie", "plat"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "With milk?",
+          "words": [
+            {
+              "text": "Avec",
+              "gloss": "with",
+              "decoys": ["Avez", "Après"]
+            },
+            {
+              "text": "du",
+              "gloss": "some",
+              "decoys": ["de", "des"]
+            },
+            {
+              "text": "lait",
+              "gloss": "milk",
+              "decoys": ["laid", "lit"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "Yes, please.",
+          "words": [
+            {
+              "text": "Oui",
+              "gloss": "yes",
+              "decoys": ["Où", "Ou"],
+              "punctuation": ","
+            },
+            {
+              "text": "s'il",
+              "gloss": "if it",
+              "decoys": ["s'ils", "si"]
+            },
+            {
+              "text": "vous",
+              "gloss": "you",
+              "decoys": ["vos", "vu"]
+            },
+            {
+              "text": "plaît",
+              "gloss": "pleases",
+              "decoys": ["plaise", "plais"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Anything else?",
+          "words": [
+            {
+              "text": "Et",
+              "gloss": "and",
+              "decoys": ["Est", "Es"]
+            },
+            {
+              "text": "avec",
+              "gloss": "with",
+              "decoys": ["avez", "avant"]
+            },
+            {
+              "text": "ça",
+              "gloss": "that",
+              "decoys": ["sa", "ce"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "No, thank you.",
+          "words": [
+            {
+              "text": "Non",
+              "gloss": "no",
+              "decoys": ["Nom", "Nos"],
+              "punctuation": ","
+            },
+            {
+              "text": "merci",
+              "gloss": "thank you",
+              "decoys": ["mardi", "mari"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "That comes to five euros.",
+          "words": [
+            {
+              "text": "Ça",
+              "gloss": "that",
+              "decoys": ["Sa", "Se"]
+            },
+            {
+              "text": "fait",
+              "gloss": "makes",
+              "decoys": ["fais", "faite"]
+            },
+            {
+              "text": "cinq",
+              "gloss": "five",
+              "decoys": ["sain", "cent"]
+            },
+            {
+              "text": "euros",
+              "gloss": "euros",
+              "decoys": ["heures", "œufs"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Here you are.",
+          "words": [
+            {
+              "text": "Voilà",
+              "gloss": "here you are",
+              "decoys": ["Voilier", "Voile"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Have a nice day!",
+          "words": [
+            {
+              "text": "Bonne",
+              "gloss": "good",
+              "decoys": ["Bon", "Bonnes"]
+            },
+            {
+              "text": "journée",
+              "gloss": "day",
+              "decoys": ["journal", "jouer"],
+              "punctuation": "!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr-a2",
+      "cefr": "A2",
+      "title": "À la gare",
+      "situation": "Buying a train ticket",
+      "sentences": [
+        {
+          "translation": "Excuse me, when does the next train to Paris leave?",
+          "words": [
+            {
+              "text": "Excusez-moi",
+              "gloss": "excuse me",
+              "decoys": ["Excusez-vous", "Excuser-moi"],
+              "punctuation": ","
+            },
+            {
+              "text": "quand",
+              "gloss": "when",
+              "decoys": ["quant", "camp"]
+            },
+            {
+              "text": "part",
+              "gloss": "leaves",
+              "decoys": ["pars", "parle"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "prochain",
+              "gloss": "next",
+              "decoys": ["prochaine", "prochains"]
+            },
+            {
+              "text": "train",
+              "gloss": "train",
+              "decoys": ["traîne", "trait"]
+            },
+            {
+              "text": "pour",
+              "gloss": "to",
+              "decoys": ["par", "pur"]
+            },
+            {
+              "text": "Paris",
+              "gloss": "Paris",
+              "decoys": ["Pari", "Parie"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "At ten past nine, from platform four.",
+          "words": [
+            {
+              "text": "À",
+              "gloss": "at",
+              "decoys": ["Au", "Aux"]
+            },
+            {
+              "text": "neuf",
+              "gloss": "nine",
+              "decoys": ["neuve", "nœud"]
+            },
+            {
+              "text": "heures",
+              "gloss": "o'clock",
+              "decoys": ["heure", "heurts"]
+            },
+            {
+              "text": "dix",
+              "gloss": "ten (past)",
+              "decoys": ["dit", "dis"],
+              "punctuation": ","
+            },
+            {
+              "text": "voie",
+              "gloss": "platform",
+              "decoys": ["voix", "voir"]
+            },
+            {
+              "text": "quatre",
+              "gloss": "four",
+              "decoys": ["quarte", "quart"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "I would like a return ticket, please.",
+          "words": [
+            {
+              "text": "Je",
+              "gloss": "I",
+              "decoys": ["Jeu", "J'ai"]
+            },
+            {
+              "text": "voudrais",
+              "gloss": "would like",
+              "decoys": ["voudrai", "voudrait"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["une", "en"]
+            },
+            {
+              "text": "aller-retour",
+              "gloss": "return ticket",
+              "decoys": ["allers-retours", "aller-retours"],
+              "punctuation": ","
+            },
+            {
+              "text": "s'il",
+              "gloss": "if it",
+              "decoys": ["s'ils", "si"]
+            },
+            {
+              "text": "vous",
+              "gloss": "you",
+              "decoys": ["vos", "vœu"]
+            },
+            {
+              "text": "plaît",
+              "gloss": "pleases",
+              "decoys": ["plaise", "plais"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Do you have a discount card?",
+          "words": [
+            {
+              "text": "Avez-vous",
+              "gloss": "do you have",
+              "decoys": ["Êtes-vous", "Allez-vous"]
+            },
+            {
+              "text": "une",
+              "gloss": "a",
+              "decoys": ["un", "unes"]
+            },
+            {
+              "text": "carte",
+              "gloss": "card",
+              "decoys": ["cartes", "quarte"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["des", "du"]
+            },
+            {
+              "text": "réduction",
+              "gloss": "discount",
+              "decoys": ["rédaction", "séduction"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "No, unfortunately not.",
+          "words": [
+            {
+              "text": "Non",
+              "gloss": "no",
+              "decoys": ["Nom", "Nos"],
+              "punctuation": ","
+            },
+            {
+              "text": "hélas",
+              "gloss": "unfortunately",
+              "decoys": ["héla", "hélait"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Then it costs forty-two euros.",
+          "words": [
+            {
+              "text": "Alors",
+              "gloss": "then",
+              "decoys": ["Lors", "Alerte"],
+              "punctuation": ","
+            },
+            {
+              "text": "c'est",
+              "gloss": "it is",
+              "decoys": ["s'est", "cet"]
+            },
+            {
+              "text": "quarante-deux",
+              "gloss": "forty-two",
+              "decoys": ["quarantaine", "quatorze"]
+            },
+            {
+              "text": "euros",
+              "gloss": "euros",
+              "decoys": ["eurent", "heures"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Can I pay by card?",
+          "words": [
+            {
+              "text": "Je",
+              "gloss": "I",
+              "decoys": ["Jeu", "J'ai"]
+            },
+            {
+              "text": "peux",
+              "gloss": "can",
+              "decoys": ["peut", "peu"]
+            },
+            {
+              "text": "payer",
+              "gloss": "pay",
+              "decoys": ["payé", "pays"]
+            },
+            {
+              "text": "par",
+              "gloss": "by",
+              "decoys": ["pas", "pour"]
+            },
+            {
+              "text": "carte",
+              "gloss": "card",
+              "decoys": ["carton", "quarte"],
+              "punctuation": "?"
+            }
+          ]
+        },
+        {
+          "translation": "Of course. Have a good trip!",
+          "words": [
+            {
+              "text": "Bien",
+              "gloss": "of (course)",
+              "decoys": ["Bon", "Biens"]
+            },
+            {
+              "text": "sûr",
+              "gloss": "course",
+              "decoys": ["sur", "sœur"],
+              "punctuation": "."
+            },
+            {
+              "text": "Bon",
+              "gloss": "good",
+              "decoys": ["Bonne", "Bons"]
+            },
+            {
+              "text": "voyage",
+              "gloss": "trip",
+              "decoys": ["voyages", "voyagé"],
+              "punctuation": "!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr-b1",
+      "cefr": "B1",
+      "title": "Un week-end à la montagne",
+      "situation": "Telling a friend about the weekend",
+      "sentences": [
+        {
+          "translation": "Last weekend I went to the mountains with my sister.",
+          "words": [
+            {
+              "text": "Le",
+              "gloss": "the",
+              "decoys": ["La", "Les"]
+            },
+            {
+              "text": "week-end",
+              "gloss": "weekend",
+              "decoys": ["week-ends", "semaine"]
+            },
+            {
+              "text": "dernier",
+              "gloss": "last",
+              "decoys": ["dernière", "derniers"],
+              "punctuation": ","
+            },
+            {
+              "text": "je",
+              "gloss": "I",
+              "decoys": ["j'ai", "jeu"]
+            },
+            {
+              "text": "suis",
+              "gloss": "(I) am",
+              "decoys": ["suit", "sois"]
+            },
+            {
+              "text": "allé",
+              "gloss": "gone",
+              "decoys": ["aller", "allais"]
+            },
+            {
+              "text": "à",
+              "gloss": "to",
+              "decoys": ["a", "au"]
+            },
+            {
+              "text": "la",
+              "gloss": "the",
+              "decoys": ["le", "là"]
+            },
+            {
+              "text": "montagne",
+              "gloss": "mountains",
+              "decoys": ["montage", "montagnes"]
+            },
+            {
+              "text": "avec",
+              "gloss": "with",
+              "decoys": ["avez", "aveu"]
+            },
+            {
+              "text": "ma",
+              "gloss": "my",
+              "decoys": ["mon", "mes"]
+            },
+            {
+              "text": "sœur",
+              "gloss": "sister",
+              "decoys": ["sœurs", "sueur"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "On Saturday it rained all day, so we stayed in the hut and played cards.",
+          "words": [
+            {
+              "text": "Samedi",
+              "gloss": "Saturday",
+              "decoys": ["Samedis", "Mardi"],
+              "punctuation": ","
+            },
+            {
+              "text": "il",
+              "gloss": "it",
+              "decoys": ["ils", "elle"]
+            },
+            {
+              "text": "a",
+              "gloss": "has",
+              "decoys": ["à", "as"]
+            },
+            {
+              "text": "plu",
+              "gloss": "rained",
+              "decoys": ["plut", "plus"]
+            },
+            {
+              "text": "toute",
+              "gloss": "all",
+              "decoys": ["tout", "toutes"]
+            },
+            {
+              "text": "la",
+              "gloss": "the",
+              "decoys": ["le", "là"]
+            },
+            {
+              "text": "journée",
+              "gloss": "day",
+              "decoys": ["jour", "journées"],
+              "punctuation": ","
+            },
+            {
+              "text": "alors",
+              "gloss": "so",
+              "decoys": ["lors", "allons"]
+            },
+            {
+              "text": "nous",
+              "gloss": "we",
+              "decoys": ["nos", "vous"]
+            },
+            {
+              "text": "sommes",
+              "gloss": "(we) are",
+              "decoys": ["avons", "sommet"]
+            },
+            {
+              "text": "restés",
+              "gloss": "stayed",
+              "decoys": ["rester", "resté"]
+            },
+            {
+              "text": "au",
+              "gloss": "in the",
+              "decoys": ["aux", "à"]
+            },
+            {
+              "text": "refuge",
+              "gloss": "hut",
+              "decoys": ["refus", "réfugié"]
+            },
+            {
+              "text": "et",
+              "gloss": "and",
+              "decoys": ["est", "es"]
+            },
+            {
+              "text": "nous",
+              "gloss": "we",
+              "decoys": ["nos", "noue"]
+            },
+            {
+              "text": "avons",
+              "gloss": "(we) have",
+              "decoys": ["sommes", "avez"]
+            },
+            {
+              "text": "joué",
+              "gloss": "played",
+              "decoys": ["jouer", "joue"]
+            },
+            {
+              "text": "aux",
+              "gloss": "at the",
+              "decoys": ["au", "eaux"]
+            },
+            {
+              "text": "cartes",
+              "gloss": "cards",
+              "decoys": ["carte", "cartons"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "On Sunday the sun came out and we climbed up to the summit.",
+          "words": [
+            {
+              "text": "Dimanche",
+              "gloss": "Sunday",
+              "decoys": ["Dimanches", "Demain"],
+              "punctuation": ","
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "soleil",
+              "gloss": "sun",
+              "decoys": ["sommeil", "soleils"]
+            },
+            {
+              "text": "est",
+              "gloss": "has",
+              "decoys": ["et", "a"]
+            },
+            {
+              "text": "revenu",
+              "gloss": "come back",
+              "decoys": ["revenue", "revenus"]
+            },
+            {
+              "text": "et",
+              "gloss": "and",
+              "decoys": ["est", "eh"]
+            },
+            {
+              "text": "nous",
+              "gloss": "we",
+              "decoys": ["nos", "noue"]
+            },
+            {
+              "text": "sommes",
+              "gloss": "(we) are",
+              "decoys": ["sommet", "êtes"]
+            },
+            {
+              "text": "montés",
+              "gloss": "climbed",
+              "decoys": ["monté", "montrés"]
+            },
+            {
+              "text": "jusqu'au",
+              "gloss": "up to the",
+              "decoys": ["jusqu'à", "jusque"]
+            },
+            {
+              "text": "sommet",
+              "gloss": "summit",
+              "decoys": ["sommeil", "sommes"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "The view was wonderful, and I would like to go back next summer.",
+          "words": [
+            {
+              "text": "La",
+              "gloss": "the",
+              "decoys": ["Le", "Les"]
+            },
+            {
+              "text": "vue",
+              "gloss": "view",
+              "decoys": ["vu", "vues"]
+            },
+            {
+              "text": "était",
+              "gloss": "was",
+              "decoys": ["été", "étais"]
+            },
+            {
+              "text": "magnifique",
+              "gloss": "wonderful",
+              "decoys": ["magnifiques", "magnifié"],
+              "punctuation": ","
+            },
+            {
+              "text": "et",
+              "gloss": "and",
+              "decoys": ["est", "ait"]
+            },
+            {
+              "text": "j'aimerais",
+              "gloss": "I would like",
+              "decoys": ["j'aimerai", "j'aimais"]
+            },
+            {
+              "text": "y",
+              "gloss": "there",
+              "decoys": ["en", "lui"]
+            },
+            {
+              "text": "retourner",
+              "gloss": "go back",
+              "decoys": ["retourné", "retournerai"]
+            },
+            {
+              "text": "l'été",
+              "gloss": "the summer",
+              "decoys": ["l'étape", "l'état"]
+            },
+            {
+              "text": "prochain",
+              "gloss": "next",
+              "decoys": ["prochaine", "proche"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr-b2",
+      "cefr": "B2",
+      "title": "Le chauffage en panne",
+      "situation": "Calling the landlord about the heating",
+      "sentences": [
+        {
+          "translation": "I am calling because the heating in my flat has not been working for a week.",
+          "words": [
+            {
+              "text": "Je",
+              "gloss": "I",
+              "decoys": ["Jeu", "J'ai"]
+            },
+            {
+              "text": "vous",
+              "gloss": "you",
+              "decoys": ["vos", "votre"]
+            },
+            {
+              "text": "appelle",
+              "gloss": "call",
+              "decoys": ["appel", "appelles"]
+            },
+            {
+              "text": "parce",
+              "gloss": "because",
+              "decoys": ["par", "parc"]
+            },
+            {
+              "text": "que",
+              "gloss": "that",
+              "decoys": ["qui", "quel"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "chauffage",
+              "gloss": "heating",
+              "decoys": ["chauffeur", "chauffé"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["du", "des"]
+            },
+            {
+              "text": "mon",
+              "gloss": "my",
+              "decoys": ["ma", "mont"]
+            },
+            {
+              "text": "appartement",
+              "gloss": "flat",
+              "decoys": ["appartenant", "département"]
+            },
+            {
+              "text": "ne",
+              "gloss": "not",
+              "decoys": ["nez", "me"]
+            },
+            {
+              "text": "fonctionne",
+              "gloss": "works",
+              "decoys": ["fonctionnent", "fonction"]
+            },
+            {
+              "text": "plus",
+              "gloss": "any more",
+              "decoys": ["plut", "plu"]
+            },
+            {
+              "text": "depuis",
+              "gloss": "for",
+              "decoys": ["puis", "dépit"]
+            },
+            {
+              "text": "une",
+              "gloss": "a",
+              "decoys": ["un", "unes"]
+            },
+            {
+              "text": "semaine",
+              "gloss": "week",
+              "decoys": ["semaines", "semence"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "I have already reported the problem twice, but nobody has come yet.",
+          "words": [
+            {
+              "text": "J'ai",
+              "gloss": "I have",
+              "decoys": ["J'aie", "Je"]
+            },
+            {
+              "text": "déjà",
+              "gloss": "already",
+              "decoys": ["dégât", "déjeuné"]
+            },
+            {
+              "text": "signalé",
+              "gloss": "reported",
+              "decoys": ["signaler", "signalée"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "problème",
+              "gloss": "problem",
+              "decoys": ["problèmes", "probable"]
+            },
+            {
+              "text": "deux",
+              "gloss": "two",
+              "decoys": ["deuil", "d'eux"]
+            },
+            {
+              "text": "fois",
+              "gloss": "times",
+              "decoys": ["foi", "foie"],
+              "punctuation": ","
+            },
+            {
+              "text": "mais",
+              "gloss": "but",
+              "decoys": ["mes", "mai"]
+            },
+            {
+              "text": "personne",
+              "gloss": "nobody",
+              "decoys": ["personnes", "personnel"]
+            },
+            {
+              "text": "n'est",
+              "gloss": "has not",
+              "decoys": ["n'ait", "n'es"]
+            },
+            {
+              "text": "encore",
+              "gloss": "yet",
+              "decoys": ["encre", "enfin"]
+            },
+            {
+              "text": "venu",
+              "gloss": "come",
+              "decoys": ["venue", "venus"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Since it is getting colder, I would ask you to send a technician as soon as possible.",
+          "words": [
+            {
+              "text": "Comme",
+              "gloss": "since",
+              "decoys": ["Comment", "Commis"]
+            },
+            {
+              "text": "il",
+              "gloss": "it",
+              "decoys": ["ils", "elle"]
+            },
+            {
+              "text": "fait",
+              "gloss": "makes",
+              "decoys": ["fais", "faite"]
+            },
+            {
+              "text": "de",
+              "gloss": "(more) and",
+              "decoys": ["des", "du"]
+            },
+            {
+              "text": "plus",
+              "gloss": "more",
+              "decoys": ["plu", "plut"]
+            },
+            {
+              "text": "en",
+              "gloss": "and",
+              "decoys": ["an", "on"]
+            },
+            {
+              "text": "plus",
+              "gloss": "more",
+              "decoys": ["plut", "pluie"]
+            },
+            {
+              "text": "froid",
+              "gloss": "cold",
+              "decoys": ["froide", "froids"],
+              "punctuation": ","
+            },
+            {
+              "text": "je",
+              "gloss": "I",
+              "decoys": ["jeu", "j'ai"]
+            },
+            {
+              "text": "vous",
+              "gloss": "you",
+              "decoys": ["vos", "vôtre"]
+            },
+            {
+              "text": "demanderais",
+              "gloss": "would ask",
+              "decoys": ["demanderai", "demandais"]
+            },
+            {
+              "text": "d'envoyer",
+              "gloss": "to send",
+              "decoys": ["d'envoyé", "d'envoi"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["une", "en"]
+            },
+            {
+              "text": "technicien",
+              "gloss": "technician",
+              "decoys": ["technique", "techniciens"]
+            },
+            {
+              "text": "dès",
+              "gloss": "as (soon)",
+              "decoys": ["des", "dé"]
+            },
+            {
+              "text": "que",
+              "gloss": "as",
+              "decoys": ["qui", "quoi"]
+            },
+            {
+              "text": "possible",
+              "gloss": "possible",
+              "decoys": ["possibles", "passible"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Otherwise I will unfortunately have to reduce the rent.",
+          "words": [
+            {
+              "text": "Sinon",
+              "gloss": "otherwise",
+              "decoys": ["Sinus", "Si"],
+              "punctuation": ","
+            },
+            {
+              "text": "je",
+              "gloss": "I",
+              "decoys": ["jeu", "j'ai"]
+            },
+            {
+              "text": "serai",
+              "gloss": "will be",
+              "decoys": ["serais", "sera"]
+            },
+            {
+              "text": "hélas",
+              "gloss": "unfortunately",
+              "decoys": ["héla", "hélait"]
+            },
+            {
+              "text": "obligé",
+              "gloss": "obliged",
+              "decoys": ["obliger", "obligés"]
+            },
+            {
+              "text": "de",
+              "gloss": "to",
+              "decoys": ["des", "du"]
+            },
+            {
+              "text": "réduire",
+              "gloss": "reduce",
+              "decoys": ["réduit", "réduis"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "loyer",
+              "gloss": "rent",
+              "decoys": ["loyal", "noyer"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr-c1",
+      "cefr": "C1",
+      "title": "Le télétravail en débat",
+      "situation": "Discussing remote work",
+      "sentences": [
+        {
+          "translation": "Although working from home saves time, people often underestimate how much informal exchange is lost.",
+          "words": [
+            {
+              "text": "Bien",
+              "gloss": "although",
+              "decoys": ["Bon", "Biens"]
+            },
+            {
+              "text": "que",
+              "gloss": "(al)though",
+              "decoys": ["qui", "quoi"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "télétravail",
+              "gloss": "remote work",
+              "decoys": ["téléphone", "télétravaux"]
+            },
+            {
+              "text": "fasse",
+              "gloss": "makes",
+              "decoys": ["fait", "face"]
+            },
+            {
+              "text": "gagner",
+              "gloss": "save (gain)",
+              "decoys": ["gagné", "gagnez"]
+            },
+            {
+              "text": "du",
+              "gloss": "some",
+              "decoys": ["de", "des"]
+            },
+            {
+              "text": "temps",
+              "gloss": "time",
+              "decoys": ["tant", "tempe"],
+              "punctuation": ","
+            },
+            {
+              "text": "on",
+              "gloss": "people",
+              "decoys": ["ont", "en"]
+            },
+            {
+              "text": "sous-estime",
+              "gloss": "underestimate",
+              "decoys": ["surestime", "sous-estiment"]
+            },
+            {
+              "text": "souvent",
+              "gloss": "often",
+              "decoys": ["souvient", "suivant"]
+            },
+            {
+              "text": "combien",
+              "gloss": "how much",
+              "decoys": ["comment", "combiné"]
+            },
+            {
+              "text": "d'échanges",
+              "gloss": "of exchanges",
+              "decoys": ["d'échanger", "échanges"]
+            },
+            {
+              "text": "informels",
+              "gloss": "informal",
+              "decoys": ["informel", "informés"]
+            },
+            {
+              "text": "se",
+              "gloss": "themselves",
+              "decoys": ["ce", "s'en"]
+            },
+            {
+              "text": "perdent",
+              "gloss": "are lost",
+              "decoys": ["perd", "perdant"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Many ideas do not arise in meetings, but over a coffee in the corridor.",
+          "words": [
+            {
+              "text": "Beaucoup",
+              "gloss": "many",
+              "decoys": ["Beaucoups", "Beauté"]
+            },
+            {
+              "text": "d'idées",
+              "gloss": "of ideas",
+              "decoys": ["d'idée", "idées"]
+            },
+            {
+              "text": "ne",
+              "gloss": "not",
+              "decoys": ["nez", "né"]
+            },
+            {
+              "text": "naissent",
+              "gloss": "arise",
+              "decoys": ["naisse", "naissance"]
+            },
+            {
+              "text": "pas",
+              "gloss": "not",
+              "decoys": ["par", "pis"]
+            },
+            {
+              "text": "en",
+              "gloss": "in",
+              "decoys": ["un", "an"]
+            },
+            {
+              "text": "réunion",
+              "gloss": "meetings",
+              "decoys": ["réunir", "union"],
+              "punctuation": ","
+            },
+            {
+              "text": "mais",
+              "gloss": "but",
+              "decoys": ["mes", "mai"]
+            },
+            {
+              "text": "autour",
+              "gloss": "around",
+              "decoys": ["auteur", "alentour"]
+            },
+            {
+              "text": "d'un",
+              "gloss": "a",
+              "decoys": ["d'une", "d'en"]
+            },
+            {
+              "text": "café",
+              "gloss": "coffee",
+              "decoys": ["cafés", "carafe"]
+            },
+            {
+              "text": "dans",
+              "gloss": "in",
+              "decoys": ["dent", "danse"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "couloir",
+              "gloss": "corridor",
+              "decoys": ["couleur", "couloirs"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Companies should therefore not simply abolish the office, but rethink it as a place for working together.",
+          "words": [
+            {
+              "text": "Les",
+              "gloss": "the",
+              "decoys": ["La", "Le"]
+            },
+            {
+              "text": "entreprises",
+              "gloss": "companies",
+              "decoys": ["entreprise", "entrepris"]
+            },
+            {
+              "text": "ne",
+              "gloss": "not",
+              "decoys": ["nez", "n'y"]
+            },
+            {
+              "text": "devraient",
+              "gloss": "should",
+              "decoys": ["devrait", "devaient"]
+            },
+            {
+              "text": "donc",
+              "gloss": "therefore",
+              "decoys": ["dont", "don"]
+            },
+            {
+              "text": "pas",
+              "gloss": "not",
+              "decoys": ["part", "pis"]
+            },
+            {
+              "text": "simplement",
+              "gloss": "simply",
+              "decoys": ["simplet", "simplicité"]
+            },
+            {
+              "text": "supprimer",
+              "gloss": "abolish",
+              "decoys": ["supprimé", "supprimez"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "bureau",
+              "gloss": "office",
+              "decoys": ["bureaux", "bourreau"],
+              "punctuation": ","
+            },
+            {
+              "text": "mais",
+              "gloss": "but",
+              "decoys": ["mes", "mai"]
+            },
+            {
+              "text": "le",
+              "gloss": "it",
+              "decoys": ["la", "lui"]
+            },
+            {
+              "text": "repenser",
+              "gloss": "rethink",
+              "decoys": ["repensé", "repasser"]
+            },
+            {
+              "text": "comme",
+              "gloss": "as",
+              "decoys": ["comment", "comte"]
+            },
+            {
+              "text": "un",
+              "gloss": "a",
+              "decoys": ["une", "en"]
+            },
+            {
+              "text": "lieu",
+              "gloss": "place",
+              "decoys": ["lieue", "lien"]
+            },
+            {
+              "text": "pour",
+              "gloss": "for",
+              "decoys": ["par", "pur"]
+            },
+            {
+              "text": "travailler",
+              "gloss": "working",
+              "decoys": ["travaillé", "travailleur"]
+            },
+            {
+              "text": "ensemble",
+              "gloss": "together",
+              "decoys": ["ensembles", "semble"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr-c2",
+      "cefr": "C2",
+      "title": "Langue et pensée",
+      "situation": "Reflecting on language and thought",
+      "sentences": [
+        {
+          "translation": "Whoever learns a language acquires not merely words, but a way of seeing the world.",
+          "words": [
+            {
+              "text": "Qui",
+              "gloss": "whoever",
+              "decoys": ["Que", "Quel"]
+            },
+            {
+              "text": "apprend",
+              "gloss": "learns",
+              "decoys": ["apprends", "apprenne"]
+            },
+            {
+              "text": "une",
+              "gloss": "a",
+              "decoys": ["un", "unes"]
+            },
+            {
+              "text": "langue",
+              "gloss": "language",
+              "decoys": ["longue", "langage"]
+            },
+            {
+              "text": "n'acquiert",
+              "gloss": "acquires (not)",
+              "decoys": ["n'acquière", "n'acquis"]
+            },
+            {
+              "text": "pas",
+              "gloss": "not",
+              "decoys": ["part", "pis"]
+            },
+            {
+              "text": "seulement",
+              "gloss": "merely",
+              "decoys": ["seule", "sûrement"]
+            },
+            {
+              "text": "des",
+              "gloss": "(some)",
+              "decoys": ["dès", "dé"]
+            },
+            {
+              "text": "mots",
+              "gloss": "words",
+              "decoys": ["maux", "mot"],
+              "punctuation": ","
+            },
+            {
+              "text": "mais",
+              "gloss": "but",
+              "decoys": ["mes", "mets"]
+            },
+            {
+              "text": "une",
+              "gloss": "a",
+              "decoys": ["un", "unes"]
+            },
+            {
+              "text": "manière",
+              "gloss": "way",
+              "decoys": ["manier", "minière"]
+            },
+            {
+              "text": "de",
+              "gloss": "of",
+              "decoys": ["du", "des"]
+            },
+            {
+              "text": "voir",
+              "gloss": "seeing",
+              "decoys": ["voire", "voix"]
+            },
+            {
+              "text": "le",
+              "gloss": "the",
+              "decoys": ["la", "les"]
+            },
+            {
+              "text": "monde",
+              "gloss": "world",
+              "decoys": ["monte", "mondes"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Every idiom carries traces of a history that no dictionary fully captures.",
+          "words": [
+            {
+              "text": "Chaque",
+              "gloss": "every",
+              "decoys": ["Chacun", "Chaques"]
+            },
+            {
+              "text": "locution",
+              "gloss": "idiom",
+              "decoys": ["location", "allocution"]
+            },
+            {
+              "text": "porte",
+              "gloss": "carries",
+              "decoys": ["portent", "porté"]
+            },
+            {
+              "text": "en",
+              "gloss": "in",
+              "decoys": ["an", "on"]
+            },
+            {
+              "text": "elle",
+              "gloss": "itself",
+              "decoys": ["lui", "elles"]
+            },
+            {
+              "text": "les",
+              "gloss": "the",
+              "decoys": ["le", "lès"]
+            },
+            {
+              "text": "traces",
+              "gloss": "traces",
+              "decoys": ["trace", "tracés"]
+            },
+            {
+              "text": "d'une",
+              "gloss": "of a",
+              "decoys": ["d'un", "dune"]
+            },
+            {
+              "text": "histoire",
+              "gloss": "history",
+              "decoys": ["histoires", "historien"]
+            },
+            {
+              "text": "qu'aucun",
+              "gloss": "that no",
+              "decoys": ["qu'aucune", "quiconque"]
+            },
+            {
+              "text": "dictionnaire",
+              "gloss": "dictionary",
+              "decoys": ["dictionnaires", "dictateur"]
+            },
+            {
+              "text": "ne",
+              "gloss": "(negation)",
+              "decoys": ["nez", "ni"]
+            },
+            {
+              "text": "restitue",
+              "gloss": "captures",
+              "decoys": ["restitué", "restituent"]
+            },
+            {
+              "text": "pleinement",
+              "gloss": "fully",
+              "decoys": ["pleine", "plénière"],
+              "punctuation": "."
+            }
+          ]
+        },
+        {
+          "translation": "Perhaps that is why we only truly master a language once we can play with its ambiguities.",
+          "words": [
+            {
+              "text": "C'est",
+              "gloss": "it is",
+              "decoys": ["S'est", "Ces"]
+            },
+            {
+              "text": "peut-être",
+              "gloss": "perhaps",
+              "decoys": ["peut", "peuvent"]
+            },
+            {
+              "text": "pour",
+              "gloss": "for",
+              "decoys": ["par", "pur"]
+            },
+            {
+              "text": "cela",
+              "gloss": "that",
+              "decoys": ["cèle", "sella"]
+            },
+            {
+              "text": "qu'on",
+              "gloss": "that we",
+              "decoys": ["qu'ont", "qu'en"]
+            },
+            {
+              "text": "ne",
+              "gloss": "only (ne…que)",
+              "decoys": ["nez", "ni"]
+            },
+            {
+              "text": "maîtrise",
+              "gloss": "master",
+              "decoys": ["maîtrisent", "maître"]
+            },
+            {
+              "text": "vraiment",
+              "gloss": "truly",
+              "decoys": ["vrai", "vraie"]
+            },
+            {
+              "text": "une",
+              "gloss": "a",
+              "decoys": ["un", "unes"]
+            },
+            {
+              "text": "langue",
+              "gloss": "language",
+              "decoys": ["longue", "langues"]
+            },
+            {
+              "text": "que",
+              "gloss": "only (ne…que)",
+              "decoys": ["qui", "quand"]
+            },
+            {
+              "text": "lorsqu'on",
+              "gloss": "once we",
+              "decoys": ["lorsqu'un", "lorsque"]
+            },
+            {
+              "text": "sait",
+              "gloss": "can (knows)",
+              "decoys": ["c'est", "sais"]
+            },
+            {
+              "text": "jouer",
+              "gloss": "play",
+              "decoys": ["joué", "jouet"]
+            },
+            {
+              "text": "avec",
+              "gloss": "with",
+              "decoys": ["avez", "aveu"]
+            },
+            {
+              "text": "ses",
+              "gloss": "its",
+              "decoys": ["sa", "s'est"]
+            },
+            {
+              "text": "ambiguïtés",
+              "gloss": "ambiguities",
+              "decoys": ["ambiguïté", "ambigus"],
+              "punctuation": "."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
