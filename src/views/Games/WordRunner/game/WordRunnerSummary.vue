@@ -219,6 +219,7 @@ onMounted(() => {
 .word-runner-summary__sentence {
   display: flex;
   flex-direction: column;
+  align-items: center;
   font-size: var(--lui-text-tiny);
 }
 
