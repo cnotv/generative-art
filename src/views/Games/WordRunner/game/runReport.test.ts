@@ -61,9 +61,8 @@ describe('raceResult', () => {
 })
 
 describe('buildRunReport', () => {
-  it('counts the right words and gives every pick', () => {
+  it('counts the right words', () => {
     const report = buildRunReport({
-      gates,
       results: resultsWithMistakes(2),
       words,
       seconds: 63,
@@ -72,11 +71,6 @@ describe('buildRunReport', () => {
 
     expect(report.correctCount).toBe(8)
     expect(report.wordCount).toBe(10)
-    expect(report.picks).toHaveLength(10)
-    expect(report.picks.filter((pick) => !pick.correct).map((pick) => pick.text)).toEqual([
-      'word0',
-      'word1'
-    ])
     expect(report.seconds).toBe(63)
   })
 })

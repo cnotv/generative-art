@@ -143,7 +143,7 @@ const createRunScore = () => {
     isNewBest.value = won && (bestSeconds.value === null || runSeconds.value < bestSeconds.value)
     if (isNewBest.value) saveBestTime(levelId, runSeconds.value)
   }
-  return { runSeconds, bestSeconds, isNewBest, reset, settle }
+  return { runSeconds, isNewBest, reset, settle }
 }
 
 /** The course laid out now: restarted for another attempt, rebuilt only for another level. */
@@ -215,13 +215,7 @@ const settleRace = (
   const race = raceResult({ playerSeconds: seconds, finishDistance: run.finishDistance, rivals })
   const found = findLevel(run.level.id)
   if (race.won && found) saveLevelCleared(found.pack.language, found.levelIndex)
-  return buildRunReport({
-    gates: run.gates,
-    results,
-    words: run.words,
-    seconds,
-    race
-  })
+  return buildRunReport({ results, words: run.words, seconds, race })
 }
 
 type DrawState = {
@@ -479,7 +473,6 @@ export const useWordRun = (settings: RunSettings) => {
     level: computed(() => levelRun.value?.level ?? null),
     report,
     runSeconds: score.runSeconds,
-    bestSeconds: score.bestSeconds,
     isNewBest: score.isNewBest,
     ...createReadouts(levelRun, runState),
     impulseCharge: impulses.charge,

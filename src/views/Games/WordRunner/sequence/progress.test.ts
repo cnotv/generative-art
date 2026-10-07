@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createRunState, passGate, pickedWords } from './progress'
+import { createRunState, passGate } from './progress'
 import type { Gate, LevelWord, RunState } from '../types'
 
 const words: LevelWord[] = [
@@ -45,17 +45,5 @@ describe('passGate', () => {
     passGate(start, gates[0], 0)
 
     expect(start).toEqual({ gateIndex: 0, results: [] })
-  })
-})
-
-describe('pickedWords', () => {
-  it('gives every word the player took, marking the wrong ones with the right word', () => {
-    const state = passAll(createRunState(), [0, 1, 1])
-
-    expect(pickedWords(state.results, gates, words)).toEqual([
-      { position: 0, text: 'uno', chosen: 'uno', correct: true },
-      { position: 1, text: 'dos', chosen: 'B', correct: false },
-      { position: 2, text: 'tres', chosen: 'tres', correct: true }
-    ])
   })
 })

@@ -223,6 +223,9 @@ export const MATCHMAKER_ROOM = 'word-runner-matchmaker'
 export const READY_TIMEOUT_MS = 15000
 // How often a ball's place on the course is sent to the rest of the room.
 export const PROGRESS_INTERVAL_SECONDS = 0.1
+// A new order of the room's players is shown only once it has held this long, so two balls
+// neck and neck do not swap places in the list on every progress update.
+export const RANKING_HOLD_SECONDS = 0.2
 // Rivals' balls drawn at once: the bot alone, or this many other players in a room.
 export const MAX_RIVALS = 4
 // How quickly another player's ball eases towards where the room last reported it.

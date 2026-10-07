@@ -1,5 +1,4 @@
-import { pickedWords } from '../sequence/progress'
-import type { Gate, GateResult, LevelWord, RaceResult, Rival, RunReport } from '../types'
+import type { GateResult, LevelWord, RaceResult, Rival, RunReport } from '../types'
 
 type RaceEnd = {
   playerSeconds: number
@@ -38,18 +37,16 @@ export const raceResult = ({ playerSeconds, finishDistance, rivals }: RaceEnd): 
 }
 
 type RunEnd = {
-  gates: Gate[]
   results: GateResult[]
   words: LevelWord[]
   seconds: number
   race: RaceResult
 }
 
-/** What the end screen says about a level: the race, the score, and every word as picked. */
-export const buildRunReport = ({ gates, results, words, seconds, race }: RunEnd): RunReport => ({
+/** What the end screen says about a level: the race and the score. */
+export const buildRunReport = ({ results, words, seconds, race }: RunEnd): RunReport => ({
   race,
   seconds,
   correctCount: results.filter((result) => result.correct).length,
-  wordCount: words.length,
-  picks: pickedWords(results, gates, words)
+  wordCount: words.length
 })

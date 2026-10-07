@@ -94,7 +94,7 @@ const run = useWordRun({
   onProgress: (distance, lateral) => emit('progress', distance, lateral),
   onFinish: (seconds) => emit('finish', seconds)
 })
-const { phase, level, report, ribbon, translation, bestSeconds, isNewBest, impulseCharge } = run
+const { phase, level, report, ribbon, translation, isNewBest, impulseCharge } = run
 
 // The first race after the course loads waits behind the intro until any key or tap.
 const introShown = ref(true)
@@ -227,9 +227,7 @@ onUnmounted(() => {
     />
     <WordRunnerSummary
       v-if="phase === 'finished' && level && report"
-      :level="level"
       :report="report"
-      :best-seconds="bestSeconds"
       :is-new-best="isNewBest"
       :has-next-level="nextLevel !== null"
       :can-restart="canRestart"

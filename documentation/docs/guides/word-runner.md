@@ -90,12 +90,10 @@ only close to the gate, and from the third on the text is the test.
 ## The end screen
 
 From the top: a small line saying whether the next level is now open, the result ("Level
-complete", or who got there first), and the time against the level's best (the fastest race won
-on it), the words right and the margin. Under it, every sentence of the text as the player picked
-it, with its English: a wrong word is struck through in red with the right one beside it in green.
-The buttons come last.
+complete", or who got there first), the time, gold when it beats the level's best (the fastest
+race won on it), and the words right. The buttons come last.
 
-![The end screen of a won race: next level unlocked, level complete, the time and margin, and the text as picked with the wrong words struck through and corrected](/img/word-runner/summary.webp)
+![The end screen of a won race: next level unlocked, level complete, the time and the words right, then Next level, Race again and Levels](/img/word-runner/summary.webp)
 
 ## Racing a room
 
@@ -103,6 +101,9 @@ Anyone joining the lobby's room races too, in place of the bot, each ball a ghos
 colour. The host picks the level and the difficulty, and the race starts once everyone has loaded
 the course, or after fifteen seconds, so a slow device cannot hold the room at the line. At the end
 only the host chooses what comes next.
+
+The sidebar lists the room by distance, each score live. A new order shows only once it has held
+for a fifth of a second, so two players neck and neck do not keep swapping places in it.
 
 ## Playing
 

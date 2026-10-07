@@ -23,6 +23,7 @@ import {
   DIFFICULTY_STORAGE_KEY,
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
+  RANKING_HOLD_SECONDS,
   READY_TIMEOUT_MS,
   STEERING_STORAGE_KEY
 } from './config'
@@ -30,6 +31,7 @@ import { LANGUAGE_PACKS, packFor } from './levels/languagePacks'
 import { loadChoice, oneOf, saveChoice } from './game/preferences'
 import { unlockedLevelCount } from './game/levelProgress'
 import { useWordRunnerSession } from './useWordRunnerSession'
+import { inRankingOrder, useSteadyRanking } from './game/useSteadyRanking'
 import WordRunnerLobby from './wizard/WordRunnerLobby.vue'
 import WordRunnerRules from './wizard/WordRunnerRules.vue'
 import WordRunnerRace from './game/WordRunnerRace.vue'
@@ -193,8 +195,10 @@ watch([showSidebar, messages], ([open]) => {
   if (open) lastReadCount.value = messages.value.length
 })
 
+// Scores stay live, but the order waits until a new one has held, so close players do not flicker.
+const shownOrder = useSteadyRanking(() => playerList.value, RANKING_HOLD_SECONDS)
 const sidebarPlayers = computed((): MultiplayerPlayer[] =>
-  playerList.value.map((player) => ({
+  inRankingOrder(playerList.value, shownOrder.value).map((player) => ({
     id: player.id,
     name: player.name,
     color: player.color,

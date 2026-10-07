@@ -75,14 +75,6 @@ export type RunState = {
   results: GateResult[]
 }
 
-/** A word as the player picked it: the right word, the one taken, and whether they match. */
-export type PickedWord = {
-  position: number
-  text: string
-  chosen: string
-  correct: boolean
-}
-
 /**
  * How the race ended, against the closest rival: the bot in a solo race, the other players
  * in a room. A win is measured in metres the rival still had to go, a loss in seconds.
@@ -134,7 +126,6 @@ export type RunReport = {
   seconds: number
   correctCount: number
   wordCount: number
-  picks: PickedWord[]
 }
 
 /** How a word sign is drawn: plain, glowing as a hint, or the verdict after it is passed. */
