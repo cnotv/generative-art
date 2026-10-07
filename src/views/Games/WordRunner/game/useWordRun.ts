@@ -58,7 +58,6 @@ type LevelRun = {
   gates: Gate[]
   features: RouteFeature[]
   gateDistances: number[]
-  featureDistances: number[]
   finishDistance: number
   botLanes: number[]
   sentenceOfWord: number[]
@@ -75,8 +74,9 @@ const prepareLevelRun = (level: Level, path: TrackPath, attempt: number): LevelR
   const distances = gateDistances(0, words.length, LEAD_IN_DISTANCE, GATE_SPACING)
   const insideLanes = insideLanesAlong(
     (distance) => path.sampleAt(distance).yaw,
-    distances,
-    FEATURE_OFFSET + GRAVEL.length,
+    // The bend is measured across the gravel in front of the word and as far again past it.
+    distances.map((distance) => distance + FEATURE_OFFSET - GRAVEL.length / 2),
+    GRAVEL.length * 2,
     BEND_YAW_RATE_THRESHOLD,
     LANE_COUNT
   )
@@ -95,7 +95,6 @@ const prepareLevelRun = (level: Level, path: TrackPath, attempt: number): LevelR
       chooseRouteFeature(gate.position, gate.correctLane, insideLanes[gate.position] ?? null)
     ),
     gateDistances: distances,
-    featureDistances: distances.map((distance) => distance + FEATURE_OFFSET),
     finishDistance: (distances[distances.length - 1] ?? LEAD_IN_DISTANCE) + FINISH_RUN_OUT,
     botLanes: planBotLanes(gates, BOT_ACCURACY[level.cefr], botRandomValues, LANE_COUNT),
     sentenceOfWord: sentenceIndices(level)
@@ -194,12 +193,10 @@ const createFeedback = () => {
   return { feedback, show, tick, clear }
 }
 
-/** The lane the bot holds: the one it planned for the next route feature it has not reached. */
+/** The lane the bot holds: the one it planned for the next gate it has not reached. */
 const botLaneAt = (run: LevelRun, distance: number): number => {
-  const nextFeature = run.featureDistances.findIndex(
-    (featureDistance) => featureDistance >= distance
-  )
-  return run.botLanes[nextFeature] ?? run.botLanes[run.botLanes.length - 1] ?? CENTRE_LANE
+  const nextGate = run.gateDistances.findIndex((gateDistance) => gateDistance >= distance)
+  return run.botLanes[nextGate] ?? run.botLanes[run.botLanes.length - 1] ?? CENTRE_LANE
 }
 
 type BallsStep = {
@@ -211,14 +208,18 @@ type BallsStep = {
   elapsedSeconds: number
 }
 
-/** What a lane through a route feature does to a ball that reached it. */
-const runOverFeatures = (
+/**
+ * What the lane a ball took through a gate does to it. The ramp, rocks or gravel lie just in
+ * front of the word, so the lane that is judged is the one the word was taken in, never the
+ * one the player has already turned towards for the next word.
+ */
+const runThroughGates = (
   run: LevelRun,
   racer: Racer,
   fromDistance: number,
   laneAt: (gateIndex: number) => number
 ): Racer =>
-  crossedGateIndices(fromDistance, racer.distance, run.featureDistances).reduce(
+  crossedGateIndices(fromDistance, racer.distance, run.gateDistances).reduce(
     (current, gateIndex) =>
       applyOutcome(
         current,
@@ -228,8 +229,8 @@ const runOverFeatures = (
   )
 
 /**
- * Rolls both balls on by one frame, and applies every route feature each one reached in its
- * lane. Also says which gates the player's ball went through, for their words to be judged.
+ * Rolls both balls on by one frame, and applies the route feature of every gate each one went
+ * through in its lane. Also says which gates the player's ball went through, for their words.
  */
 const stepBalls = (
   run: LevelRun,
@@ -239,8 +240,8 @@ const stepBalls = (
   const movedPlayer = stepRacer(player, step)
   const movedBot = stepRacer(bot, step)
   return {
-    player: runOverFeatures(run, movedPlayer, player.distance, () => playerLane),
-    bot: runOverFeatures(run, movedBot, bot.distance, (gateIndex) => run.botLanes[gateIndex]),
+    player: runThroughGates(run, movedPlayer, player.distance, () => playerLane),
+    bot: runThroughGates(run, movedBot, bot.distance, (gateIndex) => run.botLanes[gateIndex]),
     crossedGates: crossedGateIndices(player.distance, movedPlayer.distance, run.gateDistances)
   }
 }

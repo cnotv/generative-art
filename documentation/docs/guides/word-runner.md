@@ -48,8 +48,8 @@ only close to the gate, and from the third on the text is the test.
 - **Each word keeps its lane.** The lane comes from a seed made from the level id, so it is the
   same on every attempt and the route can be learned as well as the text. Where a gate opens onto
   a bend, its word takes the inside lane. The same lane never comes up three times in a row.
-- **The right word is the faster route, and a wrong one slows the ball.** Just past each gate
-  stands what its lanes lead onto:
+- **The right word is the faster route, and a wrong one slows the ball.** Just in front of each word
+  lies what its lanes run over:
 
 | Feature | Right lane                         | Other lanes                        |
 | ------- | ---------------------------------- | ---------------------------------- |

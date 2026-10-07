@@ -81,8 +81,9 @@ export const SIGN_FONT_MIN_SIZE = 56
 export const SIGN_CORNER_RADIUS = 36
 export const SIGN_BORDER_WIDTH = 10
 
-// The route feature stands this far past its gate, so it reads as what the lane leads to.
-export const FEATURE_OFFSET = 6
+// The route feature lies this far in front of its word, so the ball runs over it on the way in
+// and the lane it is judged in is the one the word was taken in.
+export const FEATURE_OFFSET = -3
 export const RAMP = { width: 2.8, length: 3.4, rise: 0.8, thickness: 0.3, color: 0xe9c46a }
 // lift is how much of the radius stands above the deck: the rest is sunk into it.
 export const ROCK = { radius: 0.95, detail: 1, color: 0x9a8f82, lift: 0.55 }
