@@ -78,32 +78,34 @@ onMounted(() => {
       </p>
       <p class="word-runner-summary__line lui-slide-in lui-slide-in--2">{{ verdict }}</p>
       <p class="word-runner-summary__tip lui-slide-in lui-slide-in--2">{{ report.tip }}</p>
-      <section
-        v-if="report.missed.length > 0"
-        class="word-runner-summary__section lui-slide-in lui-slide-in--2"
+      <div
+        v-if="report.missed.length > 0 || !won"
+        class="word-runner-summary__details lui-slide-in lui-slide-in--2"
       >
-        <h3 class="word-runner-summary__heading">Words to go over</h3>
-        <ol class="word-runner-summary__list">
-          <li v-for="word in report.missed" :key="word.position" class="word-runner-summary__row">
-            <span class="word-runner-summary__word--right">{{ word.text }}</span>
-            <span class="word-runner-summary__gloss">{{ word.gloss }}</span>
-            <span class="word-runner-summary__word--wrong">not {{ word.chosen }}</span>
-          </li>
-        </ol>
-      </section>
-      <section v-if="!won" class="word-runner-summary__section lui-slide-in lui-slide-in--2">
-        <h3 class="word-runner-summary__heading">The text</h3>
-        <ol class="word-runner-summary__list">
-          <li
-            v-for="(sentence, index) in sentences"
-            :key="index"
-            class="word-runner-summary__sentence"
-          >
-            <span>{{ sentence.text }}</span>
-            <span class="word-runner-summary__gloss">{{ sentence.translation }}</span>
-          </li>
-        </ol>
-      </section>
+        <section v-if="report.missed.length > 0" class="word-runner-summary__section">
+          <h3 class="word-runner-summary__heading">Words to go over</h3>
+          <ol class="word-runner-summary__list">
+            <li v-for="word in report.missed" :key="word.position" class="word-runner-summary__row">
+              <span class="word-runner-summary__word--right">{{ word.text }}</span>
+              <span class="word-runner-summary__gloss">{{ word.gloss }}</span>
+              <span class="word-runner-summary__word--wrong">not {{ word.chosen }}</span>
+            </li>
+          </ol>
+        </section>
+        <section v-if="!won" class="word-runner-summary__section">
+          <h3 class="word-runner-summary__heading">The text</h3>
+          <ol class="word-runner-summary__list">
+            <li
+              v-for="(sentence, index) in sentences"
+              :key="index"
+              class="word-runner-summary__sentence"
+            >
+              <span>{{ sentence.text }}</span>
+              <span class="word-runner-summary__gloss">{{ sentence.translation }}</span>
+            </li>
+          </ol>
+        </section>
+      </div>
       <div class="word-runner-summary__actions lui-slide-in lui-slide-in--3" data-lui-row>
         <LobbyUIButton
           v-if="showNext"
@@ -149,8 +151,9 @@ onMounted(() => {
 .word-runner-summary__dialog {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
   align-items: center;
+  max-height: 100%;
   text-align: center;
   pointer-events: all;
 }
@@ -189,14 +192,22 @@ onMounted(() => {
   color: var(--lui-focus-color);
 }
 
+/* The one part allowed to scroll, so the title and the actions always stay on screen. */
+.word-runner-summary__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--spacing-4);
+  width: min(100%, 52rem);
+  min-height: 0;
+  padding: var(--spacing-2);
+  overflow-y: auto;
+}
+
 .word-runner-summary__section {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
   align-items: center;
-  max-height: 24vh;
-  padding: var(--spacing-2);
-  overflow-y: auto;
 }
 
 .word-runner-summary__heading {
@@ -207,7 +218,7 @@ onMounted(() => {
 .word-runner-summary__sentence {
   display: flex;
   flex-direction: column;
-  font-size: var(--lui-text-small);
+  font-size: var(--lui-text-tiny);
 }
 
 .word-runner-summary__time {
