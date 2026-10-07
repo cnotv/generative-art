@@ -133,6 +133,8 @@ export const FREE_BALL = {
 // Holding the brake: the free ball sheds this much speed a second, down to a stop, more than
 // the steepest hill can add, and in lanes the ball runs at this share of its speed.
 export const BRAKE = { deceleration: 60, laneSpeedRatio: 0.4 }
+// Holding speed-up: the ball runs at this share of its speed, in either steering.
+export const ACCELERATE = { speedRatio: 1.3 }
 export const STEERING_STORAGE_KEY = 'word-runner-steering'
 export const LANGUAGE_STORAGE_KEY = 'word-runner-language'
 export const DIFFICULTY_STORAGE_KEY = 'word-runner-difficulty'
@@ -191,7 +193,9 @@ export const CONTROL_MAPPING: ControlMapping = {
     ArrowRight: 'right',
     KeyD: 'right',
     ArrowDown: 'brake',
-    KeyS: 'brake'
+    KeyS: 'brake',
+    ArrowUp: 'accelerate',
+    KeyW: 'accelerate'
   },
   gamepad: {
     'axis0-left': 'left',
@@ -199,7 +203,9 @@ export const CONTROL_MAPPING: ControlMapping = {
     'dpad-left': 'left',
     'dpad-right': 'right',
     'axis1-down': 'brake',
-    'dpad-down': 'brake'
+    'dpad-down': 'brake',
+    'axis1-up': 'accelerate',
+    'dpad-up': 'accelerate'
   },
   pointer: {
     'swipe-left': 'left',
@@ -220,10 +226,10 @@ export const MAX_RIVALS = 4
 // How quickly another player's ball eases towards where the room last reported it.
 export const REMOTE_FOLLOW_RATE = 6
 
-// The on-screen buttons on a touch screen, label to action: a steer either side, the brake between.
-export const TOUCH_LEFT_BUTTON: Record<string, string> = { '←': 'left' }
-export const TOUCH_RIGHT_BUTTON: Record<string, string> = { '→': 'right' }
-export const TOUCH_BRAKE_BUTTON: Record<string, string> = { '↓': 'brake' }
+// The on-screen buttons on a touch screen, label to action: steering under the left thumb,
+// brake and speed-up under the right.
+export const TOUCH_STEER_BUTTONS: Record<string, string> = { '←': 'left', '→': 'right' }
+export const TOUCH_PEDAL_BUTTONS: Record<string, string> = { '↓': 'brake', '↑': 'accelerate' }
 
 export const configControls = {
   run: {

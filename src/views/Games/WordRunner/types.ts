@@ -205,6 +205,8 @@ export type RunSettings = {
   steerInput: () => number
   /** Whether the player is holding the brake. */
   brakeInput: () => boolean
+  /** Whether the player is holding speed-up. */
+  accelerateInput: () => boolean
   /** True with no one else in the room, when the bot is the rival. */
   solo: () => boolean
   /** The other players' balls, as the room last reported them. */

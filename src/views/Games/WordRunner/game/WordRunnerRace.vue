@@ -7,7 +7,6 @@ import { createControls, isMobile, type ControlsCurrents } from '@webgamekit/con
 import { steerDirection } from '@/views/Games/RockRunner/game/rockMotion'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
-import TouchControl from '@/components/TouchControl.vue'
 import { reportInputSource } from '@/composables/useInputDevice'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
@@ -22,9 +21,6 @@ import {
   CONTROL_MAPPING,
   GATE_POOL_SIZE,
   DIFFICULTY_SPEEDS,
-  TOUCH_LEFT_BUTTON,
-  TOUCH_RIGHT_BUTTON,
-  TOUCH_BRAKE_BUTTON,
   configControls,
   setupConfig
 } from '../config'
@@ -38,6 +34,7 @@ import { catchUpSteps, createTickClock } from './tickClock'
 import WordRunnerHud from './WordRunnerHud.vue'
 import WordRunnerSummary from './WordRunnerSummary.vue'
 import WordRunnerIntro from './WordRunnerIntro.vue'
+import WordRunnerControls from './WordRunnerControls.vue'
 import type { Difficulty, RemoteRival, SteeringMode } from '../types'
 
 const props = defineProps<{
@@ -92,6 +89,7 @@ const run = useWordRun({
   steering: props.steering,
   steerInput: () => steerDirection(heldActions.value),
   brakeInput: () => 'brake' in heldActions.value,
+  accelerateInput: () => 'accelerate' in heldActions.value,
   solo: () => props.solo,
   rivals: () => props.rivals,
   onProgress: (distance, lateral) => emit('progress', distance, lateral),
@@ -218,33 +216,11 @@ onUnmounted(() => {
       :translation="translation"
       :ribbon="ribbon"
     />
-    <WordRunnerIntro
-      v-if="introVisible && level"
-      :level="level"
-      :solo="solo"
+    <WordRunnerIntro v-if="introVisible" :touch="isTouchDevice" />
+    <WordRunnerControls
+      v-if="introVisible || (isTouchDevice && phase === 'running')"
       :touch="isTouchDevice"
-    />
-    <TouchControl
-      v-if="isTouchDevice && phase === 'running'"
-      class="word-runner-race__touch word-runner-race__touch--left"
-      mode="button"
-      :mapping="TOUCH_LEFT_BUTTON"
-      :current-actions="heldActions"
-      :on-action="handleAction"
-    />
-    <TouchControl
-      v-if="isTouchDevice && phase === 'running'"
-      class="word-runner-race__touch word-runner-race__touch--right"
-      mode="button"
-      :mapping="TOUCH_RIGHT_BUTTON"
-      :current-actions="heldActions"
-      :on-action="handleAction"
-    />
-    <TouchControl
-      v-if="isTouchDevice && phase === 'running'"
-      class="word-runner-race__touch word-runner-race__touch--brake"
-      mode="button"
-      :mapping="TOUCH_BRAKE_BUTTON"
+      :hints="introVisible"
       :current-actions="heldActions"
       :on-action="handleAction"
     />
@@ -278,24 +254,5 @@ onUnmounted(() => {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-.word-runner-race__touch {
-  position: absolute;
-  bottom: var(--spacing-6);
-  z-index: var(--z-dropdown);
-}
-
-.word-runner-race__touch--left {
-  left: var(--spacing-6);
-}
-
-.word-runner-race__touch--right {
-  right: var(--spacing-6);
-}
-
-.word-runner-race__touch--brake {
-  left: 50%;
-  transform: translateX(-50%);
 }
 </style>

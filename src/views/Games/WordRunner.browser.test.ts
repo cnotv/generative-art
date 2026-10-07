@@ -38,25 +38,30 @@ describe('WordRunner - a race from the lobby', () => {
 
       await startButton()?.trigger('click')
 
-      await vi.waitFor(() => expect(wrapper.find('.word-runner-hud').exists()).toBe(true), {
-        timeout: SCENE_READY_TIMEOUT,
-        interval: 500
-      })
-      expect(wrapper.find('.word-runner-hud__translation').text()).toBe('Good morning!')
-      const canvas = wrapper.find('canvas').element as HTMLCanvasElement
-      expect(canvas.width).toBeGreaterThan(0)
-
-      // The first race waits behind its intro until any key, then the intro gives way.
+      // The first race waits behind its intro until any key, with a hint over each control.
       await vi.waitFor(
         () =>
           expect(wrapper.find('.word-runner-intro__prompt').text()).toBe('Press any key to start'),
         { timeout: SCENE_READY_TIMEOUT, interval: 500 }
       )
+      expect(wrapper.findAll('.word-runner-hint__word').map((hint) => hint.text())).toEqual([
+        'Steer',
+        'Brake',
+        'Speed up'
+      ])
+      const canvas = wrapper.find('canvas').element as HTMLCanvasElement
+      expect(canvas.width).toBeGreaterThan(0)
+
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
-      await vi.waitFor(() => expect(wrapper.find('.word-runner-intro').exists()).toBe(false), {
+
+      // The key clears the intro and its hints, and the race shows its first sentence.
+      await vi.waitFor(() => expect(wrapper.find('.word-runner-hud').exists()).toBe(true), {
         timeout: 5000,
         interval: 100
       })
+      expect(wrapper.find('.word-runner-intro').exists()).toBe(false)
+      expect(wrapper.find('.word-runner-hint').exists()).toBe(false)
+      expect(wrapper.find('.word-runner-hud__translation').text()).toBe('Good morning!')
 
       wrapper.unmount()
     },

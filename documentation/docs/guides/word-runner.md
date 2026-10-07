@@ -47,12 +47,15 @@ The race is set up in the lobby, which remembers every choice for the next visit
 
 ## How a race works
 
-The first race after the course loads opens on a card: the level and its situation, the rules,
-the controls, and "Press any key to start" ("Tap to start" on a touch screen). The ball waits on
-the line until then. In a room the player counts as ready only once they have pressed, and the
-race still goes after fifteen seconds at most.
+The first race after the course loads opens with its controls drawn over the course: a pulsing
+word for each button in the bottom corners, Steer over the pair on the left, Brake and Speed up
+over the pair on the right, each with a hand-drawn arrow down to it, and "Press any key to
+start" ("Tap to start" on a touch screen) in the middle. On a touch screen the buttons are the
+real ones; elsewhere they are drawn keys. The ball waits on the line until a key or a tap, which
+clears the hints. In a room the player counts as ready only once they have pressed, and the race
+still goes after fifteen seconds at most.
 
-![The intro card over the course: A1, Ordering at a café, three lines of rules, the steer and brake keys, and Press any key to start](/img/word-runner/intro.webp)
+![The start of a race: Press any key to start across the middle, Steer pointing at the left and right keys in the bottom-left corner, and Brake and Speed up pointing at the down and up keys in the bottom-right](/img/word-runner/intro.webp)
 
 The level is run once, from its first word to its last. Only two lines sit over the course: the
 English of the current sentence, and underneath it the sentence the words passed so far build, a
@@ -104,15 +107,16 @@ only the host chooses what comes next.
 
 ## Playing
 
-| Input    | Steer                                                                     | Brake                    |
-| -------- | ------------------------------------------------------------------------- | ------------------------ |
-| Keyboard | Left and right arrows, or A and D                                         | Down arrow, or S         |
-| Gamepad  | Left stick or D-pad                                                       | Left stick or D-pad down |
-| Touch    | The arrow buttons in the bottom corners, a swipe, or a tap on either side | The down arrow between   |
+| Input    | Steer                                                         | Brake                     | Speed up                   |
+| -------- | ------------------------------------------------------------- | ------------------------- | -------------------------- |
+| Keyboard | Left and right arrows, or A and D                             | Down arrow, or S          | Up arrow, or W             |
+| Gamepad  | Left stick or D-pad                                           | Left stick or D-pad down  | Left stick or D-pad up     |
+| Touch    | The two buttons bottom left, a swipe, or a tap on either side | The left one bottom right | The right one bottom right |
 
 With free steering the ball turns for as long as a key or button is held; with lanes, each press
 moves it one lane. Holding the brake brings the free ball to a stop and holds it there, even on
-a slope, and runs the lanes ball at under half its speed. The Config panel's speed slider starts at the difficulty's speed and tunes it
+a slope, and runs the lanes ball at under half its speed. Holding speed up runs either ball
+30% faster than the difficulty's speed. The Config panel's speed slider starts at the difficulty's speed and tunes it
 for every ball.
 
 ## Adding a language

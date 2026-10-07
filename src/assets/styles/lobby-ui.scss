@@ -22,6 +22,10 @@
     0 -1px 0 #111, 0 1px 0 #111, clamp(3px, 0.12em, 6px) clamp(3px, 0.16em, 7px) 0 #111;
   --lui-font: var(--font-playful);
 
+  // The dark ink of that outline, for drawn strokes (arrows, sketches) that cannot take a
+  // text shadow and carry the same black-under-white look with a wider stroke beneath.
+  --lui-outline-color: #111;
+
   // Exactly three text levels:
   //   --lui-text-important: page title + CTAs (Start, Play Again)
   //   --lui-text-medium:    picked option / control value (input, button, select)
@@ -112,6 +116,32 @@
 
 .lui-slide-in--3 {
   animation-delay: 0.16s;
+}
+
+// Attention pulse for a hint that waits on the player, such as a "press to start" prompt or
+// an arrow pointing at a control. Put it on an element inside a `.lui-slide-in` one, since
+// both are animations and an element runs only one.
+@keyframes lui-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
+}
+
+.lui-pulse {
+  animation: lui-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lui-pulse {
+    animation: none;
+  }
 }
 
 // Modifier: apply to any element (LobbyUI or plain) to flip into the inverted
