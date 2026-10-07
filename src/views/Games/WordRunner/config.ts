@@ -12,6 +12,9 @@ import {
   LIGHT_SHADOW_RADIUS
 } from '@/views/Games/MarbleMadness/config'
 
+// The language a first visit starts in; after that the start screen remembers the last pick.
+export const DEFAULT_LANGUAGE = 'de'
+
 export const LANE_COUNT = 3
 
 // Three words is about what a player can hold while also steering; the next chunk only

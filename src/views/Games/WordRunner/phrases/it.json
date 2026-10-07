@@ -1,0 +1,59 @@
+{
+  "language": "it",
+  "languageName": "Italian",
+  "phrases": [
+    {
+      "id": "nel-mezzo",
+      "title": "Nel mezzo del cammin di nostra vita",
+      "translation": "Midway along the journey of our life.",
+      "words": [
+        { "text": "Nel", "gloss": "in the", "decoys": ["Nei", "Nella"] },
+        { "text": "mezzo", "gloss": "middle", "decoys": ["mazzo", "messo"] },
+        { "text": "del", "gloss": "of the", "decoys": ["dal", "dei"] },
+        { "text": "cammin", "gloss": "journey", "decoys": ["camin", "cammino"] },
+        { "text": "di", "gloss": "of", "decoys": ["dì", "da"] },
+        { "text": "nostra", "gloss": "our", "decoys": ["nostro", "mostra"] },
+        { "text": "vita", "gloss": "life", "decoys": ["vite", "vista"] }
+      ]
+    },
+    {
+      "id": "chi-va-piano",
+      "title": "Chi va piano va sano e va lontano",
+      "translation": "Slow and steady goes safely, and goes far.",
+      "words": [
+        { "text": "Chi", "gloss": "whoever", "decoys": ["Che", "Ci"] },
+        { "text": "va", "gloss": "goes", "decoys": ["fa", "vai"] },
+        { "text": "piano", "gloss": "slowly", "decoys": ["pieno", "pane"] },
+        { "text": "va", "gloss": "goes", "decoys": ["vai", "da"] },
+        { "text": "sano", "gloss": "safely", "decoys": ["seno", "sanno"] },
+        { "text": "e", "gloss": "and", "decoys": ["è", "ed"] },
+        { "text": "va", "gloss": "goes", "decoys": ["fa", "vado"] },
+        { "text": "lontano", "gloss": "far", "decoys": ["lontana", "lantana"] }
+      ]
+    },
+    {
+      "id": "tutte-le-strade",
+      "title": "Tutte le strade portano a Roma",
+      "translation": "All roads lead to Rome.",
+      "words": [
+        { "text": "Tutte", "gloss": "all", "decoys": ["Tutti", "Tutta"] },
+        { "text": "le", "gloss": "the", "decoys": ["la", "lo"] },
+        { "text": "strade", "gloss": "roads", "decoys": ["strane", "strada"] },
+        { "text": "portano", "gloss": "lead", "decoys": ["partono", "portiamo"] },
+        { "text": "a", "gloss": "to", "decoys": ["ha", "al"] },
+        { "text": "Roma", "gloss": "Rome", "decoys": ["Rima", "Ramo"] }
+      ]
+    },
+    {
+      "id": "meglio-tardi",
+      "title": "Meglio tardi che mai",
+      "translation": "Better late than never.",
+      "words": [
+        { "text": "Meglio", "gloss": "better", "decoys": ["Moglie", "Miglio"] },
+        { "text": "tardi", "gloss": "late", "decoys": ["tardo", "tordi"] },
+        { "text": "che", "gloss": "than", "decoys": ["chi", "ché"] },
+        { "text": "mai", "gloss": "never", "decoys": ["ma", "mani"] }
+      ]
+    }
+  ]
+}

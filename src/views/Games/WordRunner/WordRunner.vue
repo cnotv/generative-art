@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { createTimelineManager } from '@webgamekit/animation'
@@ -11,7 +11,8 @@ import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
 import { reportInputSource } from '@/composables/useInputDevice'
 import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useSceneViewStore } from '@/stores/sceneView'
-import spanishPack from './phrases/es.json'
+import { LANGUAGE_PACKS, packFor } from './phrases/languagePacks'
+import { loadLanguage, saveLanguage } from './game/languagePreference'
 import {
   FOG_COLOR,
   FOG_FAR,
@@ -19,7 +20,14 @@ import {
   LIGHT_DIRECTIONAL_POSITION
 } from '@/views/Games/RockRunner/config'
 import { createDirectionalLightFollowAction } from '@/utils/gameTimelineActions'
-import { CONTROL_MAPPING, GATE_POOL_SIZE, RUN_SPEED, configControls, setupConfig } from './config'
+import {
+  CONTROL_MAPPING,
+  DEFAULT_LANGUAGE,
+  GATE_POOL_SIZE,
+  RUN_SPEED,
+  configControls,
+  setupConfig
+} from './config'
 import { useWordRun } from './game/useWordRun'
 import { createGatePool } from './scene/gatePool'
 import { createCourse } from './scene/course'
@@ -27,12 +35,22 @@ import { spawnRunner } from './scene/runner'
 import WordRunnerStart from './game/WordRunnerStart.vue'
 import WordRunnerHud from './game/WordRunnerHud.vue'
 import WordRunnerSummary from './game/WordRunnerSummary.vue'
-import type { LanguagePack } from './types'
 
 const FONT_KEY = 'word-runner-font'
 const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
 
-const pack: LanguagePack = spanishPack
+const languageOptions = LANGUAGE_PACKS.map((pack) => ({
+  value: pack.language,
+  label: pack.languageName
+}))
+const language = ref(
+  loadLanguage(
+    languageOptions.map((option) => option.value),
+    DEFAULT_LANGUAGE
+  )
+)
+watch(language, saveLanguage)
+const languagePack = computed(() => packFor(language.value))
 const route = useRoute()
 const store = useSceneViewStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -48,9 +66,12 @@ const handleProgress = (progress: LoadProgress): void => {
 
 const reactiveConfig = createReactiveConfig({ run: { speed: RUN_SPEED } })
 
-const run = useWordRun(pack, {
-  speed: () => reactiveConfig.value.run.speed
-})
+const run = useWordRun(
+  LANGUAGE_PACKS.flatMap((pack) => pack.phrases),
+  {
+    speed: () => reactiveConfig.value.run.speed
+  }
+)
 const {
   phase,
   phrase,
@@ -149,8 +170,9 @@ onUnmounted(() => {
     />
     <WordRunnerStart
       v-if="phase === 'idle' && !loadingVisible"
-      :phrases="pack.phrases"
-      :language-name="pack.languageName"
+      v-model:language="language"
+      :phrases="languagePack.phrases"
+      :languages="languageOptions"
       @start="run.start"
     />
     <WordRunnerSummary

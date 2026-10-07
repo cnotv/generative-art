@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { LobbyUIButton, LobbyUIFocusHint } from '@/components/LobbyUI'
+import { LobbyUIButton, LobbyUIFocusHint, LobbyUIOptionToggle } from '@/components/LobbyUI'
 import { useDialogFocusTrap } from '@/composables/useDialogFocusTrap'
 import type { Phrase } from '../types'
 
 defineProps<{
   phrases: Phrase[]
-  languageName: string
+  languages: Array<{ value: string; label: string }>
 }>()
+
+const language = defineModel<string>('language', { required: true })
 
 const emit = defineEmits<{
   start: [phraseId: string]
@@ -25,7 +27,9 @@ const { focusedHint, inputSource } = useDialogFocusTrap(dialogReference)
         Run through the next word of the phrase. Every word keeps its lane, so the phrase becomes a
         path.
       </p>
-      <p class="word-runner-start__language lui-slide-in lui-slide-in--2">{{ languageName }}</p>
+      <div class="lui-slide-in lui-slide-in--2" data-lui-row>
+        <LobbyUIOptionToggle v-model="language" :options="languages" size="sm" />
+      </div>
       <ul class="word-runner-start__phrases lui-slide-in lui-slide-in--3">
         <li v-for="(phrase, index) in phrases" :key="phrase.id" data-lui-row>
           <LobbyUIButton
@@ -77,18 +81,12 @@ const { focusedHint, inputSource } = useDialogFocusTrap(dialogReference)
   text-transform: uppercase;
 }
 
-.word-runner-start__hint,
-.word-runner-start__language {
+.word-runner-start__hint {
   margin: 0;
   font-family: var(--lui-font);
   font-size: var(--lui-text-small);
   color: var(--lui-text-color);
   text-shadow: var(--lui-text-shadow);
-}
-
-.word-runner-start__language {
-  font-size: var(--lui-text-tiny);
-  text-transform: uppercase;
 }
 
 .word-runner-start__phrases {

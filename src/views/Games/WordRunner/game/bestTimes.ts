@@ -1,3 +1,5 @@
+import { readStorage, writeStorage } from './storage'
+
 const STORAGE_KEY = 'word-runner-best-times'
 
 const isTime = (value: unknown): value is number =>
@@ -20,26 +22,14 @@ export const parseBestTimes = (raw: string | null): Record<string, number> => {
   }
 }
 
-// Private windows and blocked storage throw on access; a best time is a nicety, never a blocker.
-const readStorage = (): string | null => {
-  try {
-    return localStorage.getItem(STORAGE_KEY)
-  } catch {
-    return null
-  }
-}
-
 export const loadBestTime = (phraseId: string): number | null =>
-  parseBestTimes(readStorage())[phraseId] ?? null
+  parseBestTimes(readStorage(STORAGE_KEY))[phraseId] ?? null
 
-export const saveBestTime = (phraseId: string, seconds: number): void => {
-  try {
-    const times = { ...parseBestTimes(readStorage()), [phraseId]: seconds }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(times))
-  } catch {
-    // Storage is unavailable; the run simply is not remembered.
-  }
-}
+export const saveBestTime = (phraseId: string, seconds: number): void =>
+  writeStorage(
+    STORAGE_KEY,
+    JSON.stringify({ ...parseBestTimes(readStorage(STORAGE_KEY)), [phraseId]: seconds })
+  )
 
 const SECONDS_PER_MINUTE = 60
 

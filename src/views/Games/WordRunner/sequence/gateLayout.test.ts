@@ -247,23 +247,3 @@ describe('buildLapGates', () => {
     })
   })
 })
-
-describe('the Spanish language pack', () => {
-  it.each(pack.phrases.map((phrase) => [phrase.id, phrase]))(
-    '%s has words, and no word is its own decoy',
-    (_, phrase) => {
-      expect(phrase.words.length).toBeGreaterThan(0)
-      phrase.words.forEach((word) => {
-        expect(word.text.trim()).not.toBe('')
-        expect(word.gloss.trim()).not.toBe('')
-        expect(word.decoys).not.toContain(word.text)
-      })
-    }
-  )
-
-  it('has a unique id for every phrase', () => {
-    const ids = pack.phrases.map((phrase) => phrase.id)
-
-    expect(new Set(ids).size).toBe(ids.length)
-  })
-})

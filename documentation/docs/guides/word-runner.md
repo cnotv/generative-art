@@ -6,11 +6,11 @@ sidebar_position: 25
 
 Word Runner is a three-lane runner at `/games/WordRunner`, set on Rock Runner's course: the same
 seeded track, forest, drawn edges and haze. Each gate across the track shows one word per lane,
-and the player runs through the lane holding the next word of a phrase in another language. The
-first language pack is Spanish.
+and the player runs through the lane holding the next word of a phrase in another language: German,
+Spanish, French or Italian.
 
 :::note Source files
-`src/views/Games/WordRunner/phrases/es.json`, `src/views/Games/WordRunner/types.ts`,
+`src/views/Games/WordRunner/phrases/`, `src/views/Games/WordRunner/types.ts`,
 `src/views/Games/WordRunner/config.ts`, `src/views/Games/WordRunner/sequence/`,
 `src/views/Games/WordRunner/runner/routeAdvantage.ts`
 :::
@@ -72,6 +72,11 @@ how often its lane was right.
 
 ## Playing
 
+The start screen picks the language, then the phrase. A first visit starts in German, and after
+that the start screen opens on the language picked last.
+
+![The start screen: the language picker with German selected, and the five German phrases](/img/word-runner/start.webp)
+
 | Input    | Change lane                         |
 | -------- | ----------------------------------- |
 | Keyboard | Left and right arrows, or A and D   |
@@ -83,21 +88,24 @@ The Config panel sets the run speed.
 ## Adding a language
 
 A language is one JSON file in `src/views/Games/WordRunner/phrases/`, shaped as the
-`LanguagePack` type in `types.ts`:
+`LanguagePack` type in `types.ts`, and listed in `LANGUAGE_PACKS` in
+`phrases/languagePacks.ts`, whose order is the order of the picker:
 
 ```json
 {
-  "language": "it",
-  "languageName": "Italian",
+  "language": "pt",
+  "languageName": "Portuguese",
   "phrases": [
     {
-      "id": "chi-va-piano",
-      "title": "Chi va piano",
-      "translation": "Slow and steady wins the race.",
+      "id": "devagar-se-vai",
+      "title": "Devagar se vai ao longe",
+      "translation": "Slowly, one goes far.",
       "words": [
-        { "text": "chi", "gloss": "who", "decoys": ["chiù", "che"] },
-        { "text": "va", "gloss": "goes", "decoys": ["fa", "vai"] },
-        { "text": "piano", "gloss": "slowly", "decoys": ["pieno", "pane"] }
+        { "text": "Devagar", "gloss": "slowly", "decoys": ["Devagarinho", "Divagar"] },
+        { "text": "se", "gloss": "one", "decoys": ["sé", "si"] },
+        { "text": "vai", "gloss": "goes", "decoys": ["vá", "vais"] },
+        { "text": "ao", "gloss": "to the", "decoys": ["o", "à"] },
+        { "text": "longe", "gloss": "far", "decoys": ["longo", "lance"] }
       ]
     }
   ]
@@ -109,9 +117,12 @@ A language is one JSON file in `src/views/Games/WordRunner/phrases/`, shaped as 
 - `decoys` are look-alikes of that word. Two per word is plenty, since the other decoy on each
   gate comes from the phrase itself. A word must never list itself.
 - `id` seeds both the course and the lane path, so changing it gives the phrase a different
-  route.
+  route. It also keys the best time, so it has to be unique across every language, not just
+  its own.
 - Phrases are memorised word by word, so prefer short sayings, proverbs and lines of verse
   that are in the public domain.
 
-The unit tests in `sequence/gateLayout.test.ts` check the Spanish pack for empty words, duplicate
-ids and words listed as their own decoy. Point the same checks at a new pack when adding one.
+The unit tests in `phrases/languagePacks.test.ts` check every listed pack for empty words, phrase
+ids shared anywhere across the languages, and words listed as their own decoy, so a new pack is
+covered as soon as it is listed. The test that names the offered languages needs the new code
+added.

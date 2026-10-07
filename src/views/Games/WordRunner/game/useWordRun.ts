@@ -37,7 +37,6 @@ import type {
   Course,
   Gate,
   GateDeal,
-  LanguagePack,
   Phrase,
   RibbonWord,
   RouteFeature,
@@ -120,8 +119,8 @@ const prepareRun = (phrase: Phrase, insideLanes: Array<number | null>) => {
  * The phrase being learned: which one, the lanes its words keep, where the lap schedule
  * stands, and the gates of the lap being run.
  */
-const createPhraseRun = (pack: LanguagePack) => {
-  const phrase = shallowRef<Phrase>(pack.phrases[0])
+const createPhraseRun = (phrases: Phrase[]) => {
+  const phrase = shallowRef<Phrase>(phrases[0])
   const runState = shallowRef<RunState>(createRunState([]))
   const lapGates = shallowRef<Gate[]>([])
   let deal: GateDeal | null = null
@@ -136,7 +135,7 @@ const createPhraseRun = (pack: LanguagePack) => {
     phraseId: string,
     layCourse: (seed: number, wordCount: number) => Array<number | null>
   ): void => {
-    const picked = pack.phrases.find((candidate) => candidate.id === phraseId) ?? pack.phrases[0]
+    const picked = phrases.find((candidate) => candidate.id === phraseId) ?? phrases[0]
     insideLanes = layCourse(phraseSeed(picked.id), picked.words.length)
     const prepared = prepareRun(picked, insideLanes)
     phrase.value = picked
@@ -277,9 +276,9 @@ const createFeedback = () => {
  * and the scene kept in step with all of it every frame. Every lap restarts at the start of
  * the phrase's own course, so each word's gate is met at the same place every time.
  */
-export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
+export const useWordRun = (phrases: Phrase[], settings: RunSettings) => {
   const phase = ref<RunPhase>('idle')
-  const learning = createPhraseRun(pack)
+  const learning = createPhraseRun(phrases)
   const { phrase, runState, lapGates } = learning
   const ribbon = ref<RibbonWord[]>([])
   const {
@@ -397,7 +396,7 @@ export const useWordRun = (pack: LanguagePack, settings: RunSettings) => {
   const attachScene = (runScene: RunScene): void => {
     scene = runScene
     drawRunner = createRunnerDrawer(runScene)
-    courses.useFor(runScene, phraseSeed(pack.phrases[0].id))
+    courses.useFor(runScene, phraseSeed(phrases[0].id))
   }
 
   const dispose = (): void => {
