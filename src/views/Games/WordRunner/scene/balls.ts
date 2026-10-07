@@ -6,7 +6,7 @@ import {
   ROCK_STROKE_WIDTH,
   ROCK_STROKE_WOBBLE
 } from '@/views/Games/RockRunner/config'
-import { BALL, BOT_GHOST_OPACITY, BOT_SURFACE, PLAYER_SURFACE } from '../config'
+import { BALL, BOT_GHOST_OPACITY, BOT_SURFACE, MAX_RIVALS, PLAYER_SURFACE } from '../config'
 
 const createBall = (
   scene: THREE.Scene,
@@ -36,12 +36,13 @@ const createBall = (
 }
 
 /**
- * The two balls of the race, dressed in Rock Runner's painted rock surfaces. The bot's is a
- * see-through ghost, so where the two share a lane the player's ball still shows through it.
+ * The balls of the race, dressed in Rock Runner's painted rock surfaces: the player's, and a
+ * see-through ghost for each rival, so where a rival shares the player's lane the player's ball
+ * still shows through it. Every ghost has its own material, to take its player's colour.
  */
 export const createBalls = (
   scene: THREE.Scene
-): { player: THREE.Mesh; bot: THREE.Mesh; dispose: () => void } => {
+): { player: THREE.Mesh; ghosts: THREE.Mesh[]; dispose: () => void } => {
   const loader = new THREE.TextureLoader()
   const geometry = new THREE.SphereGeometry(BALL.radius, BALL.segments, BALL.segments / 2)
   const textures = [PLAYER_SURFACE, BOT_SURFACE].map((surfaceId) => {
@@ -50,8 +51,13 @@ export const createBalls = (
     return texture
   })
   const player = createBall(scene, geometry, textures[0], 'player-ball', 1)
-  const bot = createBall(scene, geometry, textures[1], 'bot-ball', BOT_GHOST_OPACITY)
-  const balls = [player, bot]
+  const ghosts = Array.from({ length: MAX_RIVALS }, (_, index) =>
+    createBall(scene, geometry, textures[1], `rival-ball-${index}`, BOT_GHOST_OPACITY)
+  )
+  ghosts.forEach((ghost) => {
+    ghost.visible = false
+  })
+  const balls = [player, ...ghosts]
   const dispose = (): void => {
     balls.forEach((ball) => {
       scene.remove(ball)
@@ -64,5 +70,5 @@ export const createBalls = (
     geometry.dispose()
     textures.forEach((texture) => texture.dispose())
   }
-  return { player, bot, dispose }
+  return { player, ghosts, dispose }
 }

@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { LobbyUIKeyPill } from '@/components/LobbyUI'
 import { formatRunTime } from './bestTimes'
+import { capitalise } from '../sequence/levelText'
 import type { Level, RibbonWord, RunFeedback } from '../types'
 
 const props = defineProps<{
   level: Level
+  waiting: boolean
   sentenceIndex: number
   sentenceCount: number
   translation: string
@@ -13,13 +15,16 @@ const props = defineProps<{
   nextGloss: string | null
   feedback: RunFeedback | null
   standing: number
+  rivalName: string
   runSeconds: number
 }>()
 
 const isLeading = computed(() => props.standing >= 0)
 const standingLabel = computed(() => {
   const metres = Math.round(Math.abs(props.standing))
-  return isLeading.value ? `You lead by ${metres} m` : `Bot ahead by ${metres} m`
+  return isLeading.value
+    ? `You lead by ${metres} m`
+    : `${capitalise(props.rivalName)} ahead by ${metres} m`
 })
 </script>
 
@@ -48,7 +53,10 @@ const standingLabel = computed(() => {
       </ol>
     </header>
 
-    <p v-if="feedback" class="word-runner-hud__feedback lui-slide-in">
+    <p v-if="waiting" class="word-runner-hud__feedback lui-slide-in">
+      <span>Waiting for everyone to load the course…</span>
+    </p>
+    <p v-else-if="feedback" class="word-runner-hud__feedback lui-slide-in">
       <span
         :class="feedback.correct ? 'word-runner-hud__word--right' : 'word-runner-hud__word--wrong'"
         >{{ feedback.text }}</span

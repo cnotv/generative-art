@@ -4,7 +4,7 @@ import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import WordRunner from '@/views/Games/WordRunner/WordRunner.vue'
 
-// The whole forest course is built before the start screen shows, which takes a while.
+// The whole forest course is built before the race begins, which takes a while.
 const SCENE_READY_TIMEOUT = 90_000
 
 const mountWordRunner = () => {
@@ -18,36 +18,30 @@ const mountWordRunner = () => {
   })
 }
 
-describe('WordRunner - a race from the start screen', () => {
+describe('WordRunner - a race from the lobby', () => {
   beforeEach(() => localStorage.clear())
 
   it(
-    'loads the course, opens only A1 in German, and starts its race',
+    'offers German A1 alone in the lobby, then loads the course and races it',
     async () => {
       const wrapper = mountWordRunner()
 
-      await vi.waitFor(() => expect(wrapper.find('.word-runner-start').exists()).toBe(true), {
+      const startButton = () =>
+        wrapper.findAll('button').find((button) => button.text().trim() === 'Start')
+      await vi.waitFor(() => expect(startButton()).toBeDefined(), {
+        timeout: 10_000,
+        interval: 250
+      })
+      const selects = wrapper.findAll('select')
+      expect((selects[0].element as HTMLSelectElement).value).toBe('de')
+      expect(selects[1].findAll('option').map((option) => option.text())).toEqual(['A1 · Im Café'])
+
+      await startButton()?.trigger('click')
+
+      await vi.waitFor(() => expect(wrapper.find('.word-runner-hud').exists()).toBe(true), {
         timeout: SCENE_READY_TIMEOUT,
         interval: 500
       })
-      const levelButtons = wrapper.findAll('.word-runner-start__levels button')
-      expect(wrapper.find('.lui-toggle__btn--active').text()).toBe('German')
-      expect(levelButtons).toHaveLength(6)
-      expect(levelButtons.map((button) => button.attributes('disabled') !== undefined)).toEqual([
-        false,
-        true,
-        true,
-        true,
-        true,
-        true
-      ])
-
-      await levelButtons[0].trigger('click')
-
-      await vi.waitFor(() => expect(wrapper.find('.word-runner-hud').exists()).toBe(true), {
-        timeout: 10_000
-      })
-      expect(wrapper.find('.word-runner-hud__status').text()).toContain('A1 · Im Café')
       expect(wrapper.find('.word-runner-hud__translation').text()).toBe('Good morning!')
       const canvas = wrapper.find('canvas').element as HTMLCanvasElement
       expect(canvas.width).toBeGreaterThan(0)

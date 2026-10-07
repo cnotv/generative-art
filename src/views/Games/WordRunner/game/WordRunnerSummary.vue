@@ -3,7 +3,7 @@ import { computed, onMounted, ref, type ComponentPublicInstance } from 'vue'
 import { LobbyUIButton, LobbyUIFocusHint } from '@/components/LobbyUI'
 import { useDialogFocusTrap } from '@/composables/useDialogFocusTrap'
 import { formatRunTime } from './bestTimes'
-import { sentenceText } from '../sequence/levelText'
+import { capitalise, sentenceText } from '../sequence/levelText'
 import type { CefrDescription, Level, RunReport } from '../types'
 
 const props = defineProps<{
@@ -13,6 +13,7 @@ const props = defineProps<{
   bestSeconds: number | null
   isNewBest: boolean
   hasNextLevel: boolean
+  canRestart: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,8 +31,8 @@ const won = computed(() => props.report.race.won)
 const raceLine = computed(() => {
   const { race } = props.report
   return race.won
-    ? `${Math.round(race.metresAhead)} m ahead of the bot`
-    : `${race.secondsBehind.toFixed(1)} s behind the bot`
+    ? `${Math.round(race.metresAhead)} m ahead of ${race.rivalName}`
+    : `${race.secondsBehind.toFixed(1)} s behind ${race.rivalName}`
 })
 const verdict = computed(() =>
   won.value
@@ -44,7 +45,7 @@ const sentences = computed(() =>
     translation: sentence.translation
   }))
 )
-const showNext = computed(() => won.value && props.hasNextLevel)
+const showNext = computed(() => props.canRestart && won.value && props.hasNextLevel)
 
 onMounted(() => {
   const primary = nextReference.value ?? againReference.value
@@ -59,7 +60,7 @@ onMounted(() => {
         class="word-runner-summary__title lui-slide-in"
         :class="{ 'word-runner-summary__title--won': won }"
       >
-        {{ won ? 'You got there first' : 'The bot got there first' }}
+        {{ won ? 'You got there first' : `${capitalise(report.race.rivalName)} got there first` }}
       </h2>
       <p class="word-runner-summary__line lui-slide-in">
         {{ level.cefr }} · {{ level.title }} · {{ raceLine }}
@@ -106,7 +107,10 @@ onMounted(() => {
           </ol>
         </section>
       </div>
-      <div class="word-runner-summary__actions lui-slide-in lui-slide-in--3" data-lui-row>
+      <p v-if="!canRestart" class="word-runner-summary__line lui-slide-in lui-slide-in--3">
+        Waiting for host…
+      </p>
+      <div v-else class="word-runner-summary__actions lui-slide-in lui-slide-in--3" data-lui-row>
         <LobbyUIButton
           v-if="showNext"
           ref="nextReference"

@@ -1,49 +1,44 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import * as THREE from 'three'
-import { createTimelineManager } from '@webgamekit/animation'
-import { createControls, isMobile } from '@webgamekit/controls'
-import type { LoadProgress } from '@webgamekit/threejs'
-import LoadingOverlay from '@/components/LoadingOverlay.vue'
-import TouchControl from '@/components/TouchControl.vue'
+import { storeToRefs } from 'pinia'
 import '@/assets/styles/lobby-ui.scss'
 import { loadGoogleFont, removeGoogleFont } from '@/utils/ui'
-import { reportInputSource } from '@/composables/useInputDevice'
-import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
-import { useSceneViewStore } from '@/stores/sceneView'
-import { CEFR_DESCRIPTIONS, LANGUAGE_PACKS, nextLevelId, packFor } from './levels/languagePacks'
+import {
+  loadProfile,
+  randomPick,
+  NAME_ADJECTIVES,
+  NAME_ANIMALS,
+  PLAYER_COLORS
+} from '@/utils/playerProfile'
+import { useRoomId } from '@/composables/useRoomId'
+import { useMultiplayerLobbyHandlers } from '@/composables/useMultiplayerLobbyHandlers'
+import { useWordRunnerStore } from '@/stores/wordRunner'
+import LobbyLayout from '@/layout/LobbyLayout.vue'
+import GameHeader from '@/components/GameHeader.vue'
+import MultiplayerSidebar, { type MultiplayerPlayer } from '@/components/MultiplayerSidebar.vue'
+import GameTabBar from '@/components/GameTabBar.vue'
+import { DEFAULT_LANGUAGE, READY_TIMEOUT_MS } from './config'
+import { LANGUAGE_PACKS, packFor } from './levels/languagePacks'
 import { loadLanguage, saveLanguage } from './game/languagePreference'
 import { unlockedLevelCount } from './game/levelProgress'
-import {
-  FOG_COLOR,
-  FOG_FAR,
-  FOG_NEAR,
-  LIGHT_DIRECTIONAL_POSITION
-} from '@/views/Games/RockRunner/config'
-import { createDirectionalLightFollowAction } from '@/utils/gameTimelineActions'
-import {
-  CONTROL_MAPPING,
-  DEFAULT_LANGUAGE,
-  GATE_POOL_SIZE,
-  RUN_SPEED,
-  TOUCH_LEFT_BUTTON,
-  TOUCH_RIGHT_BUTTON,
-  configControls,
-  setupConfig
-} from './config'
-import { useWordRun } from './game/useWordRun'
-import { createGatePool } from './scene/gatePool'
-import { createCourse } from './scene/course'
-import { createBalls } from './scene/balls'
-import { createFinishLine } from './scene/finishLine'
-import WordRunnerStart from './game/WordRunnerStart.vue'
-import WordRunnerHud from './game/WordRunnerHud.vue'
-import WordRunnerSummary from './game/WordRunnerSummary.vue'
+import { useWordRunnerSession } from './useWordRunnerSession'
+import WordRunnerLobby from './wizard/WordRunnerLobby.vue'
+import WordRunnerRules from './wizard/WordRunnerRules.vue'
+import WordRunnerRace from './game/WordRunnerRace.vue'
+import type { RemoteRival } from './types'
 
 const FONT_KEY = 'word-runner-font'
-const isTouchDevice = isMobile()
 const LOBBY_UI_FONT = 'https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap'
+
+const store = useWordRunnerStore()
+const { phase, playerList, messages, hostId, levelId, raceSerial, started, solo } =
+  storeToRefs(store)
+
+const storedProfile = loadProfile()
+const playerName = ref(
+  storedProfile?.name ?? `${randomPick(NAME_ADJECTIVES)}${randomPick(NAME_ANIMALS)}`
+)
+const playerColor = ref(storedProfile?.color ?? randomPick(PLAYER_COLORS))
 
 const languageOptions = LANGUAGE_PACKS.map((pack) => ({
   value: pack.language,
@@ -56,192 +51,207 @@ const language = ref(
   )
 )
 watch(language, saveLanguage)
-const languagePack = computed(() => packFor(language.value))
-const route = useRoute()
-const store = useSceneViewStore()
-const canvas = ref<HTMLCanvasElement | null>(null)
 
-const loadingVisible = ref(true)
-const loadingStage = ref('Loading…')
-const loadingDetail = ref<string | undefined>(undefined)
-const handleProgress = (progress: LoadProgress): void => {
-  loadingVisible.value = !progress.done
-  loadingStage.value = progress.stage
-  loadingDetail.value = progress.detail
-}
-
-const reactiveConfig = createReactiveConfig({ run: { speed: RUN_SPEED } })
-
-const run = useWordRun({ speed: () => reactiveConfig.value.run.speed })
-const steerTowards = (action: string): void => run.steer(action === 'left' ? -1 : 1)
-const {
-  phase,
-  level,
-  report,
-  ribbon,
-  feedback,
-  standing,
-  nextGloss,
-  translation,
-  sentenceIndex,
-  sentenceCount,
-  runSeconds,
-  bestSeconds,
-  isNewBest
-} = run
-
-// Read again whenever a race ends, since winning one opens the next level.
-const unlockedCount = computed(() =>
-  phase.value === 'running'
-    ? 0
-    : unlockedLevelCount(language.value, languagePack.value.levels.length)
+// Read again on every return to the lobby, since a race won there opens the next level.
+const openLevels = computed(() => {
+  const pack = packFor(language.value)
+  return phase.value === 'lobby'
+    ? pack.levels.slice(0, unlockedLevelCount(pack.language, pack.levels.length))
+    : []
+})
+const levelOptions = computed(() =>
+  openLevels.value.map((level) => ({ value: level.id, label: `${level.cefr} · ${level.title}` }))
 )
-const nextLevel = computed(() => (level.value ? nextLevelId(level.value.id) : null))
-const startNextLevel = (): void => {
-  if (nextLevel.value) run.start(nextLevel.value)
+const selectedLevelId = ref('')
+// The newest open level is the one to race next, unless another open one was picked.
+watch(
+  openLevels,
+  (levels) => {
+    if (levels.length === 0 || levels.some((level) => level.id === selectedLevelId.value)) return
+    selectedLevelId.value = levels[levels.length - 1].id
+  },
+  { immediate: true }
+)
+
+const { roomId, resolvedRoomId } = useRoomId()
+const session = useWordRunnerSession(
+  { name: playerName.value, color: playerColor.value, roomId: resolvedRoomId },
+  { onGo: () => store.markStarted() }
+)
+const { isHost, localPeerId } = session
+
+const inRoom = computed(() => playerList.value.length > 1)
+const canRestart = computed(() => solo.value || isHost.value)
+const rivals = computed((): RemoteRival[] =>
+  playerList.value
+    .filter((player) => player.id !== localPeerId.value)
+    .map(({ name, color, distance, lane, finishSeconds }) => ({
+      name,
+      color,
+      distance,
+      lane,
+      finishSeconds
+    }))
+)
+
+const handleConfigChange = (key: string, value: string | number): void => {
+  if (key === 'language') language.value = packFor(String(value)).language
+  if (key === 'levelId') selectedLevelId.value = String(value)
 }
 
-let destroyControls: () => void = () => undefined
-const disposers: Array<() => void> = []
+/** Races a level: alone against the bot, or with everyone in the room. */
+const raceLevel = (nextLevelId: string): void => {
+  if (solo.value) store.startRace(nextLevelId)
+  else session.startRace(nextLevelId)
+}
 
-onMounted(async () => {
-  if (!canvas.value) return
+const handleStartGame = (): void => {
+  store.solo = !inRoom.value
+  raceLevel(selectedLevelId.value)
+}
+
+const handleBackToLobby = (): void => {
+  if (solo.value) store.phase = 'lobby'
+  else session.returnToLobby()
+}
+
+const {
+  handleNameChange,
+  handleColorChange,
+  handleMatchFound,
+  handleLeaveRoom: leaveRoom
+} = useMultiplayerLobbyHandlers(playerName, playerColor, roomId, session)
+
+const handleLeaveRoom = (): void => {
+  store.phase = 'lobby'
+  leaveRoom()
+}
+
+// The host lets the room go once everyone has loaded the course, or once waiting has lasted
+// long enough that one slow device should not hold everyone else at the line.
+let readyTimer: ReturnType<typeof setTimeout> | undefined
+const goOnce = (): void => {
+  if (isHost.value && phase.value === 'race' && !started.value) session.go()
+}
+const handleReady = (): void => {
+  if (solo.value) return
+  session.markReady()
+  if (!isHost.value) return
+  clearTimeout(readyTimer)
+  readyTimer = setTimeout(goOnce, READY_TIMEOUT_MS)
+}
+watch(
+  () => store.everyoneReady,
+  (everyoneReady) => {
+    if (everyoneReady) goOnce()
+  }
+)
+
+const handleProgress = (distance: number, lane: number): void => {
+  if (!solo.value) session.broadcastProgress(distance, lane)
+}
+const handleFinish = (seconds: number): void => {
+  if (!solo.value) session.broadcastFinish(seconds)
+}
+
+const showSidebar = ref(false)
+const lastReadCount = ref(0)
+const unreadCount = computed(() => Math.max(0, messages.value.length - lastReadCount.value))
+watch([showSidebar, messages], ([open]) => {
+  if (open) lastReadCount.value = messages.value.length
+})
+
+const sidebarPlayers = computed((): MultiplayerPlayer[] =>
+  playerList.value.map((player) => ({
+    id: player.id,
+    name: player.name,
+    color: player.color,
+    score: Math.round(player.distance),
+    isHost: player.id === hostId.value
+  }))
+)
+
+onMounted(() => {
+  store.reset()
+  session.init()
   loadGoogleFont(LOBBY_UI_FONT, FONT_KEY)
-  registerViewConfig(route.name as string, reactiveConfig, configControls)
-
-  const controls = createControls({
-    mapping: CONTROL_MAPPING,
-    pointerTarget: canvas.value,
-    onAction: steerTowards,
-    onInput: (_action, _trigger, device) => reportInputSource(device)
-  })
-  destroyControls = controls.destroyControls
-
-  await store.init(canvas.value, setupConfig, {
-    viewPanels: { showConfig: true, showScene: true, showElements: false },
-    playMode: true,
-    onProgress: handleProgress,
-    defineSetup: async ({ scene, camera, world, getDelta, animate }) => {
-      // Rock Runner's haze, so the course fades into the distance the way its track does.
-      scene.fog = new THREE.Fog(FOG_COLOR, FOG_NEAR, FOG_FAR)
-      const pool = createGatePool(scene, GATE_POOL_SIZE)
-      const balls = createBalls(scene)
-      const finish = createFinishLine(scene)
-      disposers.push(pool.dispose, balls.dispose, finish.dispose)
-      run.attachScene({
-        slots: pool.slots,
-        player: balls.player,
-        bot: balls.bot,
-        finishLine: finish.finishLine,
-        camera,
-        createCourse: (seed) => createCourse(scene, world, seed)
-      })
-
-      const sun = scene.children.find((child) => child instanceof THREE.DirectionalLight)
-      const timeline = createTimelineManager()
-      // The shadow camera covers a patch around its light; it follows the runner down the course.
-      timeline.addAction(
-        createDirectionalLightFollowAction(
-          () => (sun instanceof THREE.DirectionalLight ? sun : null),
-          () => balls.player,
-          LIGHT_DIRECTIONAL_POSITION
-        )
-      )
-      animate({ beforeTimeline: () => run.stepRun(getDelta()), timeline })
-    }
-  })
-  // The day cycle would repaint Rock Runner's light and sky a frame later.
-  store.setLightTransitionEnabled(false)
 })
 
 onUnmounted(() => {
+  clearTimeout(readyTimer)
   removeGoogleFont(FONT_KEY)
-  destroyControls()
-  run.dispose()
-  disposers.forEach((dispose) => dispose())
-  unregisterViewConfig(route.name as string)
-  store.cleanup()
 })
 </script>
 
 <template>
-  <div class="word-runner">
-    <canvas ref="canvas" class="word-runner__canvas"></canvas>
-    <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
-    <WordRunnerHud
-      v-if="phase === 'running' && level"
-      :level="level"
-      :sentence-index="sentenceIndex"
-      :sentence-count="sentenceCount"
-      :translation="translation"
-      :ribbon="ribbon"
-      :next-gloss="nextGloss"
-      :feedback="feedback"
-      :standing="standing"
-      :run-seconds="runSeconds"
+  <LobbyLayout
+    class="word-runner"
+    :phase="phase"
+    :show-sidebar="showSidebar"
+    :sidebar-visible="inRoom"
+    :main-placement="phase === 'race' ? 'fill' : 'center'"
+    @leave-room="handleLeaveRoom"
+  >
+    <template #header>
+      <GameHeader :phase="phase" back-to="wizard" @back-to-wizard="handleBackToLobby" />
+    </template>
+
+    <template #rules>
+      <WordRunnerRules />
+    </template>
+
+    <WordRunnerLobby
+      v-if="phase === 'lobby'"
+      :player-name="playerName"
+      :player-color="playerColor"
+      :is-host="isHost"
+      :player-list="playerList"
+      :room-id="roomId"
+      :language="language"
+      :language-options="languageOptions"
+      :level-id="selectedLevelId"
+      :level-options="levelOptions"
+      @update:player-name="playerName = $event"
+      @update:player-color="handleColorChange"
+      @name-change="handleNameChange"
+      @start-game="handleStartGame"
+      @match-found="handleMatchFound"
+      @leave-room="handleLeaveRoom"
+      @config-change="handleConfigChange"
     />
-    <TouchControl
-      v-if="isTouchDevice && phase === 'running'"
-      class="word-runner__touch word-runner__touch--left"
-      mode="button"
-      :mapping="TOUCH_LEFT_BUTTON"
-      :on-action="steerTowards"
+    <WordRunnerRace
+      v-else
+      :level-id="levelId"
+      :race-serial="raceSerial"
+      :solo="solo"
+      :started="started"
+      :can-restart="canRestart"
+      :rivals="rivals"
+      @ready="handleReady"
+      @progress="handleProgress"
+      @finish="handleFinish"
+      @restart="raceLevel"
+      @lobby="handleBackToLobby"
     />
-    <TouchControl
-      v-if="isTouchDevice && phase === 'running'"
-      class="word-runner__touch word-runner__touch--right"
-      mode="button"
-      :mapping="TOUCH_RIGHT_BUTTON"
-      :on-action="steerTowards"
-    />
-    <WordRunnerStart
-      v-if="phase === 'idle' && !loadingVisible"
-      v-model:language="language"
-      :levels="languagePack.levels"
-      :unlocked-count="unlockedCount"
-      :languages="languageOptions"
-      @start="run.start"
-    />
-    <WordRunnerSummary
-      v-if="phase === 'finished' && level && report"
-      :level="level"
-      :report="report"
-      :description="CEFR_DESCRIPTIONS[level.cefr]"
-      :best-seconds="bestSeconds"
-      :is-new-best="isNewBest"
-      :has-next-level="nextLevel !== null"
-      @next="startNextLevel"
-      @restart="run.start(level.id)"
-      @pick="run.backToStart"
-    />
-  </div>
+
+    <template v-if="inRoom" #sidebar>
+      <MultiplayerSidebar
+        :players="sidebarPlayers"
+        :local-peer-id="localPeerId"
+        :messages="messages"
+        chat-placeholder="Say something…"
+        @send="session.broadcastChat($event)"
+      />
+    </template>
+
+    <template v-if="inRoom" #tabbar>
+      <GameTabBar v-model:show-sidebar="showSidebar" :unread-count="unreadCount" />
+    </template>
+  </LobbyLayout>
 </template>
 
 <style scoped>
 .word-runner {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.word-runner__touch {
-  position: absolute;
-  bottom: var(--spacing-6);
-  z-index: var(--z-dropdown);
-}
-
-.word-runner__touch--left {
-  left: var(--spacing-6);
-}
-
-.word-runner__touch--right {
-  right: var(--spacing-6);
-}
-
-.word-runner__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
+  background: var(--lb-bg);
 }
 </style>

@@ -23,26 +23,40 @@ const resultsWithMistakes = (mistakeCount: number): GateResult[] =>
   }))
 
 describe('raceResult', () => {
-  it('is a win by the distance the bot still had to go when the player finished first', () => {
-    expect(
-      raceResult({
-        playerSeconds: 60,
-        botFinishSeconds: null,
-        botDistance: 480,
-        finishDistance: 500
-      })
-    ).toEqual({ won: true, metresAhead: 20 })
+  const FINISH = 500
+
+  it('is a win by the distance the closest rival still had to go', () => {
+    const rivals = [
+      { name: 'the bot', distance: 480, finishSeconds: null },
+      { name: 'Quick Otter', distance: 492, finishSeconds: null }
+    ]
+
+    expect(raceResult({ playerSeconds: 60, finishDistance: FINISH, rivals })).toEqual({
+      won: true,
+      metresAhead: 8,
+      rivalName: 'Quick Otter'
+    })
   })
 
-  it('is a loss by how long after the bot the player finished', () => {
-    expect(
-      raceResult({
-        playerSeconds: 63,
-        botFinishSeconds: 60.5,
-        botDistance: 500,
-        finishDistance: 500
-      })
-    ).toEqual({ won: false, secondsBehind: 2.5 })
+  it('is a loss by how long after the first rival over the line the player finished', () => {
+    const rivals = [
+      { name: 'Quick Otter', distance: FINISH, finishSeconds: 61 },
+      { name: 'Calm Heron', distance: FINISH, finishSeconds: 60.5 }
+    ]
+
+    expect(raceResult({ playerSeconds: 63, finishDistance: FINISH, rivals })).toEqual({
+      won: false,
+      secondsBehind: 2.5,
+      rivalName: 'Calm Heron'
+    })
+  })
+
+  it('is a win with no one to beat', () => {
+    expect(raceResult({ playerSeconds: 60, finishDistance: FINISH, rivals: [] })).toEqual({
+      won: true,
+      metresAhead: 0,
+      rivalName: ''
+    })
   })
 })
 
@@ -53,7 +67,7 @@ describe('buildRunReport', () => {
       results: resultsWithMistakes(2),
       words,
       seconds: 63,
-      race: { won: true, metresAhead: 12 },
+      race: { won: true, metresAhead: 12, rivalName: 'the bot' },
       hasNextLevel: true
     })
 
@@ -64,11 +78,11 @@ describe('buildRunReport', () => {
   })
 
   it.each([
-    [0, { won: true, metresAhead: 30 }, true, 'next level is open'],
-    [0, { won: true, metresAhead: 30 }, false, 'every level'],
-    [3, { won: true, metresAhead: 2 }, true, 'words below'],
-    [1, { won: false, secondsBehind: 1 }, true, 'ramps'],
-    [6, { won: false, secondsBehind: 9 }, true, 'Read the text']
+    [0, { won: true, metresAhead: 30, rivalName: 'the bot' }, true, 'next level is open'],
+    [0, { won: true, metresAhead: 30, rivalName: 'the bot' }, false, 'every level'],
+    [3, { won: true, metresAhead: 2, rivalName: 'the bot' }, true, 'words below'],
+    [1, { won: false, secondsBehind: 1, rivalName: 'the bot' }, true, 'ramps'],
+    [6, { won: false, secondsBehind: 9, rivalName: 'the bot' }, true, 'Read the text']
   ] as const)(
     'with %i mistakes and %j (next level: %s) advises "%s"',
     (mistakeCount, race, hasNextLevel, advice) => {

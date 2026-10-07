@@ -88,8 +88,46 @@ export type MissedWord = {
   chosen: string
 }
 
-/** How the race against the bot ended: who got there first, and by how much. */
-export type RaceResult = { won: true; metresAhead: number } | { won: false; secondsBehind: number }
+/**
+ * How the race ended, against the closest rival: the bot in a solo race, the other players
+ * in a room. A win is measured in metres the rival still had to go, a loss in seconds.
+ */
+export type RaceResult =
+  | { won: true; metresAhead: number; rivalName: string }
+  | { won: false; secondsBehind: number; rivalName: string }
+
+/** Another ball in the race, as far as the player can see it. */
+export type Rival = {
+  name: string
+  distance: number
+  finishSeconds: number | null
+}
+
+/** Where a room is: choosing a level in the lobby, or racing it. */
+export type WrPhase = 'lobby' | 'race'
+
+/** One player in the room, with where their ball is in the current race. */
+export type WrPlayer = {
+  id: string
+  name: string
+  color: string
+  distance: number
+  lane: number
+  finishSeconds: number | null
+  ready: boolean
+}
+
+export type WrAvatarPayload = { name: string; color: string }
+export type WrStartPayload = { levelId: string }
+export type WrProgressPayload = { distance: number; lane: number }
+export type WrFinishPayload = { seconds: number }
+
+/** Who the local player is, and the room their session joins. */
+export type WrSessionOptions = {
+  name: string
+  color: string
+  roomId: string
+}
 
 /** Everything the end screen says about a finished level. */
 export type RunReport = {
@@ -136,14 +174,18 @@ export type RibbonWord = {
   correct: boolean
 }
 
-/** Where a run is: waiting to start, racing, or over. */
-export type RunPhase = 'idle' | 'running' | 'finished'
+/**
+ * Where a run is: not started, on the start line while the rest of the room loads the course,
+ * racing, or over.
+ */
+export type RunPhase = 'idle' | 'waiting' | 'running' | 'finished'
 
 /** What a run draws into, handed over once the scene exists. */
 export type RunScene = {
   slots: GateSlot[]
   player: THREE.Mesh
-  bot: THREE.Mesh
+  /** See-through balls for the rivals: the bot alone, or the other players in a room. */
+  ghosts: THREE.Mesh[]
   finishLine: THREE.Object3D
   camera: THREE.Camera
   createCourse: (seed: number) => Course
@@ -152,6 +194,18 @@ export type RunScene = {
 /** Settings read live from the Config panel, so changing them mid-run takes effect at once. */
 export type RunSettings = {
   speed: () => number
+  /** True with no one else in the room, when the bot is the rival. */
+  solo: () => boolean
+  /** The other players' balls, as the room last reported them. */
+  rivals: () => RemoteRival[]
+  onProgress: (distance: number, lane: number) => void
+  onFinish: (seconds: number) => void
+}
+
+/** Another player's ball, as the room last reported it. */
+export type RemoteRival = Rival & {
+  color: string
+  lane: number
 }
 
 /** The word just passed, shown briefly with its meaning and whether the lane was right. */
@@ -178,11 +232,14 @@ export type BallFrame = {
   hop: number
 }
 
+/** A rival's ball for one frame, tinted in its player's colour, or untinted for the bot. */
+export type RivalFrame = BallFrame & { color: string | null }
+
 /** What the balls and the camera need for one frame. */
 export type RaceFrame = {
   path: TrackPath
   player: BallFrame
-  bot: BallFrame
+  rivals: RivalFrame[]
   deltaSeconds: number
   shake: number
   snapCamera: boolean

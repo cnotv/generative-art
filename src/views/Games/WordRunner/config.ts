@@ -19,6 +19,7 @@ export const DEFAULT_LANGUAGE = 'de'
 export const CEFR_LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
 export const LANE_COUNT = 3
+export const CENTRE_LANE = 1
 
 // The same lane three times running reads as "stay put" rather than as part of a path.
 export const MAX_SAME_LANE_STREAK = 2
@@ -166,6 +167,17 @@ export const CONTROL_MAPPING: ControlMapping = {
     'tap-right': 'right'
   }
 }
+
+export const MATCHMAKER_ROOM = 'word-runner-matchmaker'
+// A room races only once every player has loaded the course, or after this long at most,
+// so one slow device cannot hold everyone at the start line for ever.
+export const READY_TIMEOUT_MS = 15000
+// How often a ball's place on the course is sent to the rest of the room.
+export const PROGRESS_INTERVAL_SECONDS = 0.1
+// Rivals' balls drawn at once: the bot alone, or this many other players in a room.
+export const MAX_RIVALS = 4
+// How quickly another player's ball eases towards where the room last reported it.
+export const REMOTE_FOLLOW_RATE = 6
 
 // The on-screen lane buttons on a touch screen, one either side, label to action.
 export const TOUCH_LEFT_BUTTON: Record<string, string> = { '←': 'left' }

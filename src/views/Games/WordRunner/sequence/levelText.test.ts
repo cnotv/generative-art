@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { levelHints, levelWords, sentenceIndices, sentenceText } from './levelText'
+import { capitalise, levelHints, levelWords, sentenceIndices, sentenceText } from './levelText'
 import type { Level } from '../types'
 
 const cafe: Level = {
@@ -76,5 +76,16 @@ describe('sentenceText', () => {
 
   it('writes only the words given, for a sentence still being built', () => {
     expect(sentenceText(cafe.sentences[1].words.slice(0, 2))).toBe('Einen Kaffee,')
+  })
+})
+
+describe('capitalise', () => {
+  it.each([
+    ['the bot', 'The bot'],
+    ['Quick Otter', 'Quick Otter'],
+    ['über', 'Über'],
+    ['', '']
+  ])('writes %j as %j', (text, expected) => {
+    expect(capitalise(text)).toBe(expected)
   })
 })

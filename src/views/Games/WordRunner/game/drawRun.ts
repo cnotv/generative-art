@@ -17,9 +17,19 @@ import {
 } from '../config'
 import { isHintShown, laneOffset, smoothingFactor } from '../runner/runMotion'
 import { assignSlot, hideSlot, placeSlot, setSignState } from '../scene/gatePool'
-import type { BallFrame, Gate, GateSlot, GateView, RaceFrame, RunScene, TrackPath } from '../types'
+import type {
+  BallFrame,
+  Gate,
+  GateSlot,
+  GateView,
+  RaceFrame,
+  RivalFrame,
+  RunScene,
+  TrackPath
+} from '../types'
 
 const CENTRE_LANE = Math.floor(LANE_COUNT / 2)
+const UNTINTED = '#ffffff'
 
 export const gateKey = (runSerial: number, gateIndex: number): string => `${runSerial}:${gateIndex}`
 
@@ -105,17 +115,37 @@ const createBallDrawer = (ball: THREE.Mesh) => {
 }
 
 /**
- * Draws both balls and keeps a chase camera behind the player's. The camera aims at the deck
+ * One see-through rival ball: drawn and tinted in its player's colour while it has a rival to
+ * show, hidden while it has none. The bot keeps its rock's own colours.
+ */
+const createGhostDrawer = (ghost: THREE.Mesh) => {
+  const drawBall = createBallDrawer(ghost)
+  let tint: string | null = null
+  return (path: TrackPath, rival: RivalFrame | undefined, deltaSeconds: number, snap: boolean) => {
+    ghost.visible = rival !== undefined
+    if (!rival) return
+    if (rival.color !== tint && ghost.material instanceof THREE.MeshLambertMaterial) {
+      ghost.material.color.set(rival.color ?? UNTINTED)
+      tint = rival.color
+    }
+    drawBall(path, rival, deltaSeconds, snap)
+  }
+}
+
+/**
+ * Draws every ball and keeps a chase camera behind the player's. The camera aims at the deck
  * rather than the ball, so a hop off a ramp lifts the ball in frame instead of jolting the view.
  */
 export const createRaceDrawer = (scene: RunScene) => {
   const cameraTarget = new THREE.Vector3()
   const drawPlayer = createBallDrawer(scene.player)
-  const drawBot = createBallDrawer(scene.bot)
+  const drawGhosts = scene.ghosts.map(createGhostDrawer)
   return (frame: RaceFrame): void => {
     const { camera } = scene
     const lateral = drawPlayer(frame.path, frame.player, frame.deltaSeconds, frame.snapCamera)
-    drawBot(frame.path, frame.bot, frame.deltaSeconds, frame.snapCamera)
+    drawGhosts.forEach((drawGhost, index) =>
+      drawGhost(frame.path, frame.rivals[index], frame.deltaSeconds, frame.snapCamera)
+    )
 
     const sample = frame.path.sampleAt(frame.player.distance)
     cameraTarget

@@ -18,3 +18,7 @@ export const levelHints = (level: Level): HintLevel[] =>
 /** Words as they read in the text, each with the punctuation that opens or follows it. */
 export const sentenceText = (words: LevelWord[]): string =>
   words.map((word) => `${word.opening ?? ''}${word.text}${word.punctuation ?? ''}`).join(' ')
+
+/** The text with its first letter in capitals, as at the start of a sentence. */
+export const capitalise = (text: string): string =>
+  text.charAt(0).toLocaleUpperCase() + text.slice(1)
