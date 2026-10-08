@@ -6,7 +6,7 @@ import type {
   NormalizedLandmark,
   PoseLandmarker
 } from '@mediapipe/tasks-vision'
-import type { HandSide, PoseKeyframe, QuaternionData } from '@webgamekit/rig'
+import type { HandSide, PoseKeyframe, QuaternionData, Vector3Data } from '@webgamekit/rig'
 
 export interface RigAnimatorConfig {
   model: string
@@ -18,6 +18,8 @@ export interface RigAnimatorConfig {
   fps: number
   showBoneMarkers: boolean
   cameraGroundFeet: boolean
+  cameraFollowTravel: boolean
+  cameraPinFeet: boolean
   cameraTurnHips: boolean
   cameraBendSpine: boolean
   cameraTurnHead: boolean
@@ -56,6 +58,10 @@ export interface RigAnimatorConfig {
   cameraTwistFullBendDegrees: number
   cameraShowPreview: boolean
   cameraVideoSlowdownRatio: number
+  /** Smooth a finished take `RECORDING_SMOOTHING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraSmoothRecording: boolean
+  /** Halve a finished take `RECORDING_HALVING_PASSES` times, see `cleanUpRecordedTake`. */
+  cameraThinRecording: boolean
   targetLeftArm: boolean
   targetRightArm: boolean
   targetLeftLeg: boolean
@@ -86,6 +92,12 @@ export interface CameraLandmark extends CameraHandLandmark {
   visibility: number
 }
 
+/** A picture's size in pixels. */
+export interface CameraImageSize {
+  width: number
+  height: number
+}
+
 /**
  * Everything one detection found, already mirrored when the source is a self-view. Any part may be
  * missing on its own: a close-up of a hand has no body, a subject turned away has no face.
@@ -99,6 +111,12 @@ export interface CameraPoseFrame {
   headRotation: QuaternionData | null
   /** When the live feed read it, once smoothed; the next reading measures its elapsed time from here. */
   timestampMilliseconds?: number
+  /**
+   * Where the hip centre stands relative to the camera, in metres and scene axes (x to the
+   * right of the picture, y up, z toward the camera), when enough of the body is in the picture
+   * to tell, see `cameraBodyPosition`.
+   */
+  bodyPosition?: Vector3Data
 }
 
 /** How fast a landmark was last moving, in its own units per second. */
@@ -187,6 +205,10 @@ export interface CameraPoseMappingOptions {
   filterBodyFlips: boolean
   /** The fastest a joint may turn, in radians a second; 0 turns the cap off. */
   maxBoneTurnRadiansPerSecond: number
+  /** Move the rig across the floor as the performer moves in the picture, see `advanceCameraTravel`. */
+  followTravel: boolean
+  /** Hold a planted foot where it landed while the body moves over it, see `pinPlantedFeet`. */
+  pinPlantedFeet: boolean
 }
 
 /** The Config panel's switches for how each frame is detected, before any bone is turned. */
@@ -256,7 +278,7 @@ export interface CameraLandmarkers {
 /** Everything one detection pass reads from. */
 export interface CameraDetectionContext {
   source: HTMLVideoElement | ImageBitmap
-  frameSize: { width: number; height: number }
+  frameSize: CameraImageSize
   landmarkers: CameraLandmarkers
   /** The canvas face and hand crops are drawn into. */
   cropCanvas: HTMLCanvasElement
@@ -285,6 +307,40 @@ export interface RigHistorySnapshot {
   frameMax: number
 }
 
+/** How far a capture has carried the rig across the floor, and what it is measured from. */
+export interface CameraTravel {
+  /** Where the performer stood when the source started, from `cameraBodyPosition`. */
+  origin: Vector3Data
+  /** The performer's leg length in metres, smoothed, which converts their travel to the rig's size. */
+  performerLegLength: number
+  /** How far the rig's hips are carried from where they stand at rest, in world units, level. */
+  offset: Vector3Data
+  /** How long the source has been read for, in seconds. */
+  sourceSeconds: number
+  /** The readings the start is still being taken from; empty once it is settled. */
+  startReadings: Vector3Data[]
+}
+
+/** One foot held where it landed, and how firmly. */
+export interface CameraFootPin {
+  /** Where the ankle landed, in world space. */
+  position: Vector3Data
+  /** 1 holds the ankle there, 0 leaves it where the leg puts it. */
+  weight: number
+  /** Whether the foot has been let go and is easing back to where the leg puts it. */
+  releasing: boolean
+}
+
+/** One foot between two frames: where the leg put its ankle, and what it is held to, if anything. */
+export interface CameraFootTrack {
+  /** Where the capture put the ankle before any hold, in world space. */
+  freeAnkle: Vector3Data
+  pin: CameraFootPin | null
+}
+
+/** Each foot's track, by side. */
+export type CameraFootTracks = Partial<Record<HandSide, CameraFootTrack>>
+
 /** Each bone's roll track from the previous frame, keyed by bone name. */
 export type TurnTracks = Map<string, TurnTrack>
 
@@ -294,4 +350,18 @@ export interface CameraRetargetPass {
   turnTracks: TurnTracks
   /** Time since the previous frame was applied, which is what a roll's movement is measured over. */
   elapsedSeconds: number
+}
+
+/** How many times a finished take is smoothed and halved, see `cleanUpRecordedTake`. */
+export interface RecordedTakeCleanup {
+  smoothingPasses: number
+  halvingPasses: number
+}
+
+/** Where a skeleton's shoulders and hips sit in its joint list, for `normalizeSkeleton`. */
+export interface SkeletonTorsoJoints {
+  leftShoulder: number
+  rightShoulder: number
+  leftHip: number
+  rightHip: number
 }

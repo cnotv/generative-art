@@ -56,6 +56,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   apply: [frame: CameraPoseFrame]
+  /** A different video, photo or camera session starts: whatever it shows is measured afresh. */
+  newSource: []
   close: []
   toggleRecord: []
   enablePreview: []
@@ -200,6 +202,7 @@ const handleMediaChange = async (event: Event): Promise<void> => {
   if (!file) return
   if (props.isRecording) emit('toggleRecord')
   camera.stop()
+  emit('newSource')
   if (file.type.startsWith('video/')) {
     mode.value = 'video'
     await uploadedVideo.loadVideo(file)
@@ -233,6 +236,7 @@ const toggleCamera = (): void => {
   photo.reset()
   uploadedVideo.stop()
   mode.value = 'camera'
+  emit('newSource')
   camera.start()
 }
 
@@ -260,9 +264,15 @@ const { syncEnabled, handleVideoSeeked: resolveSeekedFrame } = useVideoTimelineS
   isRecording: () => props.isRecording
 })
 
+/** A paused video is not detected frame by frame, so a seek re-reads the frame it lands on: the
+ * rig then shows that frame, not the last played pose or whatever the timeline holds there. A
+ * take in progress keeps sampling its own clock instead. */
 const handleVideoSeeked = (): void => {
   const seekedFrame = resolveSeekedFrame()
   if (seekedFrame !== null) emit('seekFrame', seekedFrame)
+  if (mode.value === 'video' && !props.isRecording && videoReference.value?.paused) {
+    void uploadedVideo.readStillFrame()
+  }
 }
 
 watch(
@@ -336,7 +346,13 @@ onUnmounted(() => {
         @ended="handleVideoEnded"
         @seeked="handleVideoSeeked"
       ></video>
-      <canvas ref="canvasReference" class="camera-pose-capture__overlay"></canvas>
+      <!-- Hidden while an uploaded video plays, so the clip itself can be watched; paused, it shows
+        what detection read for the frame on screen. -->
+      <canvas
+        v-show="!(mode === 'video' && isVideoPlaying)"
+        ref="canvasReference"
+        class="camera-pose-capture__overlay"
+      ></canvas>
     </div>
     <p class="camera-pose-capture__status camera-pose-capture__status--scope">
       {{
