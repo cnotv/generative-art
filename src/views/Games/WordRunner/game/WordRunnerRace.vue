@@ -77,7 +77,7 @@ const handleProgress = (progress: LoadProgress): void => {
 const reactiveConfig = createReactiveConfig({
   run: { speed: DIFFICULTY_SPEEDS[props.difficulty] },
   booster: { opacity: DEFAULT_BOOSTER_OPACITY, gap: DEFAULT_BOOSTER_GAP },
-  hud: { offset: DEFAULT_HUD_OFFSET }
+  words: { offset: DEFAULT_HUD_OFFSET }
 })
 // Every race starts at its difficulty's speed; the panel slider tunes it from there.
 watch(
@@ -101,7 +101,7 @@ const run = useWordRun({
   onFinish: (seconds) => emit('finish', seconds)
 })
 const { phase, level, report, ribbon, translation, isNewBest, impulseCharge } = run
-const hudOffset = computed(() => reactiveConfig.value.hud.offset)
+const hudOffset = computed(() => reactiveConfig.value.words.offset)
 
 // The first race after the course loads waits behind the intro until any key or tap.
 const introShown = ref(true)

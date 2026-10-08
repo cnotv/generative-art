@@ -253,7 +253,8 @@ export const BOOSTER_ARC = {
   sweep: 1.9,
   segments: 32,
   renderOrder: 10,
-  chargingColor: 0xffffff,
+  // The signs' own ink, dark enough to read against the sand while it refills.
+  chargingColor: 0x4a4560,
   readyColor: 0xffd700,
   trackOpacityShare: 0.3
 }
@@ -272,7 +273,7 @@ export const configControls = {
     opacity: { min: 0, max: 1, step: 0.05, label: 'Booster Opacity' },
     gap: { min: 0, max: 1.5, step: 0.05, label: 'Booster Gap' }
   },
-  hud: {
+  words: {
     offset: { min: 0, max: 70, step: 1, label: 'Guessed Words Height' }
   }
 }
