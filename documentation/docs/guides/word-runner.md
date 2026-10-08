@@ -75,6 +75,8 @@ only close to the gate, and from the third on the text is the test.
 | Rocks   | clear                              | a rock that makes the ball stumble |
 | Bend    | the inside line, at full speed     | run wide onto gravel and slow down |
 
+![A race in Lanes steering, sped up from a recording: the ball takes the left lane, the wrong word, and gravel springs up out of the deck under it while the bot's ghost, in the right lane, hops off the ramp its right word revealed; the booster arc beside the ball refills from the bottom and turns gold](/img/word-runner/race-penalties.webp)
+
 - **The bot plays by the same rules.** It takes the right word at a rate set for each level,
   from 60% at A1 to 80% at C2, and its ramps, rocks and gravel speed it up and slow it down
   exactly as they do the player. A player who reads the text beats it; one who guesses does not.
@@ -135,6 +137,8 @@ The Config panel tunes the race as it runs:
 | Booster Opacity      | how see-through the booster arc is; at 0 it is hidden                                |
 | Booster Gap          | how far the arc stands off the ball                                                  |
 | Guessed Words Height | moves the English and the sentence built so far down the screen, in hundredths of it |
+
+![The Config panel open beside a race, with the Run, Booster and Words sections, and Guessed Words Height at 30 moving the English down to the middle of the course](/img/word-runner/config-panel.webp)
 
 ## Adding a language
 
