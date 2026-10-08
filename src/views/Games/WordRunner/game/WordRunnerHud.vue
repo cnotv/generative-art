@@ -5,12 +5,14 @@ defineProps<{
   waiting: boolean
   translation: string
   ribbon: RibbonWord[]
+  /** How far below its place under the navigation the text sits, in hundredths of the screen. */
+  offset: number
 }>()
 </script>
 
 <template>
   <div class="word-runner-hud">
-    <header class="word-runner-hud__top">
+    <header class="word-runner-hud__top" :style="{ marginTop: `${offset}vh` }">
       <p class="word-runner-hud__translation">{{ translation }}</p>
       <ol class="word-runner-hud__ribbon" aria-label="This sentence so far">
         <li

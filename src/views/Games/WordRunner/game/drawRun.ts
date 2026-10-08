@@ -14,7 +14,14 @@ import {
   LATE_HINT_DISTANCE
 } from '../config'
 import { isHintShown, smoothingFactor } from '../runner/runMotion'
-import { assignSlot, hideSlot, placeSlot, revealPiece, setSignState } from '../scene/gatePool'
+import {
+  assignSlot,
+  hideSlot,
+  placeSlot,
+  revealPiece,
+  setSignState,
+  springPieces
+} from '../scene/gatePool'
 import { revealedPiece } from '../runner/routeAdvantage'
 import type {
   BallFrame,
@@ -68,6 +75,7 @@ export const drawGates = (slots: GateSlot[], view: GateView): void =>
       view.path.sampleAt(gateDistance + FEATURE_OFFSET),
       fadeFor(distanceAhead)
     )
+    springPieces(slot.features, view.deltaSeconds)
     if (distanceAhead <= 0) return
     const hinted = isHintShown(gate.hint, distanceAhead, LATE_HINT_DISTANCE)
     setSignState(

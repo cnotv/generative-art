@@ -7,8 +7,6 @@ defineProps<{
   /** On a touch screen the buttons are real; elsewhere they are drawn keys, shown with hints. */
   touch: boolean
   hints: boolean
-  /** How far the impulse has recharged, 0 to 1. */
-  charge: number
   currentActions: Record<string, unknown>
   onAction: (action: string) => void
 }>()
@@ -70,19 +68,6 @@ const corners = [
         </kbd>
       </div>
     </div>
-    <!-- The impulse recharging: a bar rising beside its button, gold once it is ready. -->
-    <div
-      v-if="corner.side === 'left'"
-      class="word-runner-controls__charge"
-      :class="{ 'word-runner-controls__charge--ready': charge >= 1 }"
-      role="meter"
-      aria-label="Speed up recharge"
-      aria-valuemin="0"
-      aria-valuemax="1"
-      :aria-valuenow="charge"
-    >
-      <div class="word-runner-controls__charge-fill" :style="{ transform: `scaleY(${charge})` }" />
-    </div>
   </div>
 </template>
 
@@ -138,27 +123,5 @@ const corners = [
   text-shadow: var(--lui-text-shadow);
   border: 2px solid var(--lui-stroke);
   border-radius: var(--lui-radius-sketch-small);
-}
-
-.word-runner-controls__charge {
-  display: flex;
-  align-items: flex-end;
-  width: var(--spacing-2);
-  height: var(--spacing-12);
-  overflow: hidden;
-  border: 2px solid var(--lui-outline-color);
-  border-radius: var(--lui-radius-sketch-small);
-  background: var(--lui-stroke-faint);
-}
-
-.word-runner-controls__charge-fill {
-  width: 100%;
-  height: 100%;
-  background: var(--lui-stroke);
-  transform-origin: bottom;
-}
-
-.word-runner-controls__charge--ready .word-runner-controls__charge-fill {
-  background: var(--lui-focus-color);
 }
 </style>
