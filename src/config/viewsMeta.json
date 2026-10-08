@@ -155,6 +155,9 @@
   "Isometric Editor": {
     "description": "Build a scene on an isometric grid: pick a primitive from the palette and click a cell to place it, snapped to the square."
   },
+  "Brick Breaker": {
+    "description": "3D brick breaker for one or more players: everyone plays the same seeded walls, and breaking bricks pushes garbage rows onto rivals."
+  },
   "Bubble Shooter": {
     "description": "Multiplayer bubble shooter with hex grid matching and a shared color queue."
   },
