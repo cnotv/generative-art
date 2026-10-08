@@ -145,6 +145,8 @@ export type GateFeatures = {
   ramp: THREE.Mesh
   rocks: THREE.Mesh[]
   gravel: THREE.Mesh[]
+  /** How long since a piece was last revealed, while it springs up out of the deck. */
+  popSeconds: number
 }
 
 /** One lane's word on a gate, drawn into its own canvas so it can be redrawn in place. */
@@ -210,6 +212,16 @@ export type RemoteRival = Rival & {
   lateral: number
 }
 
+/** What the booster's recharge arc beside the player's ball shows for one frame. */
+export type BoosterArcFrame = {
+  ball: THREE.Object3D
+  camera: THREE.Camera
+  /** How far the booster has recharged, 0 to 1. */
+  charge: number
+  opacity: number
+  visible: boolean
+}
+
 /** Where the gates of the level stand relative to the player, for one frame. */
 export type GateView = {
   path: TrackPath
@@ -218,6 +230,7 @@ export type GateView = {
   distances: number[]
   distance: number
   runSerial: number
+  deltaSeconds: number
 }
 
 /** Where one ball is this frame, and how it moves. */

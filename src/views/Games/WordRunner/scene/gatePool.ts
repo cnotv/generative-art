@@ -9,13 +9,14 @@ import {
   GRAVEL,
   LANE_COUNT,
   LANE_WIDTH,
+  PIECE_POP,
   RAMP,
   ROCK,
   SIGN_HEIGHT,
   SIGN_WIDTH,
   SIGN_Y
 } from '../config'
-import { laneOffset } from '../runner/runMotion'
+import { laneOffset, popScale } from '../runner/runMotion'
 import { createSignCanvas, drawSign } from './signTexture'
 import type {
   Gate,
@@ -93,7 +94,7 @@ const createFeatures = (geometry: SharedGeometry, materials: SharedMaterials): G
     rock.position.x = laneOffset(lane, LANE_COUNT, LANE_WIDTH)
   })
   group.add(ramp, ...rocks, ...gravel)
-  return { group, ramp, rocks, gravel }
+  return { group, ramp, rocks, gravel, popSeconds: PIECE_POP.seconds }
 }
 
 const createSlot = (
@@ -139,12 +140,23 @@ const hideFeatures = (features: GateFeatures): void => {
  * the course gives a word away before it is picked.
  */
 export const revealPiece = (features: GateFeatures, piece: RoutePiece, lane: number): void => {
+  features.popSeconds = 0
   if (piece === 'ramp') {
     features.ramp.position.x = laneOffset(lane, LANE_COUNT, LANE_WIDTH)
     features.ramp.visible = true
   }
   if (piece === 'rock') features.rocks[lane].visible = true
   if (piece === 'gravel') features.gravel[lane].visible = true
+}
+
+/** Springs a just-revealed piece up out of the deck, and leaves it alone once it has settled. */
+export const springPieces = (features: GateFeatures, deltaSeconds: number): void => {
+  if (features.popSeconds >= PIECE_POP.seconds) return
+  features.popSeconds += deltaSeconds
+  const scale = popScale(features.popSeconds, PIECE_POP.seconds, PIECE_POP.spring)
+  features.ramp.scale.setScalar(scale)
+  features.rocks.forEach((rock) => rock.scale.setScalar(scale))
+  features.gravel.forEach((patch) => patch.scale.setScalar(scale))
 }
 
 /** Dresses a pooled slot as one gate of the text, its route still hidden. */

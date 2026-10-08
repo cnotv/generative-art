@@ -54,7 +54,7 @@ the buttons are the real ones; elsewhere they are drawn keys. The ball waits on 
 key or a tap, which clears the hints. In a room the player counts as ready only once they have
 pressed, and the race still goes after fifteen seconds at most.
 
-![The start of a race: Press any key to start across the middle, Steer and Speed up pointing at the left and up keys bottom left beside the full recharge bar, and Brake and Steer pointing at the down and right keys bottom right](/img/word-runner/intro.webp)
+![The start of a race: Press any key to start across the middle, Steer and Speed up pointing at the left and up keys bottom left, and Brake and Steer pointing at the down and right keys bottom right](/img/word-runner/intro.webp)
 
 The level is run once, from its first word to its last. Only two lines sit over the course: the
 English of the current sentence, and underneath it the sentence the words passed so far build, a
@@ -66,8 +66,8 @@ only close to the gate, and from the third on the text is the test.
   same on every attempt and the route can be learned as well as the text. Where a gate opens onto
   a bend, its word takes the inside lane. The same lane never comes up three times in a row.
 - **The right word is the faster route, and a wrong one slows the ball.** Just past each word
-  lies what its lanes run over, hidden until the word is picked and then shown in the lane taken
-  alone, so the route never gives the answer away:
+  lies what its lanes run over, hidden until the word is picked and then springing up out of the
+  deck in the lane taken alone, so the route never gives the answer away:
 
 | Feature | Right lane                         | Other lanes                        |
 | ------- | ---------------------------------- | ---------------------------------- |
@@ -75,15 +75,20 @@ only close to the gate, and from the third on the text is the test.
 | Rocks   | clear                              | a rock that makes the ball stumble |
 | Bend    | the inside line, at full speed     | run wide onto gravel and slow down |
 
+![A race in Lanes steering, sped up from a recording: the ball takes the left lane, the wrong word, and gravel springs up out of the deck under it while the bot's ghost, in the right lane, hops off the ramp its right word revealed; the booster arc beside the ball refills from the bottom and turns gold](/img/word-runner/race-penalties.webp)
+
 - **The bot plays by the same rules.** It takes the right word at a rate set for each level,
   from 60% at A1 to 80% at C2, and its ramps, rocks and gravel speed it up and slow it down
   exactly as they do the player. A player who reads the text beats it; one who guesses does not.
-- **Each effect wears off** back to full speed within about a second. A ramp's boost is a
-  nudge, a quarter faster, not a sprint.
+- **Each effect wears off** back to full speed within two seconds. A wrong word costs far more
+  than a right one gains: a rock all but stops the ball and jolts the camera, gravel off a missed
+  ramp takes three quarters of its speed and a wide bend about two thirds, while a ramp's boost is
+  a nudge, a quarter faster, not a sprint.
 - **With free steering the ball is a real body**, with Rock Runner's rock handling: it is pushed
   along the track up to the difficulty's speed, gathers a little more downhill and keeps the line it is
   put on. A word counts in the lane nearest the ball as it goes through. A ramp also throws the
-  ball into the air, and a slowing lane takes its speed away at once. A soft cushion along each
+  ball into the air, a slowing lane takes its speed away at once, and a rock knocks it off the
+  deck as well. A soft cushion along each
   wall turns it back before it touches, and a ball knocked through the deck or caught on
   something for a second is set back on the track where it was, clear of the wall.
 
@@ -107,21 +112,33 @@ for a fifth of a second, so two players neck and neck do not keep swapping place
 
 ## Playing
 
-| Button | Key               | Gamepad                   | Does                                                               |
-| ------ | ----------------- | ------------------------- | ------------------------------------------------------------------ |
-| ←      | Left arrow, or A  | Left stick or D-pad left  | Steers left                                                        |
-| ↑      | Up arrow, or W    | Left stick or D-pad up    | Speed up: an impulse half as fast again, wearing off over a second |
-| ↓      | Down arrow, or S  | Left stick or D-pad down  | Brakes                                                             |
-| →      | Right arrow, or D | Left stick or D-pad right | Steers right                                                       |
+| Button | Key               | Gamepad                                    | Does                                                               |
+| ------ | ----------------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| ←      | Left arrow, or A  | Left stick or D-pad left                   | Steers left                                                        |
+| ↑      | Up arrow, or W    | O (B on Xbox), or left stick or D-pad up   | Speed up: an impulse half as fast again, wearing off over a second |
+| ↓      | Down arrow, or S  | X (A on Xbox), or left stick or D-pad down | Brakes                                                             |
+| →      | Right arrow, or D | Left stick or D-pad right                  | Steers right                                                       |
 
 On a touch screen ← and ↑ are bottom left, ↓ and → bottom right, and a swipe or a tap on either
 side of the course steers too. With free steering the ball turns for as long as a steer is held;
 with lanes, each press moves it one lane. Holding the brake brings the free ball to a stop and
 holds it there, even on a slope, and runs the lanes ball at under half its speed.
 
-Speed up can be used once every three seconds. A bar beside its button rises as it recharges and
-turns gold once it is ready. The Config panel's speed slider starts at the difficulty's speed and
-tunes it for every ball.
+Speed up can be used once every three seconds. A see-through arc hugging the left of the ball
+fills from the bottom as it recharges and turns gold once it is ready.
+
+![The ball mid-race with the gold booster arc hugging its left side, ready to use](/img/word-runner/booster-arc.webp)
+
+The Config panel tunes the race as it runs:
+
+| Setting              | Does                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| Run Speed            | starts at the difficulty's speed and tunes it for every ball                         |
+| Booster Opacity      | how see-through the booster arc is; at 0 it is hidden                                |
+| Booster Gap          | how far the arc stands off the ball                                                  |
+| Guessed Words Height | moves the English and the sentence built so far down the screen, in hundredths of it |
+
+![The Config panel open beside a race, with the Run, Booster and Words sections, and Guessed Words Height at 30 moving the English down to the middle of the course](/img/word-runner/config-panel.webp)
 
 ## Adding a language
 

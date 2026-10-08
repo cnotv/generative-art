@@ -200,14 +200,21 @@ export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) =>
     return { distance, lateral }
   }
 
-  /** What a lane does to a real ball: a ramp throws it up, a slowing lane bleeds its speed. */
+  const knockUp = (strength: number): void => {
+    impulse.x = 0
+    impulse.y = strength
+    impulse.z = 0
+    body.applyImpulse(impulse, true)
+  }
+
+  /**
+   * What a lane does to a real ball: a ramp throws it up, a slowing lane bleeds its speed, and
+   * a rock does both, knocking it off the deck as it stops it.
+   */
   const react = (outcome: LaneOutcome): void => {
     if (outcome === 'none') return
     if (outcome === 'boost') {
-      impulse.x = 0
-      impulse.y = FREE_BALL.hopImpulse
-      impulse.z = 0
-      body.applyImpulse(impulse, true)
+      knockUp(FREE_BALL.hopImpulse)
       return
     }
     const velocity = body.linvel()
@@ -216,6 +223,7 @@ export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) =>
     impulse.y = velocity.y
     impulse.z = velocity.z * ratio
     body.setLinvel(impulse, true)
+    if (outcome === 'stumble') knockUp(FREE_BALL.rockKnockImpulse)
   }
 
   return { holdAtStart, stop, drive, react, lateral: () => lateral }

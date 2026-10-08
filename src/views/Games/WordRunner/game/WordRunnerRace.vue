@@ -19,6 +19,9 @@ import {
 } from '@/views/Games/RockRunner/config'
 import {
   CONTROL_MAPPING,
+  DEFAULT_BOOSTER_GAP,
+  DEFAULT_BOOSTER_OPACITY,
+  DEFAULT_HUD_OFFSET,
   GATE_POOL_SIZE,
   DIFFICULTY_SPEEDS,
   configControls,
@@ -29,6 +32,7 @@ import { createGatePool } from '../scene/gatePool'
 import { createCourse } from '../scene/course'
 import { createBalls } from '../scene/balls'
 import { createFinishLine } from '../scene/finishLine'
+import { createBoosterArc } from '../scene/boosterArc'
 import { useWordRun } from './useWordRun'
 import { catchUpSteps, createTickClock } from './tickClock'
 import WordRunnerHud from './WordRunnerHud.vue'
@@ -71,7 +75,9 @@ const handleProgress = (progress: LoadProgress): void => {
 }
 
 const reactiveConfig = createReactiveConfig({
-  run: { speed: DIFFICULTY_SPEEDS[props.difficulty] }
+  run: { speed: DIFFICULTY_SPEEDS[props.difficulty] },
+  booster: { opacity: DEFAULT_BOOSTER_OPACITY, gap: DEFAULT_BOOSTER_GAP },
+  words: { offset: DEFAULT_HUD_OFFSET }
 })
 // Every race starts at its difficulty's speed; the panel slider tunes it from there.
 watch(
@@ -95,6 +101,7 @@ const run = useWordRun({
   onFinish: (seconds) => emit('finish', seconds)
 })
 const { phase, level, report, ribbon, translation, isNewBest, impulseCharge } = run
+const hudOffset = computed(() => reactiveConfig.value.words.offset)
 
 // The first race after the course loads waits behind the intro until any key or tap.
 const introShown = ref(true)
@@ -159,7 +166,14 @@ onMounted(async () => {
       const pool = createGatePool(scene, GATE_POOL_SIZE)
       const balls = createBalls(scene, props.steering === 'free' ? world : null)
       const finish = createFinishLine(scene)
-      disposers.push(pool.dispose, balls.dispose, finish.dispose)
+      const boosterArc = createBoosterArc(scene, reactiveConfig.value.booster.gap)
+      disposers.push(
+        pool.dispose,
+        balls.dispose,
+        finish.dispose,
+        boosterArc.dispose,
+        watch(() => reactiveConfig.value.booster.gap, boosterArc.setGap)
+      )
       run.attachScene({
         slots: pool.slots,
         player: balls.player,
@@ -186,6 +200,13 @@ onMounted(async () => {
           const seconds = tickSeconds()
           Array.from({ length: catchUpSteps(seconds) }).forEach(() => world.step())
           run.stepRun(seconds)
+          boosterArc.draw({
+            ball: balls.player,
+            camera,
+            charge: impulseCharge.value,
+            opacity: reactiveConfig.value.booster.opacity,
+            visible: phase.value === 'running'
+          })
         },
         timeline
       })
@@ -215,13 +236,13 @@ onUnmounted(() => {
       :waiting="phase === 'waiting' && !introShown"
       :translation="translation"
       :ribbon="ribbon"
+      :offset="hudOffset"
     />
     <WordRunnerIntro v-if="introVisible" :touch="isTouchDevice" />
     <WordRunnerControls
       v-if="introVisible || phase === 'running'"
       :touch="isTouchDevice"
       :hints="introVisible"
-      :charge="impulseCharge"
       :current-actions="heldActions"
       :on-action="handleAction"
     />

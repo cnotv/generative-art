@@ -239,7 +239,8 @@ const framesFor = (state: DrawState): { view: GateView; frame: RaceFrame } => ({
     features: state.run?.features ?? [],
     distances: state.run?.gateDistances ?? [],
     distance: state.player.distance,
-    runSerial: state.runSerial
+    runSerial: state.runSerial,
+    deltaSeconds: state.deltaSeconds
   },
   frame: {
     path: state.path,

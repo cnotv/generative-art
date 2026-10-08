@@ -39,9 +39,9 @@ export const LANE_SWITCH_RATE = 14
 // impulse is the player's own speed-up, the same kind of change at the press of a button.
 export const ROUTE_EFFECTS = {
   boost: { ratio: 1.25, seconds: 1.2 },
-  stumble: { ratio: 0.3, seconds: 1.1 },
-  wide: { ratio: 0.6, seconds: 1.2 },
-  miss: { ratio: 0.5, seconds: 1.2 },
+  stumble: { ratio: 0.1, seconds: 1.8 },
+  wide: { ratio: 0.35, seconds: 1.6 },
+  miss: { ratio: 0.25, seconds: 1.6 },
   impulse: { ratio: 1.5, seconds: 1 }
 }
 // The impulse can be used again this long after the last one.
@@ -51,8 +51,9 @@ export const IMPULSE_COOLDOWN_SECONDS = 3
 export const BOT_ACCURACY = { A1: 0.6, A2: 0.64, B1: 0.68, B2: 0.72, C1: 0.76, C2: 0.8 }
 // Below this turn rate, in radians per unit of track, a gate is not on a bend worth cutting.
 export const BEND_YAW_RATE_THRESHOLD = 0.009
-export const STUMBLE_SHAKE = 0.18
-export const STUMBLE_SHAKE_FREQUENCY = 47
+// The camera's sideways jolt when the ball bangs into a rock, fading as it recovers.
+export const STUMBLE_SHAKE = 0.6
+export const STUMBLE_SHAKE_FREQUENCY = 38
 
 // Room for the ball to roll between words: long enough to read the next three and settle
 // into a lane, while the next gate still comes into view before the last one is passed.
@@ -94,10 +95,13 @@ export const SIGN_BORDER_WIDTH = 10
 export const FEATURE_OFFSET = 4
 export const RAMP = { width: 2.8, length: 3.4, rise: 0.8, thickness: 0.3, color: 0xe9c46a }
 // lift is how much of the radius stands above the deck: the rest is sunk into it.
-export const ROCK = { radius: 0.95, detail: 1, color: 0x9a8f82, lift: 0.55 }
+export const ROCK = { radius: 1.35, detail: 1, color: 0x9a8f82, lift: 0.55 }
 export const GRAVEL = { width: 3.2, length: 8, lift: 0.05, color: 0xc9a77a }
 // The hop off a ramp: how long the runner is airborne and how high it goes.
-export const RAMP_HOP = { seconds: 0.6, height: 1.2 }
+export const RAMP_HOP = { seconds: 0.7, height: 1.8 }
+// A revealed route piece springs up out of the deck over this long, so the verdict on a word is
+// seen and not just noticed. The spring is an ease-out-back constant: higher overshoots further.
+export const PIECE_POP = { seconds: 0.4, spring: 2.5 }
 
 // The player and the bot are balls, small enough to sit inside one lane.
 export const BALL = { radius: 1.1, segments: 32 }
@@ -131,8 +135,10 @@ export const FREE_BALL = {
   stallSeconds: 1,
   // How quickly the ball sheds sideways speed when not steered, per second.
   lateralGrip: 6,
-  // Enough to lift the ball about a metre off a ramp against its own heavy gravity.
-  hopImpulse: 1500
+  // Enough to lift the ball well clear of a ramp against its own heavy gravity.
+  hopImpulse: 2000,
+  // The bang of hitting a rock: the ball is knocked up off the deck as well as slowed.
+  rockKnockImpulse: 900
 }
 // Holding the brake: the free ball sheds this much speed a second, down to a stop, more than
 // the steepest hill can add, and in lanes the ball runs at this share of its speed.
@@ -207,7 +213,10 @@ export const CONTROL_MAPPING: ControlMapping = {
     'axis1-down': 'brake',
     'dpad-down': 'brake',
     'axis1-up': 'accelerate',
-    'dpad-up': 'accelerate'
+    'dpad-up': 'accelerate',
+    // The face buttons: X (A on Xbox) brakes, O (B on Xbox) fires the booster.
+    cross: 'brake',
+    circle: 'accelerate'
   },
   pointer: {
     'swipe-left': 'left',
@@ -236,8 +245,35 @@ export const REMOTE_FOLLOW_RATE = 6
 export const TOUCH_LEFT_BUTTONS: Record<string, string> = { '←': 'left', '↑': 'accelerate' }
 export const TOUCH_RIGHT_BUTTONS: Record<string, string> = { '↓': 'brake', '→': 'right' }
 
+// The booster's recharge, drawn as an arc hugging the left of the player's ball: how far it
+// stands off the ball, how thick it is, how much of the ball it wraps, in radians, and its
+// colours while charging and once ready.
+export const BOOSTER_ARC = {
+  thickness: 0.22,
+  sweep: 1.9,
+  segments: 32,
+  renderOrder: 10,
+  // The signs' own ink, dark enough to read against the sand while it refills.
+  chargingColor: 0x4a4560,
+  readyColor: 0xffd700,
+  trackOpacityShare: 0.3
+}
+
+// What the Config panel starts at: the booster arc's opacity and gap from the ball, and how
+// far down the screen the guessed words sit, in hundredths of its height.
+export const DEFAULT_BOOSTER_OPACITY = 0.55
+export const DEFAULT_BOOSTER_GAP = 0.25
+export const DEFAULT_HUD_OFFSET = 0
+
 export const configControls = {
   run: {
     speed: { min: 10, max: 30, step: 1, label: 'Run Speed' }
+  },
+  booster: {
+    opacity: { min: 0, max: 1, step: 0.05, label: 'Booster Opacity' },
+    gap: { min: 0, max: 1.5, step: 0.05, label: 'Booster Gap' }
+  },
+  words: {
+    offset: { min: 0, max: 70, step: 1, label: 'Guessed Words Height' }
   }
 }

@@ -19,6 +19,16 @@ export const stepLane = (lane: number, direction: number, laneCount: number): nu
 export const smoothingFactor = (rate: number, deltaSeconds: number): number =>
   1 - Math.exp(-rate * deltaSeconds)
 
+/**
+ * The size of something springing into view, from nothing to full size over the given seconds,
+ * overshooting on the way by an ease-out-back curve and settling exactly on one.
+ */
+export const popScale = (ageSeconds: number, seconds: number, spring: number): number => {
+  const progress = Math.min(1, Math.max(0, ageSeconds / seconds))
+  const remaining = progress - 1
+  return 1 + (spring + 1) * remaining ** 3 + spring * remaining ** 2
+}
+
 /** How far along the run each gate of a lap stands. */
 export const gateDistances = (
   lapStartDistance: number,

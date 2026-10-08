@@ -6,7 +6,8 @@ import {
   smoothingFactor,
   gateDistances,
   crossedGateIndices,
-  isHintShown
+  isHintShown,
+  popScale
 } from './runMotion'
 
 describe('laneOffset', () => {
@@ -99,5 +100,42 @@ describe('laneAtOffset', () => {
     expect([0, 1, 2].map((lane) => laneAtOffset(laneOffset(lane, 3, 3.6), 3, 3.6))).toEqual([
       0, 1, 2
     ])
+  })
+})
+
+describe('popScale', () => {
+  it.each([
+    [0, 0],
+    [-1, 0],
+    [0.4, 1],
+    [2, 1]
+  ])('at %f seconds into a 0.4 second pop is %f', (ageSeconds, expected) => {
+    // Act
+    const scale = popScale(ageSeconds, 0.4, 2.5)
+
+    // Assert
+    expect(scale).toBeCloseTo(expected)
+  })
+
+  it('overshoots full size on the way before settling', () => {
+    // Arrange
+    const ages = Array.from({ length: 40 }, (_, step) => (step / 40) * 0.4)
+
+    // Act
+    const largest = Math.max(...ages.map((age) => popScale(age, 0.4, 2.5)))
+
+    // Assert
+    expect(largest).toBeGreaterThan(1.1)
+  })
+
+  it('never overshoots with no spring', () => {
+    // Arrange
+    const ages = Array.from({ length: 40 }, (_, step) => (step / 40) * 0.4)
+
+    // Act
+    const largest = Math.max(...ages.map((age) => popScale(age, 0.4, 0)))
+
+    // Assert
+    expect(largest).toBeLessThanOrEqual(1)
   })
 })
