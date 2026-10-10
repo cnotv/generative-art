@@ -1,184 +1,138 @@
 ---
 name: open-pr
 description: >-
-  Use when a change reaches its first commit, to open its draft pull request — per AGENTS.md
-  every request opens one, without waiting to be asked — and again when the change is
-  validated, to mark it ready. Also when explicitly asked to open, raise, create, submit or
-  update one: "open the PR", "raise a PR", "make a pull request", "push this up", "update
-  the PR description". Covers the issue the PR closes, rebasing onto main, force-pushing
-  safely, the PR body format, keeping the description current after each push, watching CI
-  to green, and the abstraction review that closes out the work.
+  Use when a change reaches its first commit, to open its draft pull request — every request
+  opens one, without waiting to be asked — and again when the change is validated, to mark it
+  ready. Also when explicitly asked to open, raise, create, submit or update one: "open the
+  PR", "raise a PR", "make a pull request", "push this up", "update the PR description".
+  Covers the issue the PR closes, targeting the default branch, rebasing onto main,
+  force-pushing safely, the PR body, the preview screenshot and video, keeping the description
+  current, watching the check gates to green, and the abstraction review that closes out the
+  work.
 ---
 
 # Opening a pull request
 
-The pull request opens as a draft at the first commit, not at the end: it is where the
-decisions are recorded while they are still being made. It is marked ready once the change
-is validated (`finish-change` passed) and its checks are green. Neither step waits to be
-asked.
+The pull request opens as a draft at the first commit: it is where decisions are recorded
+while they are being made. It is marked ready once the change is validated (`finish-change`
+passed) and every check gate is green, and goes back to draft while a later change is made to
+it (section 7). None of these steps waits to be asked.
 
 ## 0. The issue it closes
 
-The PR title and body both need an issue number (step 3), and `start-issue` has already
-opened or read that issue before the branch existed. If somehow no issue exists, write it
-now, covering what is being built and why, before opening the PR.
+`start-issue` has already opened or read the issue. If somehow none exists, write it now.
 
 ## 1. Rebase onto main
 
 ```sh
 git fetch origin main
 git rebase origin/main
-```
-
-Resolve any conflicts. Never `git pull`, and never rebase onto the remote feature branch —
-always onto main. CI fails if the branch is behind.
-
-```sh
 git push --force-with-lease
 ```
 
-`--force-with-lease`, never `--force`: it refuses when someone else has pushed in the
-meantime, instead of destroying their work.
+Never `git pull`, never `--force`.
 
 ## 2. Run the abstraction review
 
-Before the PR is marked ready, look back over the work and ask what should outlive it.
-Route each item by how it would be enforced:
+Before the PR is marked ready, ask what should outlive the work, and route each item:
 
-| What came up                                            | Where it belongs                   |
-| ------------------------------------------------------- | ---------------------------------- |
-| A mistake a machine could have caught                   | a lint rule, a git hook, or a test |
-| A constraint that will bite anyone working in this area | the matching `.claude/rules/` file |
-| A procedure now performed for the second time           | a new skill in `.claude/skills/`   |
-| Hard-won context explaining why                         | a journey doc                      |
-| Nothing generalizable                                   | say so explicitly                  |
-
-"Nothing generalizable" is a valid and common answer. Writing it down is what stops the
-section from becoming a place to invent rules nobody needed.
+| What came up                                            | Where it belongs                                        |
+| ------------------------------------------------------- | ------------------------------------------------------- |
+| A mistake a machine could have caught                   | a lint rule, a git hook, or a test                      |
+| A constraint that will bite anyone working in this area | the repository's scoped rules (see Project facts)       |
+| A procedure now performed for the second time           | a skill — in agent-base if it is not repository-specific |
+| Hard-won context explaining why                         | a journey doc                                           |
+| Nothing generalizable                                   | say so explicitly                                       |
 
 ## 3. Open it
 
 ```sh
-gh pr create --draft --title "<type>: <summary> (#<issue-number>)" --body-file <file>
+gh pr create --draft --base <default-branch> --title "<type>: <summary> (#<issue-number>)" --body-file <file>
 ```
 
-`--draft` while the work is still moving; `gh pr ready` once it is validated and green. A
-draft opened at the first commit describes what is being done and why, and is updated as
-the work lands rather than rewritten at the end.
+**The base is always the default branch**: `main`, or `master` in a repository that still uses
+that name (`gh repo view --json defaultBranchRef` says which). Only the user can name another
+base. Never target another pull request's branch to build on work that has not merged yet:
+merging into that branch leaves the change off the default branch, and its `Closes` line
+closes nothing. When the work needs an unmerged pull request, say so and wait for it to merge,
+or ask whether the two should become one pull request.
 
-The issue number ends the PR title, as `feat: <summary> (#6)`, so GitHub links it to the
-issue and a squash merge reads `(#6) (#7)`; fix an existing title with `gh pr edit --title`. Only the
-title carries it, never a commit. The body follows
-`.github/pull_request_template.md` and starts with `Closes #<issue-number>`, which links
-and closes the issue automatically. Do not restate the template here — it is the single
-source for the format.
+The title ends with the issue number, as `feat: <summary> (#6)`, so GitHub links it to the
+issue; fix an existing title with `gh pr edit --title`. Only the title carries the number,
+never a commit. The body follows the repository's `.github/pull_request_template.md` and
+starts with `Closes #<issue-number>`.
 
-**Always open with In short.** The first section is a brief introduction written for a reader
-with ADHD: someone who will read those few lines and nothing else, so they must carry the whole
-point on their own. Three to five bullets, one idea each, short sentences and plain words, the
-most important thing first. Say what changed, why it matters to the person using it, and the
-one core idea that made it work; if one change mattered far more than the rest, name it
-outright rather than letting it hide among the others. No jargon, no hedging, no background.
+**Open with In short**: three to five bullets for a reader who reads nothing else — what
+changed, why it matters, the one core idea, how to see it. Then write only what the diff
+cannot say: decisions, constraints, surprises. Link a doc instead of repeating it. A body long
+enough to skim past has failed.
 
-**Write only what the diff cannot say.** A reviewer has the code; an agent picking this up
-in six months does not have your reasoning. So the body carries decisions, constraints and
-surprises — never a tour of what changed. If a point is already explained in a doc, a rule
-or a code comment, link it in a clause rather than repeating the explanation. One line per
-point is the default; spend a paragraph only where the thing was genuinely surprising.
+## 4. The screenshot and the video
 
-A body long enough to skim past has failed, however accurate it is.
+A pull request that changes anything visible carries **one screenshot and one video**. Dashi,
+the agent dashboard, shows exactly these two next to the check gates.
 
-Two sections need care:
+- The repository's `pr-preview` workflow records both from the running app on every push and
+  uploads them as the `pr-preview` artifact. Nothing to do by hand when it exists.
+- It opens the default route from its workflow inputs. When the change lives elsewhere, add a
+  line to the body: `Preview route: /the/route`. It is picked up on the next push.
+- The recording is one 1280x800 viewport after load, so a feature behind a collapsed panel,
+  a tab or the fold is not in it. Add `Preview click: <selector>` lines (up to five, clicked in
+  order) to unfold it, and one `Preview show: <selector>` line to scroll it to the top, e.g.
+  `Preview click: [aria-label="Show Closed"]` then `Preview show: [aria-label="Fold Closed"]`.
+  Open the recorded screenshot and check the feature itself is in it, not just the page.
+- When the repository has no `pr-preview` workflow, capture them yourself from the running
+  app (see `verify`) and put the first image and the first video in the body. Pin raw links
+  to the commit sha, never the branch, and re-fetch the body to confirm the image renders.
+- Show the **before** as well when the change alters something that already existed.
 
-- **Added on top of the issue** — only the **conceptual or architectural** departures
-  from what the issue described: a reshaped API, a changed mechanism, a dropped or added
-  layer, a new convention. One line each. Not a list of everything built — the diff has
-  that, and the issue already said what was asked for. If the work matched the issue in
-  shape, delete the section. Keep it current as new commits land.
-- **Rules and skills to abstract** — the output of step 2.
-
-## 3b. Show the change if it renders
-
-**A pull request that changes anything visible carries a picture of it.** A view, a transition, a
-material, a camera, a panel, a layout — a reviewer should not have to check out the branch and
-run the app to find out what it looks like.
-
-- **Stills** for a state or a comparison, **video** when the point is motion.
-- Capture from the running app, never a mock-up. The recipe — driving the app, waiting long
-  enough for a 3D scene to exist, trimming a recording — is in
-  `documentation/docs/guides/capturing-documentation-media.md`.
-- Show the **before** as well when the change alters something that already existed. "It looks
-  like this now" is half an argument; the other half is what it replaced.
-- Include the same media in the documentation, per `.claude/rules/docs.md`. The pull request is
-  read once and the docs are read for years, so the media belongs in both.
-
-Committing the media into `documentation/static/` and linking it by raw URL is what makes it show
-in the body:
-
-```markdown
-![What the reader is looking at](https://raw.githubusercontent.com/cnotv/generative-art/<sha>/documentation/static/img/<feature>/<name>.webp)
-```
-
-Pin the link to the **commit sha**, not the branch: a branch link dies when the branch is deleted
-on merge, and the pull request is the record afterwards. GitHub will not play a `.webm` linked
-this way, so link the file for a video and keep the stills inline.
-
-**After writing the body, re-fetch the PR and confirm the image actually renders** — never
-trust that the markup you wrote is what got stored. A stray escape (quoted backticks or
-quotes wrapped around the URL, a mangled character) turns `![alt](url)` into literal text
-with no image, and it looks identical to a working link in the tool call that wrote it. Read
-the body back and check the image line is exactly `![alt](raw-url)`, no extra characters
-inside the parentheses.
-
-## 4. Watch CI
+## 5. Watch the check gates
 
 ```sh
 gh pr checks <number> --watch
 ```
 
-If a check fails, read the actual failure before changing anything:
+If a check fails, read the failure before changing anything:
 
 ```sh
 gh run view <run-id> --log-failed
 ```
 
-Fix the cause, commit, push, and repeat until every check passes. Never bypass hooks with
-`--no-verify` — if a hook fails, the hook is usually right.
+Fix the cause, commit, push, and repeat until every gate is green. Never `--no-verify`. If the
+repository has preview deploys (see Project facts), put the full preview URL, including the
+route, on the Preview line of the body.
 
-Once `deploy/netlify` succeeds, take its preview link (`targetUrl` in
-`gh pr view <number> --json statusCheckRollup`) and append the route to the view being
-changed — `/tools/RigAnimator`, not the bare root — so it opens straight to the state being
-demonstrated. Put the full URL into the **Preview** line at the top of the PR body (the
-template carries the placeholder) and edit it in via step 5, the same as any other body
-update; do not only mention it in the chat reply, which the next reader of the PR never sees.
+## 6. Keep the PR and the issue current
 
-Whenever a pull request exists for the work, end the report with a link to it too, so it is
-one click away rather than something the reader has to go find.
-
-## 5. Keep the PR and the issue current
-
-After every subsequent push, update **both**:
+After every push, update both:
 
 ```sh
-gh pr edit <number> --body-file <file>      # the PR body
-gh issue edit <number> --body-file <file>   # the issue, when its description is now wrong
+gh pr edit <number> --body-file <file>
+gh issue edit <number> --body-file <file>   # when its description is now wrong
 ```
 
-A description that lags behind its commits is worse than no description, because it is read
-as current. This applies to the issue as much as the PR: if the work changed the shape of
-what was proposed — a different file layout, a different mechanism, a dropped deliverable —
-the issue body is now misinformation for anyone who reads it later.
+Edit the body itself rather than appending a comment about it. Do it as part of the push, not
+as a final tidy-up.
 
-Edit the body itself rather than appending a comment about it. Both the issue and the PR
-should read as one clean, current description; a changelog of how the description evolved
-belongs in the revision history, which GitHub keeps for you.
+## 7. Changing a pull request that is ready
 
-Do this as part of the push, not as a final tidy-up. The moment you postpone it is the moment
-it stops happening.
+When more work starts on a pull request that is already ready for review (changes asked for in
+a review or a chat, a failing gate, a conflict), put it back to draft before the first push:
+
+```sh
+gh pr ready --undo <number>
+```
+
+A draft tells reviewers, GitHub and Dashi's board that it is being changed. Once the change is
+validated again (`finish-change` passed, every gate green), mark it ready as before:
+
+```sh
+gh pr ready <number>
+```
 
 ## Definition of done
 
-Every CI check is green, the PR description matches what is actually on the branch, the
-linked issue still describes the work accurately, the abstraction review section is filled
-in — including when the answer is that nothing generalizes — and any embedded screenshot or
-video was confirmed to render, not just written.
+Every check gate is green, the description matches what is on the branch, the linked issue
+still describes the work, the abstraction review is filled in (including "nothing
+generalizable"), and the screenshot and video are present for any visible change. End the
+report with a link to the pull request.
