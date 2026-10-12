@@ -31,3 +31,9 @@ export const STRUDEL_EXAMPLES: StrudelExample[] = [
 ]
 
 export const DEFAULT_STRUDEL_EXAMPLE_ID = 'first-beat'
+
+/**
+ * Classic TR-909 style kit the shipped examples play. Loaded once before the first
+ * evaluation, or every trigger fails with "sound not found".
+ */
+export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'

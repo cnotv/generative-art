@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES, STRUDEL_LICENSE_NOTE } from './config'
+import {
+  DEFAULT_SAMPLE_BANK,
+  DEFAULT_STRUDEL_EXAMPLE_ID,
+  STRUDEL_EXAMPLES,
+  STRUDEL_LICENSE_NOTE
+} from './config'
 
 describe('StrudelEditor config', () => {
   it('ships at least one example pattern', () => {
@@ -61,5 +66,16 @@ describe('StrudelEditor config', () => {
 
     // Assert
     expect(mentionsLicense).toBe(true)
+  })
+
+  it('points the sample bank at a loadable github kit', () => {
+    // Arrange
+    const sampleBank = DEFAULT_SAMPLE_BANK
+
+    // Act
+    const isGithubKit = sampleBank.startsWith('github:')
+
+    // Assert
+    expect(isGithubKit).toBe(true)
   })
 })
