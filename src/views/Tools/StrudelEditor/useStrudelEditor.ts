@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
-import { DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES } from './config'
+import { DEFAULT_SAMPLE_BANK, DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES } from './config'
 import type {
   StrudelEditorStatus,
   StrudelEvaluationResult,
@@ -71,6 +71,7 @@ export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => 
   const scopeInitializer = toCallable(coreModule.evalScope)
   const audioInitializer = toCallable(webaudioModule.initAudio)
   const synthRegistrar = toCallable(webaudioModule.registerSynthSounds)
+  const sampleBankLoader = toCallable(webaudioModule.samples)
   const contextGetter = toCallable(webaudioModule.getAudioContext)
   const scheduleHandler = webaudioModule.webaudioOutput
   const codeTranspiler = transpilerModule.transpiler
@@ -79,6 +80,7 @@ export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => 
     scopeInitializer === undefined ||
     audioInitializer === undefined ||
     synthRegistrar === undefined ||
+    sampleBankLoader === undefined ||
     contextGetter === undefined ||
     typeof scheduleHandler !== 'function' ||
     typeof codeTranspiler !== 'function'
@@ -88,6 +90,7 @@ export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => 
 
   await audioInitializer()
   synthRegistrar()
+  await sampleBankLoader(DEFAULT_SAMPLE_BANK)
   await scopeInitializer(miniModule, webaudioModule, tonalModule, coreModule)
 
   const audioContext: unknown = await contextGetter()
