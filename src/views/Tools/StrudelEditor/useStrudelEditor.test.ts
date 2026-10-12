@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES } from './config'
+import { DEFAULT_SAMPLE_BANK, DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES } from './config'
 import type { StrudelExample, StrudelPlayback } from './types'
 import {
   findStrudelExample,
@@ -14,6 +14,7 @@ const {
   mockScopeInitializer,
   mockAudioInitializer,
   mockSynthRegistrar,
+  mockSampleBankLoader,
   mockContextGetter,
   mockResumeFunction,
   mockScheduleHandler,
@@ -25,6 +26,7 @@ const {
   mockScopeInitializer: vi.fn(),
   mockAudioInitializer: vi.fn(),
   mockSynthRegistrar: vi.fn(),
+  mockSampleBankLoader: vi.fn(),
   mockContextGetter: vi.fn(),
   mockResumeFunction: vi.fn(),
   mockScheduleHandler: vi.fn(),
@@ -41,6 +43,7 @@ vi.mock('@strudel/mini', () => ({}))
 vi.mock('@strudel/webaudio', () => ({
   initAudio: mockAudioInitializer,
   registerSynthSounds: mockSynthRegistrar,
+  samples: mockSampleBankLoader,
   getAudioContext: mockContextGetter,
   webaudioOutput: mockScheduleHandler
 }))
@@ -194,6 +197,21 @@ describe('loadDefaultStrudelPlayback', () => {
     // Assert
     expect(mockEvaluateFunction).toHaveBeenCalledWith('s("bd sd")')
     expect(evaluationResult).toEqual({ success: true })
+  })
+
+  it('loads the default drum kit before anything can evaluate', async () => {
+    // Arrange
+    const playbackLoader = loadDefaultStrudelPlayback
+
+    // Act
+    const playback = await playbackLoader()
+    await playback.evaluateCode('s("bd sd")')
+
+    // Assert
+    expect(mockSampleBankLoader).toHaveBeenCalledWith(DEFAULT_SAMPLE_BANK)
+    const bankLoadOrder = mockSampleBankLoader.mock.invocationCallOrder[0] ?? 0
+    const evaluateOrder = mockEvaluateFunction.mock.invocationCallOrder[0] ?? 0
+    expect(bankLoadOrder).toBeLessThan(evaluateOrder)
   })
 
   it('plays through the real loader wiring with mocked modules', async () => {
