@@ -140,6 +140,9 @@
   "Scene Editor": {
     "description": "Visual 3D scene composition tool with object placement and lighting."
   },
+  "Strudel Editor": {
+    "description": "Live-code music patterns in the browser with Strudel mini notation."
+  },
   "Tools Test": {
     "description": "Internal tooling test page for development utilities."
   },
