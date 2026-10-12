@@ -1,12 +1,53 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES } from './config'
 import type { StrudelExample, StrudelPlayback } from './types'
 import {
   findStrudelExample,
   listStrudelExampleOptions,
+  loadDefaultStrudelPlayback,
   resolveDefaultStrudelExample,
   useStrudelEditor
 } from './useStrudelEditor'
+
+const {
+  mockReplFactory,
+  mockScopeInitializer,
+  mockAudioInitializer,
+  mockSynthRegistrar,
+  mockContextGetter,
+  mockResumeFunction,
+  mockScheduleHandler,
+  mockCodeTranspiler,
+  mockEvaluateFunction,
+  mockStopFunction
+} = vi.hoisted(() => ({
+  mockReplFactory: vi.fn(),
+  mockScopeInitializer: vi.fn(),
+  mockAudioInitializer: vi.fn(),
+  mockSynthRegistrar: vi.fn(),
+  mockContextGetter: vi.fn(),
+  mockResumeFunction: vi.fn(),
+  mockScheduleHandler: vi.fn(),
+  mockCodeTranspiler: vi.fn(),
+  mockEvaluateFunction: vi.fn(),
+  mockStopFunction: vi.fn()
+}))
+
+vi.mock('@strudel/core', () => ({
+  repl: mockReplFactory,
+  evalScope: mockScopeInitializer
+}))
+vi.mock('@strudel/mini', () => ({}))
+vi.mock('@strudel/webaudio', () => ({
+  initAudio: mockAudioInitializer,
+  registerSynthSounds: mockSynthRegistrar,
+  getAudioContext: mockContextGetter,
+  webaudioOutput: mockScheduleHandler
+}))
+vi.mock('@strudel/tonal', () => ({}))
+vi.mock('@strudel/transpiler', () => ({
+  transpiler: mockCodeTranspiler
+}))
 
 const buildExampleList = (): StrudelExample[] => [
   { id: 'first-beat', label: 'First beat', code: 's("bd sd")' },
@@ -90,6 +131,85 @@ describe('resolveDefaultStrudelExample', () => {
 
     // Assert
     expect(defaultExample?.id).toBe(exampleId)
+  })
+})
+
+describe('loadDefaultStrudelPlayback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockEvaluateFunction.mockResolvedValue(undefined)
+    mockContextGetter.mockResolvedValue({ currentTime: 0, resume: mockResumeFunction })
+    mockReplFactory.mockResolvedValue({
+      evaluate: mockEvaluateFunction,
+      stop: mockStopFunction
+    })
+  })
+
+  it('hands the scheduler output to the pinned core under defaultOutput', async () => {
+    // Arrange
+    const playbackLoader = loadDefaultStrudelPlayback
+
+    // Act
+    await playbackLoader()
+    const replOptions = mockReplFactory.mock.calls[0]?.[0] as Record<string, unknown>
+
+    // Assert
+    expect(replOptions.defaultOutput).toBe(mockScheduleHandler)
+    expect(replOptions).not.toHaveProperty('onSchedule')
+  })
+
+  it('initializes and resumes audio inside the play gesture', async () => {
+    // Arrange
+    const playbackLoader = loadDefaultStrudelPlayback
+
+    // Act
+    await playbackLoader()
+
+    // Assert
+    expect(mockAudioInitializer).toHaveBeenCalledTimes(1)
+    expect(mockSynthRegistrar).toHaveBeenCalledTimes(1)
+    expect(mockResumeFunction).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads pattern time from the audio context clock', async () => {
+    // Arrange
+    mockContextGetter.mockResolvedValue({ currentTime: 1.5, resume: mockResumeFunction })
+
+    // Act
+    await loadDefaultStrudelPlayback()
+    const replOptions = mockReplFactory.mock.calls[0]?.[0] as Record<string, unknown>
+    const getTime = replOptions.getTime as () => number
+
+    // Assert
+    expect(getTime()).toBe(1.5)
+  })
+
+  it('evaluates code through the repl instance', async () => {
+    // Arrange
+    const playback = await loadDefaultStrudelPlayback()
+
+    // Act
+    const evaluationResult = await playback.evaluateCode('s("bd sd")')
+
+    // Assert
+    expect(mockEvaluateFunction).toHaveBeenCalledWith('s("bd sd")')
+    expect(evaluationResult).toEqual({ success: true })
+  })
+
+  it('plays through the real loader wiring with mocked modules', async () => {
+    // Arrange
+    const { playPattern, editorStatus } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: loadDefaultStrudelPlayback
+    })
+
+    // Act
+    await playPattern()
+
+    // Assert
+    expect(mockAudioInitializer).toHaveBeenCalledTimes(1)
+    expect(mockEvaluateFunction).toHaveBeenCalledWith('s("bd sd")')
+    expect(editorStatus.value).toBe('playing')
   })
 })
 
