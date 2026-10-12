@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DEFAULT_SAMPLE_BANK, DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES } from './config'
+import {
+  DEFAULT_SAMPLE_BANK,
+  DEFAULT_STRUDEL_EXAMPLE_ID,
+  ELECTRO_TUNES,
+  STRUDEL_EXAMPLES,
+  STRUDEL_TABS
+} from './config'
 import type { StrudelExample, StrudelPlayback } from './types'
 import {
   findStrudelExample,
@@ -406,5 +412,195 @@ describe('useStrudelEditor', () => {
     // Assert
     expect(editorStatus.value).toBe('error')
     expect(errorMessage.value).toBe('stop failed')
+  })
+
+  it('exposes the electro tune list from config', () => {
+    // Arrange
+    const { electroTunes } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+
+    // Act
+    const tuneCount = electroTunes.length
+
+    // Assert
+    expect(tuneCount).toBe(ELECTRO_TUNES.length)
+    expect(electroTunes.map((tune) => tune.id)).toContain('caverave')
+    expect(electroTunes.map((tune) => tune.id)).toContain('flatrave')
+  })
+
+  it('loads an electro tune into the editor when selected', () => {
+    // Arrange
+    const { selectElectroTune, selectedExampleId, patternCode, editorStatus } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+    const targetTune = ELECTRO_TUNES[0]
+
+    // Act
+    selectElectroTune(targetTune.id)
+
+    // Assert
+    expect(selectedExampleId.value).toBe(targetTune.id)
+    expect(patternCode.value).toBe(targetTune.code)
+    expect(editorStatus.value).toBe('idle')
+  })
+
+  it('ignores unknown electro tune ids', () => {
+    // Arrange
+    const { selectElectroTune, patternCode } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+    const codeBeforeSelection = patternCode.value
+
+    // Act
+    selectElectroTune('missing-tune')
+
+    // Assert
+    expect(patternCode.value).toBe(codeBeforeSelection)
+  })
+
+  it('starts on the welcome tab', () => {
+    // Arrange
+    const { activeTab } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+
+    // Act
+    const tabId = activeTab.value
+
+    // Assert
+    expect(tabId).toBe('welcome')
+  })
+
+  it('switches tabs and tracks the active one', () => {
+    // Arrange
+    const { setActiveTab, activeTab } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+
+    // Act
+    setActiveTab('patterns')
+
+    // Assert
+    expect(activeTab.value).toBe('patterns')
+  })
+
+  it('exposes the full tab list matching strudel.cc', () => {
+    // Arrange
+    const { tabList } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+
+    // Act
+    const tabLabels = tabList.map((tab) => tab.id)
+
+    // Assert
+    expect(tabLabels).toEqual([
+      'welcome',
+      'patterns',
+      'sounds',
+      'reference',
+      'export',
+      'console',
+      'settings'
+    ])
+  })
+
+  it('writes a log entry when a pattern starts playing', async () => {
+    // Arrange
+    const { playPattern, logEntries } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+
+    // Act
+    await playPattern()
+
+    // Assert
+    expect(logEntries.value.length).toBeGreaterThan(0)
+    expect(logEntries.value.some((entry) => entry.message.includes('Playing'))).toBe(true)
+  })
+
+  it('clears log entries', async () => {
+    // Arrange
+    const { playPattern, clearLogEntries, logEntries } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+    await playPattern()
+
+    // Act
+    clearLogEntries()
+
+    // Assert
+    expect(logEntries.value).toEqual([])
+  })
+})
+
+describe('STRUDEL_TABS', () => {
+  it('matches the strudel.cc player menu order', () => {
+    // Arrange
+    const expectedOrder = [
+      'welcome',
+      'patterns',
+      'sounds',
+      'reference',
+      'export',
+      'console',
+      'settings'
+    ]
+
+    // Act
+    const actualOrder = STRUDEL_TABS.map((tab) => tab.id)
+
+    // Assert
+    expect(actualOrder).toEqual(expectedOrder)
+  })
+})
+
+describe('ELECTRO_TUNES', () => {
+  it('ships at least five famous electro tunes', () => {
+    // Arrange
+    const tuneCount = ELECTRO_TUNES.length
+
+    // Act
+    const hasEnough = tuneCount >= 5
+
+    // Assert
+    expect(hasEnough).toBe(true)
+  })
+
+  it.each(ELECTRO_TUNES.map((tune) => [tune.id, tune.label, tune.code]))(
+    'electro tune "%s" has a label and playable code',
+    (_id, label, code) => {
+      // Arrange
+      const labelText = label as string
+      const patternCode = code as string
+
+      // Act
+      const hasLabel = labelText.length > 0
+      const hasCode = patternCode.length > 0
+
+      // Assert
+      expect(hasLabel).toBe(true)
+      expect(hasCode).toBe(true)
+    }
+  )
+
+  it('keeps every electro tune id unique', () => {
+    // Arrange
+    const tuneIds = ELECTRO_TUNES.map((tune) => tune.id)
+
+    // Act
+    const uniqueIds = new Set(tuneIds)
+
+    // Assert
+    expect(uniqueIds.size).toBe(tuneIds.length)
   })
 })
