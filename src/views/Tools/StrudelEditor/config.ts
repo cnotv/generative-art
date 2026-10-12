@@ -79,7 +79,7 @@ stack(
   {
     id: 'good-times',
     label: 'Good times',
-    code: `// "Good times"
+    code: `// "Good times" (adapted: .piano() replaced with triangle synth)
 // @license CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
 // @by Felix Roos
 
@@ -95,7 +95,7 @@ stack(
 )
   .gain(".6 .7".fast(4))
   .add(note(4))
-  .piano()
+  .s('triangle')
   .clip(2)
   .mul(gain(.8))
   .slow(2)`
@@ -103,19 +103,19 @@ stack(
   {
     id: 'flatrave',
     label: 'Flatrave',
-    code: `// "Flatrave"
+    code: `// "Flatrave" (adapted: RolandTR909 bank replaced with default dirt-samples)
 // @license CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
 // @by Felix Roos
 
 useRNG('legacy')
 
 stack(
-  s("bd*2,~ [cp,sd]").bank('RolandTR909'),
+  s("bd*2,~ [cp,sd]"),
 
   s("hh:1*4").sometimes(fast("2"))
   .rarely(x=>x.speed(".5").delay(.5))
   .end(perlin.range(0.02,.05).slow(8))
-  .bank('RolandTR909').room(.5)
+  .room(.5)
   .gain("0.4,0.4(5,8,-1)"),
 
   note("<0 2 5 3>".scale('G1 minor')).struct("x(5,8,-1)")
@@ -134,19 +134,19 @@ stack(
   {
     id: 'amensister',
     label: 'Amensister',
-    code: `// "Amensister"
+    code: `// "Amensister" (adapted: custom samples replaced with default dirt-samples)
 // @license CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
 // @by Felix Roos
 
 useRNG('legacy')
 
 stack(
-  // amen
+  // amen break using default samples
   n("0 1 2 3 4 5 6 7")
   .sometimes(x=>x.ply(2))
   .rarely(x=>x.speed("2 | -2"))
   .sometimesBy(.4, x=>x.delay(".5"))
-  .s("amencutup")
+  .s("sd")
   .slow(2)
   .room(.5)
   ,
@@ -166,28 +166,24 @@ stack(
   .s('sawtooth').lpf(1000).struct("<~@3 [~ x]>")
   .decay(.05).sustain(.0).delay(.8).delaytime(.125).room(.8)
   ,
-  // alien
-  s("breath").room(1).shape(.6).chop(16).rev().mask("<x ~@7>")
+  // hat texture
+  s("hh").room(1).shape(.6).chop(16).rev().mask("<x ~@7>")
   ,
-  n("0 1").s("east").delay(.5).degradeBy(.8).speed(rand.range(.5,1.5))
+  n("0 1").s("cp").delay(.5).degradeBy(.8).speed(rand.range(.5,1.5))
 ).reset("<x@7 x(5,8,-1)>")`
   },
   {
     id: 'dinofunk',
     label: 'Dinofunk',
-    code: `// "Dinofunk"
+    code: `// "Dinofunk" (adapted: freesound URLs replaced with default dirt-samples)
 // @license CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
 // @by Felix Roos
 
 setcps(1)
 useRNG('legacy')
 
-samples({bass:'https://cdn.freesound.org/previews/614/614637_2434927-hq.mp3',
-dino:{b4:'https://cdn.freesound.org/previews/316/316403_5123851-hq.mp3'}})
-setVoicingRange('lefthand', ['c3','a4'])
-
 stack(
-  s('bass').loopAt(8).clip(1),
+  s('bd').loopAt(8).clip(1),
   s("bd*2, ~ sd,hh*4"),
   chord("Abm7")
   .mode("below:G4")
@@ -202,7 +198,7 @@ stack(
   .decay(perlin.range(.05,.2)).sustain(0)
   .delay(sine.range(0,.5).slow(32))
   .degradeBy(.4).room(1),
-  note("<b4 eb4>").s('dino').delay(.8).slow(8).room(.5)
+  note("<b4 eb4>").s('sd').delay(.8).slow(8).room(.5)
 )`
   }
 ]
