@@ -1,12 +1,20 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
-import { DEFAULT_SAMPLE_BANK, DEFAULT_STRUDEL_EXAMPLE_ID, STRUDEL_EXAMPLES } from './config'
+import {
+  DEFAULT_SAMPLE_BANK,
+  DEFAULT_STRUDEL_EXAMPLE_ID,
+  ELECTRO_TUNES,
+  STRUDEL_EXAMPLES,
+  STRUDEL_TABS
+} from './config'
 import type {
   StrudelEditorStatus,
   StrudelEvaluationResult,
   StrudelExample,
   StrudelExampleOption,
-  StrudelPlayback
+  StrudelLogEntry,
+  StrudelPlayback,
+  StrudelTabId
 } from './types'
 
 export const findStrudelExample = (
@@ -134,10 +142,17 @@ type StrudelEditorState = {
   editorStatus: Ref<StrudelEditorStatus>
   errorMessage: Ref<string>
   exampleOptions: StrudelExampleOption[]
+  electroTunes: StrudelExample[]
+  logEntries: Ref<StrudelLogEntry[]>
+  activeTab: Ref<StrudelTabId>
+  tabList: { id: StrudelTabId; label: string }[]
   selectExample: (exampleId: string) => void
+  selectElectroTune: (tuneId: string) => void
   updatePatternCode: (nextCode: string) => void
   playPattern: () => Promise<void>
   stopPattern: () => Promise<void>
+  setActiveTab: (tabId: StrudelTabId) => void
+  clearLogEntries: () => void
 }
 
 const loadCachedPlayback = async (
@@ -166,6 +181,14 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   const editorStatus = ref<StrudelEditorStatus>('idle')
   const errorMessage = ref('')
   const playbackReference = ref<StrudelPlayback | null>(null)
+  const activeTab = ref<StrudelTabId>('welcome')
+  const logEntries = ref<StrudelLogEntry[]>([])
+  let logCounter = 0
+
+  const appendLog = (message: string, level: StrudelLogEntry['level'] = 'info'): void => {
+    logCounter += 1
+    logEntries.value = [...logEntries.value, { id: logCounter, message, level }]
+  }
 
   const selectExample = (exampleId: string): void => {
     const matchedExample = findStrudelExample(exampleList, exampleId)
@@ -178,6 +201,18 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     errorMessage.value = ''
   }
 
+  const selectElectroTune = (tuneId: string): void => {
+    const matchedTune = ELECTRO_TUNES.find((tune) => tune.id === tuneId)
+    if (matchedTune === undefined) {
+      return
+    }
+    selectedExampleId.value = matchedTune.id
+    patternCode.value = matchedTune.code
+    editorStatus.value = 'idle'
+    errorMessage.value = ''
+    appendLog(`Loaded electro tune: ${matchedTune.label}`)
+  }
+
   const updatePatternCode = (nextCode: string): void => {
     patternCode.value = nextCode
   }
@@ -185,18 +220,22 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   const playPattern = async (): Promise<void> => {
     editorStatus.value = 'idle'
     errorMessage.value = ''
+    appendLog('Playing pattern...')
     try {
       const playback = await loadCachedPlayback(playbackReference, playbackLoader)
       const evaluationResult = await playback.evaluateCode(patternCode.value)
       if (evaluationResult.success) {
         editorStatus.value = 'playing'
+        appendLog('Pattern playing')
       } else {
         editorStatus.value = 'error'
         errorMessage.value = evaluationResult.errorMessage ?? 'Pattern failed to evaluate'
+        appendLog(errorMessage.value, 'error')
       }
     } catch (error) {
       editorStatus.value = 'error'
       errorMessage.value = error instanceof Error ? error.message : 'Pattern failed to evaluate'
+      appendLog(errorMessage.value, 'error')
     }
   }
 
@@ -206,9 +245,19 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     } catch (error) {
       editorStatus.value = 'error'
       errorMessage.value = error instanceof Error ? error.message : 'Pattern failed to stop'
+      appendLog(errorMessage.value, 'error')
       return
     }
     editorStatus.value = 'idle'
+    appendLog('Stopped')
+  }
+
+  const setActiveTab = (tabId: StrudelTabId): void => {
+    activeTab.value = tabId
+  }
+
+  const clearLogEntries = (): void => {
+    logEntries.value = []
   }
 
   return {
@@ -217,9 +266,16 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     editorStatus,
     errorMessage,
     exampleOptions: listStrudelExampleOptions(exampleList),
+    electroTunes: ELECTRO_TUNES,
+    logEntries,
+    activeTab,
+    tabList: STRUDEL_TABS,
     selectExample,
+    selectElectroTune,
     updatePatternCode,
     playPattern,
-    stopPattern
+    stopPattern,
+    setActiveTab,
+    clearLogEntries
   }
 }
