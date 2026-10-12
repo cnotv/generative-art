@@ -38,6 +38,17 @@ const readAudioTime = (audioContext: unknown): number => {
   return 0
 }
 
+const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
+  if (!isRecordModule(audioContext)) {
+    return
+  }
+  const resumeFunction = toCallable(audioContext.resume)
+  if (resumeFunction === undefined) {
+    return
+  }
+  await resumeFunction.call(audioContext)
+}
+
 export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => {
   const [coreModule, miniModule, webaudioModule, tonalModule, transpilerModule]: unknown[] =
     await Promise.all([
@@ -58,7 +69,7 @@ export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => 
 
   const replFactory = toCallable(coreModule.repl)
   const scopeInitializer = toCallable(coreModule.evalScope)
-  const audioInitializer = toCallable(webaudioModule.initAudioOnFirstClick)
+  const audioInitializer = toCallable(webaudioModule.initAudio)
   const synthRegistrar = toCallable(webaudioModule.registerSynthSounds)
   const contextGetter = toCallable(webaudioModule.getAudioContext)
   const scheduleHandler = webaudioModule.webaudioOutput
@@ -75,13 +86,16 @@ export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => 
     throw new Error('Strudel modules failed to load')
   }
 
-  audioInitializer()
+  await audioInitializer()
   synthRegistrar()
   await scopeInitializer(miniModule, webaudioModule, tonalModule, coreModule)
 
   const audioContext: unknown = await contextGetter()
+  await resumeAudioContext(audioContext)
   const replInstance: unknown = await replFactory({
-    onSchedule: scheduleHandler,
+    // Pinned @strudel/core 1.2.6 schedules through defaultOutput; newer Strudel renamed
+    // it to onSchedule, so this key has to move with the pinned version.
+    defaultOutput: scheduleHandler,
     getTime: () => readAudioTime(audioContext),
     transpiler: codeTranspiler
   })
