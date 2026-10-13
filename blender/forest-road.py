@@ -65,6 +65,19 @@ FREE_ASSETS = {
 randomGenerator = random.Random(SEED)
 
 
+def to_blender_space(x, y, z):
+    """Map a scene position to Blender's space.
+
+    Positions throughout this script are authored with height on Y and the
+    road running along Z (camera at eye height 1.6 looking down the corridor),
+    while Blender is Z-up with the road running along Y. Geometry construction
+    (planes spanning XY, cylinders along Z, quads with Z rotation) already
+    assumes Blender's space, so only positions cross the boundary, through
+    this one function.
+    """
+    return (x, -z, y)
+
+
 def base_directory():
     """Directory for render output and the asset cache: next to the open
     .blend when there is one, next to this script in a headless run, where
@@ -140,7 +153,7 @@ def add_textured_fallback(material, imagePath, repeat=12.0):
 
 
 def build_ground(asphaltImage, floorImage):
-    bpy.ops.mesh.primitive_plane_add(size=1.0, location=(0.0, 0.0, -45.0))
+    bpy.ops.mesh.primitive_plane_add(size=1.0, location=to_blender_space(0.0, 0.0, -45.0))
     ground = bpy.context.active_object
     ground.name = "ForestRoad_Ground"
     ground.scale = (60.0, 150.0, 1.0)
@@ -151,7 +164,9 @@ def build_ground(asphaltImage, floorImage):
     add_textured_fallback(floorMaterial, floorImage)
     ground.data.materials.append(floorMaterial)
 
-    bpy.ops.mesh.primitive_plane_add(size=1.0, location=(0.0, ROAD_TOP_Y, -55.0))
+    bpy.ops.mesh.primitive_plane_add(
+        size=1.0, location=to_blender_space(0.0, ROAD_TOP_Y, -55.0)
+    )
     road = bpy.context.active_object
     road.name = "ForestRoad_Asphalt"
     road.scale = (ROAD_WIDTH, ROAD_LENGTH, 1.0)
@@ -208,7 +223,8 @@ def build_leaf_litter():
             Vector((-size, size * 0.66, 0.0)),
         ]
         base = len(vertices)
-        vertices.extend([rotation @ corner + Vector((x, y, z)) for corner in corners])
+        center = Vector(to_blender_space(x, y, z))
+        vertices.extend([rotation @ corner + center for corner in corners])
         faces.append((base, base + 1, base + 2, base + 3, index % len(materials)))
     mesh.from_pydata(vertices, [], [face[:4] for face in faces])
     mesh.update()
@@ -234,7 +250,7 @@ def build_trees():
             bpy.ops.mesh.primitive_cylinder_add(
                 radius=trunkRadius,
                 depth=trunkHeight,
-                location=(x, trunkHeight / 2.0, z),
+                location=to_blender_space(x, trunkHeight / 2.0, z),
             )
             trunk = bpy.context.active_object
             trunk.name = "ForestRoad_Trunk_%d_%d" % (side, index)
@@ -243,14 +259,14 @@ def build_trees():
             bpy.ops.mesh.primitive_ico_sphere_add(
                 radius=canopySize / 2.0,
                 subdivisions=2,
-                location=(x, trunkHeight + canopySize * 0.4, z),
+                location=to_blender_space(x, trunkHeight + canopySize * 0.4, z),
             )
             canopy = bpy.context.active_object
             canopy.name = "ForestRoad_Canopy_%d_%d" % (side, index)
             canopy.scale = (
                 randomGenerator.uniform(0.9, 1.2),
-                randomGenerator.uniform(0.9, 1.3),
                 randomGenerator.uniform(0.9, 1.2),
+                randomGenerator.uniform(0.9, 1.3),
             )
             canopy.data.materials.append(canopyMaterial)
 
@@ -271,11 +287,11 @@ def build_lighting(hdriPath):
     else:
         background.inputs["Color"].default_value = (0.79, 0.83, 0.82, 1.0)
         background.inputs["Strength"].default_value = 1.0
-    bpy.ops.object.light_add(type="SUN", location=(20.0, 60.0, 10.0))
+    bpy.ops.object.light_add(type="SUN", location=to_blender_space(20.0, 60.0, 10.0))
     sun = bpy.context.active_object
     sun.name = "ForestRoad_OvercastSun"
     sun.data.energy = 1.2
-    bpy.ops.object.light_add(type="AREA", location=(0.0, 20.0, 10.0))
+    bpy.ops.object.light_add(type="AREA", location=to_blender_space(0.0, 20.0, 10.0))
     softbox = bpy.context.active_object
     softbox.name = "ForestRoad_Softbox"
     softbox.data.energy = 800.0
@@ -287,8 +303,9 @@ def build_camera():
     cameraData.lens = 35
     cameraObject = bpy.data.objects.new("ForestRoad_Camera", cameraData)
     bpy.context.collection.objects.link(cameraObject)
-    cameraObject.location = CAMERA_POSITION
-    direction = Vector(CAMERA_LOOK_AT) - Vector(CAMERA_POSITION)
+    cameraObject.location = Vector(to_blender_space(*CAMERA_POSITION))
+    lookTarget = Vector(to_blender_space(*CAMERA_LOOK_AT))
+    direction = lookTarget - cameraObject.location
     cameraObject.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
     bpy.context.scene.camera = cameraObject
 
