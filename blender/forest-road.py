@@ -8,8 +8,9 @@ procedural fallbacks otherwise.
 Run headless:
     blender --background --python blender/forest-road.py
 
-The script renders ``forest-road-render.png`` next to the .blend and leaves
-the composed scene open when run inside the Blender UI.
+The script renders ``forest-road-render.png`` next to the open .blend, or next
+to this script when run headless with no .blend open, and leaves the composed
+scene open when run inside the Blender UI.
 """
 
 import math
@@ -64,9 +65,19 @@ FREE_ASSETS = {
 randomGenerator = random.Random(SEED)
 
 
+def base_directory():
+    """Directory for render output and the asset cache: next to the open
+    .blend when there is one, next to this script in a headless run, where
+    ``bpy.path.abspath("//...")`` never resolves to a writable location."""
+    blendDirectory = bpy.path.abspath("//")
+    if os.path.isabs(blendDirectory):
+        return blendDirectory
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 def download_asset(url, filename):
     """Fetch one free asset, returning its path or an empty string."""
-    cacheDirectory = bpy.path.abspath("//.blender-cache")
+    cacheDirectory = os.path.join(base_directory(), ".blender-cache")
     os.makedirs(cacheDirectory, exist_ok=True)
     destination = os.path.join(cacheDirectory, filename)
     if os.path.exists(destination):
@@ -307,7 +318,7 @@ def main():
     build_lighting(hdriPath)
     build_camera()
     configure_render()
-    outputPath = bpy.path.abspath("//forest-road-render.png")
+    outputPath = os.path.join(base_directory(), "forest-road-render.png")
     bpy.context.scene.render.filepath = outputPath
     bpy.ops.render.render(write_still=True)
     print("Rendered", outputPath)
