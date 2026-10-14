@@ -30,7 +30,14 @@ const clickHandlerState = {
   currentCanvas: null as HTMLCanvasElement | null
 }
 
-// Setup click and touch handlers for the current visualizer
+/**
+ * Routes clicks and touches on the canvas to the current visualiser, replacing any previous
+ * handlers.
+ * @param visualizer The visualiser to receive input, or null for none
+ * @param camera The camera clicks are projected through
+ * @param canvas The canvas to listen on
+ * @param visualizerObjects The objects the visualiser can hit
+ */
 export const setupVisualizerClickHandlers = (
   visualizer: VisualizerSetup | null,
   camera: THREE.Camera,
@@ -65,7 +72,9 @@ export const setupVisualizerClickHandlers = (
   }
 }
 
-// Clear click and touch handlers
+/**
+ * Removes the click and touch handlers `setupVisualizerClickHandlers` added.
+ */
 export const clearVisualizerClickHandlers = () => {
   if (clickHandlerState.currentClickHandler && clickHandlerState.currentCanvas) {
     clickHandlerState.currentCanvas.removeEventListener(
@@ -107,10 +116,19 @@ Object.entries(visualizerModules).forEach(([path, module]) => {
   }
 })
 
+/**
+ * Names of every registered visualiser, for the picker.
+ * @returns The visualiser names
+ */
 export const getVisualizerNames = (): string[] => {
   return Object.keys(visualizers)
 }
 
+/**
+ * Looks up a visualiser by name.
+ * @param name A name from `getVisualizerNames`
+ * @returns The visualiser's setup
+ */
 export const getVisualizer = (name: string): VisualizerSetup => {
   return visualizers[name]
 }

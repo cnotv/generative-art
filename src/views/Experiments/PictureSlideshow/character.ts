@@ -55,7 +55,6 @@ const loadPoseClip = async (url: string): Promise<THREE.AnimationClip> => {
  * both without either being re-tuned.
  * @param model - The spawned rig, moved in place
  * @param handHeight - Where the rig's hands currently are, in world units
- * @returns Nothing; the rig is moved
  */
 const standByHands = (model: THREE.Object3D, handHeight: number): void => {
   model.position.y += CANVAS_DISPLAY_POSITION[1] - handHeight
@@ -208,7 +207,6 @@ export const spawnSlideshowCharacter = (
  * Takes a character out of the scene and frees what it owned.
  * @param scene - The scene it was added to
  * @param character - The character being replaced
- * @returns Nothing; the rig is removed and disposed
  */
 export const despawnSlideshowCharacter = (
   scene: THREE.Scene,

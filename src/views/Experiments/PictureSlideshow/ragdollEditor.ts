@@ -2,8 +2,10 @@ import * as THREE from 'three'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import type { ConfigControlsSchema } from '@/stores/viewConfig'
 
-/** The Elements panel row for each hand, read and written in the same rig units the
- *  generator script's `HOLD_HAND_*_UNITS` constants are in — copy straight across. */
+/**
+ * The Elements panel row for each hand, read and written in the same rig units the
+ *  generator script's `HOLD_HAND_*_UNITS` constants are in — copy straight across.
+ */
 export const RAGDOLL_SCHEMA: ConfigControlsSchema = {
   left: {
     component: 'CoordinateInput',
@@ -24,8 +26,10 @@ export const RAGDOLL_SCHEMA: ConfigControlsSchema = {
 /** Which hand a gizmo is posing. */
 export type HandSide = 'left' | 'right'
 
-/** A rig-unit position, in the model's own unscaled frame — what the generator
- *  script's `HOLD_HAND_*_UNITS` constants are written in. */
+/**
+ * A rig-unit position, in the model's own unscaled frame — what the generator
+ *  script's `HOLD_HAND_*_UNITS` constants are written in.
+ */
 export interface RigPosition {
   x: number
   y: number
@@ -85,7 +89,6 @@ const solveElbow = (
  * @param bone The bone to turn
  * @param child The bone whose position is being aimed
  * @param target Where the child should end up, in world space
- * @returns Nothing; the bone's local rotation is written
  */
 const aimBoneAt = (bone: THREE.Object3D, child: THREE.Object3D, target: THREE.Vector3): void => {
   bone.updateMatrixWorld(true)
@@ -109,6 +112,8 @@ const aimBoneAt = (bone: THREE.Object3D, child: THREE.Object3D, target: THREE.Ve
  * @param camera - The scene's camera, for the gizmos to project against
  * @param domElement - The canvas gizmo drags read pointer events from
  * @param scene - Where the gizmos themselves are added
+ * @param onChange - Called after every pose change, including drags. Nothing here is itself
+ *   reactive, so this is what lets a Vue-side panel know the displayed numbers are stale.
  * @returns Handles to enable/disable the editor and read or set each hand's target
  */
 export const createRagdollEditor = (
@@ -116,8 +121,6 @@ export const createRagdollEditor = (
   camera: THREE.Camera,
   domElement: HTMLElement,
   scene: THREE.Scene,
-  /** Called after every pose change, including drags — nothing here is itself reactive,
-   *  so this is what lets a Vue-side panel know the displayed numbers are stale. */
   onChange: () => void
 ) => {
   const sides: HandSide[] = ['left', 'right']
@@ -185,6 +188,7 @@ export const createRagdollEditor = (
    * Turns the gizmos on or off. Enabling re-reads each hand's current bone position first,
    * so editing always starts from the pose the timeline was actually paused on rather than
    * wherever the gizmo was left after the last edit.
+   * @param enabled Whether the gizmos should be shown and draggable
    */
   const setEnabled = (enabled: boolean): void => {
     if (enabled) {

@@ -415,9 +415,9 @@ const createLights = (scene: THREE.Scene, config: ProjectConfig) =>
 
 /**
  * Reassign ball position on click
- * @param click
- * @param model
- * @param rigidBody
+ * @param click The click that sets the new position
+ * @param model The ball mesh
+ * @param rigidBody The ball's physics body, moved with it
  */
 const setModelPosition = (
   click: MouseEvent,
@@ -448,8 +448,8 @@ const setModelPosition = (
 
 /**
  * Get default textures
- * @param img
- * @returns
+ * @param img URL of the image to load
+ * @returns A texture set to repeat, offset by one full tile
  */
 const getTextures = (img: string) => {
   const texture = textureLoader.load(img)
@@ -465,8 +465,8 @@ const getTextures = (img: string) => {
 
 /**
  * Take a ball out of the scene and the simulation, and free what it held.
- * @param scene
- * @param world
+ * @param scene The scene the ball was added to
+ * @param world The physics world the ball's body lives in
  * @param ball - The mesh and body to release
  */
 const releaseBall = (
@@ -489,8 +489,8 @@ const releaseBall = (
  * A bowl is a hollow shape, so its collider cannot be one of the solid primitives: any of
  * them would fill the hollow and leave the balls resting on a lid. The collider is the mesh
  * itself, triangle for triangle, which is the only shape that is concave where the bowl is.
- * @param scene
- * @param world
+ * @param scene The scene to add the bowl to
+ * @param world The physics world the collider is added to
  * @returns The bowl mesh and its collider
  */
 const getBowl = (scene: THREE.Scene, world: RAPIER.World) => {
@@ -556,12 +556,13 @@ const getBowl = (scene: THREE.Scene, world: RAPIER.World) => {
 /**
  * Create a ball with physics, texture, and shadow
  * Friction and bounciness is size based
- * @param size
- * @param position
- * @param scene
- * @param orbit
- * @param world
+ * @param size Ball radius
+ * @param position Where the ball starts
+ * @param scene The scene to add the ball to
+ * @param orbit Orbit controls, whose target follows the ball
+ * @param world The physics world the ball's body is added to
  * @param physics How heavy the ball is, and how much it grips and bounces
+ * @returns The ball mesh and its rigid body
  */
 const getModel = (
   size: number,

@@ -60,7 +60,6 @@ const defaultSurface = (): RockSurface =>
  *
  * A saved or shared id can outlive the surface it named, and a rock with no
  * material at all is a black hole in the middle of the screen.
- *
  * @param id - Surface id, from the lobby or a peer
  * @returns The matching surface, or the default one
  */
@@ -69,7 +68,6 @@ export const rockSurfaceById = (id: string): RockSurface =>
 
 /**
  * The surfaces as the lobby's select field wants them.
- *
  * @returns One option per surface, in catalogue order
  */
 export const rockSurfaceOptions = (): { value: string; label: string }[] =>

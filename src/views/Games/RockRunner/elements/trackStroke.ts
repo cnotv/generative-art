@@ -23,7 +23,6 @@ const SIDES = [-1, 1] as const
  * chunks meeting at a station agree on where the edge is without either knowing
  * the other exists — the alternative, seeding per chunk, leaves a visible step
  * at every boundary.
- *
  * @param terms - Amplitude and wavelength pairs
  * @param phases - One phase offset per term, drawn from the track seed
  * @param distance - Distance along the track
@@ -38,7 +37,6 @@ export const strokeWander = (terms: StrokeTerms, phases: number[], distance: num
 
 /**
  * Builds the phase offsets the two wanders are drawn with.
- *
  * @param seed - The track seed, so every peer draws the same edge
  * @returns Phases for the lateral wander and for the width variation
  */
@@ -59,7 +57,6 @@ export const strokePhases = (seed: number): { wander: number[]; width: number[] 
  * Both the line's position and its thickness wander. Thickness matters as much
  * as position: a band of constant width reads as a machined inlay however much
  * it snakes, because a drawn line is uneven where the hand pressed harder.
- *
  * @param deckWidth - Width of the deck the stroke edges
  * @param side - Which edge, -1 for left and 1 for right
  * @param distance - Distance along the track
@@ -94,7 +91,6 @@ const stationPoint = (station: SweepStation, lateral: number): THREE.Vector3 =>
  * Flat ribbons rather than swept tubes: the stroke is read from directly above
  * at a glancing angle, where a tube's roundness is invisible and costs four
  * times the triangles.
- *
  * @param stations - Stations the stretch covers
  * @param firstIndex - Absolute index of the first station, which anchors the
  *   wander to the track rather than to the chunk

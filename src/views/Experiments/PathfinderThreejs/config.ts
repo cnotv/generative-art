@@ -171,7 +171,12 @@ export const defaultSceneValues = {
   scene: { backgroundColor: 0x1a1a2e }
 }
 
-/** Returns configControls with start/goal brush options disabled when already placed. */
+/**
+ * Returns configControls with start/goal brush options disabled when already placed.
+ * @param hasStart Whether a start cell is already on the grid
+ * @param hasGoal Whether a goal cell is already on the grid
+ * @returns The panel controls with the placed brushes disabled
+ */
 export const buildConfigControls = (hasStart: boolean, hasGoal: boolean) => ({
   ...configControls,
   brush: {
@@ -189,6 +194,12 @@ export const buildConfigControls = (hasStart: boolean, hasGoal: boolean) => ({
 // ── Start / goal helpers ──────────────────────────────────────────────────────
 
 export const defaultStart = { x: 1, z: 1 }
+/**
+ * The goal a fresh grid starts with, one cell in from the far corner.
+ * @param gridWidth Number of cells across
+ * @param gridHeight Number of cells deep
+ * @returns The goal cell position
+ */
 export const defaultGoal = (gridWidth: number, gridHeight: number) => ({
   x: gridWidth - 2,
   z: gridHeight - 2
@@ -196,19 +207,41 @@ export const defaultGoal = (gridWidth: number, gridHeight: number) => ({
 
 // ── Scenario wall helpers ─────────────────────────────────────────────────────
 
-/** Generates `count` cells in a column (fixed x, z from 0 to count-1). */
+/**
+ * Generates `count` cells in a column (fixed x, z from 0 to count-1).
+ * @param x Column the cells sit in
+ * @param count How many cells to generate
+ * @returns The column of cells
+ */
 const col = (x: number, count: number): ScenarioCell[] =>
   Array.from({ length: count }, (_, z) => ({ x, z }))
 
-/** Generates `count` cells in a column starting at zFrom. */
+/**
+ * Generates `count` cells in a column starting at zFrom.
+ * @param x Column the cells sit in
+ * @param zFrom Row of the first cell
+ * @param count How many cells to generate
+ * @returns The column of cells
+ */
 const colFrom = (x: number, zFrom: number, count: number): ScenarioCell[] =>
   Array.from({ length: count }, (_, i) => ({ x, z: zFrom + i }))
 
-/** Diagonal cells: (0,0), (1,1), ..., (n-1,n-1). */
+/**
+ * Diagonal cells: (0,0), (1,1), ..., (n-1,n-1).
+ * @param n How many cells to generate
+ * @returns The diagonal of cells
+ */
 const diagonal = (n: number): ScenarioCell[] =>
   Array.from({ length: n }, (_, i) => ({ x: i, z: i }))
 
-/** Row of typed cells from xFrom to xFrom+count-1 at fixed z. */
+/**
+ * Row of typed cells from xFrom to xFrom+count-1 at fixed z.
+ * @param z Row the cells sit in
+ * @param xFrom Column of the first cell
+ * @param count How many cells to generate
+ * @param type Cell type every generated cell carries
+ * @returns The row of typed cells
+ */
 const typedRow = (z: number, xFrom: number, count: number, type: CellType): ScenarioCell[] =>
   Array.from({ length: count }, (_, i) => ({ x: xFrom + i, z, type }))
 

@@ -7,6 +7,9 @@ import { isHeicBuffer } from './heic'
  * not have, and they would re-encode the image on the way past for nothing. Keeping this in
  * the worker rather than beside `isHeicBuffer` also keeps the decoder out of the main bundle,
  * which would otherwise carry a second copy it never loads.
+ * @param buffer The file's bytes
+ * @param mimeType The file's type, for the non-HEIF path
+ * @returns The decoded image
  */
 const decodeBitmap = async (buffer: ArrayBuffer, mimeType: string): Promise<ImageBitmap> => {
   const blob = new Blob([buffer], { type: mimeType })

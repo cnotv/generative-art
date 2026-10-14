@@ -37,6 +37,8 @@ import {
  * The handful of the shared sphere's own physics figures that read wrong
  * unchanged across characters — a running figure pushed and gravity-pulled
  * as hard as a boulder looks like it's being flung, not running.
+ * @param characterType The character being run
+ * @returns The physics figures that differ for that character
  */
 const characterPhysicsPreset = (
   characterType: CharacterType
@@ -202,7 +204,6 @@ const setStickmanValue = (
  * the rock mid-run rather than at the next spawn. The drive, steering and jump
  * figures are not pushed anywhere: the run loop reads this same object every
  * frame, which is what keeps a change felt on the very next input.
- *
  * @param options - Access to the live rock, which is replaced on every restart
  * @returns The shared config, a re-apply hook for new rocks, and a teardown
  */

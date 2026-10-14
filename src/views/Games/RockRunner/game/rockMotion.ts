@@ -18,7 +18,6 @@ type Vec3Like = { x: number; y: number; z: number }
  * last known station onto the local tangent advances the cursor by exactly the
  * forward component, which converges in a step or two because the path is
  * smooth and the rock only moves a little each frame.
- *
  * @param path - The track being run
  * @param currentDistance - Last known distance
  * @param position - The rock's world position
@@ -39,8 +38,10 @@ export const advanceDistance = (
 /**
  * The forward speed cap at a given distance. It ramps from the starting cap up
  * to the ceiling so a long run keeps getting faster, then holds.
- *
  * @param distance - Distance travelled so far
+ * @param baseSpeed The cap at the start of a run
+ * @param ceiling The highest the cap can go
+ * @param rampDistance Distance over which the cap climbs to the ceiling
  * @returns The maximum forward speed allowed
  */
 export const speedCapAt = (
@@ -53,7 +54,6 @@ export const speedCapAt = (
 
 /**
  * Which way the player is steering.
- *
  * @param currentActions - Actions currently held
  * @returns 1 for right, -1 for left, 0 for neither or both
  */
@@ -63,7 +63,6 @@ export const steerDirection = (currentActions: ControlsCurrents): number =>
 /**
  * The component of a velocity along a direction, used to cap forward and
  * lateral speed independently.
- *
  * @param velocity - The body's velocity
  * @param direction - A unit direction in the horizontal plane
  * @returns The signed speed along that direction
@@ -77,10 +76,11 @@ export const speedAlong = (velocity: Vec3Like, direction: Vec2Like): number =>
  * Uses the path's own ground height rather than a physics ray: the deck is
  * generated from the same path, so its surface height is known exactly and
  * costs nothing to look up.
- *
  * @param rockY - The rock's centre height
  * @param groundY - The deck surface height beneath it
  * @param velocityY - The rock's vertical speed
+ * @param probeDistance How far above the deck still counts as resting on it
+ * @param risingTolerance Vertical speed above which the rock counts as rising
  * @returns True when the rock is close enough to the deck and not already rising
  */
 export const isGrounded = (
@@ -97,7 +97,6 @@ export const isGrounded = (
  * Deliberately a much tighter test than `isGrounded`. That one is generous so a
  * jump lands when a player expects it to; this one decides where the falling
  * gravity stops applying, so it has to mean resting rather than merely close.
- *
  * @param rockY - The rock's centre height
  * @param groundY - The deck surface height beneath it
  * @param radius - The rock's radius, which is its resting height above the deck
@@ -116,7 +115,6 @@ export const isResting = (rockY: number, groundY: number, radius: number, slack:
  * and the rock still counts as grounded for a moment after leaving the deck,
  * which matters here because cresting a hill lifts it off for a few frames at a
  * time and a strict check reads that as being airborne.
- *
  * @param gate - The timers as they stand
  * @param delta - Seconds elapsed
  * @param input - This frame's press, ground contact, and the two grace windows
@@ -134,7 +132,6 @@ export const advanceJumpGate = (
 
 /**
  * Whether a jump should fire this frame.
- *
  * @param gate - The advanced timers
  * @returns True when a remembered press meets ground the rock still has
  */
@@ -151,7 +148,6 @@ export const jumpReady = (gate: JumpGate): boolean =>
  * rounded up to a chip on every tick — and the tick is fast, so "the smallest
  * possible spray" was still fifty chips a second. Squaring holds it at nothing
  * until the rock is genuinely moving, then ramps hard.
- *
  * @param speed - The rock's horizontal speed
  * @param cap - The current speed cap
  * @param maxBurst - Chips thrown at the cap
@@ -177,7 +173,6 @@ export const debrisBurstSize = (
  * flying. The ramp is linear rather than squared like the burst count: the
  * count wants to sit at zero until the rock is really moving, whereas a trail
  * that collapses to nothing at half speed reads as the effect breaking.
- *
  * @param speed - Current ground speed
  * @param cap - Speed at which the trail reaches its full length
  * @param maxLifetime - Seconds a chip lives at the cap
@@ -203,7 +198,6 @@ export const debrisLifetime = (
  * machine that drops frames. Scaling by the frame's own duration against a
  * reference rate keeps the tuned numbers meaningful and the handling identical
  * everywhere.
- *
  * @param magnitude - Impulse tuned for the reference frame rate
  * @param delta - Seconds the frame covered
  * @returns The impulse to actually apply this frame
@@ -213,7 +207,6 @@ export const frameScaledImpulse = (magnitude: number, delta: number): number =>
 
 /**
  * Impulse that pushes the rock forward without exceeding the current cap.
- *
  * @param forwardSpeed - The rock's speed along the path tangent
  * @param cap - The current speed cap
  * @param impulse - The impulse magnitude when under the cap
@@ -236,7 +229,6 @@ export type SteerLimits = {
 /**
  * Whether a lateral push in the given direction is still open: not already
  * at the lateral speed cap, and not already pinned against the wall.
- *
  * @param direction - Positive for a rightward push, negative for leftward, zero for neither
  * @param limits - The speed and position the steering has to stop at
  * @returns Whether that direction is still open
@@ -250,7 +242,6 @@ export const lateralPushAllowed = (direction: number, limits: SteerLimits): bool
 
 /**
  * A lateral magnitude, zeroed once its direction is no longer open.
- *
  * @param magnitude - The signed lateral magnitude to gate
  * @param limits - The speed and position the steering has to stop at
  * @returns The magnitude unchanged, or zero if that direction is no longer open
@@ -261,7 +252,6 @@ export const clampLateralMagnitude = (magnitude: number, limits: SteerLimits): n
 /**
  * Impulse that steers the rock sideways without exceeding the lateral cap or
  * driving it into a wall.
- *
  * @param steer - Steering direction from steerDirection
  * @param impulse - The impulse magnitude when under both limits
  * @param limits - The speed and position the steering has to stop at
@@ -275,7 +265,6 @@ export const steerImpulseMagnitude = (
 
 /**
  * How far off the centreline the rock can sit before it is touching a wall.
- *
  * @param deckWidth - Width of the deck the walls flank
  * @param radius - The rock's radius
  * @returns The offset at which the rock is already against the wall
@@ -285,7 +274,6 @@ export const wallStandoff = (deckWidth: number, radius: number): number =>
 
 /**
  * The rock's offset from the centreline, positive towards the path's right.
- *
  * @param position - The rock's world position
  * @param origin - The centreline point it is measured against
  * @param right - The path's right vector there
@@ -303,7 +291,6 @@ export const lateralOffset = (
  * clamped to a maximum centering speed. A direct velocity command rather than
  * an impulse, so the rock is steered like a servo pulling back to the middle
  * instead of being nudged by an accumulating force.
- *
  * @param offset - Offset from the centreline, positive towards the path's right
  * @param gain - How strongly offset converts to a velocity command
  * @param maxSpeed - The largest centering speed allowed, in either direction

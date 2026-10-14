@@ -114,7 +114,7 @@ const bestLevel = ref(loadBestLevel())
 const isNewRecord = ref(false)
 
 /** Assigned once the scene exists; a decided round drives the next one through it. */
-let startNextRound: () => void = () => undefined
+let startNextRound: () => void = () => {}
 
 /** What the round did to the level, said outright rather than implied by a direction. */
 const levelVerdict = computed(() => (outcome.value === 'won' ? 'Level up' : 'Level down'))

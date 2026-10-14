@@ -56,10 +56,10 @@ const WALL_BASE = -DECK_THICKNESS
  * of `thickness`, with its surface at `top`. Wound the same way as the marble
  * editor's lane profile so the face normals point up and Rapier's
  * FIX_INTERNAL_EDGES resolves contacts across chunk seams.
- *
  * @param width - Surface width
  * @param thickness - How deep the slab sits below its surface
  * @param top - Height of the surface relative to the station
+ * @param segments How many pieces the top edge is split into
  * @returns The closed cross-section outline
  */
 export const slabCrossSection = (
@@ -81,7 +81,6 @@ export const slabCrossSection = (
 
 /**
  * The drivable deck's outline.
- *
  * @param width - Deck width
  * @param thickness - How deep the slab sits below the deck surface
  * @returns The closed cross-section outline
@@ -99,7 +98,6 @@ export const deckCrossSection = (width: number, thickness: number): CrossSection
  * ball reaching that concave corner either catches on it and stops dead or is
  * handed a bad normal and punted through. Sweeping one profile removes the
  * junction entirely.
- *
  * @param width - Deck width
  * @param wall - Wall height and thickness
  * @param thickness - How deep the deck slab sits below its surface
@@ -128,7 +126,6 @@ export const deckWithWallsCrossSection = (
  * Outlines for the two containment walls, one per track edge. These are the
  * visual-only meshes the elements panel can reveal; collision comes from
  * deckWithWallsCrossSection instead.
- *
  * @param width - Deck width the walls flank
  * @param wall - Wall height and thickness
  * @returns The left and right wall outlines, in that order
@@ -155,7 +152,6 @@ export const wallCrossSections = (width: number, wall: WallConfig): CrossSection
 /**
  * The station index range one chunk spans. Consecutive chunks share their
  * boundary station, so the swept slabs butt up exactly with no seam.
- *
  * @param chunkIndex - Zero-based chunk number
  * @returns The first and last station index of the chunk
  */
@@ -168,7 +164,6 @@ export const chunkStationRange = (chunkIndex: number): [number, number] => [
  * UVs matching the vertex order `sweepPositions` emits: the texture runs across
  * the deck in U and along the travelled distance in V, so the ground tiles
  * continuously from one chunk into the next.
- *
  * @param stationIndices - Absolute station index of each swept station
  * @param crossSection - Outline being swept
  * @param width - Surface width used to normalise U
@@ -192,7 +187,6 @@ export const sweepGroundUvs = (
 /**
  * Merges coincident vertices and recomputes normals, so a displaced surface
  * cannot split along its own internal seams.
- *
  * @param geometry - Swept geometry to weld in place of the original
  * @returns The welded geometry; the source is disposed
  */
@@ -234,7 +228,6 @@ type ChunkBuildContext = {
  *
  * They start exactly where the deck ends rather than spanning underneath it, so
  * the two surfaces share no depth range and cannot z-fight.
- *
  * @param deckWidth - Width of the drivable deck the strips flank
  * @param terrainWidth - Total span of deck plus both strips
  * @returns The left and right strip outlines, in that order
@@ -419,7 +412,6 @@ export type TrackChunkManagerOptions = {
 /**
  * Generates the ground ahead of the rock and disposes it behind, so an endless
  * track never holds more than a bounded number of meshes and collider bodies.
- *
  * @param options - Scene, physics world, path and wall configuration
  * @returns Handles to pump, prune, rebuild and tear down the ground
  */

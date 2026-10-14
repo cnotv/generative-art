@@ -25,7 +25,6 @@ const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0)
 
 /**
  * Moves one particle forward in time under gravity.
- *
  * @param particle - Particle to advance, mutated in place
  * @param delta - Seconds elapsed
  * @returns Whether the particle is still alive afterwards
@@ -42,7 +41,6 @@ export const advanceParticle = (particle: DebrisParticle, delta: number): boolea
 /**
  * How large a particle draws for its remaining life: full size for most of it,
  * shrinking away at the end so chips vanish rather than blink out.
- *
  * @param particle - Particle being drawn
  * @returns A scale factor in [0, 1] times the particle's own size
  */
@@ -55,7 +53,6 @@ export const particleScale = (particle: DebrisParticle): number => {
 /**
  * Launch velocity for a chip thrown up behind the rock: backwards along travel,
  * upwards, and spread sideways so the trail fans out instead of forming a line.
- *
  * @param forward - The rock's travel direction
  * @param right - The track's right vector
  * @param samples - Three values in [0, 1) driving the spread
@@ -104,7 +101,6 @@ const buildInstanced = (
  * slightly larger copy drawn back-faces-only that reads as an ink outline
  * around each one. That keeps the hand-drawn stroke at two draw calls rather
  * than one per particle.
- *
  * @param scene - Scene to add the meshes to
  * @param colors - Colours chips are tinted with, normally the ground and the rock
  * @returns Handles to emit, advance and tear down the field
@@ -168,7 +164,12 @@ export const createDebrisField = (scene: THREE.Scene, colors: number[]): DebrisF
   return {
     emit,
     update,
-    /** True once enough time has passed to release the next chip. */
+    /**
+     * True once enough time has passed to release the next chip.
+     * @param delta Seconds since the last frame
+     * @param interval Seconds between chips
+     * @returns True when a chip should be released this frame
+     */
     shouldEmit: (delta: number, interval: number): boolean => {
       sinceEmit += delta
       if (sinceEmit < interval) return false

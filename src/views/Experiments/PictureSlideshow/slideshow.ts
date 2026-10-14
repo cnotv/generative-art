@@ -14,7 +14,12 @@ import type {
  */
 const ease = (progress: number): number => progress * progress * (3 - 2 * progress)
 
-/** Wrap into [0, count), which `%` alone does not do for a step to the left. */
+/**
+ * Wrap into [0, count), which `%` alone does not do for a step to the left.
+ * @param index The index to wrap, which may be negative
+ * @param slideCount Number of slides
+ * @returns The index within range
+ */
 const wrapIndex = (index: number, slideCount: number): number =>
   ((index % slideCount) + slideCount) % slideCount
 
@@ -186,7 +191,13 @@ export const holdAmountAt = ({ phase, phaseProgress }: SlideshowFrame): number =
   return ease(phaseProgress)
 }
 
-/** Where in a 0 to 1 span a value sits, clamped, or 1 outright once the span is empty. */
+/**
+ * Where in a 0 to 1 span a value sits, clamped, or 1 outright once the span is empty.
+ * @param raw The value to place
+ * @param fadeStart Where the span begins
+ * @param fadeEnd Where the span ends
+ * @returns Progress through the span, from 0 to 1
+ */
 const fadeProgress = (raw: number, fadeStart: number, fadeEnd: number): number => {
   const span = fadeEnd - fadeStart
   // A zero or negative span is a snap rather than a ramp: nothing before fadeStart,

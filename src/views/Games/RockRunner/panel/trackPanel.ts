@@ -80,7 +80,6 @@ export type TrackPanelOptions = {
  * The walls are physical but never rendered, so they start with the panel's
  * hidden state on. Toggling the row reveals them, which is the only way to see
  * where the invisible boundary actually sits while tuning it.
- *
  * @param options - The chunk manager to drive and the rock's current distance
  * @returns A teardown that removes the panel entry
  */
@@ -185,7 +184,6 @@ export const registerTrackElements = (options: TrackPanelOptions): (() => void) 
 /**
  * Builds the single visibility dispatcher the debug scene store calls for plain
  * scene elements, routing each name to whatever owns it.
- *
  * @param toggles - Visibility setters keyed by element name
  * @returns The handlers to hand to `setSceneElements`
  */

@@ -9,7 +9,6 @@ import type { LateralFogUniforms } from './types'
  * dozen units to the left and right, well inside any useful camera-distance
  * fog. Fading by distance from the track centreline instead dissolves those
  * edges, whatever the camera is doing.
- *
  * @param color - Colour to fade into, normally the sky
  * @param near - Distance from the centreline where the fade begins
  * @param far - Distance where the fade is complete
@@ -52,7 +51,6 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, lateralFogColor, lateralFogFactor);
  * The distance is read from a `lateralOffset` attribute the caller bakes in,
  * which is exact: the geometry already knows how far every vertex sits from the
  * centreline, so nothing has to be reconstructed per frame.
- *
  * @param material - Material to patch, mutated in place
  * @param uniforms - Shared uniforms from createLateralFogUniforms
  * @returns The same material, for chaining
@@ -84,7 +82,6 @@ export const applyLateralFog = <MaterialType extends THREE.Material>(
  * The swept positions are already in world space, so they cannot be read back
  * for this; the offset has to come from the cross-section, which is exactly
  * what the profile's x already is.
- *
  * @param stationCount - How many stations the sweep has
  * @param crossSection - Outline being swept
  * @returns One absolute offset per emitted vertex

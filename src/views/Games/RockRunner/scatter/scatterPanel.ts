@@ -112,7 +112,6 @@ export const RR_SCATTER_CONTROLS = {
 
 /**
  * Initial panel state for an area, derived from its catalog entry.
- *
  * @param definition - The area's catalog entry
  * @returns The nested config the panel reads and writes
  */
@@ -150,7 +149,6 @@ export const buildScatterPanelConfig = (
 
 /**
  * Flattens the panel's nested state into the shape the placement maths takes.
- *
  * @param panelConfig - Nested config as edited in the panel
  * @returns The area config used to place instances
  */
@@ -188,7 +186,6 @@ export type ScatterPanelState = {
  * Created before the managers exist so the placement maths can read live config
  * from the first chunk onward; `register` then connects the managers so edits
  * rebuild what is already on screen.
- *
  * @returns The panel state, its accessors and a teardown
  */
 export const createScatterPanel = (): ScatterPanelState => {

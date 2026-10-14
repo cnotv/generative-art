@@ -22,6 +22,12 @@ const RETRACT_CHANNEL = 'lb-room-retract'
 type HelloPayload = { name: string; color: string }
 type RetractPayload = { id: string }
 
+/**
+ * Manage the lobby's P2P session: the player's profile, chat, and the room they host.
+ * @param initialName The player's name when the session starts
+ * @param initialColor The player's colour when the session starts
+ * @returns The local peer id, the hosted room, and the actions on both
+ */
 export const useLobbySession = (initialName: string, initialColor: string) => {
   const store = useLobbyStore()
   const session = ref<P2PSession | null>(null)

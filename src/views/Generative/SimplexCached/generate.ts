@@ -19,6 +19,11 @@ interface Config {
   height: number
 }
 
+/**
+ * Starts the cached simplex noise animation on a canvas, with a settings panel.
+ * @param canvas The canvas to draw on
+ * @param statsElement Where the frame rate readout is mounted
+ */
 export const init = (canvas: HTMLCanvasElement, statsElement: HTMLElement): void => {
   const config: Config = {
     pixelSize: 4,

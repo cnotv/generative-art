@@ -18,7 +18,6 @@ import {
  * mesh open there — the same failure the rock's own displacement map has to be
  * kept small to avoid. Two vertices in the same place are in the same
  * direction, so this cannot disagree with itself.
- *
  * @param direction - Unit direction of the point from the rock's centre
  * @param thickness - Base thickness of the outline
  * @param wobble - How much the thickness is allowed to vary, as a fraction
@@ -53,7 +52,6 @@ export const strokeThicknessAt = (
  * Built at the rock's own radius rather than at one. The rock carries its size
  * in its geometry and leaves its scale at one, so a unit hull parented to it
  * sits entirely inside the ball and is never seen.
- *
  * @param radius - Radius of the rock being outlined, in its local space
  * @param thickness - Outline thickness as a fraction of that radius
  * @param wobble - How much that thickness varies around the ball
@@ -88,7 +86,6 @@ export const buildRockStrokeGeometry = (
  * The radius is measured off the rock's own geometry rather than passed in. A
  * hull told the wrong radius disappears inside the ball without erroring, which
  * is exactly the kind of mistake a caller should not be able to make.
- *
  * @param rock - The rock mesh to outline
  * @param thickness - Base thickness of the outline
  * @param wobble - How much that thickness varies around the ball

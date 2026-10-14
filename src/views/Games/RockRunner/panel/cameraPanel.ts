@@ -65,7 +65,6 @@ export const RR_CAMERA_MODE_CONTROLS = {
 /**
  * The schema shown for one camera mode: the selector, that mode's own offsets,
  * and the settings every mode shares.
- *
  * @param mode - The camera currently selected
  * @returns The controls to render for it
  */
@@ -111,7 +110,7 @@ export type CameraPanel = {
  *
  * Nothing is pushed anywhere on change: the camera is placed from these values
  * every frame, so editing one is felt on the next.
- *
+ * @param options The current camera mode and the setter for it
  * @returns The shared config the run loop reads, and a teardown
  */
 export const registerCameraElements = (options: CameraPanelOptions): CameraPanel =>

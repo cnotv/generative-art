@@ -20,12 +20,17 @@ export type { GridCell, Grid, Coord, TrajectoryConfig }
 const rowRange = Array.from({ length: GRID_ROWS }, (_, i) => i)
 const colRange = Array.from({ length: GRID_COLS }, (_, i) => i)
 
-/** Odd rows have one fewer column to stay within the wall boundaries. */
+/**
+ * Odd rows have one fewer column to stay within the wall boundaries.
+ * @param row Row index
+ * @returns How many columns the row has
+ */
 const rowColCount = (row: number): number => (row % 2 === 0 ? GRID_COLS : GRID_COLS - 1)
 
 /**
  * Create an empty grid with a given number of pre-filled rows at the top.
  * @param filledRows - Number of rows to fill with random colors.
+ * @param colorCount How many of the bubble colours to draw from
  * @returns A fresh GRID_ROWS × GRID_COLS grid.
  */
 export const createGrid = (

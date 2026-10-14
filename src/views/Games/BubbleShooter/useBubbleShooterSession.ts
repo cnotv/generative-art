@@ -145,6 +145,7 @@ const initSessionForContext = (ctx: BsContext, roomId: string): void => {
 /**
  * Manage a BubbleShooter P2P session (peers, chat, garbage sync, game-over).
  * @param options - Session configuration including name, color, and room ID.
+ * @param onGarbage Called with the number of garbage rows another player sent
  * @returns Session controls and reactive state for the consuming view.
  */
 export const useBubbleShooterSession = (

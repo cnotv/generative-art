@@ -68,14 +68,20 @@ const connectAudioSource = (): void => {
   }
 }
 
-// Reset audio setup for new songs
+/**
+ * Forgets the current audio element so the next song sets up afresh. The audio context is kept,
+ * since it can be reused.
+ */
 export const resetAudio = (): void => {
   state.isInitialized = false
   state.audioElement = null
   // Note: Don't close audioContext as it can be reused
 }
 
-// Setup audio controls and auto-load music
+/**
+ * Connects an audio element to the analyser and starts playback on the first user interaction.
+ * @param audioElementReference The element to analyse; the page's player is used when omitted
+ */
 export const setupAudio = (audioElementReference?: HTMLAudioElement): void => {
   if (state.isInitialized && state.audioElement === audioElementReference) return
 
@@ -133,7 +139,10 @@ export const setupAudio = (audioElementReference?: HTMLAudioElement): void => {
   state.isInitialized = true
 }
 
-// Get audio frequency data as normalized array
+/**
+ * Current frequency spectrum, one value per bar.
+ * @returns Frequency magnitudes from 0 to 1, or zeros before audio is set up
+ */
 export const getAudioData = (): number[] => {
   if (!state.analyser) {
     return new Array(barCount).fill(0)
@@ -145,7 +154,10 @@ export const getAudioData = (): number[] => {
   return [...dataArray].slice(0, barCount).map((value) => value / 255)
 }
 
-// Get audio time domain data (for waveform visualization)
+/**
+ * Current waveform, for visualisers that draw the signal rather than its spectrum.
+ * @returns Samples from -1 to 1, or zeros before audio is set up
+ */
 export const getWaveformData = (): number[] => {
   if (!state.analyser) {
     return new Array(barCount).fill(0)
@@ -157,13 +169,20 @@ export const getWaveformData = (): number[] => {
   return [...dataArray].slice(0, barCount).map((value) => (value - 128) / 128)
 }
 
-// Get average volume level
+/**
+ * Overall loudness of the current frame.
+ * @returns The mean frequency magnitude, from 0 to 1
+ */
 export const getAverageVolume = (): number => {
   const audioData = getAudioData()
   return audioData.reduce((sum, value) => sum + value, 0) / audioData.length
 }
 
-// Get bass, mid, treble frequencies separately
+/**
+ * Loudness of the bass, mid and treble ranges of the current frame, split at 10% and 50% of the
+ * spectrum.
+ * @returns The mean magnitude of each range, from 0 to 1
+ */
 export const getFrequencyRanges = (): { bass: number; mid: number; treble: number } => {
   const audioData = getAudioData()
   const bassEnd = Math.floor(audioData.length * 0.1)
@@ -180,7 +199,11 @@ export const getFrequencyRanges = (): { bass: number; mid: number; treble: numbe
   return { bass, mid, treble }
 }
 
-// Get frequency bands data for visualizers with configurable ranges
+/**
+ * Loudness of named frequency bands, for visualisers that choose their own ranges.
+ * @param bandConfig First and last spectrum index of each band, by name
+ * @returns The mean magnitude of each band, by name
+ */
 export const getFrequencyBands = (bandConfig: {
   [key: string]: { start: number; end: number }
 }): { [key: string]: number } => {
@@ -202,7 +225,10 @@ export const getFrequencyBands = (bandConfig: {
   return result
 }
 
-// Check if audio is playing
+/**
+ * Whether the song is currently playing.
+ * @returns True while the audio element is playing
+ */
 export const isPlaying = (): boolean => {
   return state.audioElement ? !state.audioElement.paused : false
 }
@@ -234,7 +260,10 @@ const initializeMicrophone = async (): Promise<boolean> => {
   }
 }
 
-// Get available audio devices
+/**
+ * Lists the audio inputs the browser can capture, and remembers them.
+ * @returns The audio input devices, or an empty list when they cannot be read
+ */
 export const getAvailableAudioDevices = async (): Promise<MediaDeviceInfo[]> => {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices()
@@ -316,7 +345,11 @@ const switchToSelectedOutput = async (): Promise<boolean> => {
   return true
 }
 
-// Toggle between song, microphone, and selected audio output
+/**
+ * Moves to the next audio source in turn: song, then microphone, then the selected output, then
+ * back to the song.
+ * @returns True when the new source is connected
+ */
 export const toggleAudioSource = async (): Promise<boolean> => {
   if (!state.audioContext) {
     console.error('Audio context not initialized')
@@ -346,7 +379,12 @@ export const toggleAudioSource = async (): Promise<boolean> => {
   }
 }
 
-// Set specific audio source
+/**
+ * Switches the visualiser to a given audio source.
+ * @param sourceType The source to analyse
+ * @param deviceId The input device to capture, for the selected-output source
+ * @returns True when the source is connected
+ */
 export const setAudioSource = async (
   sourceType: AudioSourceType,
   deviceId?: string
@@ -378,17 +416,25 @@ export const setAudioSource = async (
   return true
 }
 
-// Get current audio source
+/**
+ * The audio source the visualiser is listening to.
+ * @returns The current source type
+ */
 export const getAudioSource = (): AudioSourceType => {
   return state.currentAudioSourceType
 }
 
-// Check if microphone is available
+/**
+ * Whether microphone access has been granted.
+ * @returns True once a microphone stream is available
+ */
 export const isMicrophoneReady = (): boolean => {
   return state.isMicrophoneAvailable
 }
 
-// Cleanup when component unmounts
+/**
+ * Stops every captured stream and releases the audio graph, for when the view unmounts.
+ */
 export const cleanup = (): void => {
   if (state.microphoneStream) {
     state.microphoneStream.getTracks().forEach((track) => track.stop())

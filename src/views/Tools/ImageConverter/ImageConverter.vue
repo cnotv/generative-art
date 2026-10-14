@@ -64,7 +64,11 @@ const savings = (entry: FileEntry): string => {
 
 const resultExtension = computed(() => selectedFormatOption.value.extension)
 
-/** A HEIF source has no preview until the worker has decoded it, so the result stands in. */
+/**
+ * A HEIF source has no preview until the worker has decoded it, so the result stands in.
+ * @param entry The file in the list
+ * @returns The preview URL, the result URL, or nothing yet
+ */
 const thumbnailUrl = (entry: FileEntry): string | undefined => entry.previewUrl ?? entry.downloadUrl
 
 const downloadName = (entry: FileEntry): string => {
