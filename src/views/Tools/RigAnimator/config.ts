@@ -60,6 +60,17 @@ export const DEFAULT_FPS = 30
  * misread pose is outvoted by its neighbours instead of landing on the timeline.
  */
 export const RECORDING_SAMPLES_PER_FRAME = 2
+/**
+ * How many times Smooth Recording runs the timeline's Filter over a finished take. Measured on a
+ * recording of the Running preset, six passes steady the knees slightly and cost no accuracy.
+ */
+export const RECORDING_SMOOTHING_PASSES = 6
+/**
+ * How many times Thin Out Recording halves a finished take, keeping one keyframe in four. On the
+ * same recording two halvings stay within about a degree of the full take; three lose five
+ * degrees on the legs, and six leave three keyframes for a four second run.
+ */
+export const RECORDING_HALVING_PASSES = 2
 export const DEFAULT_FRAME_MAX = 150
 /** The rig timeline's frame range never shrinks below this, dragging its resize handle in. */
 export const FRAME_MAX_MIN = 10
@@ -251,8 +262,14 @@ export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0
  * follows the video's own clock, so a take keeps the video's real timing at any ratio. 1 plays at
  * normal speed with one sample a frame and nothing to filter.
  */
-export const CAMERA_VIDEO_SLOWDOWN_RATIO = 2
-export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 6, step: 1 }
+export const CAMERA_VIDEO_SLOWDOWN_RATIO = 10
+export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 20, step: 1 }
+/**
+ * The slowest a browser plays a video, a sixteenth of its speed: Chromium throws
+ * `NotSupportedError` for any rate below it. A slowdown ratio past 16 plays at this rate and only
+ * raises how many poses Record Motion samples per frame.
+ */
+export const CAMERA_VIDEO_MIN_PLAYBACK_RATE = 0.0625
 
 /** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
  * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
@@ -309,6 +326,12 @@ export const CAMERA_HAND_FLIP_DEGREES_RANGE = { min: 10, max: 180, step: 5 }
 export const CAMERA_HAND_FLIP_CONFIRM_READINGS = 3
 /** A trusted hand reading older than this, in milliseconds, no longer vetoes a sharply turned one. */
 export const CAMERA_HAND_TRACK_RESET_MILLISECONDS = 500
+/**
+ * The furthest, in seconds of the video's own time, a reading may be from the last one and still
+ * count as the pose tracker following on from it. Further than that, a seek or a skip, the reading
+ * is taken from the wrong moment and only primes the tracker, see `continuesPreviousReading`.
+ */
+export const CAMERA_READING_MAX_GAP_SECONDS = 0.5
 /** A pose applied longer ago than this, in seconds, is not blended from: a new photo lands whole. */
 export const CAMERA_BONE_SMOOTHING_RESET_SECONDS = 0.5
 /**
@@ -328,6 +351,46 @@ export const CAMERA_KEYFRAME_ROLL_FLIP_DEGREES = 90
 /** How far, in metres, a smoothed landmark may move in a single frame before the excess past
  * this is clamped off as a sudden jump rather than genuine motion. */
 export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
+/**
+ * How long, in milliseconds, the rig takes to settle on where the performer now stands. The
+ * position read from the picture jitters by a few centimetres of depth a frame, and pose changes
+ * alone move it by a couple of tens of centimetres; a quarter second hides both and still keeps
+ * up with a walk. See the travel journey doc for the clip it was measured on.
+ */
+export const CAMERA_TRAVEL_SMOOTHING_MILLISECONDS = 250
+/**
+ * How long, in milliseconds, where the performer stands at the start is read over before the rig
+ * travels from it. The first reading of a video is a fresh detection rather than a tracked one, and
+ * on both attached clips its depth was off by 15 to 18 cm: taken alone as the start, it slid the
+ * rig at the first frames and offset the whole take by that much.
+ */
+export const CAMERA_TRAVEL_ANCHOR_MILLISECONDS = 250
+/** How few in-picture body landmarks are too few to judge how large the performer appears. */
+export const CAMERA_BODY_POSITION_MIN_LANDMARKS = 6
+/**
+ * A foot counts as planted once it sits within this share of the rig's leg length of the lower
+ * foot, measured as how far each has risen from where it stands at rest.
+ */
+export const CAMERA_FOOT_PLANT_LIFT_SHARE = 0.03
+/** A planted foot is let go once it rises this share of the leg length above the lower foot. */
+export const CAMERA_FOOT_RELEASE_LIFT_SHARE = 0.06
+/**
+ * How fast, in leg lengths a second, a foot may move across the floor where the capture puts it
+ * and still count as planted. A foot on the ground stands still, so one sweeping back under a body
+ * running in place is not planted, however low it is. The dance clip's lower foot moves under one
+ * leg length a second at its median, the recorded Running preset's at three.
+ */
+export const CAMERA_FOOT_PLANT_SPEED_SHARE = 2
+/** A planted foot is let go once the capture moves it across the floor this fast. */
+export const CAMERA_FOOT_RELEASE_SPEED_SHARE = 4
+/**
+ * The furthest, as a share of the leg length, a planted foot is held from where the leg would
+ * otherwise put it. Past it the foot is dragged along at that reach: the capture's legs and the
+ * travel disagree, and bending the leg further to hide it looks worse than a slow slide.
+ */
+export const CAMERA_FOOT_PIN_MAX_STRETCH_SHARE = 0.15
+/** How long, in milliseconds, a let-go foot takes to ease back to where the leg puts it. */
+export const CAMERA_FOOT_RELEASE_MILLISECONDS = 120
 /** Range and step the Config panel's max jump slider offers. */
 export const CAMERA_MAX_JUMP_RANGE = { min: 0.02, max: 0.5, step: 0.01 }
 

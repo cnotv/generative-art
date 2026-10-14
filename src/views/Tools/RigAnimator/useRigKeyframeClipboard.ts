@@ -1,6 +1,6 @@
 import { computed, shallowRef, type Ref } from 'vue'
 import type * as THREE from 'three'
-import { poseApply, type Pose, type PoseKeyframe } from '@webgamekit/rig'
+import { poseApply, type PoseKeyframe } from '@webgamekit/rig'
 import type { RigAnimatorConfig } from './types'
 
 interface Dependencies {
@@ -10,19 +10,20 @@ interface Dependencies {
   persistAutosave: (label: string) => void
 }
 
-/** One copied pose, kept relative to the earliest frame in the copy rather than an absolute
+/** One copied keyframe, kept relative to the earliest frame in the copy rather than an absolute
  * frame, so paste can drop the whole block starting wherever the playhead currently sits. */
 interface ClipboardEntry {
   offset: number
-  pose: Pose
+  keyframe: PoseKeyframe
 }
 
 /**
- * Plain-data copy of a pose. `keyframes` is a Vue ref, so a stored pose is wrapped in a
- * reactive Proxy; `structuredClone` cannot clone that Proxy, but a pose is pure JSON-safe
- * numeric data, so a JSON round-trip clones it without touching the Proxy machinery.
+ * Plain-data copy of a keyframe, its pose and any bone positions. `keyframes` is a Vue ref, so a
+ * stored keyframe is wrapped in a reactive Proxy; `structuredClone` cannot clone that Proxy, but
+ * a keyframe is pure JSON-safe numeric data, so a JSON round-trip clones it without touching the
+ * Proxy machinery.
  */
-const clonePose = (pose: Pose): Pose => JSON.parse(JSON.stringify(pose))
+const cloneKeyframe = (keyframe: PoseKeyframe): PoseKeyframe => JSON.parse(JSON.stringify(keyframe))
 
 /**
  * Owns copying and pasting a block of keyframes' poses, split out of `useRigKeyframes` to stay
@@ -46,7 +47,10 @@ export const useRigKeyframeClipboard = ({
     const entries = frames
       .map((frame) => keyframes.value.find((keyframe) => keyframe.frame === frame))
       .filter((keyframe): keyframe is PoseKeyframe => keyframe !== undefined)
-      .map((keyframe) => ({ offset: keyframe.frame - baseFrame, pose: clonePose(keyframe.pose) }))
+      .map((keyframe) => ({
+        offset: keyframe.frame - baseFrame,
+        keyframe: cloneKeyframe(keyframe)
+      }))
     if (entries.length > 0) clipboardEntries.value = entries
   }
 
@@ -60,8 +64,8 @@ export const useRigKeyframeClipboard = ({
     if (!clipboardEntries.value) return
     const baseFrame = config.value.frame
     const pasted = clipboardEntries.value.map((entry) => ({
-      frame: baseFrame + entry.offset,
-      pose: clonePose(entry.pose)
+      ...cloneKeyframe(entry.keyframe),
+      frame: baseFrame + entry.offset
     }))
     const pastedFrames = new Set(pasted.map((keyframe) => keyframe.frame))
     const withoutOverlap = keyframes.value.filter((keyframe) => !pastedFrames.has(keyframe.frame))

@@ -40,12 +40,15 @@ import {
   CAMERA_TWIST_MIN_BEND_DEGREES,
   CAMERA_TWIST_FULL_BEND_DEGREES,
   CAMERA_VIDEO_SLOWDOWN_RATIO,
+  RECORDING_HALVING_PASSES,
   RECORDING_SAMPLES_PER_FRAME,
+  RECORDING_SMOOTHING_PASSES,
   RIG_TIMELINE_KEYBOARD_MAPPING,
   DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES,
   DEFAULT_ENCLOSURE_SIZE_FRACTION,
   DEFAULT_ENCLOSURE_OPACITY
 } from './config'
+import { cleanUpRecordedTake } from './keyframeOps'
 import { buildRigPanelGroups } from './panelSchema'
 import RigConfigAccordion from './RigConfigAccordion.vue'
 import { useRigAnimator } from './useRigAnimator'
@@ -100,6 +103,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   fps: DEFAULT_FPS,
   showBoneMarkers: false,
   cameraGroundFeet: true,
+  cameraFollowTravel: true,
+  cameraPinFeet: true,
   cameraTurnHips: true,
   cameraBendSpine: true,
   cameraTurnHead: true,
@@ -138,6 +143,8 @@ const reactiveConfig = createReactiveConfig<RigAnimatorConfig>({
   cameraTwistFullBendDegrees: CAMERA_TWIST_FULL_BEND_DEGREES,
   cameraShowPreview: false,
   cameraVideoSlowdownRatio: CAMERA_VIDEO_SLOWDOWN_RATIO,
+  cameraSmoothRecording: true,
+  cameraThinRecording: true,
   targetLeftArm: true,
   targetRightArm: true,
   targetLeftLeg: true,
@@ -175,7 +182,9 @@ const cameraPoseMappingOptions = computed(
     filterBodyFlips: reactiveConfig.value.cameraFilterBodyFlips,
     maxBoneTurnRadiansPerSecond: THREE.MathUtils.degToRad(
       reactiveConfig.value.cameraBoneMaxTurnSpeed
-    )
+    ),
+    followTravel: reactiveConfig.value.cameraFollowTravel,
+    pinPlantedFeet: reactiveConfig.value.cameraPinFeet
   })
 )
 
@@ -231,9 +240,18 @@ const motionRecording = useRigMotionRecording({
   // doc comment) and was the actual cause of the stutter recording had — not the camera feed
   // itself. stopRecordingAndCommit below pays that cost once, when the burst ends.
   addKeyframe: () => rig.captureKeyframeSilently(),
-  capturePose: () => rig.capturePose(),
+  captureSample: () => rig.captureRecordedSample(),
   replaceTake: (fromFrame, toFrame, keyframes) =>
-    rig.replaceRecordedTake(fromFrame, toFrame, keyframes)
+    rig.replaceRecordedTake(
+      fromFrame,
+      toFrame,
+      cleanUpRecordedTake(keyframes, {
+        smoothingPasses: reactiveConfig.value.cameraSmoothRecording
+          ? RECORDING_SMOOTHING_PASSES
+          : 0,
+        halvingPasses: reactiveConfig.value.cameraThinRecording ? RECORDING_HALVING_PASSES : 0
+      })
+    )
 })
 
 /** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
@@ -794,6 +812,7 @@ onUnmounted(() => {
     :fps="reactiveConfig.fps"
     :target-group-labels="targetBodyPartGroupLabels"
     @apply="handleCameraApply"
+    @new-source="rig.startNewCameraSource"
     @close="handleCloseCamera"
     @toggle-record="handleToggleRecord"
     @enable-preview="reactiveConfig.cameraShowPreview = true"

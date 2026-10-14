@@ -46,9 +46,27 @@ const buildBoneTrack = (
   return new THREE.QuaternionKeyframeTrack(`${boneName}.quaternion`, times, values)
 }
 
+/** Build one bone's position track from every keyframe that moved it */
+const buildBonePositionTrack = (
+  boneName: string,
+  sortedKeyframes: PoseKeyframe[],
+  fps: number
+): THREE.VectorKeyframeTrack | null => {
+  const moved = sortedKeyframes.flatMap((keyframe) => {
+    const position = keyframe.positions?.[boneName]
+    return position ? [{ frame: keyframe.frame, position }] : []
+  })
+  if (moved.length === 0) return null
+
+  const times = moved.map(({ frame }) => frame / fps)
+  const values = moved.flatMap(({ position: { x, y, z } }) => [x, y, z])
+  return new THREE.VectorKeyframeTrack(`${boneName}.position`, times, values)
+}
+
 /**
  * Build a playable clip from an ordered set of pose keyframes. Three.js interpolates between
- * consecutive poses on its own, so no custom tweening is needed here.
+ * consecutive poses on its own, so no custom tweening is needed here. A bone position a keyframe
+ * carries becomes a position track over the keyframes that carry one.
  * @param keyframes The poses to connect, in any order (sorted internally by frame)
  * @param boneNames Every bone the clip should carry a track for
  * @param fps Frames per second used to convert keyframe frames into clip time
@@ -63,7 +81,10 @@ export const poseBuildClip = (
 ): THREE.AnimationClip => {
   const sortedKeyframes = sortKeyframesByFrame(keyframes)
   const tracks = boneNames
-    .map((boneName) => buildBoneTrack(boneName, sortedKeyframes, fps))
-    .filter((track): track is THREE.QuaternionKeyframeTrack => track !== null)
+    .flatMap((boneName) => [
+      buildBoneTrack(boneName, sortedKeyframes, fps),
+      buildBonePositionTrack(boneName, sortedKeyframes, fps)
+    ])
+    .filter((track): track is THREE.KeyframeTrack => track !== null)
   return new THREE.AnimationClip(clipName, -1, tracks)
 }

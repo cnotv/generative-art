@@ -64,4 +64,19 @@ describe('poseBuildClip', () => {
     const clip = poseBuildClip(keyframes, ['hip', 'unposed'], 30)
     expect(clip.tracks.map((track) => track.name)).toEqual(['hip.quaternion'])
   })
+
+  it('builds a position track from the keyframes that carry a bone position, and only those', () => {
+    const rest = { x: 0, y: 0, z: 0, w: 1 }
+    const travelling: PoseKeyframe[] = [
+      { frame: 60, pose: { hip: rest }, positions: { hip: { x: 2, y: 1, z: 3 } } },
+      { frame: 30, pose: { hip: rest } },
+      { frame: 0, pose: { hip: rest }, positions: { hip: { x: 0, y: 1, z: 0 } } }
+    ]
+
+    const clip = poseBuildClip(travelling, ['hip'], 30)
+
+    const track = clip.tracks.find((candidate) => candidate.name === 'hip.position')
+    expect([...(track?.times ?? [])]).toEqual([0, 2])
+    expect([...(track?.values ?? [])]).toEqual([0, 1, 0, 2, 1, 3])
+  })
 })

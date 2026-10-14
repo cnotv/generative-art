@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { HandSide, QuaternionData } from '@webgamekit/rig'
 import {
+  CAMERA_READING_MAX_GAP_SECONDS,
   CAMERA_CROP_MIN_SIZE_PIXELS,
   CAMERA_HAND_FLIP_CONFIRM_READINGS,
   CAMERA_HAND_TRACK_RESET_MILLISECONDS,
@@ -62,6 +63,24 @@ export const cropSquareAroundLandmark = ({
   const size = Math.max(CAMERA_CROP_MIN_SIZE_PIXELS, shoulderSpan * spanMultiplier)
   return { left: center.x * frameWidth - size / 2, top: center.y * frameHeight - size / 2, size }
 }
+
+/**
+ * Whether a reading follows on from the one before it closely enough for the pose tracker to have
+ * tracked it. MediaPipe's VIDEO mode reads each frame from the last frame's landmarks, so the first
+ * reading of a run is a fresh detection and the first after a seek is tracked from the wrong
+ * moment. On the dance clip the first after a rewind was off by up to 52° on a limb and the very
+ * first reading jumped 33° to the next, where tracked frames move under 13°; one reading later
+ * both were back to normal. Such a reading primes the tracker and never reaches the rig.
+ * @param previousVideoSeconds The video time of the last reading of this run, null for none
+ * @param videoSeconds The video time of this reading
+ * @returns True when the tracker followed on from the last reading
+ */
+export const continuesPreviousReading = (
+  previousVideoSeconds: number | null,
+  videoSeconds: number
+): boolean =>
+  previousVideoSeconds !== null &&
+  Math.abs(videoSeconds - previousVideoSeconds) <= CAMERA_READING_MAX_GAP_SECONDS
 
 /**
  * Whether a normalized image point lies inside the image.
@@ -220,12 +239,17 @@ export const hasCameraPoseContent = (frame: CameraPoseFrame): boolean =>
 export const mirrorCameraPoseFrame = (frame: CameraPoseFrame): CameraPoseFrame => ({
   bodyLandmarks: frame.bodyLandmarks ? mirrorCameraLandmarks(frame.bodyLandmarks) : null,
   handLandmarks: mirrorCameraHandLandmarks(frame.handLandmarks),
-  headRotation: frame.headRotation ? mirrorHeadRotation(frame.headRotation) : null
+  headRotation: frame.headRotation ? mirrorHeadRotation(frame.headRotation) : null,
+  ...(frame.bodyPosition
+    ? { bodyPosition: { ...frame.bodyPosition, x: -frame.bodyPosition.x } }
+    : {})
 })
 
 /**
  * Smooth every part of a new reading against the previous smoothed frame, body and hands through
- * `filterCameraLandmarks` and the head through `smoothHeadRotation`. A part missing from either
+ * `filterCameraLandmarks` and the head through `smoothHeadRotation`. The body's position passes
+ * through as read: the travel it drives is smoothed on the capture's own clock, see
+ * `advanceCameraTravel`. A part missing from either
  * reading is taken as-is, so something reappearing after a dropout is not blended against a stale
  * position.
  * @param previous The previous smoothed frame, or null for a first reading
@@ -261,7 +285,8 @@ export const smoothCameraPoseFrame = (
         elapsedSeconds,
         settings
       ),
-    timestampMilliseconds
+    timestampMilliseconds,
+    ...(next.bodyPosition ? { bodyPosition: next.bodyPosition } : {})
   }
 }
 

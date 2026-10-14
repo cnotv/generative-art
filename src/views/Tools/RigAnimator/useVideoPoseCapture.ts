@@ -1,6 +1,16 @@
 import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
 import { useVideoLandmarkDetection } from './useVideoLandmarkDetection'
+import { CAMERA_VIDEO_MIN_PLAYBACK_RATE } from './config'
 import type { CameraDetectionOptions, CameraSmoothingSettings } from './types'
+
+/**
+ * The playback rate to ask a browser for: the one wanted, or the slowest a browser plays when
+ * the one wanted is slower still, since asking for less throws rather than playing.
+ * @param rate The wanted rate, 1 for normal speed
+ * @returns A rate every browser accepts
+ */
+export const supportedPlaybackRate = (rate: number): number =>
+  Math.max(rate, CAMERA_VIDEO_MIN_PLAYBACK_RATE)
 
 /**
  * Owns an uploaded video file for the camera pose capture dialog: the video-file counterpart to
@@ -59,8 +69,9 @@ export const useVideoPoseCapture = (
    * rate to its default, so both are set. */
   const applyPlaybackRate = (): void => {
     if (!videoElement.value) return
-    videoElement.value.defaultPlaybackRate = playbackRate.value
-    videoElement.value.playbackRate = playbackRate.value
+    const rate = supportedPlaybackRate(playbackRate.value)
+    videoElement.value.defaultPlaybackRate = rate
+    videoElement.value.playbackRate = rate
   }
 
   /** Play or pause the loaded video on its own, without touching Record Motion or the timeline.

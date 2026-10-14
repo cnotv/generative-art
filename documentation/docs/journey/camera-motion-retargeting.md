@@ -70,7 +70,7 @@ runs along the arm and a generated skeleton with no rest rotation at all are han
   from the chest.
 - **Seen, not guessed.** BlazePose still reports a position for a body part out of frame, the
   legs below a webcam framed on the upper body say. A landmark outside the image counts as out of
-  view, and the bones it would drive keep their rest pose. Detection itself only runs while the
+  view, and the bones it would drive keep the pose they last had. Detection itself only runs while the
   source is live, so a paused video stops posing the rig rather than repeating one frame.
 - **Hands first.** A hand found on the whole frame wins over anything the body suggests about it,
   and takes its side from the body's nearer visible wrist.
@@ -254,6 +254,94 @@ empty stream reloads the element even when it held none, rewinding and pausing t
 Record Motion kept sampling a frozen frame. The start now notices it was cancelled, and a stream
 is only cleared when one was actually set.
 
+## Scoring a capture against a recording of the rig itself
+
+A clip of a real performer can only be compared with what a detector read from it, which puts the
+detector's own mistakes into the reference. A screen recording of the Rig Animator playing one of
+its own presets does not have that problem: the preset is the exact motion on screen, bone for bone,
+so a capture of the recording can be scored against the truth. The **Running** preset, recorded for
+four seconds from an oblique front view, is the first such clip.
+
+![Six frames of the recorded Running preset with the lite pose model's reading drawn over each: the subject's left side in blue, right in red. Frames 0 and 10 put the raised back leg on the wrong side](/img/animation/rig-running-recording-detection.webp)
+
+Two things have to be settled before any score means something. The recording starts wherever the
+loop happened to be, so the preset is slid along its own 0.7 second loop to the start that best
+fits the detection. The camera looks at the character from the side, so both bodies are turned
+about the vertical by the single angle that lines them up best across the whole take, not frame by
+frame: a per-frame fit would also forgive a body leaning the wrong way.
+
+The scores use the terms of pose estimation benchmarks, each chosen for what the others miss.
+
+| Measure                                                                     | Reads                                    | Blind to                             |
+| --------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------ |
+| Mean limb segment angle                                                     | which way each bone points, in 3D        | limb length, so proportions are fair |
+| Percentage of correct keypoints at a fifth of a torso, in the camera's view | what the recording would look like       | depth, which one camera reads worst  |
+| Correlation of each knee's bend over time                                   | a stride reproduced as a stride, in step | how deep each bend goes              |
+
+The recording is replayed through the capture the tool runs, with the Config panel as it starts:
+the first reading only primes the tracker, then every reading is smoothed, retargeted, carried
+across the floor and has its planted feet held. What it showed:
+
+| Measure                        | Detector against the preset | Capture       | Recorded take, smoothed and thinned |
+| ------------------------------ | --------------------------- | ------------- | ----------------------------------- |
+| Legs                           | 14°                         | 13°           | 13°                                 |
+| Near arm                       | 23°                         | 22°           | 21°                                 |
+| Far arm                        | 33°                         | 39°           | 38°                                 |
+| Knee bend correlation, L and R | 0.76 and 0.66               | 0.75 and 0.77 | 0.85 and 0.80                       |
+| Correct keypoints, fifth torso | 50%                         | 59%           | 51%                                 |
+
+Where the detector sees a limb, the capture is as good as the detector and slightly better, since
+smoothing takes out some of its jitter; the far arm is the one the detector barely sees, below. The
+recorded take's cleanup costs nothing on the legs and steadies the knees.
+
+The score caught a regression the dance clip could not. With planted feet held, the legs first
+came out 16° off and the knees correlated at 0.62 and 0.67, where the same capture without holding
+scored 12° and 0.76. The preset runs in place: its stance foot sweeps back under hips that never
+travel, and the lower foot was always taken as planted, so pinning held the sweep still and bent
+the knee to reach it. Contact labels in motion capture are low and still, not low alone, so a foot
+now counts as planted only while the capture moves it across the floor slower than two leg lengths
+a second, and is let go past four. The running capture came back to 13° and 0.75, and the dance
+clip, whose feet do stand still, keeps most of its hold; see
+[Carrying a Capture Across the Floor](./camera-capture-travel.md#holding-the-feet-still).
+
+Two more things the recording showed about the detectors. On a side view the pose model swaps the
+legs for a few frames every stride, the full model as much as the lite one, so a heavier model is no
+fix. And the face landmarker finds no face on the stylised character in any frame, sunglasses and
+all, so a capture of a rendered character gets no head rotation from it.
+
+## A limb the camera loses
+
+Every frame used to reset each limb bone to rest before posing it, so a bone whose landmarks fell
+under the confidence cut-off stayed at rest for that frame. On a side view that is most of the far
+arm's frames: scored against a screen recording of the Rig Animator's own Running preset, whose
+motion is known bone for bone, the lite model reports that arm's elbow and wrist at 0.2 to 0.6
+visibility, under the 0.5 cut-off, and the capture held it out in a T-pose through the run, 68°
+off the preset against the detector's own 33°.
+
+A frame now drives only the limb bones it can see. An upper arm needs its shoulder and elbow, a
+forearm and hand their elbow and wrist, and likewise thigh, shin and foot; a bone it cannot see is
+neither reset nor posed, and keeps the last confident pose. The far arm came in to 39°, with
+nothing else moving. The first frame of a new video or camera session is the exception: with no
+earlier reading of this performer to hold, a limb it cannot see starts from rest rather than from
+whatever pose the rig was left in.
+
+## A take's malformed first frame
+
+A take recorded from a video began on a pose that matched none of its neighbours, and two causes
+stacked. Pressing Record Motion keyed the pose already on the rig, which was whatever the previous
+playback had left there: after a rewind, a moment from the end of the clip. Across the eight limb
+bones the first step of the take turned 31.7° on average against 14.7° once the take was keyed from
+its own first applied pose instead.
+
+The second cause is the detector. In its video mode the Pose Landmarker tracks each frame from the
+previous one, so a reading taken after a start, a pause or a seek has no valid previous frame: it is
+a fresh detection, or tracked from the moment the video left. Seeking the dance clip back to its
+start and comparing that first reading with the same frame read in sequence, a limb was up to 52°
+off after the rewind and 33° on the very first reading of a session. A reading that does not follow
+the previous one within half a second of video now only primes the tracker, and nothing is applied
+or recorded until the next. The first step of a take is now in line with the rest of it, 0.8 times
+the take's median turn per frame where it had been 1.4 times.
+
 ## Limits
 
 - **Limits are per rig, not per person.** The ranges are one body's, measured from a Mixamo rest
@@ -261,9 +349,9 @@ is only cleared when one was actually set.
   from a different place.
 - **Front or back.** Mid turn, the lite pose model sometimes decides the wrong side faces the
   camera for a few frames, and the rig follows it.
-- **No travel.** World landmarks are centred on the hips, so the rig turns and crouches in place
-  but never walks across the floor. Grounding also moves the root, and recorded keyframes store
-  rotations only, so a recorded crouch plays back without the lowered hips.
+- **Travel comes from the picture.** World landmarks are centred on the hips, so they cannot
+  walk the rig across the floor; where the body stands is read from the image instead, see
+  [Carrying a Capture Across the Floor](camera-capture-travel.md).
 - **No shrug.** Nothing in the landmarks separates a raised clavicle from a tilted chest.
 - **No expressions.** The bundled models carry no face blend shapes, so the face drives the head's
   rotation only.

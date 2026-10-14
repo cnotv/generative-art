@@ -20,6 +20,7 @@ import {
 } from './config'
 import { CAMERA_LANDMARK_INDEX } from './cameraPoseMapping'
 import { resolveCameraHandSide } from './cameraHandPoseMapping'
+import { cameraBodyPosition } from './cameraPoseTravel'
 import {
   assignHandSides,
   cropLandmarksToFrame,
@@ -63,6 +64,20 @@ const HAND_OUTLINE_LANDMARKS: Record<HandSide, number[]> = {
 }
 
 /**
+ * Load the pose detector alone.
+ * @param runningMode VIDEO to track a playing source frame to frame, IMAGE to read one frame fresh
+ * @returns The pose detector
+ */
+export const createPoseLandmarker = async (
+  runningMode: 'IMAGE' | 'VIDEO'
+): Promise<PoseLandmarker> =>
+  PoseLandmarker.createFromOptions(await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_BASE_PATH), {
+    baseOptions: { modelAssetPath: MEDIAPIPE_POSE_MODEL_URL, delegate: 'CPU' },
+    runningMode,
+    numPoses: 1
+  })
+
+/**
  * Load the pose, hand and face detectors for one capture source. Only the pose detector follows
  * the source's running mode: the hand and face detectors always read single images, since they
  * run on a different crop of the frame every time.
@@ -73,11 +88,7 @@ export const createCameraLandmarkers = async (
   poseRunningMode: 'IMAGE' | 'VIDEO'
 ): Promise<CameraLandmarkers> => {
   const fileset = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_BASE_PATH)
-  const pose = await PoseLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: MEDIAPIPE_POSE_MODEL_URL, delegate: 'CPU' },
-    runningMode: poseRunningMode,
-    numPoses: 1
-  })
+  const pose = await createPoseLandmarker(poseRunningMode)
   const hand = await HandLandmarker.createFromOptions(fileset, {
     baseOptions: { modelAssetPath: MEDIAPIPE_HAND_MODEL_URL, delegate: 'CPU' },
     runningMode: 'IMAGE',
@@ -294,13 +305,16 @@ export const detectCameraPose = (
     bodyWorld && bodyImage && context.options.ignoreLandmarksOutsideImage
       ? hideLandmarksOutsideFrame(bodyWorld, bodyImage)
       : bodyWorld
+  const bodyPosition =
+    bodyWorld && bodyImage ? cameraBodyPosition(bodyWorld, bodyImage, context.frameSize) : null
   return {
     previewLandmarks: bodyImage,
     previewHandLandmarks: hands.map((hand) => hand.imageLandmarks),
     frame: {
       bodyLandmarks,
       handLandmarks: Object.fromEntries(hands.map((hand) => [hand.side, hand.worldLandmarks])),
-      headRotation: detectHead(context, bodyImage)
+      headRotation: detectHead(context, bodyImage),
+      ...(bodyPosition ? { bodyPosition } : {})
     }
   }
 }

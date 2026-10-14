@@ -50,6 +50,8 @@ export const buildMappingOptions = (
   limitJoints: true,
   filterBodyFlips: false,
   maxBoneTurnRadiansPerSecond: 0,
+  followTravel: false,
+  pinPlantedFeet: false,
   ...overrides
 })
 
@@ -241,5 +243,8 @@ export const loadTrainingClipFrames = (): CameraPoseFrame[] =>
     ),
     headRotation: frame.head
       ? { x: frame.head[0], y: frame.head[1], z: frame.head[2], w: frame.head[3] }
-      : null
+      : null,
+    ...(frame.position
+      ? { bodyPosition: { x: frame.position[0], y: frame.position[1], z: frame.position[2] } }
+      : {})
   }))
