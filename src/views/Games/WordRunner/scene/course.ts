@@ -26,6 +26,10 @@ import type { Course } from '../types'
  * side, and the scattered illustrations, all in its fog. A level is longer than one build
  * reaches, so it streams like Rock Runner's own track: built ahead of the leading ball one
  * chunk a frame, and taken down behind the trailing one.
+ * @param scene The scene to build in.
+ * @param world The physics world for the track's colliders.
+ * @param seed The level's seed, which shapes the track.
+ * @returns The track path, and functions to stream it on, restart it and dispose it.
  */
 export const createCourse = (scene: THREE.Scene, world: RAPIER.World, seed: number): Course => {
   const path = createTrackPath(seed)

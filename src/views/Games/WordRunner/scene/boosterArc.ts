@@ -6,13 +6,20 @@ import type { BoosterArcFrame } from '../types'
 // A one-ring arc is two triangles per segment, indexed segment by segment from its start.
 const INDICES_PER_SEGMENT = 6
 
-/** The indices of an arc's first segments, for drawing only that much of it. */
+/**
+ * The indices of an arc's first segments, for drawing only that much of it.
+ * @param charge The booster's charge, from 0 to 1.
+ * @param segments How many segments the arc has.
+ * @returns How many indices to draw.
+ */
 export const arcDrawCount = (charge: number, segments: number): number =>
   Math.round(Math.min(1, Math.max(0, charge)) * segments) * INDICES_PER_SEGMENT
 
 /**
  * An arc beside the ball, `gap` clear of its surface, centred on the ball's right. Its segments
  * run counter-clockwise from the bottom, so drawing only the first few fills it from below.
+ * @param gap The space between the ball and the arc.
+ * @returns The arc's geometry.
  */
 const arcGeometry = (gap: number): THREE.RingGeometry =>
   new THREE.RingGeometry(
@@ -38,6 +45,9 @@ const arcMaterial = (): THREE.MeshBasicMaterial =>
  * The booster's recharge as a see-through arc hugging the player's ball, turned to face the
  * camera: a faint track the whole length, and a fill that rises up it as the booster recharges
  * and turns gold once it is ready.
+ * @param scene The scene to add the arc to.
+ * @param gap The space between the ball and the arc.
+ * @returns setGap, draw for a frame, and dispose.
  */
 export const createBoosterArc = (scene: THREE.Scene, gap: number) => {
   const group = new THREE.Group()
@@ -56,9 +66,13 @@ export const createBoosterArc = (scene: THREE.Scene, gap: number) => {
   const parts = [track, fill]
   const materials = parts.map((part) => part.material)
 
-  /** Moves the arc closer to or further from the ball. Called on a setting change, not a frame. */
-  const setGap = (nextGap: number): void =>
+  /**
+   * Moves the arc closer to or further from the ball. Called on a setting change, not a frame.
+   * @param nextGap The new space.
+   */
+  const setGap = (nextGap: number): void => {
     parts.forEach((part) => replaceGeometry(part, arcGeometry(nextGap)))
+  }
 
   const draw = ({ ball, camera, charge, opacity, visible }: BoosterArcFrame): void => {
     group.visible = visible && opacity > 0

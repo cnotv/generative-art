@@ -133,7 +133,10 @@ const handleConfigChange = (key: string, value: string | number): void => {
   }
 }
 
-/** Races a level: alone against the bot, or with everyone in the room. */
+/**
+ * Races a level: alone against the bot, or with everyone in the room.
+ * @param nextLevelId The level to race.
+ */
 const raceLevel = (nextLevelId: string): void => {
   if (solo.value) store.startRace(nextLevelId, chosenDifficulty.value)
   else session.startRace(nextLevelId, chosenDifficulty.value)

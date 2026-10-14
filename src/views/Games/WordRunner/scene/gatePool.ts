@@ -76,7 +76,12 @@ const createRock = (geometry: SharedGeometry, materials: SharedMaterials): THREE
   return rock
 }
 
-/** One of each route piece per lane, shown or hidden as each gate's feature needs. */
+/**
+ * One of each route piece per lane, shown or hidden as each gate's feature needs.
+ * @param geometry The pool's shared geometry.
+ * @param materials The pool's shared materials.
+ * @returns The features group and its pieces.
+ */
 const createFeatures = (geometry: SharedGeometry, materials: SharedMaterials): GateFeatures => {
   const group = new THREE.Group()
   const ramp = new THREE.Mesh(geometry.ramp, materials.ramp)
@@ -116,7 +121,12 @@ const createSlot = (
   return { group, signs, features, gateKey: null }
 }
 
-/** Redraws a sign only when its word or state actually changed, since a redraw re-uploads it. */
+/**
+ * Redraws a sign only when its word or state actually changed, since a redraw re-uploads it.
+ * @param sign The sign.
+ * @param word The word to show.
+ * @param state Idle, right or wrong.
+ */
 export const setSignState = (sign: GateSign, word: string, state: SignState): void => {
   if (sign.word === word && sign.state === state) return
   sign.word = word
@@ -138,6 +148,9 @@ const hideFeatures = (features: GateFeatures): void => {
 /**
  * Brings up the piece of route in the lane just taken: the ramp, a rock or gravel. Nothing on
  * the course gives a word away before it is picked.
+ * @param features The gate's route pieces.
+ * @param piece The piece to show.
+ * @param lane The lane to show it in.
  */
 export const revealPiece = (features: GateFeatures, piece: RoutePiece, lane: number): void => {
   features.popSeconds = 0
@@ -149,7 +162,11 @@ export const revealPiece = (features: GateFeatures, piece: RoutePiece, lane: num
   if (piece === 'gravel') features.gravel[lane].visible = true
 }
 
-/** Springs a just-revealed piece up out of the deck, and leaves it alone once it has settled. */
+/**
+ * Springs a just-revealed piece up out of the deck, and leaves it alone once it has settled.
+ * @param features The gate's route pieces.
+ * @param deltaSeconds Seconds since the last frame.
+ */
 export const springPieces = (features: GateFeatures, deltaSeconds: number): void => {
   if (features.popSeconds >= PIECE_POP.seconds) return
   features.popSeconds += deltaSeconds
@@ -159,7 +176,12 @@ export const springPieces = (features: GateFeatures, deltaSeconds: number): void
   features.gravel.forEach((patch) => patch.scale.setScalar(scale))
 }
 
-/** Dresses a pooled slot as one gate of the text, its route still hidden. */
+/**
+ * Dresses a pooled slot as one gate of the text, its route still hidden.
+ * @param slot The pooled slot.
+ * @param gate The gate to show.
+ * @param gateKey The gate's key.
+ */
 export const assignSlot = (slot: GateSlot, gate: Gate, gateKey: string): void => {
   slot.gateKey = gateKey
   gate.options.forEach((word, lane) => setSignState(slot.signs[lane], word, 'idle'))
@@ -171,7 +193,13 @@ const placeOnTrack = (object: THREE.Object3D, sample: TrackSample): void => {
   object.rotation.y = sample.yaw
 }
 
-/** Stands a slot's gate and its feature on the track, fading the gate in by the given opacity. */
+/**
+ * Stands a slot's gate and its feature on the track, fading the gate in by the given opacity.
+ * @param slot The pooled slot.
+ * @param gateSample The track where the gate stands.
+ * @param featureSample The track where its feature lies.
+ * @param opacity How far the gate has faded in.
+ */
 export const placeSlot = (
   slot: GateSlot,
   gateSample: TrackSample,
@@ -187,13 +215,22 @@ export const placeSlot = (
   })
 }
 
+/**
+ * Hides a slot and frees it for another gate.
+ * @param slot The pooled slot.
+ */
 export const hideSlot = (slot: GateSlot): void => {
   slot.group.visible = false
   slot.features.group.visible = false
   slot.gateKey = null
 }
 
-/** Every gate slot the track can show at once, built up front so nothing is created mid-run. */
+/**
+ * Every gate slot the track can show at once, built up front so nothing is created mid-run.
+ * @param scene The scene to add the slots to.
+ * @param poolSize How many slots.
+ * @returns The slots and dispose.
+ */
 export const createGatePool = (
   scene: THREE.Scene,
   poolSize: number

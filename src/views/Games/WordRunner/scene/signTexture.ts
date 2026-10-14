@@ -13,6 +13,10 @@ import type { SignState } from '../types'
 const TEXT_MARGIN_RATIO = 0.84
 const FONT_STEP = 4
 
+/**
+ * Creates a canvas at the sign's size.
+ * @returns The canvas.
+ */
 export const createSignCanvas = (): HTMLCanvasElement => {
   const canvas = document.createElement('canvas')
   canvas.width = SIGN_CANVAS_WIDTH
@@ -20,7 +24,12 @@ export const createSignCanvas = (): HTMLCanvasElement => {
   return canvas
 }
 
-/** The largest font size, down to the minimum, at which the word fits across the sign. */
+/**
+ * The largest font size, down to the minimum, at which the word fits across the sign.
+ * @param context The canvas context, to measure with.
+ * @param word The word.
+ * @returns The font size.
+ */
 const fittedFontSize = (context: CanvasRenderingContext2D, word: string): number => {
   const maxTextWidth = SIGN_CANVAS_WIDTH * TEXT_MARGIN_RATIO
   const candidateSizes = Array.from(
@@ -35,7 +44,12 @@ const fittedFontSize = (context: CanvasRenderingContext2D, word: string): number
   )
 }
 
-/** Paints one word sign: a rounded card in the state's colours with the word centred on it. */
+/**
+ * Paints one word sign: a rounded card in the state's colours with the word centred on it.
+ * @param canvas The sign's canvas.
+ * @param word The word.
+ * @param state Idle, right or wrong.
+ */
 export const drawSign = (canvas: HTMLCanvasElement, word: string, state: SignState): void => {
   const context = canvas.getContext('2d')
   if (!context) return

@@ -24,7 +24,11 @@ const drawChequers = (): HTMLCanvasElement => {
   return canvas
 }
 
-/** A chequered stripe across the deck where the race ends, the first ball over it the winner. */
+/**
+ * A chequered stripe across the deck where the race ends, the first ball over it the winner.
+ * @param scene The scene to add the line to.
+ * @returns The line and dispose.
+ */
 export const createFinishLine = (
   scene: THREE.Scene
 ): { finishLine: THREE.Mesh; dispose: () => void } => {
@@ -49,7 +53,11 @@ export const createFinishLine = (
   return { finishLine, dispose }
 }
 
-/** Lays the finish line across the track at a point along it. */
+/**
+ * Lays the finish line across the track at a point along it.
+ * @param finishLine The line.
+ * @param sample The track at the finish.
+ */
 export const placeFinishLine = (finishLine: THREE.Object3D, sample: TrackSample): void => {
   finishLine.position.copy(sample.position)
   finishLine.position.y += FINISH_LINE.lift

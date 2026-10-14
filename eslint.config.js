@@ -449,7 +449,8 @@ export default [
     rules: {
       // Three.js requires mutating objects for position, rotation, etc.
       'functional/immutable-data': 'warn',
-      'max-lines-per-function': ['error', { max: 150 }],
+      // Counted like the base rule, without comments or blank lines; only the ceiling is higher.
+      'max-lines-per-function': ['error', { max: 150, skipBlankLines: true, skipComments: true }],
       complexity: ['error', { max: 15 }]
     }
   },

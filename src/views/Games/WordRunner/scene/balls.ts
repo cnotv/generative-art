@@ -17,7 +17,12 @@ import {
   PLAYER_SURFACE
 } from '../config'
 
-/** A ball's rock surface. Transparent so it sorts with its hand-drawn outline, as in Rock Runner. */
+/**
+ * A ball's rock surface. Transparent so it sorts with its hand-drawn outline, as in Rock Runner.
+ * @param texture The rock texture.
+ * @param opacity 1 for the player's ball, lower for a ghost.
+ * @returns The material.
+ */
 const ballMaterial = (texture: THREE.Texture, opacity: number): THREE.MeshLambertMaterial =>
   new THREE.MeshLambertMaterial({
     map: texture,
@@ -27,7 +32,13 @@ const ballMaterial = (texture: THREE.Texture, opacity: number): THREE.MeshLamber
     depthWrite: opacity >= 1
   })
 
-/** Dresses a ball mesh as a rock: its surface, its outline, and its place in the scene. */
+/**
+ * Dresses a ball mesh as a rock: its surface, its outline, and its place in the scene.
+ * @param scene The scene to add the ball to.
+ * @param ball The ball mesh.
+ * @param name Its scene name.
+ * @param opacity 1 for the player's ball, lower for a ghost.
+ */
 const dressBall = (scene: THREE.Scene, ball: THREE.Mesh, name: string, opacity: number): void => {
   ball.name = name
   ball.castShadow = true
@@ -54,6 +65,10 @@ const createBall = (
 /**
  * The player's ball as a real body in the physics world, rolling on the track's own colliders
  * with Rock Runner's rock handling. Dressed like every other ball once the package has built it.
+ * @param scene The scene to add the ball to.
+ * @param world The physics world.
+ * @param texture The rock texture.
+ * @returns The ball and its body.
  */
 const createPhysicsBall = (
   scene: THREE.Scene,
@@ -90,6 +105,9 @@ const createPhysicsBall = (
  * see-through ghost for each rival, so where a rival shares the player's lane the player's ball
  * still shows through it. Every ghost has its own material, to take its player's colour. Given
  * a physics world, the player's ball is a real body there, for free steering.
+ * @param scene The scene to add the balls to.
+ * @param world The physics world, or null for balls stepped between lanes.
+ * @returns The player's ball and body, the ghosts, and dispose.
  */
 export const createBalls = (
   scene: THREE.Scene,

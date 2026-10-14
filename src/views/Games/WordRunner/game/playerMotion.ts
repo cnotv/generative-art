@@ -18,6 +18,8 @@ type MotionStep = {
  * How the player's ball moves: stepped between the lanes at the race's speed, or rolled
  * under physics and steered freely. Either way it reports the same things, so the race reads
  * one ball whichever it is: how far along it is, which lane it is in, and how far off centre.
+ * @param settings Whether steering is free, and the steer and brake inputs.
+ * @returns The motion: attach a body, step a frame, and read the lane, offset and physics state.
  */
 export const createPlayerMotion = (
   settings: Pick<RunSettings, 'steering' | 'steerInput' | 'brakeInput'>
@@ -29,7 +31,13 @@ export const createPlayerMotion = (
     drive = body ? createFreeDrive(body, mesh) : null
   }
 
-  /** Moves the ball on one frame: at the race's speed, or under physics up to that speed. */
+  /**
+   * Moves the ball on one frame: at the race's speed, or under physics up to that speed.
+   * @param racer The player's racer.
+   * @param path The track.
+   * @param racing The base speed, gates and frame time.
+   * @returns The racer after the frame.
+   */
   const step = (racer: Racer, path: TrackPath, racing: MotionStep): Racer => {
     const ball = physical()
     const braking = settings.brakeInput()
@@ -53,7 +61,11 @@ export const createPlayerMotion = (
     attach,
     step,
     lateral,
-    /** The lane the ball is in: the one steered to, or the one it has rolled into. */
+    /**
+     * The lane the ball is in: the one steered to, or the one it has rolled into.
+     * @param targetLane The lane steered to.
+     * @returns The lane the ball is in.
+     */
     lane: (targetLane: number): number => {
       const ball = physical()
       return ball ? laneAtOffset(ball.lateral(), LANE_COUNT, LANE_WIDTH) : targetLane

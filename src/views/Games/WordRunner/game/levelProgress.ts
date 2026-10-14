@@ -8,6 +8,8 @@ const isClearedCount = (value: unknown): value is number =>
 /**
  * How many levels of each language have been cleared, from what was stored. Storage is
  * outside the game's control, so anything but a whole count of zero or more is dropped.
+ * @param raw The stored JSON, or null when nothing is stored.
+ * @returns Levels cleared, by language.
  */
 export const parseProgress = (raw: string | null): Record<string, number> => {
   if (!raw) return {}
@@ -25,12 +27,22 @@ export const parseProgress = (raw: string | null): Record<string, number> => {
 const clearedCount = (language: string): number =>
   parseProgress(readStorage(STORAGE_KEY))[language] ?? 0
 
-/** How many levels of a language can be played: every one cleared, and the next. */
+/**
+ * How many levels of a language can be played: every one cleared, and the next.
+ * @param language The language.
+ * @param levelCount How many levels it has.
+ * @returns How many levels are unlocked.
+ */
 export const unlockedLevelCount = (language: string, levelCount: number): number =>
   Math.min(levelCount, clearedCount(language) + 1)
 
-/** Records a level as cleared, which opens the one after it. Clearing an earlier one again changes nothing. */
-export const saveLevelCleared = (language: string, levelIndex: number): void =>
+/**
+ * Records a level as cleared, which opens the one after it. Clearing an earlier one again changes
+ * nothing.
+ * @param language The language.
+ * @param levelIndex The level cleared.
+ */
+export const saveLevelCleared = (language: string, levelIndex: number): void => {
   writeStorage(
     STORAGE_KEY,
     JSON.stringify({
@@ -38,3 +50,4 @@ export const saveLevelCleared = (language: string, levelIndex: number): void =>
       [language]: Math.max(clearedCount(language), levelIndex + 1)
     })
   )
+}
