@@ -46,7 +46,10 @@ interface PhysicsReferences {
   rigDiagonal: () => number
 }
 
-/** The kinematic capsules that follow the posed bones. */
+/**
+ * The kinematic capsules that follow the posed bones.
+ * @returns clear, rebuild, tick and isTouching.
+ */
 const createBoneColliderState = ({ world, bones, model, config }: PhysicsReferences) => {
   let boneColliders: BoneColliderBody[] = []
 
@@ -56,8 +59,12 @@ const createBoneColliderState = ({ world, bones, model, config }: PhysicsReferen
     boneColliders = []
   }
 
-  /** Whether any bone segment currently overlaps the given collider, for a scene object that
-   * reacts to the rig itself brushing it rather than to a click. */
+  /**
+   * Whether any bone segment currently overlaps the given collider, for a scene object that
+   * reacts to the rig itself brushing it rather than to a click.
+   * @param other The collider to test.
+   * @returns True when a bone capsule overlaps it.
+   */
   const isTouching = (other: RAPIER.Collider): boolean => {
     const currentWorld = world.value
     if (!currentWorld) return false
@@ -88,7 +95,10 @@ const createBoneColliderState = ({ world, bones, model, config }: PhysicsReferen
   return { clear, rebuild, tick, isTouching }
 }
 
-/** The enclosure floor and its four optional walls, sized to the rig's own spread. */
+/**
+ * The enclosure floor and its four optional walls, sized to the rig's own spread.
+ * @returns clear and rebuild.
+ */
 const createEnclosureState = ({ scene, world, config, rigDiagonal }: PhysicsReferences) => {
   let walls: PhysicsMesh[] = []
   let floor: RAPIER.RigidBody | null = null
@@ -126,8 +136,11 @@ const createEnclosureState = ({ scene, world, config, rigDiagonal }: PhysicsRefe
   return { clear, rebuild }
 }
 
-/** A lamp hung beside the rig on a rigid pivot arm, there the moment physics turns on so there
- * is something to knock into and watch swing without waiting on the marble flow. */
+/**
+ * A lamp hung beside the rig on a rigid pivot arm, there the moment physics turns on so there
+ * is something to knock into and watch swing without waiting on the marble flow.
+ * @returns clear, rebuild and tick.
+ */
 const createHangingLampState = ({
   scene,
   world,
@@ -165,9 +178,12 @@ const createHangingLampState = ({
   return { clear, rebuild, tick }
 }
 
-/** A touch-sensor cube on the rig's other side from the lamp. It never moves and has no
+/**
+ * A touch-sensor cube on the rig's other side from the lamp. It never moves and has no
  * collision response of its own; `tick` just asks whether a bone is currently overlapping it
- * and edge-triggers `onTouch` on the moment contact starts, not on every frame it holds. */
+ * and edge-triggers `onTouch` on the moment contact starts, not on every frame it holds.
+ * @returns clear, rebuild and tick.
+ */
 const createSpawnCubeState = ({ scene, world, model, config, rigDiagonal }: PhysicsReferences) => {
   let spawnCube: SpawnCube | null = null
   let wasTouching = false
@@ -212,9 +228,13 @@ const createSpawnCubeState = ({ scene, world, model, config, rigDiagonal }: Phys
   return { clear, rebuild, tick }
 }
 
-/** A timeline action that drips one marble in at a time, the same interval-action shape the
+/**
+ * A timeline action that drips one marble in at a time, the same interval-action shape the
  * Timeline view uses for its own ball spawner, so a hand can be held under the flow instead of
- * a whole batch landing at once. */
+ * a whole batch landing at once.
+ * @param timeline The timeline the flow action runs on.
+ * @returns clear, stop, start, rebuild, tick and spawnOne.
+ */
 const createMarbleFlowState = (
   { scene, world, model, config, rigDiagonal }: PhysicsReferences,
   timeline: ShallowRef<TimelineManager | null>
@@ -270,9 +290,16 @@ const createMarbleFlowState = (
   return { clear, stop, start, rebuild, tick, spawnOne: spawn }
 }
 
-/** Owns everything physical in the rig animator, built from the three states above. Nothing
+/**
+ * Owns everything physical in the rig animator, built from the three states above. Nothing
  * exists until the physics toggle is on, since a humanoid rig is upwards of fifty kinematic
- * bodies rewritten every frame before the world is even stepped. */
+ * bodies rewritten every frame before the world is even stepped.
+ * @param config The tool's config.
+ * @param bones The rig's bones.
+ * @param model The loaded model.
+ * @returns Setters for the scene, world and timeline, and the actions that build, update, clear and
+ *   step the physics.
+ */
 export const useRigPhysics = (
   config: Ref<RigAnimatorConfig>,
   bones: ShallowRef<THREE.Bone[]>,

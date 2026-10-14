@@ -37,7 +37,6 @@ export const captureRestPoses = (bones: THREE.Bone[]): Map<string, BoneRestPose>
  * @param bone The bone being dragged
  * @param targetWorldPosition Where the drag wants this bone to end up, in world space
  * @param restPoses Every rigged bone's transform as loaded, keyed by name
- * @returns Nothing; mutates whichever ancestor bone(s) solve for this bone, or the bone's own
  *   local position directly when it has no Bone parent at all
  */
 export const applyGizmoDragToChain = (
@@ -72,7 +71,6 @@ export const applyGizmoDragToChain = (
  * re-run with a different bend hint instead of a different target.
  * @param chain The chain whose mid bone is being dragged as a pole hint
  * @param poleWorldPosition Where the drag wants the bend to lean toward, in world space
- * @returns Nothing; mutates the chain's root/mid quaternions
  */
 export const applyPoleDrag = (chain: TwoBoneIkChain, poleWorldPosition: THREE.Vector3): void => {
   const targetWorldPosition = chain.end.getWorldPosition(new THREE.Vector3())
@@ -85,7 +83,6 @@ export const applyPoleDrag = (chain: TwoBoneIkChain, poleWorldPosition: THREE.Ve
  * just that bone would do nothing, the ancestor(s) that actually rotated need resetting too.
  * @param bone The selected bone to reset
  * @param restPoses Every rigged bone's transform as loaded, keyed by name
- * @returns Nothing; mutates every bone in the reset back to its rest transform
  */
 export const resetBoneChainToRest = (
   bone: THREE.Bone,
@@ -118,7 +115,6 @@ export const resetBoneChainToRest = (
  *   pose capture's root bone, when hip landmarks are occluded for a frame) uses this so that
  *   bone holds its last driven position instead of snapping back to rest every frame it isn't
  *   redriven.
- * @returns Nothing; mutates every non-excluded bone back to its rest transform
  */
 export const resetAllBonesToRest = (
   bones: THREE.Bone[],

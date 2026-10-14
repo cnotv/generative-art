@@ -37,15 +37,31 @@ import type {
 
 const UNTINTED = '#ffffff'
 
+/**
+ * The key a gate slot shows a gate under, unique across runs so a reused slot never keeps a passed
+ * gate's state.
+ * @param runSerial The run's number.
+ * @param gateIndex The gate's index in the level.
+ * @returns The key.
+ */
 export const gateKey = (runSerial: number, gateIndex: number): string => `${runSerial}:${gateIndex}`
 
-/** Gates fade in as they come over the horizon and out as they pass the camera. */
+/**
+ * Gates fade in as they come over the horizon and out as they pass the camera.
+ * @param distanceAhead How far ahead of the player the gate is, negative once passed.
+ * @returns Opacity from 0 to 1.
+ */
 const fadeFor = (distanceAhead: number): number =>
   distanceAhead < 0
     ? Math.max(0, 1 + distanceAhead / GATE_BEHIND_DISTANCE)
     : Math.min(1, Math.max(0, (GATE_SPAWN_DISTANCE - distanceAhead) / GATE_FADE_DISTANCE))
 
-/** The level's gate this pooled slot should show now, or -1 when none of its gates is in view. */
+/**
+ * The level's gate this pooled slot should show now, or -1 when none of its gates is in view.
+ * @param slotIndex The pooled slot.
+ * @param view The gates and the player's distance.
+ * @returns The gate's index, or -1.
+ */
 const visibleGateFor = (slotIndex: number, view: GateView): number =>
   view.distances.findIndex((gateDistance, gateIndex) => {
     const distanceAhead = gateDistance - view.distance
@@ -56,8 +72,12 @@ const visibleGateFor = (slotIndex: number, view: GateView): number =>
     )
   })
 
-/** Stands every gate in view on the track, with its route feature, and lights hints ahead. */
-export const drawGates = (slots: GateSlot[], view: GateView): void =>
+/**
+ * Stands every gate in view on the track, with its route feature, and lights hints ahead.
+ * @param slots The pooled gate slots.
+ * @param view The gates and the player's distance.
+ */
+export const drawGates = (slots: GateSlot[], view: GateView): void => {
   slots.forEach((slot, slotIndex) => {
     const gateIndex = visibleGateFor(slotIndex, view)
     if (gateIndex < 0) {
@@ -84,10 +104,16 @@ export const drawGates = (slots: GateSlot[], view: GateView): void =>
       hinted ? 'hint' : 'idle'
     )
   })
+}
 
 /**
  * Colours the lane just run through, shows where the right word was if it was not that one,
  * and brings up the piece of route that lane leads onto.
+ * @param slots The pooled gate slots.
+ * @param key The passed gate's key.
+ * @param gate The passed gate.
+ * @param chosenLane The lane the player took.
+ * @param feature The route feature that lane leads onto.
  */
 export const markPassedGate = (
   slots: GateSlot[],
@@ -110,6 +136,8 @@ export const markPassedGate = (
 /**
  * Rolls one ball along the track at its sideways offset, sliding towards it rather than
  * jumping, and turning about its own axis by exactly the distance it has covered.
+ * @param ball The ball mesh to move.
+ * @returns A drawer for one frame, returning the ball's lateral offset.
  */
 const createBallDrawer = (ball: THREE.Mesh) => {
   let lateral = 0
@@ -130,6 +158,8 @@ const createBallDrawer = (ball: THREE.Mesh) => {
 /**
  * One see-through rival ball: drawn and tinted in its player's colour while it has a rival to
  * show, hidden while it has none. The bot keeps its rock's own colours.
+ * @param ghost The see-through ball mesh.
+ * @returns A drawer for one frame.
  */
 const createGhostDrawer = (ghost: THREE.Mesh) => {
   const drawBall = createBallDrawer(ghost)
@@ -148,6 +178,8 @@ const createGhostDrawer = (ghost: THREE.Mesh) => {
 /**
  * Draws every ball and keeps a chase camera behind the player's. The camera aims at the deck
  * rather than the ball, so a hop off a ramp lifts the ball in frame instead of jolting the view.
+ * @param scene The run's balls and camera.
+ * @returns A drawer for one race frame.
  */
 export const createRaceDrawer = (scene: RunScene) => {
   const cameraTarget = new THREE.Vector3()
@@ -180,7 +212,13 @@ export const createRaceDrawer = (scene: RunScene) => {
   }
 }
 
-/** One frame of the race: the gates in view, then the balls and the camera behind the player. */
+/**
+ * One frame of the race: the gates in view, then the balls and the camera behind the player.
+ * @param slots The pooled gate slots.
+ * @param drawRace Draws the balls and camera.
+ * @param view The gates and the player's distance.
+ * @param frame Where every ball is.
+ */
 export const drawRaceFrame = (
   slots: GateSlot[],
   drawRace: (frame: RaceFrame) => void,

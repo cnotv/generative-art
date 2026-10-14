@@ -42,6 +42,9 @@ const getReverbImpulse = (ctx: AudioContext): AudioBuffer => {
 }
 
 // Initialize audio context on first user interaction (required for iOS)
+/**
+ * Creates the shared audio context on first use and resumes it if the browser suspended it.
+ */
 const initializeAudio = async () => {
   try {
     if (!gameAudioContext) {
@@ -75,6 +78,11 @@ const initializeAudio = async () => {
 }
 
 // Abstracted sound creation system
+/**
+ * Plays one synthesised sound: an oscillator swept between two frequencies and shaped by an attack
+ * and release envelope, on the shared audio context.
+ * @param config Waveform, start and end frequency, duration, volume, envelope times and reverb.
+ */
 const createSound = async (config: SoundConfig) => {
   try {
     // Initialize audio context if needed
@@ -186,12 +194,20 @@ const playMusic = (sequence: NoteSequence, gameScore = 0) => {
   playNextNote()
 }
 
+/**
+ * Starts the soundtrack loop unless it is already playing.
+ * @param sequence The notes to loop.
+ * @param gameScore The score so far; a higher score plays faster.
+ */
 const startMusic = (sequence: NoteSequence, gameScore = 0) => {
   if (musicPlaying) return
   musicPlaying = true
   playMusic(sequence, gameScore)
 }
 
+/**
+ * Stops the soundtrack loop and cancels its next scheduled bar.
+ */
 const stopMusic = () => {
   musicPlaying = false
   if (soundtrackTimeout) {
@@ -201,9 +217,18 @@ const stopMusic = () => {
 }
 
 // Check if soundtrack is currently playing
+/**
+ * Says whether the soundtrack loop is running.
+ * @returns True while the soundtrack plays.
+ */
 const isMusicPlaying = () => musicPlaying
 
 // Play audio file with optional volume control
+/**
+ * Plays an audio file once, ignoring the browser's refusal to play before a user gesture.
+ * @param audioFile URL of the file.
+ * @param volume Loudness from 0 to 1, clamped.
+ */
 const playAudioFile = (audioFile: string, volume: number = 1) => {
   const audio = new Audio(audioFile)
   audio.volume = Math.max(0, Math.min(1, volume)) // Clamp volume between 0 and 1

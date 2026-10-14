@@ -2,7 +2,12 @@ import { onScopeDispose, ref, watch } from 'vue'
 
 type Ranked = { id: string }
 
-/** The players in the order given, any not in it yet after them, keeping their own order. */
+/**
+ * The players in the order given, any not in it yet after them, keeping their own order.
+ * @param players The players.
+ * @param order Player ids in ranking order.
+ * @returns The players sorted.
+ */
 export const inRankingOrder = <T extends Ranked>(players: T[], order: string[]): T[] => {
   const place = (player: T): number => {
     const index = order.indexOf(player.id)
@@ -17,6 +22,9 @@ const orderKey = (players: Ranked[]): string => players.map((player) => player.i
  * The order the players are shown in, which follows their live order only once a new one has
  * held for the given seconds, so two players level with each other do not keep swapping. A
  * player joining or leaving changes the order at once.
+ * @param players Reads the players in live order.
+ * @param holdSeconds How long a new order must hold before it shows.
+ * @returns The shown order, as player ids.
  */
 export const useSteadyRanking = (players: () => Ranked[], holdSeconds: number) => {
   const order = ref(players().map((player) => player.id))

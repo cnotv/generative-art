@@ -10,7 +10,6 @@ const device = ref<InputDevice>('keyboard')
 /**
  * Records which input device produced the latest action, so device-aware UI
  * (key pills) can show only the relevant bindings.
- *
  * @param rawSource Source string from a controls callback ("gamepad", "gamepad-axis", "keyboard", "mouse", ...)
  */
 export const reportInputSource = (rawSource: string): void => {
@@ -19,7 +18,6 @@ export const reportInputSource = (rawSource: string): void => {
 
 /**
  * The input device the player used most recently.
- *
  * @returns Reactive reference to the current input device
  */
 export const useInputDevice = (): { device: Ref<InputDevice> } => ({ device })

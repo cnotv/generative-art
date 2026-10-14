@@ -60,6 +60,7 @@ const GLTF_EXTENSION_PATTERN = /\.(glb|gltf)$/i
  * extension. Exported on its own so the fragment-tagging convention `loadModelFile` relies on
  * can be verified without actually loading geometry.
  * @param url The model URL to check
+ * @returns True for a .gltf or .glb URL.
  */
 export const isGltfModelUrl = (url: string): boolean => GLTF_EXTENSION_PATTERN.test(url)
 
@@ -86,7 +87,10 @@ export const disposeModel = (model: THREE.Object3D): void => {
   })
 }
 
-/** Swap each triangle's last two corners, turning its front face to the other side. */
+/**
+ * Swap each triangle's last two corners, turning its front face to the other side.
+ * @param geometry The indexed geometry to flip.
+ */
 const flipTriangleWinding = (geometry: THREE.BufferGeometry): void => {
   const index = geometry.index
   if (!index) return
@@ -103,6 +107,9 @@ const flipTriangleWinding = (geometry: THREE.BufferGeometry): void => {
  * inside out once it is baked, so their winding is turned back.
  * ponytail: only indexed geometry is turned back; a mirrored flat (unindexed) mesh stays inside
  * out, which needs its position triples swapped instead if one ever turns up.
+ * @param mesh The mesh.
+ * @param model The model it belongs to.
+ * @returns The geometry in model space.
  */
 const geometryInModelSpace = (mesh: THREE.Mesh, model: THREE.Object3D): THREE.BufferGeometry => {
   const meshToModel = model.matrixWorld.clone().invert().multiply(mesh.matrixWorld)
@@ -134,6 +141,8 @@ const triangleCornersOf = (geometry: THREE.BufferGeometry): number[] =>
  * sits nearest, and a part no seed reaches falls back to the bones nearest it in a straight line.
  * Past a vertex budget the surface search would hold the page for minutes, so a dense model is
  * bound by straight-line distance alone.
+ * @param geometries Every mesh's geometry in model space.
+ * @param bones The generated bones.
  */
 const skinAsOneSurface = (geometries: THREE.BufferGeometry[], bones: THREE.Bone[]): void => {
   const vertexCounts = geometries.map((geometry) => geometry.attributes.position.count)

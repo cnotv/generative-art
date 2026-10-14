@@ -22,7 +22,6 @@ const materialOf = (mesh: THREE.Mesh): THREE.Material | null => {
  * writing depth so the target shows through), and restores materials once they
  * no longer block the view. Reuses its raycaster and vectors to avoid
  * per-frame allocation.
- *
  * @param occlusionOpacity Opacity an occluding mesh fades to
  * @returns Object exposing `update` (call per frame) and `dispose` (restore all)
  */

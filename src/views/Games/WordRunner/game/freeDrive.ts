@@ -32,6 +32,7 @@ type ForwardPush = {
  * still allows, so one long frame cannot throw the ball past it. Over the cap, a pull back
  * towards it. Braking, a steady slowing down to a stop, holding the ball there rather than
  * letting a slope roll it back.
+ * @returns The impulse along the track, negative to slow the ball.
  */
 export const forwardImpulse = ({
   forwardSpeed,
@@ -56,6 +57,10 @@ export const forwardImpulse = ({
 /**
  * Sideways grip while the player is not steering: the ball keeps the line it was put on rather
  * than drifting out on every bend until it rubs the wall to a stop.
+ * @param lateralSpeed The ball's sideways speed.
+ * @param mass The ball's mass.
+ * @param deltaSeconds Seconds since the last frame.
+ * @returns The sideways impulse that cancels part of the drift.
  */
 export const gripImpulse = (lateralSpeed: number, mass: number, deltaSeconds: number): number =>
   -lateralSpeed * mass * Math.min(1, FREE_BALL.lateralGrip * deltaSeconds)
@@ -66,6 +71,11 @@ const WALL_STANDOFF = wallStandoff(TRACK_WIDTH, BALL.radius)
  * A soft cushion along each wall. Inside it, the ball's drift towards the wall is taken away and
  * it is pushed back out, harder the deeper it is, so it never rolls against a wall and catches
  * on a joint between two of its pieces at a bend.
+ * @param lateral The ball's offset from the centreline.
+ * @param lateralSpeed The ball's sideways speed.
+ * @param mass The ball's mass.
+ * @param deltaSeconds Seconds since the last frame.
+ * @returns The sideways impulse, 0 outside the cushion.
  */
 export const cushionImpulse = (
   lateral: number,
@@ -90,18 +100,29 @@ type RescueCheck = {
 /**
  * Whether the ball has to be put back on the track: it was knocked through the deck by a wall
  * it hit too fast, or it has sat stalled against something without the player braking.
+ * @returns True when the ball fell through or stalled.
  */
 export const needsRescue = ({ heightAboveDeck, braking, stalledSeconds }: RescueCheck): boolean =>
   heightAboveDeck < -FREE_BALL.fallDepth || (!braking && stalledSeconds > FREE_BALL.stallSeconds)
 
-/** How long the ball has been stalled, counting on from the last frame. */
+/**
+ * How long the ball has been stalled, counting on from the last frame.
+ * @param motion The ball's forward speed and whether it is braking.
+ * @param stalledSeconds Seconds stalled so far.
+ * @param deltaSeconds Seconds since the last frame.
+ * @returns The new stalled time, back to 0 once the ball moves or brakes.
+ */
 export const stalledFor = (
   { forwardSpeed, braking }: Pick<RescueCheck, 'forwardSpeed' | 'braking'>,
   stalledSeconds: number,
   deltaSeconds: number
 ): number => (!braking && forwardSpeed < FREE_BALL.stallSpeed ? stalledSeconds + deltaSeconds : 0)
 
-/** Where across the track a rescued ball goes back: where it was, clear of the wall cushion. */
+/**
+ * Where across the track a rescued ball goes back: where it was, clear of the wall cushion.
+ * @param lateral Where the ball was.
+ * @returns The offset to put it back at.
+ */
 export const rescueLateral = (lateral: number): number => {
   const limit = WALL_STANDOFF - FREE_BALL.wallCushion
   return Math.max(-limit, Math.min(limit, lateral))
@@ -112,6 +133,10 @@ export const rescueLateral = (lateral: number): number => {
  * track up to a speed cap, hard enough to climb its hills, steered sideways with a capped push,
  * and otherwise left to gravity, so it gathers some speed downhill and loses it climbing. Its
  * distance along the track is found by projecting its position back onto the path.
+ * @param body The ball's rigid body.
+ * @param mesh The ball's mesh, kept on the body.
+ * @returns The drive: place and hold the ball, push it for a frame, react to a lane, and read its
+ *   offset.
  */
 export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) => {
   let distance = 0
@@ -128,7 +153,13 @@ export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) =>
     mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w)
   }
 
-  /** Sets the ball down on the deck at a place on the track, rolling straight on at a speed. */
+  /**
+   * Sets the ball down on the deck at a place on the track, rolling straight on at a speed.
+   * @param path The track.
+   * @param atDistance How far along the track.
+   * @param atLateral Offset from the centreline.
+   * @param speed Forward speed to start with.
+   */
   const placeAt = (path: TrackPath, atDistance: number, atLateral: number, speed: number) => {
     const sample = path.sampleAt(atDistance)
     spot.x = sample.position.x + sample.right.x * atLateral
@@ -146,8 +177,13 @@ export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) =>
     syncMesh()
   }
 
-  /** Puts the ball on the start line at rest, where it waits until the race begins. */
-  const holdAtStart = (path: TrackPath): void => placeAt(path, 0, 0, 0)
+  /**
+   * Puts the ball on the start line at rest, where it waits until the race begins.
+   * @param path The track.
+   */
+  const holdAtStart = (path: TrackPath): void => {
+    placeAt(path, 0, 0, 0)
+  }
 
   /** Stops the ball where it is, once it has crossed the line. */
   const stop = (): void => {
@@ -210,6 +246,7 @@ export const createFreeDrive = (body: RAPIER.RigidBody, mesh: THREE.Object3D) =>
   /**
    * What a lane does to a real ball: a ramp throws it up, a slowing lane bleeds its speed, and
    * a rock does both, knocking it off the deck as it stops it.
+   * @param outcome What the lane does.
    */
   const react = (outcome: LaneOutcome): void => {
     if (outcome === 'none') return

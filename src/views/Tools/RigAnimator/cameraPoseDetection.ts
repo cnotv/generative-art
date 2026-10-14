@@ -159,7 +159,11 @@ const isVisibleInFrame = (landmark: NormalizedLandmark | undefined): boolean =>
   landmark.visibility >= CAMERA_LANDMARK_VISIBILITY_THRESHOLD &&
   isInsideFrame(landmark)
 
-/** The body's wrists, where they are actually in view. */
+/**
+ * The body's wrists, where they are actually in view.
+ * @param bodyImage The body landmarks in image space, if a body was found.
+ * @returns Each side's wrist, or null where it is out of view.
+ */
 const visibleWrists = (
   bodyImage: NormalizedLandmark[] | null
 ): Record<HandSide, NormalizedLandmark | null> => {
@@ -180,7 +184,12 @@ const averageImagePoint = (points: NormalizedLandmark[]): { x: number; y: number
   y: points.reduce((sum, point) => sum + point.y, 0) / points.length
 })
 
-/** Every hand the whole frame shows, each sided by the body's nearer wrist or else by its label. */
+/**
+ * Every hand the whole frame shows, each sided by the body's nearer wrist or else by its label.
+ * @param context The landmarkers, the source frame and the options.
+ * @param bodyImage The body landmarks in image space, if a body was found.
+ * @returns The hands found, each with its side.
+ */
 const detectHandsInWholeFrame = (
   context: DetectionContext,
   bodyImage: NormalizedLandmark[] | null
@@ -197,7 +206,13 @@ const detectHandsInWholeFrame = (
   })
 }
 
-/** Look for a hand the whole frame missed in a crop around that side's own visible wrist. */
+/**
+ * Look for a hand the whole frame missed in a crop around that side's own visible wrist.
+ * @param context The landmarkers, the source frame and the options.
+ * @param bodyImage The body landmarks in image space.
+ * @param side The side to look for.
+ * @returns The hand found in the crop, if any.
+ */
 const detectHandAroundWrist = (
   context: DetectionContext,
   bodyImage: NormalizedLandmark[],
@@ -229,6 +244,9 @@ const detectHandAroundWrist = (
  * Hands found on the whole frame come first: a hand clearly in view is what the performer is
  * showing, whatever the body detector guesses around it. Only a side the whole frame missed is
  * looked for again in a crop around its wrist, the case of a hand too small in a wide shot.
+ * @param context The landmarkers, the source frame and the options.
+ * @param bodyImage The body landmarks in image space, if a body was found.
+ * @returns Every hand found.
  */
 const detectHands = (
   context: DetectionContext,
@@ -258,6 +276,9 @@ const readHeadRotation = (
  * Read the face on the whole frame first, which is all a webcam close-up needs, and only when
  * that finds nothing look again in a crop around the body's nose, the case of a face small in a
  * wide shot.
+ * @param context The landmarkers, the source frame and the options.
+ * @param bodyImage The body landmarks in image space, if a body was found.
+ * @returns The head's rotation, or null when no face was found.
  */
 const detectHead = (
   context: DetectionContext,

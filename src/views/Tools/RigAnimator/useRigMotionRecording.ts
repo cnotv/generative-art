@@ -2,12 +2,16 @@ import { ref } from 'vue'
 import type { Pose, PoseKeyframe } from '@webgamekit/rig'
 import { filterRecordedSamples } from './keyframeOps'
 
-/** Reads and writes the rig timeline state a live-motion recording drives, kept as plain
+/**
+ * Reads and writes the rig timeline state a live-motion recording drives, kept as plain
  * accessors rather than direct refs so the composable never assumes which reactive source
- * (the panel's config, the rig's own keyframe state) each one actually comes from. */
+ * (the panel's config, the rig's own keyframe state) each one actually comes from.
+ */
 export interface RigMotionRecordingDependencies {
-  /** The capture's own clock, in milliseconds: wall time for a webcam, the video's own time for an
-   * uploaded clip, so a video slowed down still records at its real speed. */
+  /**
+   * The capture's own clock, in milliseconds: wall time for a webcam, the video's own time for an
+   * uploaded clip, so a video slowed down still records at its real speed.
+   */
   now: () => number
   fps: () => number
   /** How many poses to sample per frame, read once as each take starts. */
@@ -27,11 +31,16 @@ export interface RigMotionRecordingDependencies {
  * Turns a live camera-driven pose stream into an authored clip automatically: while recording,
  * every applied camera frame samples the rig's current pose onto the timeline at whatever frame
  * real elapsed time has reached, rather than requiring a manual Add Keyframe click per pose.
+ * @param deps The config, the pose capture and the keyframe writers it records through.
+ * @returns Whether it is recording and how many frames it sampled, and start, stop and
+ *   recordFrameIfActive.
  */
 export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
   const isRecording = ref(false)
-  /** How many frames this recording session has actually sampled, so a caller can tell a take
-   * that genuinely captured motion from a toggle-on/toggle-off that never advanced a frame. */
+  /**
+   * How many frames this recording session has actually sampled, so a caller can tell a take
+   * that genuinely captured motion from a toggle-on/toggle-off that never advanced a frame.
+   */
   const capturedFrameCount = ref(0)
   let anchorFrame = 0
   let anchorTimeMs = 0
@@ -60,8 +69,10 @@ export const useRigMotionRecording = (deps: RigMotionRecordingDependencies) => {
     deps.addKeyframe()
   }
 
-  /** Stop, and replace the keyframes the take laid down live with ones filtered from all its
-   * samples, see `filterRecordedSamples`. */
+  /**
+   * Stop, and replace the keyframes the take laid down live with ones filtered from all its
+   * samples, see `filterRecordedSamples`.
+   */
   const stopRecording = (): void => {
     if (!isRecording.value) return
     isRecording.value = false

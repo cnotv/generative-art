@@ -16,6 +16,12 @@ type RivalStep = {
  * Where to draw another player's ball: rolling on at the base speed between reports, at most
  * one report's worth past the last, and eased towards it, so it never jumps. A ball that has
  * finished stays on the line.
+ * @param shown Where the ball is drawn now.
+ * @param reported Where the room last reported it.
+ * @param baseSpeed The race's base speed.
+ * @param deltaSeconds Seconds since the last frame.
+ * @param finished Whether the player has finished.
+ * @returns Where to draw the ball this frame.
  */
 export const followRemote = (
   shown: number,
@@ -32,6 +38,10 @@ export const followRemote = (
 /**
  * Everyone the player races: the bot in a solo race, run here like the player's own ball,
  * or the other players in a room, drawn where the room last reported them.
+ * @param settings Whether the race is solo, and the other players.
+ * @param throughGates Applies the gates a moved racer passed.
+ * @param botLaneAt The lane the bot takes at a distance.
+ * @returns The rivals: reset, step a frame, and read their standings and frames.
  */
 export const createRivals = (
   settings: Pick<RunSettings, 'solo' | 'rivals'>,
@@ -67,7 +77,10 @@ export const createRivals = (
   const remote = (): Array<RemoteRival & { shown: number }> =>
     settings.rivals().map((rival, index) => ({ ...rival, shown: shown[index] ?? 0 }))
 
-  /** The rivals as the race result counts them. */
+  /**
+   * The rivals as the race result counts them.
+   * @returns Each rival's name, distance and finish time.
+   */
   const standings = (): Rival[] =>
     settings.solo()
       ? [{ name: BOT_NAME, distance: bot.distance, finishSeconds: bot.finishSeconds }]

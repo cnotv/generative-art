@@ -203,6 +203,8 @@ const createBlankCanvas = (): HTMLCanvasElement => {
  * sheet is two of those side by side, so an image belongs in each half at panel
  * size rather than stretched across the pair, which would double its width and
  * leave nothing lining up with the body.
+ * @param context The sheet's 2D context.
+ * @param image The square body image to draw.
  */
 const drawIntoPanels = (context: CanvasRenderingContext2D, image: CanvasImageSource): void => {
   Array.from({ length: AVATAR_PANEL_COUNT }, (_, panel) =>
@@ -250,7 +252,10 @@ const refreshDisplay = (): void => {
   colorTexture.needsUpdate = true
 }
 
-/** The sheet as a finished texture: the base with the paint on top, never the guide. */
+/**
+ * The sheet as a finished texture: the base with the paint on top, never the guide.
+ * @returns A new canvas holding the finished sheet.
+ */
 const composeExportCanvas = (): HTMLCanvasElement => {
   const exported = createBlankCanvas()
   const context = exported.getContext('2d')!
@@ -284,6 +289,7 @@ const initTexture = async (): Promise<void> => {
  * away and brighter on one facing the lamp, and the colour picked in the
  * palette is never the colour on the model. Basic samples the map and nothing
  * else, so the figure shows exactly what was drawn.
+ * @returns The material for every part of the rig.
  */
 const buildAvatarMaterial = (): THREE.Material =>
   new THREE.MeshBasicMaterial({
@@ -416,6 +422,7 @@ const saveTexturePng = (): void => {
 /**
  * Loads a square body texture — a game skin, or a sheet saved out of here —
  * into both panels, so it lands on the rig the same way it does in the game.
+ * @param event The file input's change event.
  */
 const handleTextureLoad = (event: Event): void => {
   const input = event.target as HTMLInputElement
@@ -453,6 +460,8 @@ const getIntersection = (event: MouseEvent): THREE.Intersection | null => {
  * The projection parks every face that points sideways, up or down on the
  * single texel at the UV origin, so a click on a limb's edge would otherwise
  * dump paint in the sheet's corner rather than where it was aimed.
+ * @param uv The texture coordinate under the pointer.
+ * @returns False for the parked origin texel.
  */
 const isProjectedUv = (uv: THREE.Vector2): boolean => uv.x !== 0 || uv.y !== 0
 
@@ -525,6 +534,7 @@ const handleResize = (): void => {
  * Centres the rig at the origin and sizes the frustum to its own bounding box,
  * so the framing follows whatever the model actually measures rather than a
  * constant that only held for one rig at one scale.
+ * @param model The rig to frame.
  */
 const frameAvatar = (model: THREE.Object3D): void => {
   const bounds = new THREE.Box3().setFromObject(model)
@@ -541,6 +551,8 @@ const frameAvatar = (model: THREE.Object3D): void => {
  * Built here rather than through `getAnimationsModel`, which turns the model a
  * half-turn on its way past — right for a character running away down a track,
  * wrong for one being painted from the front.
+ * @param model The rig whose clips are wired.
+ * @param clips The rig's animation clips.
  */
 const attachWalkCycle = (model: THREE.Object3D, clips: THREE.AnimationClip[]): void => {
   const mixer = new THREE.AnimationMixer(model)
@@ -579,6 +591,7 @@ const collectNodes = (node: THREE.Object3D): THREE.Object3D[] => [
  * — where the camera framed it, and however far the pointer has turned it — so
  * restoring that too would yank the rig back to front and centre every time the
  * walk stopped.
+ * @param model The rig to read.
  */
 const captureRestPose = (model: THREE.Object3D): void => {
   restPose = model.children.flatMap(collectNodes).map((node) => ({

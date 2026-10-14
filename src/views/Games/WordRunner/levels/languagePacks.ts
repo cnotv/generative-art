@@ -13,7 +13,11 @@ const cefrLevelOf = (levelId: string, value: string): CefrLevel => {
   return cefr
 }
 
-/** A pack file as the game reads it, with each level's CEFR code checked rather than assumed. */
+/**
+ * A pack file as the game reads it, with each level's CEFR code checked rather than assumed.
+ * @param file The pack as imported.
+ * @returns The pack with checked CEFR codes.
+ */
 const readPack = (file: PackFile): LanguagePack => ({
   ...file,
   levels: file.levels.map((level) => ({ ...level, cefr: cefrLevelOf(level.id, level.cefr) }))
@@ -27,13 +31,21 @@ export const LANGUAGE_PACKS: LanguagePack[] = [
   italianPack
 ].map(readPack)
 
-/** The pack for a language, or the default one when that language is not offered. */
+/**
+ * The pack for a language, or the default one when that language is not offered.
+ * @param language The language code.
+ * @returns The pack.
+ */
 export const packFor = (language: string): LanguagePack =>
   LANGUAGE_PACKS.find((pack) => pack.language === language) ??
   LANGUAGE_PACKS.find((pack) => pack.language === DEFAULT_LANGUAGE) ??
   LANGUAGE_PACKS[0]
 
-/** A level by its id, with the pack it belongs to and where it stands in that pack. */
+/**
+ * A level by its id, with the pack it belongs to and where it stands in that pack.
+ * @param levelId The level's id.
+ * @returns The pack, the level and its index, or undefined.
+ */
 export const findLevel = (
   levelId: string
 ): { pack: LanguagePack; level: Level; levelIndex: number } | undefined =>
@@ -41,7 +53,11 @@ export const findLevel = (
     pack.levels.map((level, levelIndex) => ({ pack, level, levelIndex }))
   ).find((entry) => entry.level.id === levelId)
 
-/** The level after this one in its language, or null after the last. */
+/**
+ * The level after this one in its language, or null after the last.
+ * @param levelId The current level's id.
+ * @returns The next level's id, or null.
+ */
 export const nextLevelId = (levelId: string): string | null => {
   const found = findLevel(levelId)
   return found?.pack.levels[found.levelIndex + 1]?.id ?? null

@@ -16,7 +16,6 @@ export interface MatchmakeHandle {
  * - Calls `onStatusChange('searching', 0)` immediately if no peers are present.
  * - Calls `onStatusChange('matched', n)` whenever peer count rises above zero.
  * - Reverts to `'searching'` if all peers disconnect.
- *
  * @param roomId - Shared room to join (same value for all players in the session)
  * @param config - Optional P2P configuration
  * @param onStatusChange - Fired on initial join and on every peer join/leave

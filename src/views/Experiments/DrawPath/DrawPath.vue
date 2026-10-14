@@ -227,8 +227,10 @@ const pathInteraction = usePathInteraction({
 const getCurrentFollowerPosition = (state: SceneState): THREE.Vector3 =>
   getActiveFollower(state)?.position.clone() ?? new THREE.Vector3(0, FOLLOWER_GROUND_Y, 0)
 
-/** Register a timeline action that drives the goomba mixer each frame.
- *  Uses state.lastDelta (set in the animation loop) to avoid double-ticking THREE.Clock. */
+/**
+ * Register a timeline action that drives the goomba mixer each frame.
+ *  Uses state.lastDelta (set in the animation loop) to avoid double-ticking THREE.Clock.
+ */
 const registerGoombaTimelineAction = (): void => {
   if (goombaActionId) return
   goombaActionId = timeline.addAction({

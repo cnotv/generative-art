@@ -23,6 +23,7 @@ import type { MotionController } from './motion'
 
 /**
  * Detect if the device is mobile
+ * @returns True on a touch device that is a phone or tablet, iPads reporting as Macintosh included.
  */
 export const isMobile = (): boolean => {
   // Modern device detection: prioritize touch capability and iPadOS quirks
@@ -49,6 +50,9 @@ interface BoundControllers {
 /**
  * Motion binds only once permission is in hand, which needs a tap, so nothing is bound here
  * for a device that prompts. Where no prompt exists the listeners can start immediately.
+ * @param controller The motion controller to bind.
+ * @param options The controls options, which may turn motion off.
+ * @param boundList Collects the unbind functions for destroyControls.
  */
 function bindMotion(
   controller: MotionController,
@@ -107,6 +111,9 @@ function bindMouse(
 /**
  * Gestures need an element with a width to measure a tap's side against, so unlike the
  * other devices this one does not fall back to `window` and stays unbound without a target.
+ * @param controller The pointer controller to bind.
+ * @param options The controls options, holding the target element.
+ * @param boundList Collects the unbind functions for destroyControls.
  */
 function bindPointer(
   controller: PointerController,
@@ -136,9 +143,8 @@ function bindAllControllers(
  * Stateless controls logic for keyboard, gamepad, and touch
  * This module does not manage state, but emits events or calls callbacks
  * All mapping is configurable via a config object and updated with remapControlsOptions()
- *
- * @param { ControlsOptions } options Controls configuration options
- * @returns { ControlsExtras }
+ * @param options Controls configuration options
+ * @returns The live action state and logs, and functions to remap and tear the controls down.
  * @example
  * ```typescript
  * import { createControls } from '@webgamekit/controls';

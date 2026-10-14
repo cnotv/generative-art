@@ -43,6 +43,7 @@ const syncPhysicsBody = (character: ComplexModel): void => {
 /**
  * Animates a character along a computed path using the timeline system.
  * Each grid cell traversal is a separate timeline action, sequenced by start frame.
+ * @param config The path, the character, the grid and the timeline to animate on
  */
 export const animateAlongPath = (config: PathAnimationConfig): void => {
   const {
@@ -124,6 +125,8 @@ type PathSegment = { isWormhole: boolean; pointIndices: number[] }
 /**
  * Groups path edges into contiguous segments: normal edges merge into polylines,
  * wormhole edges become their own two-point dashed segment.
+ * @param path Grid positions in walking order
+ * @returns The segments, each listing the path indices it joins
  */
 const buildPathSegments = (path: Position[]): PathSegment[] =>
   path.slice(1).reduce<PathSegment[]>((accumulator, _pt, edgeIndex) => {
@@ -146,7 +149,11 @@ const buildPathSegments = (path: Position[]): PathSegment[] =>
 
 /**
  * Draws path lines: solid for normal moves, dashed for wormhole jumps.
- * Returns a THREE.Group containing all segment lines.
+ * @param scene The scene to add the lines to
+ * @param path Grid positions in walking order
+ * @param gridConfig Grid dimensions used to turn cells into world positions
+ * @param color Line colour
+ * @returns A group holding every segment line
  */
 export const createPathLine = (
   scene: THREE.Scene,
@@ -185,6 +192,8 @@ export const createPathLine = (
 
 /**
  * Removes a previously drawn path line group from the scene and disposes its resources.
+ * @param scene The scene the group was added to
+ * @param group The group `createPathLine` returned
  */
 export const removePathLine = (scene: THREE.Scene, group: THREE.Group): void => {
   scene.remove(group)

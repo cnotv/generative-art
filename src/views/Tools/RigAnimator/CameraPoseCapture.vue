@@ -37,20 +37,28 @@ const props = defineProps<{
   detectionOptions: CameraDetectionOptions
   /** Whether the mirrored camera preview is actually visible, versus detecting headlessly. */
   showPreview: boolean
-  /** Whether the parent is currently sampling the live feed onto the rig timeline as
-   * keyframes; only meaningful in camera mode, see `useRigMotionRecording`. */
+  /**
+   * Whether the parent is currently sampling the live feed onto the rig timeline as
+   * keyframes; only meaningful in camera mode, see `useRigMotionRecording`.
+   */
   isRecording: boolean
-  /** The rig timeline's current frame, for keeping an uploaded video's playback in sync with
-   * it while `syncEnabled` is on. */
+  /**
+   * The rig timeline's current frame, for keeping an uploaded video's playback in sync with
+   * it while `syncEnabled` is on.
+   */
   frame: number
   /** How many times slower an uploaded video plays, and how many poses a take samples per frame of it. */
   videoSlowdownRatio: number
-  /** The rig's frame rate, to convert between the timeline's frame numbers and the video
-   * element's `currentTime` seconds. */
+  /**
+   * The rig's frame rate, to convert between the timeline's frame numbers and the video
+   * element's `currentTime` seconds.
+   */
   fps: number
-  /** Which body-part groups (see `bodyPartGroups.ts`), by display label, the Config panel's
+  /**
+   * Which body-part groups (see `bodyPartGroups.ts`), by display label, the Config panel's
    * "Merge Target" checkboxes currently scope this capture to; shown so it's clear before
-   * applying rather than only inferable from the panel. */
+   * applying rather than only inferable from the panel.
+   */
   targetGroupLabels: string[]
 }>()
 
@@ -59,8 +67,10 @@ const emit = defineEmits<{
   close: []
   toggleRecord: []
   enablePreview: []
-  /** The uploaded video was scrubbed via its own native controls; move the rig timeline's
-   * playhead to match. */
+  /**
+   * The uploaded video was scrubbed via its own native controls; move the rig timeline's
+   * playhead to match.
+   */
   seekFrame: [frame: number]
 }>()
 
@@ -78,7 +88,13 @@ const uploadedVideo = useVideoPoseCapture(
 )
 const mode = ref<'camera' | 'photo' | 'video'>('camera')
 
-/** Picks the field from whichever source is active in the current mode. */
+/**
+ * Picks the field from whichever source is active in the current mode.
+ * @param cameraValue The value for the live camera.
+ * @param videoValue The value for an uploaded video.
+ * @param photoValue The value for an uploaded photo.
+ * @returns The value for the active mode.
+ */
 const pickByMode = <T,>(cameraValue: T, videoValue: T, photoValue: T): T => {
   if (mode.value === 'camera') return cameraValue
   if (mode.value === 'video') return videoValue
@@ -108,8 +124,10 @@ const previewHandLandmarks = computed(() =>
 const detectedFrame = computed(() =>
   pickByMode(camera.frame.value, uploadedVideo.frame.value, photo.frame.value)
 )
-/** Mirrors the video element's own play and pause events, so the Play/Pause icon matches it
- * however playback changed: this button, the native controls or the clip reaching its end. */
+/**
+ * Mirrors the video element's own play and pause events, so the Play/Pause icon matches it
+ * however playback changed: this button, the native controls or the clip reaching its end.
+ */
 const isVideoPlaying = ref(false)
 
 /** Whether the current source found anything to apply: a body, a hand or a face. */
@@ -119,9 +137,11 @@ const hasDetection = computed(
 
 let drawingUtilities: DrawingUtils | null = null
 
-/** Redraws the preview: the photo (in photo mode) or nothing behind the live/uploaded video,
+/**
+ * Redraws the preview: the photo (in photo mode) or nothing behind the live/uploaded video,
  * then the skeleton overlay on top, for whichever landmarks a detection actually found
- * confidently. */
+ * confidently.
+ */
 const drawOverlay = (): void => {
   const canvas = canvasReference.value
   const video = videoReference.value
@@ -186,13 +206,16 @@ watch(detectedFrame, (detected) => {
   if (detected && hasCameraPoseContent(detected)) emit('apply', detected)
 })
 
-/** An uploaded photo or video is the whole reason to look at this panel right then, so its
+/**
+ * An uploaded photo or video is the whole reason to look at this panel right then, so its
  * preview always comes on regardless of whatever the Config panel's checkbox was last left at
  * — leaving it off would run detection against the upload with nothing on screen to show for
  * it. A video plays at its own rate and samples live the exact same way the camera does,
  * useful for testing against a known performance; a photo applies once. A video does not start
  * Record Motion on its own: it can be played and paused to watch the mapping first, and the
- * record icon starts a take whenever it is wanted. */
+ * record icon starts a take whenever it is wanted.
+ * @param event The file input's change event.
+ */
 const handleMediaChange = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -236,8 +259,10 @@ const toggleCamera = (): void => {
   camera.start()
 }
 
-/** Starting a take on a paused video plays it too, since a take on a frame that never changes
- * would record nothing. Stopping one leaves playback as it is. */
+/**
+ * Starting a take on a paused video plays it too, since a take on a frame that never changes
+ * would record nothing. Stopping one leaves playback as it is.
+ */
 const handleRecordClick = (): void => {
   if (mode.value === 'video' && !props.isRecording && !isVideoPlaying.value) {
     uploadedVideo.togglePlayback()
@@ -245,9 +270,11 @@ const handleRecordClick = (): void => {
   emit('toggleRecord')
 }
 
-/** The uploaded video reached its natural end: stop recording the same as a manual click
+/**
+ * The uploaded video reached its natural end: stop recording the same as a manual click
  * would, rather than leaving the take open with nothing left to sample. A live camera feed's
- * `srcObject` stream never fires this, so the handler only ever does anything in video mode. */
+ * `srcObject` stream never fires this, so the handler only ever does anything in video mode.
+ */
 const handleVideoEnded = (): void => {
   if (mode.value === 'video' && props.isRecording) emit('toggleRecord')
 }
@@ -272,15 +299,21 @@ watch(
   }
 )
 
-/** The clock Record Motion reads, in milliseconds: an uploaded video's own playback position, so a
- * slowed video still records at its real speed, and wall time for the live camera. */
+/**
+ * The clock Record Motion reads, in milliseconds: an uploaded video's own playback position, so a
+ * slowed video still records at its real speed, and wall time for the live camera.
+ * @returns The capture time in milliseconds.
+ */
 const captureClockMilliseconds = (): number =>
   mode.value === 'video' && videoReference.value
     ? videoReference.value.currentTime * 1000
     : performance.now()
 
-/** How many poses Record Motion samples per frame: as many as the video is slowed down, since that
- * is how many readings detection gets of each of its frames, and a fixed rate for the camera. */
+/**
+ * How many poses Record Motion samples per frame: as many as the video is slowed down, since that
+ * is how many readings detection gets of each of its frames, and a fixed rate for the camera.
+ * @returns How many samples to take per frame.
+ */
 const captureSamplesPerFrame = (): number =>
   mode.value === 'video' ? props.videoSlowdownRatio : RECORDING_SAMPLES_PER_FRAME
 

@@ -391,7 +391,6 @@ const rotateCameraAroundY = (
  * Registers camera element properties with orbit sync.
  * Handles: schema-based property panel, Three.js updates on change,
  * and orbit controls → panel reactivity.
- *
  * @param options.camera - The Three.js camera
  * @param options.orbit - Optional orbit controls instance
  * @param options.cameraConfig - Optional external ref to use for camera state
@@ -572,7 +571,11 @@ const registerCameraPresetHandlers = ({
     cameraConfig.value = { ...cameraConfig.value, ...buildDefaults(active) }
   }
 
-  /** Applies a same-type camera change, tweening between states when transitions are enabled. */
+  /**
+   * Applies a same-type camera change, tweening between states when transitions are enabled.
+   * @param active The camera to change.
+   * @param applyChange Makes the change to the camera.
+   */
   const applyWithOptionalTween = (active: THREE.Camera, applyChange: () => void) => {
     if (!cameraConfigStore.transitionEnabled) {
       applyChange()

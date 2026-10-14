@@ -11,6 +11,8 @@ const PHYSICS_STEP_SECONDS = 1 / PHYSICS_STEPS_PER_SECOND
  * step is a fixed sixtieth whatever the frame rate. Timing ticks directly, and stepping the world
  * as often as the tick lasted, keeps the player's physics ball, the bot and the clock on the same
  * time on any device.
+ * @param now Reads the current time in milliseconds.
+ * @returns Returns the seconds since the previous call, capped.
  */
 export const createTickClock = (now: () => number = () => performance.now()) => {
   let lastTick: number | null = null
@@ -22,6 +24,10 @@ export const createTickClock = (now: () => number = () => performance.now()) => 
   }
 }
 
-/** The physics steps a tick needs on top of the one the scene loop already took. */
+/**
+ * The physics steps a tick needs on top of the one the scene loop already took.
+ * @param tickSeconds How long the tick lasted.
+ * @returns How many extra steps to take.
+ */
 export const catchUpSteps = (tickSeconds: number): number =>
   Math.max(0, Math.round(tickSeconds * PHYSICS_STEPS_PER_SECOND) - 1)

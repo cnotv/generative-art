@@ -12,7 +12,15 @@ import { useRigFrameRipple } from './useRigFrameRipple'
 import { useRigPlayback } from './useRigPlayback'
 import type { RigAnimatorConfig } from './types'
 
-/** Owns the authored pose keyframes and the preview clip built from them. */
+/**
+ * Owns the authored pose keyframes and the preview clip built from them.
+ * @param config The tool's config.
+ * @param model The loaded model.
+ * @param skinnedMesh The model's skinned mesh.
+ * @param boneNames The rig's bone names.
+ * @returns The keyframes, the timeline length and history, and the playback, I/O, clipboard and
+ *   ripple actions.
+ */
 export const useRigKeyframes = (
   config: Ref<RigAnimatorConfig>,
   model: ShallowRef<THREE.Object3D | null>,
@@ -35,7 +43,10 @@ export const useRigKeyframes = (
     rebuildPreviewClip: () => rebuildPreviewClip()
   })
 
-  /** Move the rig timeline's visible frame range without recording it as an action of its own. */
+  /**
+   * Move the rig timeline's visible frame range without recording it as an action of its own.
+   * @param nextFrameMax The new last frame.
+   */
   const applyFrameMax = (nextFrameMax: number): void => {
     frameMax.value = clampFrameMax(nextFrameMax, config.value.frame, keyframeFrames.value)
   }
@@ -49,7 +60,10 @@ export const useRigKeyframes = (
     reopenHistory('Opened')
   }
 
-  /** Resize the rig timeline's visible frame range, see `clampFrameMax`. */
+  /**
+   * Resize the rig timeline's visible frame range, see `clampFrameMax`.
+   * @param nextFrameMax The new last frame.
+   */
   const setFrameMax = (nextFrameMax: number): void => {
     applyFrameMax(nextFrameMax)
     persistAutosave('Resized timeline')
@@ -67,9 +81,12 @@ export const useRigKeyframes = (
     action.value = built?.action ?? null
   }
 
-  /** Push the rig's current pose into the keyframe list, without rebuilding the preview clip
+  /**
+   * Push the rig's current pose into the keyframe list, without rebuilding the preview clip
    * or persisting: callers batch both via `commitKeyframes` once a burst of captures ends,
-   * rather than paying the rebuild's growing cost on every sampled frame. */
+   * rather than paying the rebuild's growing cost on every sampled frame.
+   * @param bones The rig's bones.
+   */
   const captureKeyframeSilently = (bones: THREE.Bone[]): void => {
     if (bones.length === 0) return
     const pose = poseCapture(bones)
@@ -79,23 +96,31 @@ export const useRigKeyframes = (
     keyframes.value = [...withoutSameFrame, { frame: config.value.frame, pose }]
   }
 
-  /** Rebuild the preview clip and persist the autosave; the shared tail end of any change to
+  /**
+   * Rebuild the preview clip and persist the autosave; the shared tail end of any change to
    * the keyframe list that has to actually show up and survive a refresh.
-   * @param label What the change is called in the history log */
+   * @param label What the change is called in the history log
+   */
   const commitKeyframes = (label: string): void => {
     rebuildPreviewClip()
     persistAutosave(label)
   }
 
-  /** Capture the rig's current pose as a keyframe at the panel's current frame. */
+  /**
+   * Capture the rig's current pose as a keyframe at the panel's current frame.
+   * @param bones The rig's bones.
+   */
   const addKeyframe = (bones: THREE.Bone[]): void => {
     captureKeyframeSilently(bones)
     commitKeyframes('Added keyframe')
   }
 
-  /** Remove every keyframe in `frames` at once — a single current-frame delete is just a
+  /**
+   * Remove every keyframe in `frames` at once — a single current-frame delete is just a
    * one-frame list, and a multi-select delete is every frame the selection covered. One
-   * rebuild and persist for the whole batch rather than one per frame. */
+   * rebuild and persist for the whole batch rather than one per frame.
+   * @param frames The frames to clear.
+   */
   const deleteKeyframesAt = (frames: number[]): void => {
     if (frames.length === 0) return
     const framesToDelete = new Set(frames)
@@ -104,8 +129,12 @@ export const useRigKeyframes = (
     persistAutosave(frames.length > 1 ? 'Deleted keyframes' : 'Deleted keyframe')
   }
 
-  /** Drag every keyframe in `frames` by the same delta, see `moveKeyframesInList`. A plain
-   * single-keyframe drag is just a one-frame list. */
+  /**
+   * Drag every keyframe in `frames` by the same delta, see `moveKeyframesInList`. A plain
+   * single-keyframe drag is just a one-frame list.
+   * @param frames The keyframes to move.
+   * @param deltaFrames How many frames to move them, negative for earlier.
+   */
   const moveKeyframesBy = (frames: number[], deltaFrames: number): void => {
     const next = moveKeyframesInList(keyframes.value, frames, deltaFrames)
     if (next === keyframes.value) return

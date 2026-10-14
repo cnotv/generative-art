@@ -10,8 +10,10 @@ interface Dependencies {
   persistAutosave: (label: string) => void
 }
 
-/** One copied pose, kept relative to the earliest frame in the copy rather than an absolute
- * frame, so paste can drop the whole block starting wherever the playhead currently sits. */
+/**
+ * One copied pose, kept relative to the earliest frame in the copy rather than an absolute
+ * frame, so paste can drop the whole block starting wherever the playhead currently sits.
+ */
 interface ClipboardEntry {
   offset: number
   pose: Pose
@@ -21,6 +23,8 @@ interface ClipboardEntry {
  * Plain-data copy of a pose. `keyframes` is a Vue ref, so a stored pose is wrapped in a
  * reactive Proxy; `structuredClone` cannot clone that Proxy, but a pose is pure JSON-safe
  * numeric data, so a JSON round-trip clones it without touching the Proxy machinery.
+ * @param pose The pose to copy.
+ * @returns A plain copy.
  */
 const clonePose = (pose: Pose): Pose => JSON.parse(JSON.stringify(pose))
 
@@ -28,6 +32,7 @@ const clonePose = (pose: Pose): Pose => JSON.parse(JSON.stringify(pose))
  * Owns copying and pasting a block of keyframes' poses, split out of `useRigKeyframes` to stay
  * under its function-length lint cap. A single copied frame is just a one-entry block, so
  * copying the current keyframe and copying a multi-select range go through the same path.
+ * @returns Whether the clipboard holds anything, copyKeyframes and pasteKeyframes.
  */
 export const useRigKeyframeClipboard = ({
   config,
@@ -38,8 +43,11 @@ export const useRigKeyframeClipboard = ({
   const clipboardEntries = shallowRef<ClipboardEntry[] | null>(null)
   const hasClipboard = computed(() => (clipboardEntries.value?.length ?? 0) > 0)
 
-  /** Copy the poses at every given frame onto the clipboard, keyed relative to the earliest
-   * one among them. Frames with no keyframe of their own are silently skipped. */
+  /**
+   * Copy the poses at every given frame onto the clipboard, keyed relative to the earliest
+   * one among them. Frames with no keyframe of their own are silently skipped.
+   * @param frames The frames to copy.
+   */
   const copyKeyframes = (frames: number[]): void => {
     if (frames.length === 0) return
     const baseFrame = Math.min(...frames)

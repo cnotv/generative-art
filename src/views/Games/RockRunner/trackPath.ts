@@ -12,7 +12,6 @@ const TWO_PI = Math.PI * 2
  * Evaluates a sine sum at a distance. Each term contributes
  * `amplitude * sin(2*pi*distance/wavelength + phase)`, so the wavelength is a
  * real world-space distance rather than an opaque frequency.
- *
  * @param terms - Sine terms to sum
  * @param phases - One phase offset per term, drawn from the track seed
  * @param distance - Distance along the path
@@ -28,7 +27,6 @@ export const evaluateTerms = (terms: PathTerm[], phases: number[], distance: num
 /**
  * Unit forward vector for a heading. Yaw 0 points down -Z, matching the
  * convention the track pieces and cameras already use.
- *
  * @param yaw - Heading in radians
  * @returns A new unit vector pointing along the heading
  */
@@ -37,7 +35,6 @@ export const forwardFromYaw = (yaw: number): THREE.Vector3 =>
 
 /**
  * Unit right vector for a heading, perpendicular to `forwardFromYaw`.
- *
  * @param yaw - Heading in radians
  * @returns A new unit vector pointing to the heading's right
  */
@@ -56,7 +53,6 @@ export const rightFromYaw = (yaw: number): THREE.Vector3 =>
  * length. The hills are shallow enough that the difference is under a percent,
  * and keeping the parameter horizontal makes station lookup exact division
  * instead of a search.
- *
  * @param seed - Seed for the heading and height phase offsets
  * @returns A path that can be sampled and swept at any distance
  */

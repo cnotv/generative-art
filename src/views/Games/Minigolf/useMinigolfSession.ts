@@ -309,7 +309,9 @@ export const useMinigolfSession = (options: UseMinigolfSessionOptions) => {
   /**
    * Initialize the P2P session and join the room.
    */
-  const init = (): void => initSessionForContext(ctx, options.roomId)
+  const init = (): void => {
+    initSessionForContext(ctx, options.roomId)
+  }
 
   /**
    * Reconnect to a new room, leaving the current one first.

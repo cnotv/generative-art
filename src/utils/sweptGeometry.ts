@@ -5,7 +5,6 @@ import type { SweepStation, CrossSection } from '@/types/sweptGeometry'
  * Places every cross-section point at every station, in world space.
  * Each cross-section edge gets its own vertex pair per station: profile corners
  * stay hard while the sweep direction shades smoothly.
- *
  * @param stations - Frames the cross-section is swept through
  * @param crossSection - Closed outline swept along the stations
  * @returns Flat x, y, z position triples ready for a BufferAttribute
@@ -27,7 +26,6 @@ export const sweepPositions = (stations: SweepStation[], crossSection: CrossSect
  * Indexes the swept side quads plus the two end caps.
  * Winding matters: Rapier's FIX_INTERNAL_EDGES corrects contact normals using
  * the triangles' face normals, so every face must point outward (deck up).
- *
  * @param stationCount - How many stations the sweep has
  * @param crossSection - Closed outline swept along the stations
  * @returns Triangle indices into the array produced by sweepPositions
@@ -62,7 +60,6 @@ export const sweepIndices = (stationCount: number, crossSection: CrossSection): 
 
 /**
  * Sweeps a closed cross-section through a list of stations into one solid mesh.
- *
  * @param stations - Frames the cross-section is swept through
  * @param crossSection - Closed outline swept along the stations
  * @returns An indexed BufferGeometry with computed vertex normals
@@ -83,7 +80,6 @@ export const buildSweepGeometry = (
 
 /**
  * Flattens a geometry into a world-space triangle soup for a Rapier trimesh.
- *
  * @param geometry - Geometry to flatten, indexed or not
  * @param matrix - World transform applied to every vertex
  * @returns Flat x, y, z triples, three per triangle corner

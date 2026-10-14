@@ -1,6 +1,11 @@
 // Kept in sync with `toRouteName` in scripts/routes.mjs, which derives the same names at
 // build time for the prerendered SEO meta tags. Node has no TypeScript runner here, so the
 // two can't share one module without adding a dependency.
+/**
+ * Turns a view's file name into its route name, spacing words, acronyms and numbers.
+ * @param baseName The file name without extension.
+ * @returns The route name, first letter capitalised.
+ */
 export const deriveRouteName = (baseName: string): string =>
   baseName
     .replace(/([a-z])([A-Z])/g, '$1 $2') // word boundary: lowercase to uppercase
@@ -10,6 +15,12 @@ export const deriveRouteName = (baseName: string): string =>
     .trim()
     .replace(/^\w/, (c) => c.toUpperCase())
 
+/**
+ * Builds the routes for one views folder from its lazily imported files.
+ * @param views The folder's view modules, by file path.
+ * @param dir The folder under src/views.
+ * @returns One route per view.
+ */
 export const getRoutes = (views: Record<string, () => Promise<unknown>>, dir: string) => {
   return Object.keys(views)
     .map((key) => {

@@ -105,7 +105,11 @@ const resetProportions = (): void => {
   reactiveConfig.value = createEditorConfig()
 }
 
-/** The loaded file's own name without its extension, from a path or a tagged blob URL. */
+/**
+ * The loaded file's own name without its extension, from a path or a tagged blob URL.
+ * @param url The model's path or tagged blob URL.
+ * @returns The file name without extension.
+ */
 const modelFileStem = (url: string): string =>
   (url.split('#').pop() ?? url)
     .split('/')
@@ -120,6 +124,7 @@ const downloadModel = async (): Promise<void> => {
 /**
  * Give the model a humanoid skeleton when it arrives without one, so a plain uploaded mesh gets
  * the same sliders as a rigged character, then measure its bones and its face once, at rest.
+ * @param loaded The loaded model.
  */
 const prepareModel = (loaded: THREE.Object3D): void => {
   if (collectRigBones(loaded).length === 0) generateAutoRig(loaded)

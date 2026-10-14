@@ -7,10 +7,10 @@ export interface TouchController {
 }
 
 /**
- *
- * @param mappingReference
- * @param mappingReference.current
- * @param handlers
+ * Turns touch events into the actions mapped to them.
+ * @param mappingReference Holds the current mapping, so a remap applies without rebinding.
+ * @param handlers Receive each action as it starts and ends.
+ * @returns The controller, to bind and unbind its listeners.
  */
 export function createTouchController(
   mappingReference: { current: ControlMapping },

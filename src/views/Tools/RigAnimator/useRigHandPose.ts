@@ -11,8 +11,11 @@ import type { RigAnimatorConfig } from './types'
 /**
  * Owns applying a canned finger pose to whichever hand the panel's selected bone belongs to,
  * split out of `useRigModel` to stay under its function-length lint cap.
+ * @param bones The rig's bones.
+ * @param config The tool's config, for the selected bone.
  * @param getRestQuaternions Every bone's rest-pose local quaternion, from `useRigModel`, so the
  *   preset's curl composes on top of each joint's own rest tilt rather than overwriting it
+ * @returns Whether a hand is selected, and applyHandPosePreset.
  */
 export const useRigHandPose = (
   bones: Ref<THREE.Bone[]>,
@@ -28,7 +31,10 @@ export const useRigHandPose = (
     return requiredNames.every((name) => bones.value.some((bone) => bone.name === name))
   })
 
-  /** Apply a preset by its display name (a `HAND_POSE_PRESETS` key) to the selected hand. */
+  /**
+   * Apply a preset by its display name (a `HAND_POSE_PRESETS` key) to the selected hand.
+   * @param presetName The preset's display name.
+   */
   const applyHandPosePreset = (presetName: string): void => {
     const side = selectedHandSide.value
     const preset = HAND_POSE_PRESETS[presetName]

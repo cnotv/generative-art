@@ -35,6 +35,10 @@ const BOUNDARY_EPSILON = 0.001
  *
  * `ExtrudeGeometry` builds in the XY plane and extrudes along +Z; laying it flat with a -90°
  * turn about X maps shape-Y onto world -Z, which is why each hole's Z is negated here.
+ * @param layout Board extents
+ * @param holes The holes to cut
+ * @param holeRadius Radius of every hole
+ * @returns The board slab geometry
  */
 const createBoardGeometry = (
   layout: BoardLayout,
@@ -61,7 +65,13 @@ const createBoardGeometry = (
   })
 }
 
-/** Ring the board so the ball cannot escape through the maze's entrance and exit gaps. */
+/**
+ * Ring the board so the ball cannot escape through the maze's entrance and exit gaps.
+ * @param scene The Three.js scene
+ * @param world The Rapier physics world
+ * @param layout Board extents
+ * @returns The four walls
+ */
 const createPerimeterWalls = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -131,7 +141,13 @@ const createMazeWalls = (
       })
     )
 
-/** A ring sunk into each hole's mouth, marking the goal green and the traps black. */
+/**
+ * A ring sunk into each hole's mouth, marking the goal green and the traps black.
+ * @param scene The Three.js scene
+ * @param holes The holes to mark
+ * @param holeRadius Radius of every hole
+ * @returns One ring per hole
+ */
 const createHoleMarkers = (
   scene: THREE.Scene,
   holes: readonly MazeHole[],
@@ -167,6 +183,7 @@ const createHoleMarkers = (
  * @param scene The Three.js scene
  * @param world The Rapier physics world
  * @param layout Board extents derived from the viewport
+ * @param level The level's maze size and hole count
  * @returns The ball and the holes it can fall through
  */
 export const createTiltMazeBoard = (

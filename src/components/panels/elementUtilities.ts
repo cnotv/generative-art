@@ -13,6 +13,12 @@ export const ELEMENT_CATEGORIES: { category: ElementCategory; icon: Component; l
   { category: 'textureArea', icon: Image, label: 'Texture Area' }
 ]
 
+/**
+ * Sorts a scene element into the category the Elements panel groups it under, from its name and
+ * type.
+ * @param element The scene element.
+ * @returns Its category.
+ */
 export const getElementCategory = (element: SceneElement): ElementCategory => {
   const name = element.name.toLowerCase()
   const type = element.type.toLowerCase()
@@ -25,12 +31,22 @@ export const getElementCategory = (element: SceneElement): ElementCategory => {
   return 'mesh'
 }
 
+/**
+ * Picks the icon the Elements panel shows for an element.
+ * @param element The scene element.
+ * @returns The icon component of its category.
+ */
 export const getElementIcon = (element: SceneElement): Component => {
   const category = getElementCategory(element)
   const match = ELEMENT_CATEGORIES.find((c) => c.category === category)
   return match?.icon ?? Image
 }
 
+/**
+ * Picks the text colour the Elements panel gives an element, from its name and type.
+ * @param element The scene element.
+ * @returns A text colour class.
+ */
 export const getElementColor = (element: SceneElement): string => {
   const name = element.name.toLowerCase()
   const type = element.type.toLowerCase()

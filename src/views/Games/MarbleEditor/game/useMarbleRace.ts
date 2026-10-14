@@ -628,6 +628,9 @@ const buildRaceScene = ({
  * Race mode composable built on the actions factory above: initializes the
  * scene, drives the timeline, and exposes ghost-marble updates for remote
  * players plus reactive countdown, timing and camera state.
+ * @param deps The canvas, the map, the player and the room it races in.
+ * @returns The race state, camera mode and controls, the ghost and test-ball actions, and init and
+ *   destroy.
  */
 export const useMarbleRace = (deps: UseMarbleRaceDeps) => {
   const finished = ref(false)

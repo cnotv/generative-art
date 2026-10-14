@@ -2,6 +2,10 @@ interface UiStore {
   controls: { jump: boolean }
 }
 
+/**
+ * Presses jump for a moment, long enough for the game loop to see it.
+ * @param uiStore The store holding the controls.
+ */
 export const handleJumpGoomba = (uiStore: UiStore) => {
   uiStore.controls.jump = true
 

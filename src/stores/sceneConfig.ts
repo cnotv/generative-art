@@ -65,7 +65,17 @@ export const useSceneConfigStore = defineStore('sceneConfig', () => {
   return { schema, getValue, updateValue, registerSceneConfig, unregisterSceneConfig }
 })
 
-export const registerSceneConfig = (registration: SceneConfigRegistration) =>
+/**
+ * Gives the Scene panel to a view, with its schema and its own value reader and writer.
+ * @param registration The schema and the value accessors.
+ */
+export const registerSceneConfig = (registration: SceneConfigRegistration): void => {
   useSceneConfigStore().registerSceneConfig(registration)
+}
 
-export const unregisterSceneConfig = () => useSceneConfigStore().unregisterSceneConfig()
+/**
+ * Hands the Scene panel back to the global scene settings.
+ */
+export const unregisterSceneConfig = (): void => {
+  useSceneConfigStore().unregisterSceneConfig()
+}

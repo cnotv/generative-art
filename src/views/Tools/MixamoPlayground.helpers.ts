@@ -2,6 +2,8 @@
  * Resolves the animation name to play based on currently active actions.
  * Priority: blocking actions (kick/punch/jump) > movement modifiers (roll/run) > idle.
  * "run" only applies when a movement direction is also active.
+ * @param actions The control actions currently active
+ * @returns The name of the animation to play
  */
 export const getActionName = (actions: Record<string, unknown>): string => {
   if (actions['kick']) return 'kick'

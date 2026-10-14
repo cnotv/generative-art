@@ -27,6 +27,7 @@ export const EDITOR_HISTORY_LIMIT = 50
  * @param openingSnapshot The state the editor opens in
  * @param restore Puts a snapshot back on screen; awaited, for a canvas that has to repaint
  * @param limit How many states to keep
+ * @returns The history's state and log, and undo, redo, goTo and reopen.
  */
 export const useEditorHistory = <TSnapshot>(
   openingLabel: string,
@@ -59,13 +60,20 @@ export const useEditorHistory = <TSnapshot>(
     record: (label: string, snapshot: TSnapshot): void => {
       stack.value = historyPush(stack.value, label, snapshot)
     },
-    /** Step back one action, restoring what it replaced. */
+    /**
+     * Step back one action, restoring what it replaced.
+     * @returns Resolves once the previous state is back on screen.
+     */
     undo: (): Promise<void> => step(historyUndo),
-    /** Step forward into an action that was undone. */
+    /**
+     * Step forward into an action that was undone.
+     * @returns Resolves once the redone state is back on screen.
+     */
     redo: (): Promise<void> => step(historyRedo),
     /**
      * Step straight to one action from the log instead of walking there.
      * @param index The action's place on the timeline, from the log
+     * @returns Resolves once that state is back on screen.
      */
     goTo: (index: number): Promise<void> => step((stack) => historyGoTo(stack, index)),
     /**
@@ -76,7 +84,10 @@ export const useEditorHistory = <TSnapshot>(
     reopen: (label: string, snapshot: TSnapshot): void => {
       stack.value = historyCreate(label, snapshot, limit)
     },
-    /** The state on screen now, as the history understands it. */
+    /**
+     * The state on screen now, as the history understands it.
+     * @returns The current snapshot.
+     */
     state: (): TSnapshot => historyState(stack.value)
   }
 }

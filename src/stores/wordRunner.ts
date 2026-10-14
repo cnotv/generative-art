@@ -5,7 +5,11 @@ import type { Difficulty, WrPhase, WrPlayer } from '@/views/Games/WordRunner/typ
 
 const MAX_MESSAGES = 200
 
-/** A player as they stand on the start line, before any of their race has arrived. */
+/**
+ * A player as they stand on the start line, before any of their race has arrived.
+ * @param player The player's id, name and colour.
+ * @returns The player at distance 0, not ready.
+ */
 const onStartLine = (player: Pick<WrPlayer, 'id' | 'name' | 'color'>): WrPlayer => ({
   ...player,
   distance: 0,
@@ -58,7 +62,11 @@ export const useWordRunnerStore = defineStore('wordRunner', () => {
   const setFinish = (id: string, finishSeconds: number): void => updatePlayer(id, { finishSeconds })
   const setReady = (id: string): void => updatePlayer(id, { ready: true })
 
-  /** Takes the room into a race of a level, everyone back on the start line. */
+  /**
+   * Takes the room into a race of a level, everyone back on the start line.
+   * @param nextLevelId The level to race.
+   * @param nextDifficulty Its difficulty.
+   */
   const startRace = (nextLevelId: string, nextDifficulty: Difficulty): void => {
     players.value = Object.fromEntries(
       Object.entries(players.value).map(([id, player]) => [id, onStartLine(player)])

@@ -37,7 +37,6 @@ type ChunkSpan = {
 
 /**
  * How far ahead an area generates and how far behind it keeps its billboards.
- *
  * @returns The lookahead, keep-alive, chunk length and reach behind
  */
 export const scatterChunkSpan = (): ChunkSpan => ({
@@ -50,7 +49,6 @@ export const scatterChunkSpan = (): ChunkSpan => ({
 /**
  * Groups a chunk's instances by the texture they drew, so each texture becomes
  * one instanced draw call instead of one mesh per billboard.
- *
  * @param instances - Instances placed for a chunk
  * @returns Instances bucketed by texture index, empty buckets omitted
  */
@@ -80,18 +78,6 @@ export type ScatterAreaManagerOptions = {
   chunkPhase?: number
 }
 
-/**
- * Dresses one illustration family along the track, spawning billboards ahead of
- * the rock and disposing them behind so an endless world stays bounded.
- *
- * The billboards carry no rigid body at all: they are decoration the rock rolls
- * straight through. Their facing is baked at build time from the local heading,
- * which is where the chase camera sits, so no per-frame billboard pass is
- * needed for what can be thousands of planes.
- *
- * @param options - Scene, path, area definition and live config accessors
- * @returns Handles to pump, prune, rebuild and tear down the area
- */
 // Materials are cached per texture and shared across every chunk of an area, so
 // a long run never rebuilds one.
 const createMaterialCache = (uniforms: LateralFogUniforms, opacityOf: () => number) => {
@@ -126,6 +112,17 @@ const createMaterialCache = (uniforms: LateralFogUniforms, opacityOf: () => numb
   }
 }
 
+/**
+ * Dresses one illustration family along the track, spawning billboards ahead of
+ * the rock and disposing them behind so an endless world stays bounded.
+ *
+ * The billboards carry no rigid body at all: they are decoration the rock rolls
+ * straight through. Their facing is baked at build time from the local heading,
+ * which is where the chase camera sits, so no per-frame billboard pass is
+ * needed for what can be thousands of planes.
+ * @param options - Scene, path, area definition and live config accessors
+ * @returns Handles to pump, prune, rebuild and tear down the area
+ */
 export const createScatterAreaManager = (
   options: ScatterAreaManagerOptions
 ): ScatterAreaManager => {

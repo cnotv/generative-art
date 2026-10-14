@@ -9,6 +9,12 @@ import {
 } from '@webgamekit/animation'
 import { PLAYER_MODEL, playerModelOptions, PLAYER_SPEED, PLAYER_DISTANCE } from '../config'
 
+/**
+ * Loads the player's model.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @returns The player.
+ */
 export const createPlayer = async (
   scene: THREE.Scene,
   world: RAPIER.World
@@ -18,6 +24,14 @@ export const createPlayer = async (
   return player
 }
 
+/**
+ * Turns the player to face the pressed direction and moves it through its character controller.
+ * @param player The player.
+ * @param currentActions The actions held now.
+ * @param getDelta Reads seconds since the last frame.
+ * @param speed Units per second.
+ * @param filterPredicate Says which colliders the player may collide with.
+ */
 export const updatePlayerMovement = (
   player: ComplexModel,
   currentActions: Record<string, unknown>,

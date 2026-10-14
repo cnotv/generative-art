@@ -258,7 +258,13 @@ export const easeBonesFromTransforms = (
   })
 }
 
-/** MediaPipe's y grows downward and z away from the camera; the scene's y grows up and z toward the viewer. */
+/**
+ * MediaPipe's y grows downward and z away from the camera; the scene's y grows up and z toward the
+ * viewer.
+ * @param landmark The landmark.
+ * @param includeDepth Whether to keep its depth.
+ * @returns The point in scene axes.
+ */
 const landmarkToScene = (landmark: CameraHandLandmark, includeDepth = true): THREE.Vector3 =>
   new THREE.Vector3(landmark.x, -landmark.y, includeDepth ? -landmark.z : 0)
 
@@ -288,7 +294,11 @@ const restDirection = (
   return direction && direction.lengthSq() > DIRECTION_EPSILON ? direction.normalize() : null
 }
 
-/** The rotation whose y axis runs along `primary` and whose x axis leans toward `lateral`. */
+/**
+ * The rotation whose y axis runs along `primary` and whose x axis leans toward `lateral`.
+ * @param frame The primary and lateral directions.
+ * @returns The rotation, or null when the directions are degenerate.
+ */
 const frameRotation = (frame: SegmentFrame): THREE.Quaternion | null => {
   const axisY = frame.primary.clone().normalize()
   const axisZ = new THREE.Vector3().crossVectors(frame.lateral.clone().normalize(), axisY)
@@ -300,7 +310,13 @@ const frameRotation = (frame: SegmentFrame): THREE.Quaternion | null => {
   )
 }
 
-/** The world rotation carrying a rest frame onto an observed one, both built from matching directions. */
+/**
+ * The world rotation carrying a rest frame onto an observed one, both built from matching
+ * directions.
+ * @param observed The frame seen this reading.
+ * @param rest The same frame at rest.
+ * @returns The world rotation, or null when either frame is degenerate.
+ */
 const frameChange = (observed: SegmentFrame, rest: SegmentFrame): THREE.Quaternion | null => {
   const observedRotation = frameRotation(observed)
   const restRotation = frameRotation(rest)
@@ -340,7 +356,11 @@ const limitHinge = (
   )
 }
 
-/** Which `CAMERA_JOINT_LIMITS_DEGREES` entry a bone takes. */
+/**
+ * Which `CAMERA_JOINT_LIMITS_DEGREES` entry a bone takes.
+ * @param boneName The bone's name.
+ * @returns Its joint limits, or undefined for a bone with none.
+ */
 const jointLimitFor = (boneName: string): CameraJointLimitDegrees | undefined =>
   JOINT_LIMITS.get(
     boneName
@@ -354,6 +374,10 @@ const jointLimitFor = (boneName: string): CameraJointLimitDegrees | undefined =>
  * bone's own rest pose. Detection noise, a landmark swapped for its neighbour or a palm read back
  * to front otherwise turns a thigh or a forearm further round than any body can, or bends a finger
  * sideways at a joint that only curls.
+ * @param context The rig's rest pose and the mapping options.
+ * @param bone The bone being set.
+ * @param local Its new local rotation.
+ * @returns The rotation, limited to the joint's range.
  */
 const limitJoint = (
   context: RetargetContext,
@@ -371,7 +395,13 @@ const limitJoint = (
   )
 }
 
-/** Every driven bone is set through here, parents first, so each child is limited on top of an already limited parent. */
+/**
+ * Every driven bone is set through here, parents first, so each child is limited on top of an
+ * already limited parent.
+ * @param context The rig's rest pose and the mapping options.
+ * @param bone The bone to set.
+ * @param worldQuaternion Its new world rotation.
+ */
 const setBoneWorldQuaternion = (
   context: RetargetContext,
   bone: THREE.Bone,
@@ -395,7 +425,12 @@ const drivenBone = (
     : null
 }
 
-/** Turn a bone away from its own rest orientation by a world-space `change`. */
+/**
+ * Turn a bone away from its own rest orientation by a world-space `change`.
+ * @param context The rig's rest pose and the mapping options.
+ * @param boneName The bone to turn.
+ * @param change The world-space turn from rest.
+ */
 const rotateFromRest = (
   context: RetargetContext,
   boneName: string,
@@ -407,7 +442,14 @@ const rotateFromRest = (
   }
 }
 
-/** Roll a world-space change about `unitAxis` until the twist cue's rest direction meets the observed one. */
+/**
+ * Roll a world-space change about `unitAxis` until the twist cue's rest direction meets the
+ * observed one.
+ * @param change The world-space change so far.
+ * @param unitAxis The axis to roll about, normalised.
+ * @param twist The rest and observed directions that show the roll.
+ * @returns The change with the roll added.
+ */
 const rollToward = (
   change: THREE.Quaternion,
   unitAxis: THREE.Vector3,
@@ -430,6 +472,11 @@ const rollToward = (
  * wherever its already-posed parent carried it, then optionally roll it about that segment. The
  * swing is the smallest rotation that works, so a bone keeps whatever roll its parent gave it
  * unless a twist cue says otherwise; nothing here moves a joint, so a segment never stretches.
+ * @param context The rig's rest pose and the mapping options.
+ * @param boneName The bone to swing.
+ * @param nextBoneName The bone at the far end of its segment.
+ * @param observedDirection Where the segment points in the reading.
+ * @param twist An optional cue for the roll about the segment.
  * @returns Whether the bone was driven
  */
 const aimBone = (
@@ -458,7 +505,14 @@ const aimBone = (
   return true
 }
 
-/** How far a limb's bend can be trusted to show its roll: not at all when straight, fully once clearly bent. */
+/**
+ * How far a limb's bend can be trusted to show its roll: not at all when straight, fully once
+ * clearly bent.
+ * @param options The bend thresholds.
+ * @param upper The upper segment's direction.
+ * @param lower The lower segment's direction.
+ * @returns The weight, from 0 when straight to 1 when clearly bent.
+ */
 const bendTwistWeight = (
   options: CameraPoseMappingOptions,
   upper: THREE.Vector3,
@@ -551,6 +605,9 @@ const observeHips = (context: RetargetContext, point: BodyPointReader) => {
  * takes only part of that lean, the way a real pelvis tips a little and the back bends the rest.
  * With the hips out of frame, a webcam framed on the upper body, the pelvis stays put and the
  * chest turns about the vertical alone.
+ * @param context The rig's rest pose and the mapping options.
+ * @param point Reads a visible body landmark.
+ * @returns The pelvis and chest rotations, or null without both shoulders.
  */
 const observeTorso = (context: RetargetContext, point: BodyPointReader): TorsoRotations | null => {
   const leftShoulder = point(CAMERA_LANDMARK_INDEX.leftShoulder)
@@ -584,7 +641,11 @@ const observeTorso = (context: RetargetContext, point: BodyPointReader): TorsoRo
   return chest && pelvis ? { pelvis, chest } : null
 }
 
-/** Every bone strictly between the hips and the neck, lowest first. */
+/**
+ * Every bone strictly between the hips and the neck, lowest first.
+ * @param context The rig's bones.
+ * @returns The spine bones' names.
+ */
 const spineBoneNames = (context: RetargetContext): string[] => {
   const top = (context.bonesByName.get(NECK) ?? context.bonesByName.get('mixamorigLeftShoulder'))
     ?.parent
@@ -593,7 +654,12 @@ const spineBoneNames = (context: RetargetContext): string[] => {
   return collect(top)
 }
 
-/** Turn the pelvis, then spread the rest of the way to the chest evenly up the spine, so a back bends rather than hinging at one joint. */
+/**
+ * Turn the pelvis, then spread the rest of the way to the chest evenly up the spine, so a back
+ * bends rather than hinging at one joint.
+ * @param context The rig's rest pose and the mapping options.
+ * @param torso The pelvis and chest rotations.
+ */
 const applyTorso = (context: RetargetContext, torso: TorsoRotations): void => {
   // With the hips switched off the pelvis stays at rest and the spine takes the whole turn.
   const pelvis = context.options.turnHips ? torso.pelvis : new THREE.Quaternion()
@@ -611,6 +677,11 @@ const applyTorso = (context: RetargetContext, torso: TorsoRotations): void => {
  * How the head is turned: straight from the Face Landmarker when it found the face, otherwise
  * from the ears and nose. BlazePose places the nose below the ear line, so that reading is tipped
  * back up by the offset measured between the two on the same clip.
+ * @param context The rig's rest pose and the mapping options.
+ * @param frame The detected frame, with the face reading if any.
+ * @param point Reads a visible body landmark.
+ * @param chest The chest's rotation, the fallback's frame of reference.
+ * @returns The head's world rotation, or null when it cannot be read.
  */
 const observeHead = (
   context: RetargetContext,
@@ -667,7 +738,12 @@ const observeHeadFromEars = (
   return frameChange({ primary: forward, lateral }, restFacing)
 }
 
-/** Split the head's turn away from the chest between the neck and the head. */
+/**
+ * Split the head's turn away from the chest between the neck and the head.
+ * @param context The rig's rest pose and the mapping options.
+ * @param head The head's world rotation.
+ * @param chest The chest's world rotation.
+ */
 const applyHead = (
   context: RetargetContext,
   head: THREE.Quaternion,
@@ -722,6 +798,11 @@ const restHandFrame = (rest: CameraRetargetRest, side: HandSide): SegmentFrame |
  * width apart and jitter by centimetres, so a palm read from them disagreed with the Hand
  * Landmarker's by more than 90° on about half the frames of the attached clip, and switching
  * between the two turned the hand over every time; they are only read when asked for.
+ * @param context The rig's rest pose and the mapping options.
+ * @param point Reads a visible body landmark.
+ * @param indices The side's arm landmark indices.
+ * @param handLandmarks The Hand Landmarker's reading for that side, if any.
+ * @returns The palm's frame, or null when it is not read.
  */
 const observePalm = (
   context: RetargetContext,
@@ -738,6 +819,10 @@ const observePalm = (
  * Aim the upper arm at the elbow and the forearm at the wrist, then turn the hand to the detected
  * palm. The upper arm's roll comes from which way the forearm swings off it, since an elbow only
  * bends one way; the forearm's roll comes from the palm, the only thing that shows it.
+ * @param context The rig's rest pose and the mapping options.
+ * @param side Which arm.
+ * @param point Reads a visible body landmark.
+ * @param handLandmarks The Hand Landmarker's reading for that side, if any.
  */
 const applyArm = (
   context: RetargetContext,
@@ -787,6 +872,9 @@ const applyArm = (
  * the detected palm and re-expressed relative to wherever the rig's own hand is right now, so a
  * hand filmed on its own, with no arm in view to place it, still curls and spreads its fingers
  * correctly on a rig whose arm stays at rest.
+ * @param context The rig's rest pose and the mapping options.
+ * @param side Which hand.
+ * @param landmarks The Hand Landmarker's reading.
  */
 const applyFingers = (
   context: RetargetContext,
@@ -822,6 +910,11 @@ const applyFingers = (
  * Which way the thigh is rolled: a bent knee points the opposite way from the shin's swing, while
  * a straight leg shows it only through where the foot points. Blending the two by how bent the
  * knee is keeps the roll from snapping as the leg straightens.
+ * @param context The rig's rest pose and the mapping options.
+ * @param thigh The thigh's direction.
+ * @param shin The shin's direction, when the ankle is in view.
+ * @param footForward Where the foot points, when it is in view.
+ * @returns The twist cue, or undefined without one.
  */
 const legTwistCue = (
   context: RetargetContext,
@@ -846,7 +939,14 @@ const legTwistCue = (
   }
 }
 
-/** Aim the thigh at the knee, the shin at the ankle and the foot at the toes, as far as each is in view. */
+/**
+ * Aim the thigh at the knee, the shin at the ankle and the foot at the toes, as far as each is in
+ * view.
+ * @param context The rig's rest pose and the mapping options.
+ * @param side Which leg.
+ * @param point Reads a visible body landmark.
+ * @returns True when the hip and knee were in view and the leg was driven.
+ */
 const applyLeg = (context: RetargetContext, side: HandSide, point: BodyPointReader): boolean => {
   const indices = LEG_LANDMARKS[side]
   const hip = point(indices.hip)
@@ -880,6 +980,7 @@ const applyLeg = (context: RetargetContext, side: HandSide, point: BodyPointRead
  * Lift or lower the whole rig so its lowest foot sits where it does at rest. World landmarks are
  * centred on the hips, so nothing in them says how high the body is: without this a crouch folds
  * the legs up off the floor instead of bringing the hips down.
+ * @param context The rig's bones and rest pose.
  */
 const groundFeet = (context: RetargetContext): void => {
   const hips = drivenBone(context, HIPS)

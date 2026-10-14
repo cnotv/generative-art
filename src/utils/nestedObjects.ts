@@ -6,6 +6,9 @@
 /**
  * Reads a value from a nested object using a dot-separated path.
  * Returns undefined if any segment along the path is missing.
+ * @param object The object to read.
+ * @param path Keys joined by dots.
+ * @returns The value, or undefined.
  */
 export const getNestedValue = (
   object: Record<string, unknown> | null | undefined,
@@ -26,6 +29,10 @@ export const getNestedValue = (
 /**
  * Returns a new object with the value at the given dot-separated path replaced.
  * All intermediate objects are shallow-copied (immutable update).
+ * @param object The object to update.
+ * @param path Keys joined by dots.
+ * @param value The new value.
+ * @returns A new object with the value set.
  */
 export const setNestedValueImmutable = (
   object: Record<string, unknown>,

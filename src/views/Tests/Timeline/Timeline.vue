@@ -121,13 +121,18 @@ interface ActivePathTick {
 
 const activePathTicks: ActivePathTick[] = []
 
-/** Manager + delta accessor captured during buildTimeline so path creation
- *  (preset or user-drawn) can register a driving timeline action. */
+/**
+ * Manager + delta accessor captured during buildTimeline so path creation
+ *  (preset or user-drawn) can register a driving timeline action.
+ */
 let pathTimelineManager: ReturnType<typeof createTimelineManager> | null = null
 let pathGetDelta: () => number = () => 0
 /** Static brick obstacles a walking follower collides with (set during buildTimeline). */
 let pathObstacles: ComplexModel[] = []
-/** Current dynamic obstacles (the spawned balls) a walking follower collides with. */
+/**
+ * Current dynamic obstacles (the spawned balls) a walking follower collides with.
+ * @returns The spawned balls.
+ */
 let pathBallProvider: () => ComplexModel[] = () => []
 
 const GOOMBA_WALK_CLIP = 'Take 001'
@@ -144,7 +149,10 @@ const JUMP_ARC_RATIO = 0.65
 /** Jump steps advance this much faster than the path speed, so hops feel snappy. */
 const JUMP_SPEED_MULTIPLIER = 3
 
-/** Keep a kinematic body in sync with the mesh moved by the path follower. */
+/**
+ * Keep a kinematic body in sync with the mesh moved by the path follower.
+ * @param mesh The mesh the follower moved.
+ */
 const syncKinematicBody = (mesh: THREE.Object3D): void => {
   const body = mesh.userData?.body as
     | { setNextKinematicTranslation?: (t: { x: number; y: number; z: number }) => void }
@@ -156,9 +164,13 @@ const syncKinematicBody = (mesh: THREE.Object3D): void => {
   })
 }
 
-/** True for animated models (goombas, which carry animation clips) that should
+/**
+ * True for animated models (goombas, which carry animation clips) that should
  *  walk/jump toward path nodes rather than be snapped onto the path curve. A cube
- *  has an empty `actions` object, so it stays a snapped (lerp) follower. */
+ *  has an empty `actions` object, so it stays a snapped (lerp) follower.
+ * @param mesh The follower's mesh.
+ * @returns True for a model with animation clips.
+ */
 const isWalkingFollower = (mesh: THREE.Object3D): boolean => {
   const actions = (mesh.userData as { actions?: Record<string, unknown> }).actions
   return !!actions && Object.keys(actions).length > 0
@@ -166,11 +178,17 @@ const isWalkingFollower = (mesh: THREE.Object3D): boolean => {
 
 const navRaycaster = new THREE.Raycaster()
 const navDirection = new THREE.Vector3()
-/** Frames a walking follower stays blocked against a same-height wall before it
- *  gives up and heads to the next node (so a wall-banging goomba turns around). */
+/**
+ * Frames a walking follower stays blocked against a same-height wall before it
+ *  gives up and heads to the next node (so a wall-banging goomba turns around).
+ */
 const PATH_BLOCKED_GIVEUP = 40
 
-/** Plays the model's walk clip and advances its mixer by delta. */
+/**
+ * Plays the model's walk clip and advances its mixer by delta.
+ * @param mesh The model.
+ * @param delta Seconds since the last frame.
+ */
 const playWalkClip = (mesh: THREE.Object3D, delta: number): void => {
   const userData = mesh.userData as {
     mixer?: THREE.AnimationMixer
@@ -182,8 +200,16 @@ const playWalkClip = (mesh: THREE.Object3D, delta: number): void => {
   userData.mixer.update(delta)
 }
 
-/** Steps the model horizontally toward the target unless a brick/ball blocks the
- *  ray ahead. Returns whether the way forward was blocked. */
+/**
+ * Steps the model horizontally toward the target unless a brick/ball blocks the
+ *  ray ahead. Returns whether the way forward was blocked.
+ * @param model The follower.
+ * @param dx Distance to the target along X.
+ * @param dz Distance to the target along Z.
+ * @param distanceXZ Distance to the target on the ground plane.
+ * @param step How far to move this frame.
+ * @returns True when something blocked the way.
+ */
 const stepFollowerHorizontal = (
   model: ComplexModel,
   dx: number,
@@ -205,7 +231,11 @@ const stepFollowerHorizontal = (
   return blocked
 }
 
-/** Lowers the follower toward a lower node (walking off a ledge). */
+/**
+ * Lowers the follower toward a lower node (walking off a ledge).
+ * @param model The follower.
+ * @param dy Height of the target above the follower, negative below.
+ */
 const applyFollowerDrop = (model: ComplexModel, dy: number): void => {
   if (dy < -PATH_ARRIVE_Y) model.position.y -= Math.min(PATH_FALL_STEP, -dy)
 }
@@ -214,6 +244,8 @@ const applyFollowerDrop = (model: ComplexModel, dy: number): void => {
  * Walks a non-stepped follower toward its current node, colliding with bricks/balls
  * via a forward ray (so a wall-banger stops and turns) and descending toward lower
  * nodes. Climbing is the stepped follower's job, not this one's.
+ * @param tick The follower's path state.
+ * @param getDelta Reads seconds since the last frame.
  */
 const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
@@ -235,10 +267,17 @@ const navigateWalkingFollower = (tick: ActivePathTick, getDelta: () => number): 
   syncKinematicBody(model)
 }
 
-/** Position the follower a fraction `t` along the segment a→b according to its
+/**
+ * Position the follower a fraction `t` along the segment a→b according to its
  *  type: a walk moves straight horizontally (a descent keeps its height and lets
  *  gravity drop it off the ledge); a forward jump arcs up and over onto the next
- *  ledge; an in-place jump hops straight up and back down at the same spot. */
+ *  ledge; an in-place jump hops straight up and back down at the same spot.
+ * @param model The follower.
+ * @param a The segment's start.
+ * @param b The segment's end.
+ * @param t How far along it, from 0 to 1.
+ * @param type Walk, forward jump or jump in place.
+ */
 const positionAlongSegment = (
   model: ComplexModel,
   a: CoordinateTuple,
@@ -261,23 +300,39 @@ const positionAlongSegment = (
   // goomba rests on whatever surface (brick top or ground) is under it.
 }
 
-/** Picks the next active segment after one completes: wrap when looping, else stop
- *  (sentinel -1) at the final segment. Ping-pong on stepped paths falls back to loop. */
+/**
+ * Picks the next active segment after one completes: wrap when looping, else stop
+ *  (sentinel -1) at the final segment. Ping-pong on stepped paths falls back to loop.
+ * @param segmentIndex The segment just completed.
+ * @param nodeCount How many nodes the path has.
+ * @param config Whether the path loops or ping-pongs.
+ * @returns The next segment, or -1 to stop.
+ */
 const nextStepIndex = (segmentIndex: number, nodeCount: number, config: PathConfig): number => {
   if (config.loop || config.pingPong) return (segmentIndex + 1) % nodeCount
   return segmentIndex >= nodeCount - 1 ? -1 : segmentIndex + 1
 }
 
-/** Length of a segment in scene units; an in-place jump is paced over its
- *  vertical travel since it covers no horizontal distance. */
+/**
+ * Length of a segment in scene units; an in-place jump is paced over its
+ *  vertical travel since it covers no horizontal distance.
+ * @param a The segment's start.
+ * @param b The segment's end.
+ * @param type Walk, forward jump or jump in place.
+ * @returns The length.
+ */
 const segmentLength = (a: CoordinateTuple, b: CoordinateTuple, type: PathStepType): number =>
   type === 'jump'
     ? JUMP_IN_PLACE_HEIGHT * 2
     : Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Number.EPSILON)
 
-/** Advances the stepped follower along its current segment; the per-cycle
+/**
+ * Advances the stepped follower along its current segment; the per-cycle
  *  breakdown of these steps is shown as labelled segments on the path's single
- *  timeline row. On completion it hands the active step to the next segment. */
+ *  timeline row. On completion it hands the active step to the next segment.
+ * @param tick The follower's path state.
+ * @param getDelta Reads seconds since the last frame.
+ */
 const advanceSteppedFollower = (tick: ActivePathTick, getDelta: () => number): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
   if (!entry || !entry.config.playing || entry.waypoints.length < 2) return
@@ -308,9 +363,16 @@ const advanceSteppedFollower = (tick: ActivePathTick, getDelta: () => number): v
   }
 }
 
-/** True if a brick lies between the walker and the next lerped walk position, so
+/**
+ * True if a brick lies between the walker and the next lerped walk position, so
  *  the goomba would cross a wall. The ray sits at the model's height, so brick
- *  tops it is standing on don't block, but a taller wall ahead does. */
+ *  tops it is standing on don't block, but a taller wall ahead does.
+ * @param model The walker.
+ * @param a The segment's start.
+ * @param b The segment's end.
+ * @param progress How far along it the next step lands.
+ * @returns True when a brick is in the way.
+ */
 const wallBlocksWalk = (
   model: ComplexModel,
   a: CoordinateTuple,
@@ -336,7 +398,14 @@ interface NavStepResult {
   blocked: boolean
 }
 
-/** Next node for a walking follower: bounce for ping-pong, wrap for loop, else stop. */
+/**
+ * Next node for a walking follower: bounce for ping-pong, wrap for loop, else stop.
+ * @param tick The follower's path state, for its ping-pong direction.
+ * @param index The current node.
+ * @param nodeCount How many nodes the path has.
+ * @param config Whether the path loops or ping-pongs.
+ * @returns The next node, or -1 to stop.
+ */
 const nextWalkIndex = (
   tick: ActivePathTick,
   index: number,
@@ -353,8 +422,13 @@ const nextWalkIndex = (
   return Math.min(index + 1, nodeCount - 1)
 }
 
-/** Advances a walking follower to its next node when it arrives, or when it has
- *  been banging a same-height wall long enough to "turn around". */
+/**
+ * Advances a walking follower to its next node when it arrives, or when it has
+ *  been banging a same-height wall long enough to "turn around".
+ * @param tick The follower's path state.
+ * @param nodeCount How many nodes the path has.
+ * @param config Whether the path loops or ping-pongs.
+ */
 const advanceTargetIndex = (
   tick: ActivePathTick,
   nodeCount: number,
@@ -370,8 +444,12 @@ const advanceTargetIndex = (
   }
 }
 
-/** Advances one path follower a frame: animated models walk/jump toward nodes,
- *  everything else (e.g. the moving cube) is lerped along the smoothed curve. */
+/**
+ * Advances one path follower a frame: animated models walk/jump toward nodes,
+ *  everything else (e.g. the moving cube) is lerped along the smoothed curve.
+ * @param tick The follower's path state.
+ * @param getDelta Reads seconds since the last frame.
+ */
 const advancePathTick = (tick: ActivePathTick, getDelta: () => number): void => {
   if (isWalkingFollower(tick.mesh)) {
     navigateWalkingFollower(tick, getDelta)
@@ -521,6 +599,7 @@ const COLOR_WHITE = 0xffffff
  * Generates a stipple dot texture: each pixel is independently random,
  * lit only when it clears BALL_NOISE_DOT_THRESHOLD, giving isolated dots
  * instead of the connected blobs produced by interpolated value noise.
+ * @returns The texture.
  */
 const createBallGrainTexture = (): THREE.CanvasTexture => {
   const pixelCount = BALL_NOISE_TEXTURE_SIZE * BALL_NOISE_TEXTURE_SIZE
@@ -554,7 +633,11 @@ const createBallGrainTexture = (): THREE.CanvasTexture => {
 
 const BALL_GRAIN_TEXTURE = createBallGrainTexture()
 
-/** Applies the gritty noise as a visible color map, bump, and roughness variation */
+/**
+ * Applies the gritty noise as a visible color map, bump, and roughness variation
+ * @param mesh The ball.
+ * @returns The same ball.
+ */
 const applyBallGrain = (mesh: THREE.Mesh): THREE.Mesh => {
   const material = mesh.material as THREE.MeshPhysicalMaterial
   material.map = BALL_GRAIN_TEXTURE
@@ -593,8 +676,11 @@ interface BricksGroupContext {
 
 const BRICK_GROUP_ID = 'bricks'
 
-/** Elements that should not appear as their own row in the panel: instanced/spawn
- *  group members (bricks, balls) and path visualization objects (line + nodes). */
+/**
+ * Elements that should not appear as their own row in the panel: instanced/spawn
+ *  group members (bricks, balls) and path visualization objects (line + nodes).
+ * @returns True for a grouped element or a path visual.
+ */
 const isGroupedPanelElement = (element: { name?: string; userData?: { isPathVisual?: boolean } }) =>
   element.userData?.isPathVisual === true ||
   element.name?.startsWith('brick-') === true ||
@@ -721,7 +807,10 @@ const isBallOutOfBounds = (element: ComplexModel) =>
   isBall(element) &&
   (Math.abs(element.position.x) > GROUND_SIZE || Math.abs(element.position.y) > GROUND_SIZE)
 
-/** Spawns a new ball each interval and removes any balls that have left the ground bounds */
+/**
+ * Spawns a new ball each interval and removes any balls that have left the ground bounds
+ * @returns The timeline action.
+ */
 const makeBallSpawnAction = ({
   scene,
   world,
@@ -776,8 +865,10 @@ const BALL_SPAWN_SCHEMA = {
   metalness: { min: 0, max: 1, step: 0.01, label: 'Metalness' }
 }
 
-/** Registers the balls spawn group: a single panel entry exposing the spawn timer
- * and shared mesh material, applying edits to every live ball and future spawns. */
+/**
+ * Registers the balls spawn group: a single panel entry exposing the spawn timer
+ * and shared mesh material, applying edits to every live ball and future spawns.
+ */
 const registerBallSpawnGroup = ({
   world,
   elements,
@@ -972,8 +1063,11 @@ const buildTimeline = async ({
   })
 }
 
-/** Path tube + nodes are shown only while the path's element is selected (and its
- *  own showPath/showNodes config + visibility allow it). */
+/**
+ * Path tube + nodes are shown only while the path's element is selected (and its
+ *  own showPath/showNodes config + visibility allow it).
+ * @param tick The path's state.
+ */
 const updateTickVisibility = (tick: ActivePathTick): void => {
   const entry = useDebugSceneStore().paths.find((p) => p.id === tick.id)
   if (!entry) return
@@ -1132,7 +1226,11 @@ const makePathTick = (elementName: string, mesh: THREE.Object3D): ActivePathTick
   return tick
 }
 
-/** Register a timeline action that drives this path's follower each frame. */
+/**
+ * Register a timeline action that drives this path's follower each frame.
+ * @param tick The path's state.
+ * @param elementName The follower's element name, for the action's label.
+ */
 const registerPathAction = (tick: ActivePathTick, elementName: string): void => {
   if (!pathTimelineManager) return
   tick.actionId = pathTimelineManager.addAction({
@@ -1142,8 +1240,13 @@ const registerPathAction = (tick: ActivePathTick, elementName: string): void => 
   })
 }
 
-/** Per-cycle step breakdown (name + duration in frames) of a stepped path, used
- *  to render labelled segments along the path's single timeline row. */
+/**
+ * Per-cycle step breakdown (name + duration in frames) of a stepped path, used
+ *  to render labelled segments along the path's single timeline row.
+ * @param waypoints The path's nodes.
+ * @param rate The follower's speed.
+ * @returns Each step's name and length in frames.
+ */
 const buildPathSegments = (
   waypoints: CoordinateTuple[],
   rate: number
@@ -1156,8 +1259,14 @@ const buildPathSegments = (
     return { name: type, frames: Math.max(1, Math.round(seconds / rate)) }
   })
 
-/** Register the single timeline action that drives a stepped follower, carrying
- *  the per-step breakdown as `segments` so the one row shows walk/jump pieces. */
+/**
+ * Register the single timeline action that drives a stepped follower, carrying
+ *  the per-step breakdown as `segments` so the one row shows walk/jump pieces.
+ * @param tick The path's state.
+ * @param elementName The follower's element name, for the action's label.
+ * @param waypoints The path's nodes.
+ * @param rate The follower's speed.
+ */
 const registerSteppedPathAction = (
   tick: ActivePathTick,
   elementName: string,
@@ -1212,7 +1321,14 @@ const enablePathForMesh = (
   useElementPropertiesStore().requestElementSelection(elementName)
 }
 
-/** Create a path with predefined nodes (no canvas drawing) and start it looping. */
+/**
+ * Create a path with predefined nodes (no canvas drawing) and start it looping.
+ * @param elementName The follower's element name.
+ * @param mesh The follower.
+ * @param scene The scene to draw the path in.
+ * @param waypoints The path's nodes.
+ * @param configOverrides Path settings to change from the defaults.
+ */
 const createPresetPath = (
   elementName: string,
   mesh: THREE.Object3D,
@@ -1235,9 +1351,16 @@ const createPresetPath = (
   waypoints.forEach((wp) => store.addPathWaypoint(pathId, wp))
 }
 
-/** Like createPresetPath, but the follower walks straight along flat/downward
+/**
+ * Like createPresetPath, but the follower walks straight along flat/downward
  *  steps and jumps a parabola up taller ones (or in place). Its single timeline
- *  row shows the per-step walk/jump breakdown via the action's `segments`. */
+ *  row shows the per-step walk/jump breakdown via the action's `segments`.
+ * @param elementName The follower's element name.
+ * @param mesh The follower.
+ * @param scene The scene to draw the path in.
+ * @param waypoints The path's nodes.
+ * @param rate The follower's speed.
+ */
 const createSteppedPresetPath = (
   elementName: string,
   mesh: THREE.Object3D,
@@ -1276,10 +1399,12 @@ const GOOMBA_STACK_TOP_Y = GRID_UNIT * 2
 // In-place jump apex: from the stack top (GRID_UNIT*2) reaches the coin (GRID_UNIT*3).
 const JUMP_IN_PLACE_HEIGHT = GRID_UNIT
 
-/** Goomba 1 forward-jumps up the central brick column onto the stacked cube,
+/**
+ * Goomba 1 forward-jumps up the central brick column onto the stacked cube,
  *  jumps in place to bump the coin block above it, then walks down the far column
  *  back to the ground and loops. The duplicated stack node is the in-place jump;
- *  segment types (walk / forward-jump / jump) are derived from the node geometry. */
+ *  segment types (walk / forward-jump / jump) are derived from the node geometry.
+ */
 const GOOMBA_1_CLIMB_PATH: CoordinateTuple[] = [
   [0, GOOMBA_GROUND_Y, GRID_UNIT],
   [0, GOOMBA_BRICK_TOP_Y, 0],
@@ -1292,15 +1417,22 @@ const GOOMBA_1_CLIMB_PATH: CoordinateTuple[] = [
   [-GRID_UNIT * 2, GOOMBA_GROUND_Y, GRID_UNIT]
 ]
 
-/** Goomba 2 walks straight into the lone wall-bang cube, bangs it, turns around,
- *  retreats, and repeats — the far node sits inside the cube so it stays blocked. */
+/**
+ * Goomba 2 walks straight into the lone wall-bang cube, bangs it, turns around,
+ *  retreats, and repeats — the far node sits inside the cube so it stays blocked.
+ */
 const GOOMBA_2_WALL_BANG_PATH: CoordinateTuple[] = [
   [GOOMBA_2_WALL_X, GOOMBA_GROUND_Y, GOOMBA_2_WALL_Z],
   [GOOMBA_2_WALL_X, GOOMBA_GROUND_Y, GOOMBA_2_WALL_FAR_Z]
 ]
 
-/** A rectangular loop of nodes at ground level, starting at the mesh's XZ.
- *  Goombas spawn at brick height; a ground loop makes them walk down and patrol. */
+/**
+ * A rectangular loop of nodes at ground level, starting at the mesh's XZ.
+ *  Goombas spawn at brick height; a ground loop makes them walk down and patrol.
+ * @param mesh The follower, for its starting X and Z.
+ * @param span The loop's side length.
+ * @returns The loop's four nodes.
+ */
 const loopWaypoints = (mesh: THREE.Object3D, span: number): CoordinateTuple[] => {
   const { x, z } = mesh.position
   const y = GOOMBA_GROUND_Y
@@ -1322,9 +1454,11 @@ interface PresetPathContext {
   rate: number
 }
 
-/** Replaces the previous hardcoded movement: the three goombas patrol a node
+/**
+ * Replaces the previous hardcoded movement: the three goombas patrol a node
  *  loop and the moving cube bobs vertically between two nodes, each driven by
- *  its own timeline action. */
+ *  its own timeline action.
+ */
 const createPresetMovementPaths = ({
   scene,
   goombaWallBangA,
@@ -1381,9 +1515,14 @@ const registerTimelinePaths = (
   }
 }
 
-/** Maps a clicked scene object to the panel element/group it belongs to: a path
+/**
+ * Maps a clicked scene object to the panel element/group it belongs to: a path
  *  tube to its element, bricks to the Bricks group, balls to the Balls group, and
- *  texture-area meshes (clouds) to their group; null if nothing selectable. */
+ *  texture-area meshes (clouds) to their group; null if nothing selectable.
+ * @param name The clicked object's name.
+ * @param store The debug scene store.
+ * @returns The element or group name, or null.
+ */
 const matchPickedByName = (
   name: string,
   store: ReturnType<typeof useDebugSceneStore>
@@ -1413,7 +1552,12 @@ const dragAnchor = new THREE.Vector3()
 const dragNdc = new THREE.Vector2()
 const dragPoint = new THREE.Vector3()
 
-/** Aim the shared drag raycaster at the pointer position. */
+/**
+ * Aim the shared drag raycaster at the pointer position.
+ * @param event The pointer event.
+ * @param canvasElement The canvas.
+ * @param camera The camera.
+ */
 const setDragRayFromEvent = (
   event: MouseEvent,
   canvasElement: HTMLCanvasElement,
@@ -1427,7 +1571,13 @@ const setDragRayFromEvent = (
   dragRaycaster.setFromCamera(dragNdc, camera)
 }
 
-/** Ground-plane (y=0) intersection of the pointer, or null if it misses. */
+/**
+ * Ground-plane (y=0) intersection of the pointer, or null if it misses.
+ * @param event The pointer event.
+ * @param canvasElement The canvas.
+ * @param camera The camera.
+ * @returns The point, or null.
+ */
 const groundPointFromEvent = (
   event: MouseEvent,
   canvasElement: HTMLCanvasElement,
@@ -1437,7 +1587,13 @@ const groundPointFromEvent = (
   return dragRaycaster.ray.intersectPlane(dragGroundPlane, dragPoint) ? dragPoint : null
 }
 
-/** Intersection of the pointer with the per-drag vertical plane (for Shift = Y). */
+/**
+ * Intersection of the pointer with the per-drag vertical plane (for Shift = Y).
+ * @param event The pointer event.
+ * @param canvasElement The canvas.
+ * @param camera The camera.
+ * @returns The point, or null.
+ */
 const verticalPointFromEvent = (
   event: MouseEvent,
   canvasElement: HTMLCanvasElement,
@@ -1447,7 +1603,12 @@ const verticalPointFromEvent = (
   return dragRaycaster.ray.intersectPlane(dragVerticalPlane, dragPoint) ? dragPoint : null
 }
 
-/** Anchor a camera-facing vertical plane at (x, 0, z) so Shift-drags read a Y. */
+/**
+ * Anchor a camera-facing vertical plane at (x, 0, z) so Shift-drags read a Y.
+ * @param camera The camera the plane faces.
+ * @param x The anchor's X.
+ * @param z The anchor's Z.
+ */
 const setDragVerticalPlane = (camera: THREE.Camera, x: number, z: number): void => {
   camera.getWorldDirection(dragDirection)
   dragDirection.y = 0
@@ -1457,7 +1618,10 @@ const setDragVerticalPlane = (camera: THREE.Camera, x: number, z: number): void 
   dragVerticalPlane.setFromNormalAndCoplanarPoint(dragDirection, dragAnchor)
 }
 
-/** The selected element's path tick (with a built tube), or null. */
+/**
+ * The selected element's path tick (with a built tube), or null.
+ * @returns The path and its tick, or null.
+ */
 const findSelectedPathTick = (): { entry: PathEntry; tick: ActivePathTick } | null => {
   const name = useElementPropertiesStore().selectedElementName
   if (!name) return null
@@ -1477,8 +1641,12 @@ interface PathDragState {
   shift: boolean
 }
 
-/** Which node was grabbed on pointerdown (null = whole path via the tube), or
- *  null overall if the pointer missed both the nodes and the tube. */
+/**
+ * Which node was grabbed on pointerdown (null = whole path via the tube), or
+ *  null overall if the pointer missed both the nodes and the tube.
+ * @param tick The path's state.
+ * @returns The node grabbed, null for the whole path, or null overall on a miss.
+ */
 const resolvePathGrab = (tick: ActivePathTick): { nodeIndex: number | null } | null => {
   if (!tick.pathLine) return null
   const nodeHit = dragRaycaster.intersectObjects(tick.waypointNodes, true)[0]
@@ -1488,8 +1656,15 @@ const resolvePathGrab = (tick: ActivePathTick): { nodeIndex: number | null } | n
   return { nodeIndex }
 }
 
-/** Pointer delta in world units for this move; null skips (miss or mode switch).
- *  Holding Shift moves along Y only; otherwise along the ground X/Z. */
+/**
+ * Pointer delta in world units for this move; null skips (miss or mode switch).
+ *  Holding Shift moves along Y only; otherwise along the ground X/Z.
+ * @param event The pointer event.
+ * @param canvasElement The canvas.
+ * @param camera The camera.
+ * @param state The drag so far.
+ * @returns The move in world units, or null.
+ */
 const pathDragDelta = (
   event: PointerEvent,
   canvasElement: HTMLCanvasElement,
@@ -1522,8 +1697,14 @@ const pathDragDelta = (
   return delta
 }
 
-/** Translate the dragged waypoint (or all of them, for a whole-path drag) and
- *  refresh the tube + node meshes. */
+/**
+ * Translate the dragged waypoint (or all of them, for a whole-path drag) and
+ *  refresh the tube + node meshes.
+ * @param scene The scene the path is drawn in.
+ * @param entry The path.
+ * @param tick The path's state.
+ * @param movedIndex The node dragged, or null for the whole path.
+ */
 const applyPathDrag = (
   scene: THREE.Scene,
   entry: PathEntry,
@@ -1541,8 +1722,14 @@ const applyPathDrag = (
   })
 }
 
-/** Drag the selected path's tube (whole path) or a node (just that node) on the
- *  ground plane — or along Y while Shift is held; orbit is suspended meanwhile. */
+/**
+ * Drag the selected path's tube (whole path) or a node (just that node) on the
+ *  ground plane — or along Y while Shift is held; orbit is suspended meanwhile.
+ * @param scene The scene the path is drawn in.
+ * @param getCamera Reads the active camera.
+ * @param orbit The orbit controls, suspended while dragging.
+ * @returns Removes the listeners.
+ */
 const registerPathDrag = (
   scene: THREE.Scene,
   getCamera: () => THREE.Camera,
@@ -1605,8 +1792,13 @@ const registerPathDrag = (
   }
 }
 
-/** Click-to-select: maps a viewport click to its panel element/group while the
- *  Elements panel is open. */
+/**
+ * Click-to-select: maps a viewport click to its panel element/group while the
+ *  Elements panel is open.
+ * @param scene The scene to pick from.
+ * @param getCamera Reads the active camera.
+ * @returns Removes the listeners.
+ */
 const registerScenePicker = (scene: THREE.Scene, getCamera: () => THREE.Camera): (() => void) => {
   const panelsStore = usePanelsStore()
   const store = useDebugSceneStore()

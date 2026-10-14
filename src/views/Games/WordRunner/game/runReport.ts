@@ -9,6 +9,7 @@ type RaceEnd = {
 /**
  * Who reached the finish first, measured when the player crossed it. A loss is against the
  * first rival over the line; a win against the rival closest behind.
+ * @returns Whether the player won, the metres between them and that rival, and the rival's name.
  */
 export const raceResult = ({ playerSeconds, finishDistance, rivals }: RaceEnd): RaceResult => {
   const finished = rivals.filter(
@@ -43,7 +44,10 @@ type RunEnd = {
   race: RaceResult
 }
 
-/** What the end screen says about a level: the race and the score. */
+/**
+ * What the end screen says about a level: the race and the score.
+ * @returns The race result, time, and how many words were right.
+ */
 export const buildRunReport = ({ results, words, seconds, race }: RunEnd): RunReport => ({
   race,
   seconds,

@@ -17,12 +17,26 @@ const isGameOver = computed(() => gameState.value?.status === 'game-over')
 const isNewHighScore = computed(() => gameState.value?.data.isNewHighScore as boolean | undefined)
 const gameScore = computed(() => (gameState.value?.data.score as number | undefined) ?? 0)
 const gameStatus = computed(() => gameState.value?.status)
-const setStatus = (status: GameStatus) => gameState.value?.setStatus(status)
-const setScore = (score: number) => gameState.value.setData('score', score)
+/**
+ * Sets the game's status.
+ * @param status The new status.
+ */
+const setStatus = (status: GameStatus): void => {
+  gameState.value?.setStatus(status)
+}
+/**
+ * Sets the game's score.
+ * @param score The new score.
+ */
+const setScore = (score: number): void => {
+  gameState.value.setData('score', score)
+}
 const highestScore = computed(() => gameState.value.data.highestScore)
 
 /**
  * Load high score from localStorage
+ * @param highScoreKey The storage key.
+ * @returns The stored high score, 0 when there is none.
  */
 const loadHighScore = (highScoreKey = 'goomba-runner-high-score'): number => {
   const saved = localStorage.getItem(highScoreKey)
@@ -34,6 +48,8 @@ const loadHighScore = (highScoreKey = 'goomba-runner-high-score'): number => {
 
 /**
  * Check if current score is a new high score and save it
+ * @param highScoreKey The storage key.
+ * @returns True when the score beat the high score.
  */
 const checkHighScore = (highScoreKey = 'goomba-runner-high-score'): boolean => {
   const currentScore = gameState.value.data.score
@@ -50,6 +66,7 @@ const checkHighScore = (highScoreKey = 'goomba-runner-high-score'): boolean => {
 
 /**
  * Increment the game score by specified points
+ * @param points Points to add.
  */
 const incrementGameScore = (points: number): void => {
   if (!isNaN(points)) {
@@ -57,6 +74,11 @@ const incrementGameScore = (points: number): void => {
   }
 }
 
+/**
+ * Starts Rapier physics and, when the config asks, a helper that draws the colliders.
+ * @param scene The scene to add the helper to.
+ * @returns The physics object and the helper.
+ */
 const initPhysics = async (scene: THREE.Scene) => {
   //Initialize physics engine using the script in the jsm/physics folder
   const physics = await RapierPhysics()
@@ -77,6 +99,12 @@ interface GlitchOptions {
   zPosition: number
 }
 
+/**
+ * Gives a semi-transparent element a render order by depth, so overlapping layers do not flicker as
+ * the camera turns.
+ * @param result The element.
+ * @param options Its opacity and depth.
+ */
 const preventGlitches = (result: ComplexModel, options: GlitchOptions) => {
   // Fix texture opacity glitches during camera rotation
   if (result.mesh && options.opacity < 1) {
@@ -94,6 +122,9 @@ const preventGlitches = (result: ComplexModel, options: GlitchOptions) => {
 
 /**
  * Increase speed based on score (0.1 speed increase per 10 points)
+ * @param base The base speed.
+ * @param score The score.
+ * @returns The speed for that score.
  */
 const getSpeed = (base: number, score: number): number => {
   const speedMultiplier = 1 + score * 0.001
@@ -101,6 +132,10 @@ const getSpeed = (base: number, score: number): number => {
   return speed
 }
 
+/**
+ * Stops the browser from zooming, selecting text or opening menus on touch, which would interrupt
+ * play.
+ */
 const prevents = () => {
   // Prevent iOS zoom and selection behaviors
   const preventZoomAndSelection = (e: Event) => {

@@ -4,6 +4,12 @@ import { PIECE_CATALOG } from './pieceCatalog'
 
 const ORIGIN_TRANSFORM: PieceTransform = { position: [0, 0, 0], yaw: 0 }
 
+/**
+ * Moves a point from a piece's own frame into the world, by the piece's position and turn.
+ * @param transform The piece's position and turn.
+ * @param localOffset The point in the piece's frame.
+ * @returns The point in world space.
+ */
 export const applyPieceTransform = (
   transform: PieceTransform,
   localOffset: CoordinateTuple
@@ -26,6 +32,11 @@ const advanceCursor = (cursor: PieceTransform, piece: PlacedPiece): PieceTransfo
   }
 }
 
+/**
+ * Works out where each piece of a track sits, each starting where the previous one ends.
+ * @param pieces The pieces in track order.
+ * @returns Each piece's position and turn.
+ */
 export const computeChainTransforms = (pieces: PlacedPiece[]): PieceTransform[] =>
   pieces.reduce<{ transforms: PieceTransform[]; cursor: PieceTransform }>(
     ({ transforms, cursor }, piece) => ({

@@ -94,6 +94,7 @@ const createDirectionEmitter = (
 /**
  * iOS gates the sensor behind a static permission request that no other engine defines, so its
  * presence — never the user agent — is what decides whether a prompt is required.
+ * @returns The permission request, or null where no prompt is needed or the sensor is missing.
  */
 const getPermissionRequest = (): OrientationPermissionRequest | null => {
   if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return null
@@ -264,6 +265,7 @@ export function createMotionController(
   /**
    * Ask for sensor access. Must be called from a real tap: the prompt requires transient
    * activation, and a browser only offers it once.
+   * @returns Whether access was granted, denied, or the device has no sensor.
    */
   async function requestPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
     if (!isSupported()) return 'unsupported'

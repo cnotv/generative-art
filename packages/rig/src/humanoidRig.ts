@@ -2,11 +2,20 @@ import * as THREE from 'three'
 import { HUMANOID_BONE_HIERARCHY } from './config'
 import type { HumanoidBoneDefinition, HumanoidSkeleton } from './types'
 
-/** +1 for a left-side bone, -1 for right, 0 down the centreline */
+/**
+ * +1 for a left-side bone, -1 for right, 0 down the centreline
+ * @param side The bone's side, if any.
+ * @returns The sign that mirrors a spread to that side.
+ */
 const resolveSideSign = (side: HumanoidBoneDefinition['side']): number =>
   side === 'left' ? 1 : side === 'right' ? -1 : 0
 
-/** Where a template bone's joint sits in world space, scaled to the model's own bounding box */
+/**
+ * Where a template bone's joint sits in world space, scaled to the model's own bounding box
+ * @param definition The template bone, its height and spread as fractions of the model.
+ * @param box The model's bounding box.
+ * @returns The joint's world position.
+ */
 const worldPositionFor = (definition: HumanoidBoneDefinition, box: THREE.Box3): THREE.Vector3 => {
   const height = box.max.y - box.min.y
   const halfWidth = (box.max.x - box.min.x) / 2
@@ -73,7 +82,11 @@ interface BoneSegment {
   end: THREE.Vector3
 }
 
-/** Each bone's joint and its first child's joint, the segment a limb's mesh hugs */
+/**
+ * Each bone's joint and its first child's joint, the segment a limb's mesh hugs
+ * @param bones The skeleton's bones, with up-to-date world matrices.
+ * @returns One segment per bone; a bone with no child bone is a point.
+ */
 const buildBoneSegments = (bones: THREE.Bone[]): BoneSegment[] =>
   bones.map((bone, index) => {
     const start = bone.getWorldPosition(new THREE.Vector3())
@@ -84,7 +97,12 @@ const buildBoneSegments = (bones: THREE.Bone[]): BoneSegment[] =>
     return { index, start, end }
   })
 
-/** Shortest distance from a point to a bone's segment (its joint to its first child's joint) */
+/**
+ * Shortest distance from a point to a bone's segment (its joint to its first child's joint)
+ * @param point The point to measure from.
+ * @param segment The bone's segment.
+ * @returns The distance.
+ */
 const distanceToSegment = (point: THREE.Vector3, segment: BoneSegment): number => {
   const direction = segment.end.clone().sub(segment.start)
   const lengthSquared = direction.lengthSq()
@@ -99,7 +117,13 @@ const distanceToSegment = (point: THREE.Vector3, segment: BoneSegment): number =
   return point.distanceTo(closest)
 }
 
-/** The mesh vertex sitting nearest (straight-line) to a bone's segment, to seed the graph search from. */
+/**
+ * The mesh vertex sitting nearest (straight-line) to a bone's segment, to seed the graph search
+ * from.
+ * @param segment The bone's segment.
+ * @param positions The mesh's vertex positions.
+ * @returns Index of the nearest vertex.
+ */
 const nearestVertexToSegment = (segment: BoneSegment, positions: THREE.Vector3[]): number =>
   positions.reduce(
     (best, position, index) => {
@@ -114,7 +138,11 @@ interface VertexGraph {
   neighbors: number[][]
 }
 
-/** Triangle corner triples, from an indexed or a flat (three-vertices-per-face) geometry. */
+/**
+ * Triangle corner triples, from an indexed or a flat (three-vertices-per-face) geometry.
+ * @param geometry The mesh geometry.
+ * @returns Vertex indices, three per triangle.
+ */
 const readTriangleIndices = (geometry: THREE.BufferGeometry): number[] =>
   geometry.index
     ? [...geometry.index.array]
@@ -127,6 +155,7 @@ const readTriangleIndices = (geometry: THREE.BufferGeometry): number[] =>
  * points across a narrow gap (an armpit and the chest below it, one finger and its neighbour)
  * read as close in straight-line distance but far apart once a path has to stay on the surface.
  * @param geometry The mesh geometry to build a graph over
+ * @returns The vertex positions and each vertex's neighbours.
  */
 const buildVertexGraph = (geometry: THREE.BufferGeometry): VertexGraph => {
   const positionAttribute = geometry.attributes.position
@@ -166,7 +195,14 @@ interface FrontierNode {
 
 type SettledVertices = Map<number, { boneIndex: number; distance: number }>
 
-/** Extend the frontier with a settled node's unsettled neighbours, updating a shorter path in place. */
+/**
+ * Extend the frontier with a settled node's unsettled neighbours, updating a shorter path in place.
+ * @param current The node just settled.
+ * @param graph The vertex graph.
+ * @param frontier Nodes waiting to be settled.
+ * @param settled Vertices already settled, with their bone and distance.
+ * @returns The new frontier.
+ */
 const relaxNeighbors = (
   current: FrontierNode,
   graph: VertexGraph,
@@ -196,7 +232,12 @@ interface GeodesicState {
   settled: SettledVertices
 }
 
-/** Settle the frontier's nearest node, the one Dijkstra step, expressed without mutation. */
+/**
+ * Settle the frontier's nearest node, the one Dijkstra step, expressed without mutation.
+ * @param state The frontier and the settled vertices.
+ * @param graph The vertex graph.
+ * @returns The state after settling one more vertex.
+ */
 const geodesicStep = (state: GeodesicState, graph: VertexGraph): GeodesicState => {
   if (state.frontier.length === 0) return state
 
@@ -219,6 +260,9 @@ const geodesicStep = (state: GeodesicState, graph: VertexGraph): GeodesicState =
  * ponytail: an O(vertices^2) multi-source Dijkstra (linear scan for the frontier minimum,
  * matching this repo's own pathfinding style rather than a priority queue). Fine for the
  * low-poly meshes this tool targets; a binary heap would be the upgrade for a dense scan mesh.
+ * @param seeds One starting node per bone.
+ * @param graph The vertex graph.
+ * @returns Each reached vertex's nearest bone and surface distance.
  */
 const runGeodesicMultiSource = (seeds: FrontierNode[], graph: VertexGraph): SettledVertices =>
   Array.from({ length: graph.positions.length }).reduce<GeodesicState>(
@@ -243,6 +287,10 @@ interface VertexWeights {
  * Blend a settled vertex with a neighbouring bone only where its graph-neighbours disagree with
  * it, so a seam (elbow, shoulder) grades smoothly across the one or two rings of vertices
  * actually straddling it instead of every vertex committing fully to a single bone.
+ * @param vertexIndex The vertex to weigh.
+ * @param settled Each vertex's nearest bone.
+ * @param neighbors Each vertex's neighbours.
+ * @returns The vertex's two bones and their weights.
  */
 const blendSettledVertex = (
   vertexIndex: number,
@@ -272,7 +320,13 @@ const blendSettledVertex = (
   }
 }
 
-/** Euclidean nearest-two-bones fallback, for a vertex the surface graph search never reached (an isolated mesh island disconnected from every bone seed). */
+/**
+ * Euclidean nearest-two-bones fallback, for a vertex the surface graph search never reached (an
+ * isolated mesh island disconnected from every bone seed).
+ * @param point The vertex position.
+ * @param segments Every bone's segment.
+ * @returns The two nearest bones and their weights.
+ */
 const weighByStraightLineDistance = (
   point: THREE.Vector3,
   segments: BoneSegment[]
@@ -291,7 +345,11 @@ const weighByStraightLineDistance = (
   }
 }
 
-/** Store each vertex's two bones and their weights as the attributes a SkinnedMesh reads. */
+/**
+ * Store each vertex's two bones and their weights as the attributes a SkinnedMesh reads.
+ * @param geometry The geometry to write to.
+ * @param perVertexWeights Each vertex's two bones and weights.
+ */
 const writeSkinAttributes = (
   geometry: THREE.BufferGeometry,
   perVertexWeights: VertexWeights[]
@@ -337,7 +395,6 @@ export const rigAutoSkinMesh = (geometry: THREE.BufferGeometry, bones: THREE.Bon
  * price of letting weight bleed across a narrow gap such as an armpit.
  * @param geometry The geometry to skin in place, adding skinIndex and skinWeight attributes
  * @param bones The skeleton's bones, in skeleton order, with up-to-date world matrices
- * @returns Nothing; the attributes are added to the geometry
  */
 export const rigAutoSkinMeshByDistance = (
   geometry: THREE.BufferGeometry,

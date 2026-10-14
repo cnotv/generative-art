@@ -39,7 +39,6 @@ interface RegisterObjectOptions {
 /**
  * Builds the position and rotation controls for a Three.js object, for a caller that hands
  * the configuration to `addSceneElement` rather than registering it on its own.
- *
  * @param object - The Three.js Object3D to inspect and control
  * @param title - Display title in the properties panel
  * @returns The properties configuration for that object
@@ -56,7 +55,6 @@ export const createObjectPropertiesConfig = (
 
 /**
  * Registers a Three.js object's position and rotation for the element properties panel.
- *
  * @param options.object - The Three.js Object3D to inspect and control
  * @param options.name - Unique element name for registration
  * @param options.title - Display title in the properties panel (defaults to name)

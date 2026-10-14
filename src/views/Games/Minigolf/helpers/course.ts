@@ -174,6 +174,7 @@ const buildWallCollider = (
  * @param hole Hole configuration
  * @param scene Scene to add to
  * @param world Rapier world
+ * @returns The wall meshes and their bodies, for later removal
  */
 export const buildWalls = (
   hole: HoleConfig,

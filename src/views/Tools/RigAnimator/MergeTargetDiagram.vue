@@ -11,7 +11,11 @@ const emit = defineEmits<{
   toggleGroup: [group: RigBodyPartGroup]
 }>()
 
-/** Each region's own accessible label, e.g. "Merge Target: Left Arm". */
+/**
+ * Each region's own accessible label, e.g. "Merge Target: Left Arm".
+ * @param group The body-part group.
+ * @returns The label.
+ */
 const regionLabel = (group: RigBodyPartGroup): string =>
   `Merge Target: ${RIG_BODY_PART_GROUP_LABELS[group]}`
 </script>

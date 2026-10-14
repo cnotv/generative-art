@@ -176,10 +176,9 @@ const runWizardAction = (state: WizardFocusState, action: MenuAction, source: Me
  * `[data-lui-row]` rows, left/right between controls in a row, activate clicks
  * buttons and edit-cycles number/select inputs (committing on each bump).
  * Renders gamepad hints via `useGamepadHint`.
- *
- * @param {Ref<HTMLElement | null>} root The wizard root element containing the rows
- * @param {() => boolean} isBlocked When it returns true, navigation input is ignored
- * @returns {{ focusedHint: Ref<import('@/composables/useGamepadHint').HintState>, inputSource: Ref<string | null>, jumpToAutofocus: () => void }} Hint state, input source and autofocus jump
+ * @param root The wizard root element containing the rows
+ * @param isBlocked When it returns true, navigation input is ignored
+ * @returns Hint state, input source and autofocus jump
  */
 export const useLobbyWizardFocus = (root: Ref<HTMLElement | null>, isBlocked: () => boolean) => {
   const editing = ref<HTMLElement | null>(null)

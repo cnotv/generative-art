@@ -113,6 +113,12 @@ function pollAxes(
   })
 }
 
+/**
+ * Picks the gamepad to read: the one pinned by index when still connected, otherwise the first
+ * connected one.
+ * @param preferredIndex Index of the pad last used, if any.
+ * @returns The gamepad, or null when none is connected.
+ */
 export function findActiveGamepad(preferredIndex: number | null): Gamepad | null {
   const gamepads = navigator.getGamepads()
   if (preferredIndex !== null) {
@@ -122,6 +128,14 @@ export function findActiveGamepad(preferredIndex: number | null): Gamepad | null
   return gamepads.find((gp): gp is Gamepad => !!gp) ?? null
 }
 
+/**
+ * Polls connected gamepads and turns button presses and stick movement into actions.
+ * @param mappingReference Holds the current mapping, so a remap applies without rebinding.
+ * @param handlers Receive each action as it starts and ends.
+ * @param buttonMap Button names in the order the Gamepad API reports them.
+ * @param axisThreshold How far a stick must move before it counts.
+ * @returns The controller, to start and stop polling.
+ */
 export function createGamepadController(
   mappingReference: { current: ControlMapping },
   handlers: ControlHandlers,

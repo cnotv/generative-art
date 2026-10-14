@@ -57,6 +57,9 @@ const pushHistory = (history: number[], value: number): number[] => {
  * A `bucketOffset` is computed once from completed buckets so every position
  * is a fixed offset from that base — values only advance when a new complete
  * bucket of `step` seconds is available, staying frozen in between.
+ * @param values The samples, oldest first.
+ * @param count How many seconds the chosen range covers.
+ * @returns Exactly BASE_POINTS samples.
  */
 const downsample = (values: number[], count: number): number[] => {
   const fill = values.length > 0 ? values[0] : 0

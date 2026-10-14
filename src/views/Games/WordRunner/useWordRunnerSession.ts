@@ -114,6 +114,10 @@ const bindRaceEvents = (context: SessionContext, joined: P2PSession): void => {
 /**
  * The P2P session for a Word Runner room: who is in it, which level the host starts, when
  * everyone has loaded it, and where every ball is until it crosses the line. Chat too.
+ * @param options The room, player name and colour.
+ * @param callbacks Called when the race starts, goes and ends.
+ * @returns The local peer, whether it hosts, and functions to start, ready, go, report progress and
+ *   chat.
  */
 export const useWordRunnerSession = (options: WrSessionOptions, callbacks: SessionCallbacks) => {
   const store = useWordRunnerStore()

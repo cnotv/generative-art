@@ -25,11 +25,21 @@ export const poseApply = (bones: THREE.Bone[], pose: Pose): void => {
   })
 }
 
-/** Keyframes ordered earliest first, required for a valid Three.js keyframe track */
+/**
+ * Keyframes ordered earliest first, required for a valid Three.js keyframe track
+ * @param keyframes The keyframes in any order.
+ * @returns A sorted copy.
+ */
 const sortKeyframesByFrame = (keyframes: PoseKeyframe[]): PoseKeyframe[] =>
   [...keyframes].sort((a, b) => a.frame - b.frame)
 
-/** Build one bone's rotation track from every keyframe that posed it */
+/**
+ * Build one bone's rotation track from every keyframe that posed it
+ * @param boneName The bone the track drives.
+ * @param sortedKeyframes Every keyframe, earliest first.
+ * @param fps Frames per second, to turn frames into seconds.
+ * @returns The track, or null when no keyframe poses the bone.
+ */
 const buildBoneTrack = (
   boneName: string,
   sortedKeyframes: PoseKeyframe[],

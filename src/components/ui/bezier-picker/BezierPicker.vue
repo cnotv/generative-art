@@ -94,7 +94,10 @@ const getPointerInSvg = (event: MouseEvent | TouchEvent): { x: number; y: number
   return { x: local.x, y: local.y }
 }
 
-/** The preset whose control points sit closest to where the handles have been dragged. */
+/**
+ * The preset whose control points sit closest to where the handles have been dragged.
+ * @returns The nearest preset.
+ */
 const nearestPreset = (): Preset =>
   PRESETS.reduce((best, preset) => {
     const distance =

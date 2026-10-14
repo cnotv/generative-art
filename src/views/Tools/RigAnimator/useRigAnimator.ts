@@ -14,8 +14,13 @@ import {
 } from './keyframeOps'
 import type { RigAnimatorConfig } from './types'
 
-/** Composes the rig/model, keyframe, camera-pose-capture, hand-pose and physics state for the
- * rig animator tool, each split into its own focused composable. */
+/**
+ * Composes the rig/model, keyframe, camera-pose-capture, hand-pose and physics state for the
+ * rig animator tool, each split into its own focused composable.
+ * @param config The tool's config.
+ * @returns The state and actions of every composable it combines, plus the ones that span several
+ *   of them.
+ */
 export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   const rigModel = useRigModel(config)
   const rigKeyframes = useRigKeyframes(
@@ -29,13 +34,19 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   const recordedPresets = useRigRecordedPresets()
   const rigPhysics = useRigPhysics(config, rigModel.bones, rigModel.model)
 
-  /** Point both the renderer's scene and the physics world at the same scene. */
+  /**
+   * Point both the renderer's scene and the physics world at the same scene.
+   * @param scene The scene to use.
+   */
   const setScene = (scene: Parameters<typeof rigModel.setScene>[0]): void => {
     rigModel.setScene(scene)
     rigPhysics.setPhysicsScene(scene)
   }
 
-  /** Load a model and drop whatever keyframes and bodies belonged to the one it replaces. */
+  /**
+   * Load a model and drop whatever keyframes and bodies belonged to the one it replaces.
+   * @param url The model's URL.
+   */
   const loadModel = async (url: string): Promise<void> => {
     rigPhysics.clearPhysics()
     await rigModel.loadModel(url)
@@ -44,18 +55,31 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
   }
 
   /** Capture the rig's current pose as a keyframe at the panel's current frame. */
-  const addKeyframe = (): void => rigKeyframes.addKeyframe(rigModel.bones.value)
+  const addKeyframe = (): void => {
+    rigKeyframes.addKeyframe(rigModel.bones.value)
+  }
 
-  /** Capture a keyframe without the rebuild-and-persist cost `addKeyframe` pays every call —
+  /**
+   * Capture a keyframe without the rebuild-and-persist cost `addKeyframe` pays every call —
    * see `captureKeyframeSilently`'s own doc comment. For motion recording's per-frame sampling;
-   * call `commitRecordedKeyframes` once the burst of captures ends. */
-  const captureKeyframeSilently = (): void =>
+   * call `commitRecordedKeyframes` once the burst of captures ends.
+   */
+  const captureKeyframeSilently = (): void => {
     rigKeyframes.captureKeyframeSilently(rigModel.bones.value)
+  }
 
-  /** The rig's current pose, for motion recording's in-between samples. */
+  /**
+   * The rig's current pose, for motion recording's in-between samples.
+   * @returns The current pose.
+   */
   const capturePose = (): Pose => poseCapture(rigModel.bones.value)
 
-  /** Swap a finished take's live keyframes for its filtered ones, before they are committed. */
+  /**
+   * Swap a finished take's live keyframes for its filtered ones, before they are committed.
+   * @param fromFrame The take's first frame.
+   * @param toFrame Its last frame.
+   * @param keyframes The filtered keyframes.
+   */
   const replaceRecordedTake = (
     fromFrame: number,
     toFrame: number,
@@ -69,9 +93,11 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     )
   }
 
-  /** Swap in an edited keyframe list, then rebuild, persist and show the pose at the playhead.
+  /**
+   * Swap in an edited keyframe list, then rebuild, persist and show the pose at the playhead.
    * @param keyframes The edited list
-   * @param label What the edit is called in the history log */
+   * @param label What the edit is called in the history log
+   */
   const commitEditedKeyframes = (keyframes: PoseKeyframe[], label: string): void => {
     if (keyframes === rigKeyframes.keyframes.value) return
     rigKeyframes.keyframes.value = keyframes
@@ -79,32 +105,53 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     rigKeyframes.scrubToFrame(config.value.frame)
   }
 
-  /** Smooth the keyframes at `frames` one pass further, see `filterKeyframesInList`. */
-  const filterKeyframes = (frames: number[]): void =>
+  /**
+   * Smooth the keyframes at `frames` one pass further, see `filterKeyframesInList`.
+   * @param frames The keyframes to smooth.
+   */
+  const filterKeyframes = (frames: number[]): void => {
     commitEditedKeyframes(
       filterKeyframesInList(rigKeyframes.keyframes.value, frames),
       'Polished keyframes'
     )
+  }
 
-  /** Halve the keyframes at `frames`, see `reduceKeyframesInList`. */
-  const reduceKeyframes = (frames: number[]): void =>
+  /**
+   * Halve the keyframes at `frames`, see `reduceKeyframesInList`.
+   * @param frames The keyframes to halve.
+   */
+  const reduceKeyframes = (frames: number[]): void => {
     commitEditedKeyframes(
       reduceKeyframesInList(rigKeyframes.keyframes.value, frames),
       'Halved keyframes'
     )
+  }
 
   /** Rebuild the preview clip and persist once, after a burst of `captureKeyframeSilently` calls. */
-  const commitRecordedKeyframes = (): void => rigKeyframes.commitKeyframes('Recorded motion')
+  const commitRecordedKeyframes = (): void => {
+    rigKeyframes.commitKeyframes('Recorded motion')
+  }
 
   /** Paste the copied pose(s) onto the current frame and apply the landing one to the live rig. */
-  const pasteKeyframes = (): void => rigKeyframes.pasteKeyframes(rigModel.bones.value)
+  const pasteKeyframes = (): void => {
+    rigKeyframes.pasteKeyframes(rigModel.bones.value)
+  }
 
-  /** Load a bundled example animation, merged into `targetGroups` (see `mergeKeyframes`). */
+  /**
+   * Load a bundled example animation, merged into `targetGroups` (see `mergeKeyframes`).
+   * @param url The animation's URL.
+   * @param targetGroups The body-part groups it may change.
+   * @returns Resolves once the animation is merged in.
+   */
   const loadPreset = (url: string, targetGroups: Set<RigBodyPartGroup>): Promise<void> =>
     rigKeyframes.loadPreset(url, boneNamesInGroups(rigModel.bones.value, targetGroups))
 
-  /** Load a session recording back onto the timeline, merged into `targetGroups` the same way
-   * a bundled preset is. */
+  /**
+   * Load a session recording back onto the timeline, merged into `targetGroups` the same way
+   * a bundled preset is.
+   * @param index The recording's index.
+   * @param targetGroups The body-part groups it may change.
+   */
   const applyRecordedPreset = (index: number, targetGroups: Set<RigBodyPartGroup>): void => {
     const preset = recordedPresets.recordedPresets.value[index]
     if (preset) {
@@ -115,10 +162,12 @@ export const useRigAnimator = (config: Ref<RigAnimatorConfig>) => {
     }
   }
 
-  /** Clear every keyframe and the autosave behind them, and snap the live rig back to its rest
+  /**
+   * Clear every keyframe and the autosave behind them, and snap the live rig back to its rest
    * pose: a blank edit with the rig left wherever the last keyframe or drag happened to leave it
    * would read as though the reset had failed. The playhead goes back to frame 0 too, since a
-   * blank timeline with the playhead still parked wherever it was reads the same way. */
+   * blank timeline with the playhead still parked wherever it was reads the same way.
+   */
   const resetAutosave = (): void => {
     rigKeyframes.resetAutosave()
     rigModel.resetAllBonesToRest()

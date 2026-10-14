@@ -15,6 +15,7 @@ const MARKER_SEGMENTS = 8
  * How far the rig's bones spread in world space, so markers and the position panel field can
  * scale to match any model.
  * @param bones The rig's bones, with up-to-date world matrices
+ * @returns The length of the bones' bounding box diagonal.
  */
 export const computeRigDiagonal = (bones: THREE.Bone[]): number => {
   const box = new THREE.Box3()
@@ -22,7 +23,11 @@ export const computeRigDiagonal = (bones: THREE.Bone[]): number => {
   return box.getSize(new THREE.Vector3()).length()
 }
 
-/** How many Bone ancestors sit between this bone and the skeleton's root (root itself is 0). */
+/**
+ * How many Bone ancestors sit between this bone and the skeleton's root (root itself is 0).
+ * @param bone The bone.
+ * @returns Its depth in the hierarchy.
+ */
 const boneDepth = (bone: THREE.Bone): number =>
   bone.parent instanceof THREE.Bone ? boneDepth(bone.parent) + 1 : 0
 

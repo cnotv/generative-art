@@ -314,6 +314,11 @@ const clearCanvas = (canvas: HTMLCanvasElement | null): void => {
   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
 }
 
+/**
+ * Manage a rhythm game round: scoring, combo, lane input and the song's progress.
+ * @param deps The scene, audio and chart the round plays against
+ * @returns Reactive score state and the round's lifecycle controls
+ */
 export const useRhythmGame = (deps: GameDeps) => {
   const score = ref(0)
   const combo = ref(0)

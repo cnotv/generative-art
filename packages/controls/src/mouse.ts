@@ -6,10 +6,10 @@ export interface MouseController {
 }
 
 /**
- *
- * @param mappingReference
- * @param mappingReference.current
- * @param handlers
+ * Turns mouse presses into the action mapped to a tap.
+ * @param mappingReference Holds the current mapping, so a remap applies without rebinding.
+ * @param handlers Receive each action as it starts and ends.
+ * @returns The controller, to bind and unbind its listeners.
  */
 export function createMouseController(
   mappingReference: { current: ControlMapping },

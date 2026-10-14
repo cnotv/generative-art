@@ -45,7 +45,7 @@ const pickWeightedLetter = (): string =>
 
 /**
  * Shuffle array in place, returning a new shuffled copy.
- * @param arr - Input array.
+ * @param array Input array
  * @returns New shuffled array.
  */
 export const shuffleArray = <T>(array: T[]): T[] =>

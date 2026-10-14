@@ -9,6 +9,9 @@ export type PathEntry = { path: Position2D[] | null; color: number; yOffset?: nu
 /**
  * Creates a single path debug visualizer for multiple paths.
  * Returns an updater that renders all path waypoints as colored spheres.
+ * @param scene The scene to draw in.
+ * @param navGridConfig The navigation grid's size and offset.
+ * @returns Draws the given paths, or hides them.
  */
 export const createPathDebug = (
   scene: THREE.Scene,

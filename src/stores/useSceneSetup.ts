@@ -11,6 +11,12 @@ export interface SceneElementDefinition {
   onUpdate?: (path: string, value: unknown) => void
 }
 
+/**
+ * Registers each element's properties with the Elements panel and returns a config ref per element,
+ * kept in step with the panel.
+ * @param elementDefinitions Each element's starting config and property schema, by name.
+ * @returns One config ref per element, by name.
+ */
 export const useSceneSetup = (
   elementDefinitions: Record<string, SceneElementDefinition>
 ): Record<string, Ref<Record<string, unknown>>> => {

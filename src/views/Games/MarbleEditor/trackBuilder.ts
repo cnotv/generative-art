@@ -22,6 +22,12 @@ import {
 
 const ORIGIN: PieceTransform = { position: [0, 0, 0], yaw: 0 }
 
+/**
+ * Spreads the marbles' spawn points evenly across the start piece's lane.
+ * @param startTransform The start piece's position and turn, or null for the origin.
+ * @param count How many marbles.
+ * @returns One spawn point per marble.
+ */
 export const computeSpawnPositions = (
   startTransform: PieceTransform | null,
   count: number
@@ -35,9 +41,20 @@ export const computeSpawnPositions = (
   })
 }
 
+/**
+ * The middle of the finish piece's zone.
+ * @param finishTransform The finish piece's position and turn.
+ * @returns The zone's centre in world space.
+ */
 export const finishZoneCenter = (finishTransform: PieceTransform): CoordinateTuple =>
   applyPieceTransform(finishTransform, [0, 0, -FINISH_LENGTH / 2])
 
+/**
+ * Says whether a marble is inside the finish zone.
+ * @param position The marble's position.
+ * @param finishTransform The finish piece's position and turn, or null without one.
+ * @returns True inside the zone.
+ */
 export const isInFinishZone = (
   position: { x: number; y: number; z: number },
   finishTransform: PieceTransform | null
@@ -51,6 +68,12 @@ export const isInFinishZone = (
   )
 }
 
+/**
+ * Says whether a marble is over a boost pad, in the pad's own frame.
+ * @param position The marble's position.
+ * @param zone The pad's position, turn and size.
+ * @returns True over the pad.
+ */
 export const isOnBoostZone = (
   position: { x: number; y: number; z: number },
   zone: BoostZone
@@ -66,6 +89,14 @@ export const isOnBoostZone = (
   return Math.abs(localX) <= zone.width / 2 && Math.abs(localZ) <= zone.length / 2 && withinHeight
 }
 
+/**
+ * The furthest piece ahead of the current checkpoint that the marble is near, so checkpoints only
+ * move forward.
+ * @param position The marble's position on the ground plane.
+ * @param transforms Each piece's position and turn.
+ * @param currentIndex The checkpoint reached so far.
+ * @returns The new checkpoint index.
+ */
 export const nearestCheckpointIndex = (
   position: { x: number; z: number },
   transforms: PieceTransform[],
@@ -87,6 +118,14 @@ const boostZoneFromTransform = (transform: PieceTransform): BoostZone => ({
   width: LANE_WIDTH
 })
 
+/**
+ * Builds a map's pieces into the scene with merged colliders, and finds its start, finish and boost
+ * pads.
+ * @param scene The scene to build in.
+ * @param world The physics world for the colliders.
+ * @param map The map.
+ * @returns The pieces' transforms, the start and finish, the boost zones, and dispose.
+ */
 export const buildTrack = (scene: THREE.Scene, world: RAPIER.World, map: MarbleMap): BuiltTrack => {
   const transforms = computeChainTransforms(map.pieces)
   const models = map.pieces.flatMap((piece, index) =>

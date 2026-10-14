@@ -36,6 +36,10 @@ const REANNOUNCE_DELAY_MS = 2000
 /**
  * Resolve a marble id that isn't already claimed by another peer.
  * Returns the requested marble if it's free, otherwise the first unclaimed one.
+ * @param requestedMarble The marble the player asked for.
+ * @param store The game store, holding every player's marble.
+ * @param ownPeerId The player's own peer id.
+ * @returns The marble id to use.
  */
 const resolveMarble = (
   requestedMarble: string,
@@ -191,6 +195,7 @@ const initSessionForContext = (ctx: MmContext, roomId: string): void => {
  * Manage a MarbleMadness P2P session (peers, chat, ball positions, finish sync).
  * @param options - Session configuration including name, color, and room ID.
  * @param onBallPos - Called when a peer broadcasts their marble position.
+ * @param onStart Called with the track index when the host starts.
  * @returns Session controls and reactive state.
  */
 export const useMarbleMadnessSession = (

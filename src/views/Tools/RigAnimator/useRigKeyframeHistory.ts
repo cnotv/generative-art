@@ -16,6 +16,7 @@ interface RigKeyframeHistoryDeps {
  * user change both survives a refresh and becomes one step the user can walk back. Split out of
  * `useRigKeyframes` so that composable stays under the line cap.
  * @param deps The keyframe state and the clip rebuild this needs from `useRigKeyframes`
+ * @returns The undo state and log, undo, redo and goTo, and persistAutosave and reopenHistory.
  */
 export const useRigKeyframeHistory = ({
   config,

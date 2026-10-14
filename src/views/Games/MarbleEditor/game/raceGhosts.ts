@@ -14,6 +14,10 @@ export type GhostRegistry = {
   scene: THREE.Scene | null
 }
 
+/**
+ * An empty set of remote players' marbles, before the scene exists.
+ * @returns The registry.
+ */
 export const createGhostRegistry = (): GhostRegistry => ({ entries: new Map(), scene: null })
 
 const makeGhostMesh = (scene: THREE.Scene, placement: GhostPlacement): THREE.Mesh => {
@@ -43,6 +47,11 @@ export type GhostPlacement = {
   decorate?: (mesh: THREE.Mesh) => void
 }
 
+/**
+ * Moves a remote player's marble and label, creating them the first time.
+ * @param registry The ghosts.
+ * @param placement The player's id, position, colour, texture and name.
+ */
 export const placeGhost = (registry: GhostRegistry, placement: GhostPlacement): void => {
   if (!registry.scene) return
   const { peerId, pos, name, nameColor } = placement
@@ -57,6 +66,11 @@ export const placeGhost = (registry: GhostRegistry, placement: GhostPlacement): 
   if (entry.label) updateNameLabelPosition(entry.label, pos)
 }
 
+/**
+ * Removes a remote player's marble and label.
+ * @param registry The ghosts.
+ * @param peerId The player's id.
+ */
 export const removeGhost = (registry: GhostRegistry, peerId: string): void => {
   const entry = registry.entries.get(peerId)
   if (!entry || !registry.scene) return
@@ -67,6 +81,10 @@ export const removeGhost = (registry: GhostRegistry, peerId: string): void => {
   registry.entries.delete(peerId)
 }
 
+/**
+ * Removes every remote player's marble and forgets the scene.
+ * @param registry The ghosts.
+ */
 export const clearGhosts = (registry: GhostRegistry): void => {
   ;[...registry.entries.keys()].forEach((peerId) => removeGhost(registry, peerId))
   registry.scene = null

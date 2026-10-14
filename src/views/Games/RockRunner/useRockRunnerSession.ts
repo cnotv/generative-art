@@ -120,7 +120,6 @@ const bindGameEvents = (context: SessionContext, joined: P2PSession): void => {
 /**
  * P2P session for the rock runner: seed distribution so every peer generates
  * the same endless track, plus live rock positions, distances and chat.
- *
  * @param options - Local player identity and room
  * @param callbacks - Hooks for remote rock positions and seed changes
  * @returns Session state and broadcast helpers

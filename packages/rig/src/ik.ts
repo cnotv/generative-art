@@ -13,7 +13,6 @@ const IK_EPSILON = 1e-6
  * @param bone The bone to rotate
  * @param currentWorldDirection The direction the bone points right now, normalized
  * @param desiredWorldDirection The direction the bone should point, normalized
- * @returns Nothing; mutates the bone's local quaternion
  */
 export const ikApplyWorldDirectionToBone = (
   bone: THREE.Bone,
@@ -56,7 +55,6 @@ export const ikFindTwoBoneChain = (bone: THREE.Bone): TwoBoneIkChain | null => {
  * @param poleWorldPosition A hint for which way the mid joint should bend, in world space;
  *   the chain's own current mid-bone position is a reasonable choice, so the bend stays where
  *   it already visually is as the target moves
- * @returns Nothing; mutates the root and mid bones' local quaternions
  */
 export const ikSolveTwoBoneChain = (
   chain: TwoBoneIkChain,
@@ -129,7 +127,6 @@ export const ikSolveTwoBoneChain = (
  * @param child The bone being aimed at the target, whose own local transform is never touched
  * @param targetWorldPosition The direction to aim toward, in world space; only its direction
  *   from the parent matters, not its distance
- * @returns Nothing; mutates the parent bone's local quaternion
  */
 export const ikSolveOneBoneAim = (
   parent: THREE.Bone,

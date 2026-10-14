@@ -252,6 +252,9 @@ export const configControls = {
 /**
  * Generate perimeter wall positions for the island.
  * Returns positions along the edges of a square island, avoiding corners.
+ * @param islandSize The island's width.
+ * @param cellSize The width of one wall cell.
+ * @returns One wall position per cell along each edge.
  */
 export const generateWallPositions = (islandSize: number, cellSize: number): CoordinateTuple[] => {
   const half = islandSize / 2

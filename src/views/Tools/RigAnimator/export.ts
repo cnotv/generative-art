@@ -5,7 +5,11 @@ import { downloadDataUrl } from '@/utils/downloadDataUrl'
 
 type TextureSlot = { material: THREE.Material; key: string; texture: THREE.Texture }
 
-/** Every texture on the model's materials, with the material property it is held in. */
+/**
+ * Every texture on the model's materials, with the material property it is held in.
+ * @param model The model.
+ * @returns Each texture with its material and property name.
+ */
 const textureSlotsOf = (model: THREE.Object3D): TextureSlot[] =>
   model
     .getObjectsByProperty('isMesh', true)
@@ -17,7 +21,11 @@ const textureSlotsOf = (model: THREE.Object3D): TextureSlot[] =>
         .map(([key, texture]) => ({ material, key, texture }))
     )
 
-/** Whether the exporter can draw a texture's image: loaded, and with pixels to read. */
+/**
+ * Whether the exporter can draw a texture's image: loaded, and with pixels to read.
+ * @param image The texture's image.
+ * @returns True when it can be drawn.
+ */
 const isImageReadable = (image: unknown): boolean =>
   image instanceof HTMLImageElement
     ? image.complete && image.naturalWidth > 0

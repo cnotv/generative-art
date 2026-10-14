@@ -264,7 +264,6 @@ type RockMaps = ReturnType<typeof loadRockMaps>
 /**
  * Dresses a ball as stone. Every rock in the scene shares one set of maps, so a
  * room full of players costs the same five textures as one.
- *
  * @param mesh - Ball to dress, its material mutated in place
  * @param maps - The shared texture set
  * @param tint - Multiplied over the albedo; the player's colour for a ghost
@@ -425,7 +424,6 @@ const buildRunSetupConfig = (spawn: CoordinateTuple) => ({
 /**
  * Spreads players across the start line so several rocks can share the track
  * without spawning inside each other.
- *
  * @param path - The track being run
  * @param gateCount - How many players are starting
  * @param gateIndex - Which slot this player takes
@@ -451,7 +449,6 @@ export const spawnPosition = (
 // once when the run begins.
 /**
  * Holds the rock still through the countdown and releases it into the run.
- *
  * @param state - The run's mutable state, holding the rock
  * @returns The gate's hold and release handlers
  */
@@ -581,6 +578,9 @@ type StickmanCosmeticsState = {
  * a texture load is not cheap at all, so both are skipped once applied,
  * until the config changes or a restart swaps in a fresh rig instance that
  * has never had them applied.
+ * @param stickman The rig to apply the cosmetics to
+ * @param config The opacity and texture to apply
+ * @param tracked What was last applied, and to which rig instance
  */
 const applyStickmanCosmetics = (
   stickman: THREE.Object3D,
@@ -1135,7 +1135,6 @@ const createRunState = (): RunState => ({
  * The endless run: an auto-forward rock steered along a seeded procedural
  * track, with the ground and every illustration area generated ahead of it and
  * disposed behind.
- *
  * @param deps - Canvas, track seed, networking hooks and player identity
  * @returns Reactive run state plus lifecycle and ghost controls
  */

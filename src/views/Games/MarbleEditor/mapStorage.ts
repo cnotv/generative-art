@@ -36,15 +36,27 @@ const parseJson = (raw: string | null): unknown => {
   }
 }
 
+/**
+ * Stores the map being edited.
+ * @param map The map.
+ */
 export const saveCurrentMap = (map: MarbleMap): void => {
   localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(map))
 }
 
+/**
+ * Reads the map last edited.
+ * @returns The map, or null when none is stored or it is not valid.
+ */
 export const loadCurrentMap = (): MarbleMap | null => {
   const parsed = parseJson(localStorage.getItem(STORAGE_KEY_CURRENT))
   return isMarbleMap(parsed) ? parsed : null
 }
 
+/**
+ * Reads the maps saved by name.
+ * @returns The valid saved maps.
+ */
 export const listSavedMaps = (): MarbleMap[] => {
   const parsed = parseJson(localStorage.getItem(STORAGE_KEY_SAVED))
   if (!Array.isArray(parsed)) return []
@@ -56,11 +68,22 @@ const persistSavedMaps = (maps: MarbleMap[]): MarbleMap[] => {
   return maps
 }
 
+/**
+ * Saves a map under a name, replacing one with that name.
+ * @param map The map.
+ * @param name The name.
+ * @returns Every saved map.
+ */
 export const saveMapAs = (map: MarbleMap, name: string): MarbleMap[] => {
   const named: MarbleMap = { ...map, name }
   const others = listSavedMaps().filter((saved) => saved.name !== name)
   return persistSavedMaps([...others, named])
 }
 
+/**
+ * Deletes a saved map.
+ * @param name Its name.
+ * @returns The saved maps left.
+ */
 export const deleteSavedMap = (name: string): MarbleMap[] =>
   persistSavedMaps(listSavedMaps().filter((saved) => saved.name !== name))

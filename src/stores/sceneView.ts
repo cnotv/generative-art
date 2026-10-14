@@ -160,6 +160,8 @@ const DEFAULT_HEMISPHERE = { skyColor: 0xbfe3ff, groundColor: 0x8a8f7a }
  * The panel keeps hemisphere colors as skyColor/groundColor while SetupConfig carries a
  * tuple. Always present so the panel can offer all four lights: a scene without one gets
  * it at zero intensity, which creates nothing and changes nothing until it is raised.
+ * @param hemisphereOverrides The scene's hemisphere colours and intensity, if any.
+ * @returns The panel's hemisphere entry.
  */
 const buildHemisphereConfig = (
   hemisphereOverrides: { colors?: [number, number]; intensity?: number } | undefined
@@ -255,6 +257,9 @@ type LightPanelReferences = {
  * set rather than the values from before it. The panel keeps the directional position as
  * {x, y, z} and the hemisphere colors as skyColor/groundColor, while the preset carries
  * tuples.
+ * @param current The panel's light state.
+ * @param presetConfig The preset just applied.
+ * @returns The panel state with the preset's values.
  */
 const mirrorLightPresetIntoConfig = (
   current: Record<string, unknown>,
@@ -307,6 +312,9 @@ const mirrorLightPresetIntoConfig = (
 /**
  * Hide or restore the whole rig as one: every light object plus the environment map,
  * which is not a scene child and so has to be stashed rather than made invisible.
+ * @param scene The scene whose lights are toggled.
+ * @param environmentStash The environment map stashed when the rig was hidden, if any.
+ * @returns The environment map to keep stashed, or null once restored.
  */
 const toggleLightRigVisibility = (
   scene: THREE.Scene,
@@ -400,6 +408,8 @@ export type LightGroup =
  * Translate one group of the panel's light state into the config `updateLights` takes:
  * the panel keeps the directional position as {x, y, z} and the hemisphere colors as
  * skyColor/groundColor, while the package expects tuples.
+ * @param lightsConfig The panel's light state.
+ * @returns The hemisphere update, colours as a tuple.
  */
 const buildHemisphereUpdate = (
   lightsConfig: Record<string, unknown>
@@ -1128,7 +1138,12 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
   const getAreaMeshes = (areaName: string): THREE.Object3D[] => areaMeshCache.value[areaName] ?? []
 
-  /** Resolve a panel row to its object: a numbered duplicate carries the uuid of its own. */
+  /**
+   * Resolve a panel row to its object: a numbered duplicate carries the uuid of its own.
+   * @param scene The scene to search.
+   * @param name The panel row's element name.
+   * @returns The object, or undefined when it is gone.
+   */
   const findSceneObject = (scene: THREE.Scene, name: string): THREE.Object3D | undefined => {
     const objectId = debugSceneStore.sceneElements.find(
       (element) => element.name === name

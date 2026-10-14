@@ -103,7 +103,6 @@ const isModalScopeActive = (): boolean =>
  * grace). Game controls that bypass useMenuNavigation must check this before
  * firing one-shot actions, so pad presses inside a dialog do not leak into
  * gameplay handlers.
- *
  * @returns True while a modal navigation scope is active
  */
 export const isMenuModalActive = (): boolean => isModalScopeActive()

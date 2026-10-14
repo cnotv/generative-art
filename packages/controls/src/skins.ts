@@ -12,8 +12,7 @@ export const CONTROL_SKINS: ControlSkin[] = [
 
 /**
  * Get the id of the skin flagged as default, falling back to the first skin.
- *
- * @returns {ControlSkinId} The default skin id
+ * @returns The default skin id
  */
 export function getDefaultSkinId(): ControlSkinId {
   return (CONTROL_SKINS.find((skin) => skin.isDefault) ?? CONTROL_SKINS[0]).id

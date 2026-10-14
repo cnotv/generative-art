@@ -11,7 +11,6 @@ const HALF = 0.5
 
 /**
  * How many billboards an area places over a stretch of track.
- *
  * @param frequency - Instances per SCATTER_FREQUENCY_UNIT of track
  * @param length - Length of the stretch
  * @returns A non-negative instance count
@@ -22,7 +21,6 @@ export const scatterInstanceCount = (frequency: number, length: number): number 
 /**
  * Applies a symmetric variation around a base value, matching the convention
  * the cloud area already uses: the result lands in `base +/- variation`.
- *
  * @param base - Value to vary
  * @param variation - Maximum deviation in either direction
  * @param sample - A value in [0, 1)
@@ -38,7 +36,6 @@ export const applyVariation = (base: number, variation: number, sample: number):
  * grows through the ground the rock is rolling on. On-track areas stay inside
  * the deck. Areas placed everywhere run the band exactly as given, crossing the
  * deck edge so ground cover reads as continuous. Background areas sit far out.
- *
  * @param placement - Which band the area scatters into
  * @param config - The area's tunable distance band
  * @param sideSample - A value in [0, 1) choosing the bank
@@ -84,7 +81,6 @@ export type ScatterPlacementOptions = {
  * twice. Every instance faces back along the local heading, which is where the
  * chase camera always is, so the flat illustrations read as upright props with
  * no per-frame billboard work.
- *
  * @param options - Path, area config, stretch bounds, seed and texture count
  * @returns The instances to build, in stable seeded order
  */

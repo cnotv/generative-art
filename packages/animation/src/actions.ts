@@ -139,6 +139,10 @@ export const getTimelineSegmentOccurrences = (
  * Span for a continuous action (no `end`, `duration` or `interval`), which runs
  * indefinitely from `start`. Yields a span covering the whole range from `start`
  * onward, or nothing if the action hasn't started by the end of the range.
+ * @param action The continuous action.
+ * @param rangeStartFrame First frame of the range.
+ * @param rangeEndFrame Last frame of the range.
+ * @returns One span from the later of start and the range start to the range end, or none.
  */
 const getContinuousActionOccurrences = (
   action: Timeline,
@@ -151,7 +155,13 @@ const getContinuousActionOccurrences = (
     : []
 }
 
-/** Span for a non-repeating, non-continuous action, if it overlaps the range. */
+/**
+ * Span for a non-repeating, non-continuous action, if it overlaps the range.
+ * @param action The action with a fixed end or duration.
+ * @param rangeStartFrame First frame of the range.
+ * @param rangeEndFrame Last frame of the range.
+ * @returns The action's span when it overlaps the range, or none.
+ */
 const getSingleActionOccurrences = (
   action: Timeline,
   rangeStartFrame: number,
@@ -161,7 +171,14 @@ const getSingleActionOccurrences = (
   return span.end >= rangeStartFrame && span.start <= rangeEndFrame ? [span] : []
 }
 
-/** Spans for every occurrence of a repeating (`interval`-based) action overlapping the range. */
+/**
+ * Spans for every occurrence of a repeating (`interval`-based) action overlapping the range.
+ * @param interval Frames running, then frames paused, per cycle.
+ * @param delay Frame the first cycle starts on.
+ * @param rangeStartFrame First frame of the range.
+ * @param rangeEndFrame Last frame of the range.
+ * @returns One span per running phase that overlaps the range.
+ */
 const getIntervalActionOccurrences = (
   interval: [number, number],
   delay: number,
@@ -187,6 +204,10 @@ const getIntervalActionOccurrences = (
  * that overlaps the range. An action with none of `end`, `duration` or `interval`
  * is treated as continuous (runs indefinitely from `start`), so it yields a span
  * covering the whole range from `start` onward.
+ * @param action The action to expand.
+ * @param rangeStartFrame First frame of the range.
+ * @param rangeEndFrame Last frame of the range.
+ * @returns The spans the action covers inside the range.
  */
 const getActionOccurrences = (
   action: Timeline,

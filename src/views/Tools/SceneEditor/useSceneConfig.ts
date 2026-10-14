@@ -56,6 +56,9 @@ const lightsConfig = ref<SceneLightsConfig>({
 const skyConfig = ref<SceneSkyConfig>({ ...DEFAULT_SKY_CONFIG })
 const handlers = ref<SceneConfigHandlers | null>(null)
 
+/**
+ * Puts the shared scene config back to its defaults, so tests start from a clean state.
+ */
 export const _resetSceneConfig = () => {
   groundConfig.value = { ...DEFAULT_GROUND_CONFIG }
   lightsConfig.value = {
@@ -66,6 +69,11 @@ export const _resetSceneConfig = () => {
   handlers.value = null
 }
 
+/**
+ * Shared ground, lights and sky config for the scene editor, and the handlers that apply edits to
+ * the running scene.
+ * @returns The config refs, the field updaters and handler registration
+ */
 export const useSceneConfig = () => {
   const registerSceneHandlers = (newHandlers: SceneConfigHandlers) => {
     handlers.value = newHandlers

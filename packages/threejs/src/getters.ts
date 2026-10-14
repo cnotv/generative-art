@@ -17,6 +17,13 @@ type SceneOptions = {
   scene?: { background?: number }
 }
 
+/**
+ * Creates a renderer, scene, perspective camera, clock and physics world for a canvas, initialising
+ * Rapier first.
+ * @param canvas The canvas to render into.
+ * @param options The camera's position and field of view, and the background colour.
+ * @returns The renderer, scene, camera, clock and world.
+ */
 export const getScene = async (
   canvas: HTMLCanvasElement,
   options: SceneOptions = {
@@ -49,10 +56,9 @@ export const getScene = async (
 
 /**
  * Create and return ground with physic, helper and texture
- * @param scene
- * @param world
- * @param { size, position, helpers, color, texture }
- * @returns
+ * @param scene The scene to add the ground to.
+ * @param world The physics world to add its body to.
+ * @returns The ground mesh, its fixed body and collider, and the helper when asked for.
  */
 export const getGround = (
   scene: THREE.Scene,
@@ -112,20 +118,19 @@ export const getGround = (
 
 /**
  * Populate a given area with a given amount of instances
- * @param {InstanceConfig} config - Instance configuration object
- * @param {number} [config.amount] - Number of instances to create
- * @param {CoordinateTuple} [config.size] - Base size [x, y, z] of each instance
- * @param {CoordinateTuple} [config.sizeVariation] - Random size variation [x, y, z] to add to base size
- * @param {CoordinateTuple} [config.position] - Base position [x, y, z] of instances
- * @param {CoordinateTuple} [config.positionVariation] - Random position variation [x, y, z] range
- * @param {CoordinateTuple} [config.rotation] - Base rotation [x, y, z] in degrees
- * @param {CoordinateTuple} [config.rotationVariation] - Random rotation variation [x, y, z] range in degrees
- * @param {number} [config.area] - Area divisor for legacy positioning
- * @param {number} [config.ratio] - Width to height ratio multiplier (legacy)
- * @param {number} [config.spacing] - Spacing between instances along X axis (legacy)
- * @param {number} [config.opacity] - Opacity value (stored but not used in generation)
- * @param {CoordinateTuple} groundSize - Ground dimensions [width, height, depth]
- * @returns {GeneratedInstanceConfig} Array of instance configurations
+ * @param config - Instance configuration object
+ * @param [config.amount] - Number of instances to create
+ * @param [config.size] - Base size [x, y, z] of each instance
+ * @param [config.sizeVariation] - Random size variation [x, y, z] to add to base size
+ * @param [config.position] - Base position [x, y, z] of instances
+ * @param [config.positionVariation] - Random position variation [x, y, z] range
+ * @param [config.rotation] - Base rotation [x, y, z] in degrees
+ * @param [config.rotationVariation] - Random rotation variation [x, y, z] range in degrees
+ * @param [config.area] - Area divisor for legacy positioning
+ * @param [config.ratio] - Width to height ratio multiplier (legacy)
+ * @param [config.spacing] - Spacing between instances along X axis (legacy)
+ * @param [config.opacity] - Opacity value (stored but not used in generation)
+ * @returns Array of instance configurations
  */
 export const getInstanceConfig = ({
   size = [1, 1, 1],
@@ -175,6 +180,12 @@ export const getInstanceConfig = ({
   return generatedConfig
 }
 
+/**
+ * Works out where a camera should sit behind a model, from an offset in the model's own frame.
+ * @param model The model to follow.
+ * @param config The offset, in the model's frame.
+ * @returns The camera position in world space.
+ */
 export const getOffset = (
   model: Model,
   config: { offset: { x: number; y: number; z: number } }
@@ -295,7 +306,7 @@ const buildCollider = (
  * @param world
  * @param position
  * @param size
- * @param {Object} options - The options for the physics body and collider.
+ * @param {object} options - The options for the physics body and collider.
  * @param {number} [options.boundary=0] - The boundary size of the collider.
  * @param {number} [options.restitution=0] - The restitution (bounciness) of the collider.
  * @param {number} [options.friction=0] - The friction of the collider against other objects.
@@ -307,7 +318,7 @@ const buildCollider = (
  * @param {'fixed' | 'dynamic'} [options.type='fixed'] - The type of the rigid body.
  * @param {'cuboid' | 'ball' | 'cylinder' | 'capsule'} [options.shape='cuboid'] - The shape of the collider.
  * @param {boolean} [options.ccd=false] - Continuous collision detection: sweeps the body's whole path each step, for anything fast enough to pass through what it should hit.
- * @returns {Object} The created rigid body and collider.
+ * @returns {object} The created rigid body and collider.
  * @returns
  */
 
@@ -362,6 +373,12 @@ const resolvePhysicOptions = (options: PhysicOptions): ResolvedPhysicOptions => 
   ...resolvePhysicColliderOptions(options)
 })
 
+/**
+ * Creates the rigid body and collider for a model, and a character controller for kinematic bodies.
+ * @param world The physics world to add them to.
+ * @param options The body type, shape, size, position, rotation and material settings.
+ * @returns The rigid body, its collider, and the character controller when one was made.
+ */
 export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
   const {
     rotation,
@@ -422,6 +439,11 @@ export const getPhysic = (world: RAPIER.World, options: PhysicOptions) => {
 export const getPixelRatio = (devicePixelRatio: number, maxPixelRatio = 2): number =>
   Math.min(devicePixelRatio, maxPixelRatio)
 
+/**
+ * Creates an antialiased renderer with transparency and shadows enabled.
+ * @param canvas The canvas to render into.
+ * @returns The renderer.
+ */
 export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
   // Alpha is always on: it costs nothing for a scene that clears to an opaque colour,
   // and it is what lets `scene.transparent` show a layer behind the canvas later.
@@ -434,6 +456,11 @@ export const getRenderer = (canvas: HTMLCanvasElement): THREE.WebGLRenderer => {
   return renderer
 }
 
+/**
+ * Adds a sky sphere around the scene, coloured or textured on its inside.
+ * @param scene The scene to add the sky to.
+ * @returns The sky mesh.
+ */
 export const getSky = (
   scene: THREE.Scene,
   {
@@ -462,9 +489,10 @@ export const getSky = (
 
 /**
  * Get default textures
- * @param img
- * @param repeat
- * @returns
+ * @param img URL of the image.
+ * @param repeat How many times it tiles across and down.
+ * @param offset Where the tiling starts.
+ * @returns The texture, in sRGB and set to repeat.
  */
 export const getTextures = (
   img: string,

@@ -41,8 +41,9 @@ interface BackgroundLayerOptions {
 
 /**
  * Calculate Out of Sight (OoS) status for background elements
- * @param camera
- * @param background
+ * @param camera The game camera.
+ * @param background The background element.
+ * @returns True once the element has passed out of the camera's view.
  */
 const isOoS = (
   camera: THREE.PerspectiveCamera,
@@ -77,6 +78,14 @@ const isOoS = (
   return background.mesh.position.x < cameraPos.x - removalOffset
 }
 
+/**
+ * Adds one background element at a random variation of its layer's settings.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @param options The layer's texture, size, position and variation.
+ * @param initialX Where to place it across, instead of off the right edge.
+ * @returns The background element.
+ */
 export const addBackground = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -118,6 +127,13 @@ export const addBackground = (
   return result
 }
 
+/**
+ * Fills the first two screens' width with background elements, so the game does not start on an
+ * empty sky.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @param backgrounds Collects the elements added.
+ */
 export const populateInitialBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -137,6 +153,11 @@ export const populateInitialBackgrounds = (
   })
 }
 
+/**
+ * Starts every background element falling, each after a random delay and at a random speed, for the
+ * game-over effect.
+ * @param backgrounds The elements to drop.
+ */
 export const startBackgroundFalling = (backgrounds: FallingElement[]) => {
   const currentTime = Date.now()
 
@@ -158,6 +179,12 @@ export const startBackgroundFalling = (backgrounds: FallingElement[]) => {
   })
 }
 
+/**
+ * Moves falling background elements down and removes the ones that have left the screen.
+ * @param deltaTime Seconds since the last frame.
+ * @param backgrounds The falling elements.
+ * @param scene The scene to remove them from.
+ */
 export const updateFallingBackgrounds = (
   deltaTime: number,
   backgrounds: FallingElement[],
@@ -194,6 +221,14 @@ export const updateFallingBackgrounds = (
   }, null)
 }
 
+/**
+ * Adds a new background element to each layer whose timer has run out, sooner as the score rises.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @param backgrounds Collects the elements added.
+ * @param backgroundTimers Frames until each layer adds its next element.
+ * @param gameScore The score, which speeds the game up.
+ */
 export const createBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -217,6 +252,13 @@ export const createBackgrounds = (
   })
 }
 
+/**
+ * Scrolls background elements left at their layer's speed and removes the ones out of view.
+ * @param scene The scene to remove them from.
+ * @param camera The game camera.
+ * @param backgrounds The background elements.
+ * @param gameScore The score, which speeds the game up.
+ */
 export const moveBackgrounds = (
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,
@@ -248,6 +290,12 @@ export const moveBackgrounds = (
   }, null)
 }
 
+/**
+ * Removes every background element, ready for a new game.
+ * @param scene The scene to remove them from.
+ * @param world The physics world.
+ * @param backgrounds The background elements, emptied in place.
+ */
 export const resetBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -283,6 +331,13 @@ export interface TextureAreaLayerConfig {
   opacity: number
 }
 
+/**
+ * Lays out one texture-area background layer across its area.
+ * @param scene The scene to add the elements to.
+ * @param world The physics world.
+ * @param layerConfig The layer's area, density and textures.
+ * @returns The layer's elements.
+ */
 export const createTextureAreaBackgroundLayer = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -325,6 +380,13 @@ export const createTextureAreaBackgroundLayer = (
   })
 }
 
+/**
+ * Removes the texture-area elements and lays every layer out again.
+ * @param scene The scene to rebuild in.
+ * @param world The physics world.
+ * @param elements The current elements.
+ * @returns The new elements.
+ */
 export const resetTextureAreaBackgrounds = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -337,6 +399,12 @@ export const resetTextureAreaBackgrounds = (
   )
 }
 
+/**
+ * Scrolls texture-area elements left and wraps each back to the right edge of its area once it
+ * leaves it.
+ * @param elements The texture-area elements.
+ * @param gameScore The score, which speeds the game up.
+ */
 export const moveAndRecycleTextureAreaBackgrounds = (
   elements: TextureAreaElement[],
   gameScore: number

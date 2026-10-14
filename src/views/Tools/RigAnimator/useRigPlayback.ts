@@ -8,13 +8,20 @@ interface RigPlaybackDependencies {
   action: ShallowRef<THREE.AnimationAction | null>
 }
 
-/** Owns real-time playback of the preview clip built from the authored keyframes, split out
- * of `useRigKeyframes` to stay under its function-length lint cap. */
+/**
+ * Owns real-time playback of the preview clip built from the authored keyframes, split out
+ * of `useRigKeyframes` to stay under its function-length lint cap.
+ * @param deps The config, the preview mixer and the frame range.
+ * @returns Whether it is playing, scrubToFrame, togglePlayback and tickPlayback.
+ */
 export const useRigPlayback = (deps: RigPlaybackDependencies) => {
   const isPlaying = ref(false)
   const clock = new THREE.Clock()
 
-  /** Scrub the preview to a given frame without advancing playback. */
+  /**
+   * Scrub the preview to a given frame without advancing playback.
+   * @param frame The frame to show.
+   */
   const scrubToFrame = (frame: number): void => {
     if (deps.mixer.value) deps.mixer.value.setTime(frame / deps.config.value.fps)
   }

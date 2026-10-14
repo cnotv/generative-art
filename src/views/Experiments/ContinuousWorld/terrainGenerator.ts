@@ -17,6 +17,11 @@ export interface TerrainChunkOptions {
  * Creates a terrain mesh for a single chunk using noise-displaced PlaneGeometry.
  * Vertices are displaced in Y based on fractal noise using world-space coordinates
  * for seamless edges between adjacent chunks.
+ * @param chunkX The chunk's column.
+ * @param chunkZ The chunk's row.
+ * @param chunkSize The width of one chunk.
+ * @param options The noise settings and colours.
+ * @returns The terrain mesh.
  */
 export const createTerrainChunk = (
   chunkX: number,
@@ -89,6 +94,11 @@ export const createTerrainChunk = (
  * Builds a bilinear height sampler from an existing terrain mesh's vertex buffer.
  * Reading directly from the geometry avoids redundant fractalNoise calls when
  * placing grass blades or trees on the same chunk.
+ * @param terrain The chunk's terrain mesh.
+ * @param chunkX The chunk's column.
+ * @param chunkZ The chunk's row.
+ * @param chunkSize The width of one chunk.
+ * @returns Reads the terrain height at a world X and Z.
  */
 export const buildHeightSampler = (
   terrain: THREE.Mesh,

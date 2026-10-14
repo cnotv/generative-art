@@ -234,6 +234,10 @@ const handleSelectAction = (
 /**
  * Returns true if the action was consumed by control-specific handling and the
  * row/col navigation should be skipped.
+ * @param active The focused element
+ * @param action The menu action pressed
+ * @param rowCount Number of rows in the showcase
+ * @returns True when the control handled the action
  */
 const handleControlAction = (
   active: Element | null,

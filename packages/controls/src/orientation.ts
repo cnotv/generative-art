@@ -36,7 +36,6 @@ export const lockScreenOrientation = async (
 
 /**
  * Release the lock, so leaving a scene does not leave the rest of the page pinned to it.
- * @returns Nothing
  */
 export const unlockScreenOrientation = (): void => {
   getScreenOrientation()?.unlock?.()

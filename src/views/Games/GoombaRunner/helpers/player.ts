@@ -36,6 +36,13 @@ interface UiStore {
   controls: { jump: boolean }
 }
 
+/**
+ * Loads the Goomba and gives it a kinematic body and character controller.
+ * @param scene The scene to add it to.
+ * @param physics The Rapier physics object.
+ * @param world The physics world.
+ * @returns The player, its controller and its model.
+ */
 const createPlayer = async (
   scene: THREE.Scene,
   physics: RapierPhysicsObject,
@@ -122,6 +129,10 @@ interface HandleJumpOptions {
   config: GameConfig
 }
 
+/**
+ * Starts a jump when jump is pressed on the ground, arcing the player and turning the camera with
+ * it.
+ */
 const handleJump = ({
   player,
   isPlaying,
@@ -259,6 +270,9 @@ interface MovePlayerOptions {
   config: GameConfig
 }
 
+/**
+ * Moves the player through its character controller, applying gravity and its jump.
+ */
 const movePlayer = ({
   player,
   playerController,
@@ -310,6 +324,9 @@ interface UpdatePlayerAnimationOptions {
   config: GameConfig
 }
 
+/**
+ * Plays the walk animation at the game's speed while it runs.
+ */
 const updatePlayerAnimation = ({
   model,
   isPlaying,
@@ -331,6 +348,10 @@ const updatePlayerAnimation = ({
   updateAnimation(animData)
 }
 
+/**
+ * Puts the player back on the ground if it sank below it.
+ * @param player The player.
+ */
 const ensurePlayerAboveGround = (player: ComplexModel) => {
   const currentPosition = player.userData.collider.translation()
   const groundLevel = player.userData.baseY
@@ -345,6 +366,10 @@ const ensurePlayerAboveGround = (player: ComplexModel) => {
   }
 }
 
+/**
+ * Moves the player along its jump arc, ending the arc once its time is up.
+ * @param player The player.
+ */
 const handleArcMovement = (player: ComplexModel) => {
   if (!player.userData.arcMovement || !player.userData.arcMovement.isActive) {
     return
@@ -414,6 +439,12 @@ const handleArcMovement = (player: ComplexModel) => {
 // Explosion particles array
 const explosionParticles: THREE.Mesh[] = []
 
+/**
+ * Bursts a ring of star sprites from a point, for a hit.
+ * @param scene The scene to add them to.
+ * @param position Where the burst starts.
+ * @param color The stars' tint.
+ */
 const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color: number) => {
   const starCount = 12 // Number of stars in explosion
 
@@ -473,6 +504,11 @@ const createStarExplosion = (scene: THREE.Scene, position: THREE.Vector3, color:
   })
 }
 
+/**
+ * Clears the explosion and puts the player back at its start, ready for a new game.
+ * @param player The player.
+ * @param scene The scene to clear.
+ */
 const resetPlayer = (player: ComplexModel, scene: THREE.Scene) => {
   // Clear explosion particles on restart
   explosionParticles.reduceRight((_, particle, i) => {
@@ -516,6 +552,11 @@ const resetPlayer = (player: ComplexModel, scene: THREE.Scene) => {
   })
 }
 
+/**
+ * Moves the explosion's stars under gravity and removes them once they fade.
+ * @param scene The scene to remove them from.
+ * @param deltaTime Seconds since the last frame.
+ */
 const updateExplosionParticles = (scene: THREE.Scene, deltaTime: number) => {
   explosionParticles.reduceRight((_, particle, i) => {
     const userData = particle.userData
@@ -571,6 +612,9 @@ interface CheckCollisionsOptions {
   config: GameConfig
 }
 
+/**
+ * Checks the player against every obstacle and ends the game on a hit, logging each collision once.
+ */
 const checkCollisions = ({
   player,
   obstacles,

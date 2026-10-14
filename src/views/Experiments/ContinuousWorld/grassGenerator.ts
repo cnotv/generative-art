@@ -18,6 +18,8 @@ const BASE_SIDE_CURVE_POINTS = [
 
 /**
  * Simple seeded random number generator (mulberry32).
+ * @param seed The seed.
+ * @returns A generator of values in [0, 1).
  */
 const createSeededRandom = (seed: number): (() => number) => {
   let state = seed | 0
@@ -34,6 +36,8 @@ const createSeededRandom = (seed: number): (() => number) => {
 /**
  * Creates the shared grass blade BufferGeometry using CatmullRom curves,
  * matching the GrassGenerator tool's blade shape.
+ * @param bladeScale The blade's size.
+ * @returns The blade geometry.
  */
 export const createGrassBladeGeometry = (
   bladeScale = DEFAULT_BLADE_SCALE
@@ -82,6 +86,8 @@ export const createGrassBladeGeometry = (
 
 /**
  * Creates the shared grass material.
+ * @param color The grass colour.
+ * @returns The material.
  */
 export const createGrassMaterial = (color = 0x33bb33): THREE.MeshPhysicalMaterial =>
   new THREE.MeshPhysicalMaterial({
@@ -99,6 +105,11 @@ export interface GrassChunkOptions {
 /**
  * Creates an InstancedMesh of grass blades for a single chunk.
  * Uses shared geometry and material; only instance transforms differ per chunk.
+ * @param chunkX The chunk's column.
+ * @param chunkZ The chunk's row.
+ * @param chunkSize The width of one chunk.
+ * @param options The blade count, shared geometry and material, and the height sampler.
+ * @returns The instanced grass.
  */
 export const createGrassChunk = (
   chunkX: number,

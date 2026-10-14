@@ -28,6 +28,11 @@ interface GenerateConfig {
   }
 }
 
+/**
+ * Builds one grass blade mesh, bent along a curve and tapered toward the tip.
+ * @param config The blade's curve, width, segments and colours.
+ * @returns The blade mesh, receiving shadows but casting none.
+ */
 export const getBlade = (config: GenerateConfig) => {
   // Define the control points for the length curve (curvature along the length)
   // Vector values respectively: bend sides, blade silhouette, bend front
@@ -90,10 +95,10 @@ export const getBlade = (config: GenerateConfig) => {
 
 /**
  * Create a rounded box geometry
- * @param {CoordinateTuple} size - The size of the box
- * @param {number} radius - The radius of the box
- * @param {number} smoothness - The smoothness of the box
- * @returns {THREE.ExtrudeGeometry} The rounded box geometry
+ * @param size - The size of the box
+ * @param radius - The radius of the box
+ * @param smoothness - The smoothness of the box
+ * @returns The rounded box geometry
  */
 export const getRoundedBox = (size: CoordinateTuple, radius: number, smoothness: number) => {
   const [width, height, depth] = size
@@ -121,6 +126,12 @@ const COIN_RADIUS = 0.33
 const COIN_THICKNESS = 0.1
 const COIN_PHYSICS_SIZE = 0.42
 
+/**
+ * Creates a yellow coin block with a fixed physics body.
+ * @param scene The scene to add it to.
+ * @param world The physics world to add its body to.
+ * @returns The coin block.
+ */
 export const getCoinBlock = (
   scene: THREE.Scene,
   world: RAPIER.World,

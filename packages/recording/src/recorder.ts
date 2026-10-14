@@ -10,8 +10,9 @@ const getMimeType = (format: RecorderFormat): string =>
   format === 'mp4' ? 'video/mp4' : 'video/webm'
 
 /**
- *
- * @param config
+ * Creates a recorder that captures a canvas to a video blob for a fixed duration.
+ * @param config The canvas, duration, format and frame rate.
+ * @returns The recorder, to start, stop and read the result from.
  */
 export const recordCreate = (config: RecorderConfig): Recorder => {
   const { canvas, duration, format = 'webm', frameRate = 30 } = config

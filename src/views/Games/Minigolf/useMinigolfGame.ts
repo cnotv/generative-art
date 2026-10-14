@@ -101,6 +101,11 @@ const AIM_DASH_RADIUS = 0.09
 
 const onPlayAgainPressedHolder = { current: null as (() => void) | null }
 
+/**
+ * Register a callback to fire when the gamepad's fire button is pressed on the game-over screen.
+ * Pass `null` to clear it on cleanup.
+ * @param callback Handler to invoke on fire-button press, or `null` to unregister
+ */
 export const setOnPlayAgainPressed = (callback: (() => void) | null): void => {
   onPlayAgainPressedHolder.current = callback
 }
@@ -491,6 +496,7 @@ const refitHole = (ctx: GameContext, hole: HoleConfig, canvasElement: HTMLCanvas
  * @param canvas - Ref to the canvas element for scene initialisation.
  * @param session - Session methods for broadcasting ball position and score.
  * @param activeHoles - Computed list of holes to play through.
+ * @param onProgress Called as the hole loads, with its progress
  * @returns Reactive game state and lifecycle controls.
  */
 export const useMinigolfGame = (

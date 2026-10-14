@@ -152,6 +152,8 @@ const toQuaternion = ({ x, y, z, w }: QuaternionData): THREE.Quaternion =>
  * One rotation standing for several samples of the same bone. Three or more keep the sample
  * closest to all the others, which drops a single misread one outright rather than averaging it
  * in; two, too few to tell which is wrong, meet halfway.
+ * @param rotations The samples' rotations.
+ * @returns The filtered rotation.
  */
 const filterRotationSamples = (rotations: QuaternionData[]): QuaternionData => {
   if (rotations.length === 1) return rotations[0]
@@ -199,7 +201,12 @@ export const filterRecordedSamples = (samples: PoseKeyframe[]): PoseKeyframe[] =
 
 const toQuaternionData = ({ x, y, z, w }: THREE.Quaternion): QuaternionData => ({ x, y, z, w })
 
-/** The keyframes in `frames`, in frame order, with each one's index in that order. */
+/**
+ * The keyframes in `frames`, in frame order, with each one's index in that order.
+ * @param keyframes Every keyframe.
+ * @param frames The frames to keep.
+ * @returns The kept keyframes, in frame order.
+ */
 const scopedKeyframes = (keyframes: PoseKeyframe[], frames: number[]): PoseKeyframe[] => {
   const scope = new Set(frames)
   return keyframes
@@ -212,6 +219,10 @@ const scopedKeyframes = (keyframes: PoseKeyframe[], frames: number[]): PoseKeyfr
  * that only differs from its neighbours by having spun the bone about its own length is dropped
  * for their midpoint rather than eased toward: that is a flipped twist cue rather than a
  * movement, see `isBoneRollFlip`, and easing halfway to it drags the clean keyframes over too.
+ * @param previous The rotation at the keyframe before.
+ * @param current The rotation at this keyframe.
+ * @param next The rotation at the keyframe after.
+ * @returns The filtered rotation.
  */
 const filterBoneBetweenNeighbours = (
   previous: QuaternionData,

@@ -486,7 +486,6 @@ const createRollAction = (ctx: BsGameContext, leg: RollLeg): Timeline => {
  * beside the cannon, called as soon as the player shoots.
  * @param ctx - Game context.
  * @param rollColor - Color of the bubble that will become the new loaded color.
- * @returns Nothing.
  */
 const startWaitingRoll = (ctx: BsGameContext, rollColor: BubbleColor): void => {
   if (!ctx.scene) return
@@ -517,7 +516,6 @@ const startWaitingRoll = (ctx: BsGameContext, rollColor: BubbleColor): void => {
  * Start the waiting bubble rolling from beside the cannon into the loaded
  * position, called once the in-flight shot resolves.
  * @param ctx - Game context.
- * @returns Nothing.
  */
 const startDockingRoll = (ctx: BsGameContext): void => {
   if (!ctx.rollMesh) {
@@ -545,7 +543,6 @@ const startDockingRoll = (ctx: BsGameContext): void => {
  * Drop all bubble meshes off-screen with simple gravity once the game has ended.
  * @param ctx - Game context.
  * @param delta - Frame time in seconds.
- * @returns Nothing.
  */
 const tickGravity = (ctx: BsGameContext, delta: number): void => {
   ctx.bubbleMeshes.forEach((mesh, key) => {
@@ -851,7 +848,6 @@ const onPlayAgainPressedHolder = { current: null as (() => void) | null }
  * Register a callback to fire when the gamepad's fire button is pressed while the
  * game-over summary screen is shown. Pass `null` to clear it on cleanup.
  * @param callback - Handler to invoke on fire-button press, or `null` to unregister.
- * @returns Nothing.
  */
 export const setOnPlayAgainPressed = (callback: (() => void) | null): void => {
   onPlayAgainPressedHolder.current = callback

@@ -93,9 +93,10 @@ export const cameraPresets: Record<CameraPreset, CameraPresetConfig> = {
 }
 
 /**
- *
- * @param model
- * @param config
+ * Works out the point a camera should aim at on a model, from an offset in the model's own frame.
+ * @param model The model to aim at.
+ * @param config The camera config whose lookAt is the offset, at the model's origin when unset.
+ * @returns The aim point in world space.
  */
 export const getLookAt = (model: Model, config: CameraConfig) => {
   const raw = config.lookAt ?? [0, 0, 0]
@@ -214,13 +215,10 @@ export const setCameraPreset = (
 }
 
 /**
- *
- * @param camera
- * @param root0
- * @param root0.x
- * @param root0.y
- * @param root0.z
- * @param value
+ * Places the camera on one side of the scene, looking back at the origin.
+ * @param camera The camera to place.
+ * @param position The camera position vector, reset before the side is applied.
+ * @param value Which side to look from.
  */
 export const setCameraSide = (
   camera: THREE.PerspectiveCamera,
@@ -248,9 +246,9 @@ export const setCameraSide = (
 
 /**
  * Set given camera to third person view
- * @param camera
- * @param config
- * @param model
+ * @param camera The camera to place.
+ * @param config Its offset and aim point relative to the model.
+ * @param model The model to follow; without one the camera is left alone.
  */
 export const setThirdPersonCamera = (
   camera: THREE.PerspectiveCamera,
@@ -272,8 +270,8 @@ export const setThirdPersonCamera = (
  * @param camera - The Three.js camera to update
  * @param player - The player model to follow
  * @param offset - Camera offset from player [x, y, z]
- * @param orbit
- * @param coordinates
+ * @param orbit Orbit controls to keep aimed at the player, if any.
+ * @param coordinates The axes the camera follows; the rest stay put.
  * @returns Updated camera position as CoordinateTuple
  */
 export const cameraFollowPlayer = (

@@ -21,7 +21,6 @@ interface RegisterLightOptions {
 /**
  * Registers a single light's element properties for the properties panel.
  * Creates reactive state from current light values and syncs changes back to the Three.js light.
- *
  * @param options.light - The Three.js light object (must have color.getHex/set and intensity)
  * @param options.name - Unique element name for registration (e.g., 'ambient-light')
  * @param options.title - Display title in the properties panel

@@ -7,7 +7,6 @@ const ZERO_VEC: Vec3 = { x: 0, y: 0, z: 0 }
  * @param model - ComplexModel with a dynamic RigidBody in userData.body
  * @param impulse - Impulse vector to apply (should be pre-scaled by force)
  * @param maxHorizontalSpeed - Maximum horizontal speed to clamp after impulse
- * @returns void
  */
 export const moveDynamic = (
   model: ComplexModel,
@@ -27,10 +26,9 @@ export const moveDynamic = (
 /**
  * Move a kinematic model using its character controller.
  * Computes collider movement, updates collider translation, and syncs the Three.js mesh.
- *
  * @param model - A ComplexModel with characterController and collider in userData
  * @param direction - Movement vector to apply
- * @param filterPredicate
+ * @param filterPredicate Says which colliders the movement may collide with.
  * @returns The computed movement vector after physics resolution
  */
 export const moveController = (

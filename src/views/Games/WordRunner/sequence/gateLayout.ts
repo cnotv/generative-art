@@ -7,7 +7,11 @@ const FNV_PRIME = 0x01000193
 const GOLDEN_RATIO_INCREMENT = 0x9e3779b1
 const VALUES_PER_GATE = 3
 
-/** A stable 32-bit seed from a level id (FNV-1a), so a level always lays out the same course. */
+/**
+ * A stable 32-bit seed from a level id (FNV-1a), so a level always lays out the same course.
+ * @param levelId The level's id.
+ * @returns The seed.
+ */
 export const levelSeed = (levelId: string): number =>
   [...levelId].reduce(
     (hash, character) => Math.imul(hash ^ character.charCodeAt(0), FNV_PRIME) >>> 0,
@@ -19,7 +23,13 @@ export const levelSeed = (levelId: string): number =>
 const gateSeed = (seed: number, position: number): number =>
   (seed ^ Math.imul(position + 1, GOLDEN_RATIO_INCREMENT)) >>> 0
 
-/** A lane other than the given one, picked by a random value in [0, 1). */
+/**
+ * A lane other than the given one, picked by a random value in [0, 1).
+ * @param lane The lane to avoid.
+ * @param randomValue A value in [0, 1).
+ * @param laneCount How many lanes the track has.
+ * @returns Another lane.
+ */
 export const otherLane = (lane: number, randomValue: number, laneCount: number): number =>
   (lane + 1 + Math.floor(randomValue * (laneCount - 1))) % laneCount
 
@@ -28,6 +38,11 @@ export const otherLane = (lane: number, randomValue: number, laneCount: number):
  * turns the word order into a route, and never repeats past the allowed streak. A word may
  * prefer a lane, the inside of the bend its gate opens onto, and gets it unless that would
  * break the streak; everywhere else the seed decides.
+ * @param seed The level's seed.
+ * @param wordCount How many words the text has.
+ * @param laneCount How many lanes the track has.
+ * @param preferredLanes Each word's preferred lane, or null.
+ * @returns The right word's lane at each gate.
  */
 export const buildCorrectLanes = (
   seed: number,
@@ -53,6 +68,12 @@ const uniqueTexts = (texts: string[], excluded: string[]): string[] =>
  * Picks the wrong answers for one gate: a word from elsewhere in the text, preferring a
  * later one so that knowing the words out of order still fails, then one of the word's own
  * look-alikes, then whatever the text and the fallback pool still have.
+ * @param words The level's words.
+ * @param position The gate's place in the text.
+ * @param decoyCount How many wrong words to pick.
+ * @param randomValues Values in [0, 1) for this gate.
+ * @param fallbackPool Words to use when the text runs out.
+ * @returns The wrong words.
  */
 const pickDecoys = (
   words: LevelWord[],
@@ -80,7 +101,14 @@ const pickDecoys = (
   return [...preferred, ...remaining].slice(0, decoyCount)
 }
 
-/** One gate: the correct word in its lane and a decoy in each of the others. */
+/**
+ * One gate: the correct word in its lane and a decoy in each of the others.
+ * @param deal The words, seed, lane count and fallback pool.
+ * @param position The gate's place in the text.
+ * @param correctLane The lane of the right word.
+ * @param hint How much the gate helps.
+ * @returns The gate.
+ */
 export const buildGate = (
   { words, seed, laneCount, fallbackPool }: GateDeal,
   position: number,
@@ -99,7 +127,13 @@ export const buildGate = (
   return { position, options, correctLane, hint }
 }
 
-/** Every gate of the level, each word in its own lane with its own hint. */
+/**
+ * Every gate of the level, each word in its own lane with its own hint.
+ * @param deal The words, seed, lane count and fallback pool.
+ * @param hints Each gate's hint level.
+ * @param correctLanes Each gate's right lane.
+ * @returns Every gate.
+ */
 export const buildRunGates = (deal: GateDeal, hints: HintLevel[], correctLanes: number[]): Gate[] =>
   deal.words.map((_, position) =>
     buildGate(deal, position, correctLanes[position], hints[position])

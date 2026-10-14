@@ -170,7 +170,11 @@ const OPEN_LEFT_HAND: Point[] = [
 
 const offset = ([x, y, z]: Point, [dx, dy, dz]: Point): Point => [x + dx, y + dy, z + dz]
 
-/** Fold one finger's joints down toward the palm, which faces the floor (MediaPipe's +y). */
+/**
+ * Fold one finger's joints down toward the palm, which faces the floor (MediaPipe's +y).
+ * @param knuckle The finger's knuckle.
+ * @returns The finger's four joints, curled.
+ */
 const curlFinger = (knuckle: Point): Point[] => {
   const middleJoint = offset(knuckle, [0.03, 0.025, 0])
   const lastJoint = offset(middleJoint, [-0.01, 0.025, 0])

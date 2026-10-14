@@ -77,6 +77,13 @@ const createBallTexture = (): THREE.DataTexture => {
   return texture
 }
 
+/**
+ * Create the golf ball's mesh and dynamic body.
+ * @param position Where the ball starts
+ * @param scene The scene to add the ball to
+ * @param world The physics world the body is added to
+ * @returns The ball's mesh and body
+ */
 export const createBall = (
   position: CoordinateTuple,
   scene: THREE.Scene,
@@ -139,6 +146,7 @@ export const shootBall = (
  * Return true when the ball velocity is effectively zero (ball at rest).
  * @param ball BallState
  * @param threshold Speed below which the ball is considered stopped
+ * @returns True when the ball is slower than the threshold
  */
 export const isBallStopped = (ball: BallState, threshold = 0.05): boolean => {
   const v = ball.body.linvel()
@@ -233,6 +241,7 @@ export const spawnConfetti = (
  * @param particles Current confetti array
  * @param scene Scene (for removal)
  * @param lifetime Total lifetime in seconds
+ * @returns The particles still alive
  */
 export const stepConfetti = (
   particles: ConfettiParticle[],

@@ -25,7 +25,12 @@ import { DEFAULT_POSITION_RANGE, POSITION_RANGE_FRACTION } from './config'
 import { useRigBoneMarkerVisibility } from './useRigBoneMarkerVisibility'
 import type { RigAnimatorConfig } from './types'
 
-/** Owns the loaded model, its rig and its bone markers for the rig animator tool. */
+/**
+ * Owns the loaded model, its rig and its bone markers for the rig animator tool.
+ * @param config The tool's config.
+ * @returns The model, skinned mesh, bones and markers, and the actions that load, rig, select and
+ *   pose them.
+ */
 export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
   const scene = shallowRef<THREE.Scene | null>(null)
   const model = shallowRef<THREE.Object3D | null>(null)
@@ -77,7 +82,10 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     config.value.selectedBone = ''
   }
 
-  /** Load an uploaded model, replacing whatever was loaded before, and adopt its rig if it has one. */
+  /**
+   * Load an uploaded model, replacing whatever was loaded before, and adopt its rig if it has one.
+   * @param url The model's URL.
+   */
   const loadModel = async (url: string): Promise<void> => {
     if (!scene.value || !url) return
     clearModel()
@@ -97,7 +105,10 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     if (skinnedMeshes) attachRig(skinnedMeshes[0])
   }
 
-  /** Select a bone by name, highlighting its marker and loading its transform into the panel. */
+  /**
+   * Select a bone by name, highlighting its marker and loading its transform into the panel.
+   * @param name The bone's name.
+   */
   const selectBone = (name: string): void => {
     config.value.selectedBone = name
     highlightBoneMarker(boneMarkers.value, name)
@@ -108,9 +119,13 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     }
   }
 
-  /** Resolve a pointer event to a bone marker, without selecting it: the caller decides whether
+  /**
+   * Resolve a pointer event to a bone marker, without selecting it: the caller decides whether
    * this is a normal drag (selects the bone) or a pole-hint drag on the current selection's mid
-   * joint (must not change the selection). */
+   * joint (must not change the selection).
+   * @param raycaster The raycaster set from the pointer.
+   * @returns The bone under the pointer, or null.
+   */
   const identifyBoneFromRay = (raycaster: THREE.Raycaster): THREE.Bone | null => {
     if (!markerVisibility.areMarkersVisible.value) return null
     const name = pickBoneMarker(boneMarkers.value, raycaster)
@@ -129,7 +144,12 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     if (bone) bone.position.set(position.x, position.y, position.z)
   }
 
-  /** Handle a drag toward a world target: an IK solve or a plain translate, see `applyGizmoDragToChain`. */
+  /**
+   * Handle a drag toward a world target: an IK solve or a plain translate, see
+   * `applyGizmoDragToChain`.
+   * @param bone The bone being dragged.
+   * @param targetWorldPosition Where the drag wants it, in world space.
+   */
   const applyBoneDragTarget = (bone: THREE.Bone, targetWorldPosition: THREE.Vector3): void => {
     applyGizmoDragToChain(bone, targetWorldPosition, restPoses)
     config.value.bonePosition = { x: bone.position.x, y: bone.position.y, z: bone.position.z }
@@ -147,10 +167,17 @@ export const useRigModel = (config: Ref<RigAnimatorConfig>) => {
     resetBoneChainToRest(bone, restPoses)
     selectBone(bone.name)
   }
-  /** Snap every bone back to its loaded rest transform, see `resetAllBonesToRest`'s own doc. */
-  const resetAllBonesToRest = (excludeBoneNames?: Set<string>): void =>
+  /**
+   * Snap every bone back to its loaded rest transform, see `resetAllBonesToRest`'s own doc.
+   * @param excludeBoneNames Bones to leave as they are.
+   */
+  const resetAllBonesToRest = (excludeBoneNames?: Set<string>): void => {
     resetAllBoneTransformsToRest(bones.value, restPoses, excludeBoneNames)
-  /** Every bone's rest quaternion, keyed by name, for `applyHandPose`'s rest-relative curl. */
+  }
+  /**
+   * Every bone's rest quaternion, keyed by name, for `applyHandPose`'s rest-relative curl.
+   * @returns Rest quaternions by bone name.
+   */
   const getRestQuaternions = (): Map<string, THREE.Quaternion> =>
     new Map([...restPoses.entries()].map(([name, rest]) => [name, rest.quaternion]))
   return {

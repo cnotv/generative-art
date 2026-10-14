@@ -27,9 +27,13 @@ const childBonesOf = (bone: THREE.Bone): THREE.Bone[] =>
 const worldSegmentLength = (bone: THREE.Bone, child: THREE.Bone): number =>
   bone.getWorldPosition(new THREE.Vector3()).distanceTo(child.getWorldPosition(new THREE.Vector3()))
 
-/** One capsule per bone segment: a bone and one of its bone children, which is what actually
+/**
+ * One capsule per bone segment: a bone and one of its bone children, which is what actually
  * has a length and a direction. A bone on its own is only a point, and a branching joint such
- * as the hips is several segments rather than one. */
+ * as the hips is several segments rather than one.
+ * @param bones The rig's bones, with up-to-date world matrices.
+ * @returns One capsule spec per segment long enough to matter.
+ */
 export const buildBoneColliderSpecs = (bones: THREE.Bone[]): BoneColliderSpec[] => {
   const rigDiagonal = computeRigDiagonal(bones)
   const minimumLength = rigDiagonal * BONE_COLLIDER_MIN_LENGTH_FRACTION
@@ -60,8 +64,14 @@ export const buildBoneColliderSpecs = (bones: THREE.Bone[]): BoneColliderSpec[] 
 const scratchPosition = new THREE.Vector3()
 const scratchScale = new THREE.Vector3()
 
-/** Writes into the vectors it is handed rather than returning new ones, because this runs once
- * per segment per frame and a humanoid rig has upwards of fifty of them. */
+/**
+ * Writes into the vectors it is handed rather than returning new ones, because this runs once
+ * per segment per frame and a humanoid rig has upwards of fifty of them.
+ * @param bone The bone the capsule follows.
+ * @param spec The capsule's spec.
+ * @param outPosition Receives the capsule's world position.
+ * @param outQuaternion Receives its world rotation.
+ */
 export const readBoneColliderTransform = (
   bone: THREE.Bone,
   spec: BoneColliderSpec,

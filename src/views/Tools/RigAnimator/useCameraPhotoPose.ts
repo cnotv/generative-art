@@ -13,6 +13,8 @@ import type { CameraDetectionOptions, CameraLandmarkers, CameraPoseFrame } from 
  * `useCameraPoseCapture`: useful for posing from a reference photo, and for anyone without a
  * working webcam.
  * @param detectionOptions The Config panel's detection switches, read when a photo is detected
+ * @returns The photo, its loading and error state, the preview landmarks and detected frame, and
+ *   detectPhoto and reset.
  */
 export const useCameraPhotoPose = (detectionOptions: Ref<CameraDetectionOptions>) => {
   const photoImage = shallowRef<ImageBitmap | null>(null)
@@ -31,7 +33,10 @@ export const useCameraPhotoPose = (detectionOptions: Ref<CameraDetectionOptions>
     frame.value = null
   }
 
-  /** Read a person's pose out of an uploaded photo file, replacing whatever was detected before. */
+  /**
+   * Read a person's pose out of an uploaded photo file, replacing whatever was detected before.
+   * @param file The uploaded photo.
+   */
   const detectPhoto = async (file: File): Promise<void> => {
     isLoading.value = true
     error.value = null

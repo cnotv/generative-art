@@ -19,6 +19,8 @@ const HEIF_BRANDS = new Set([
  * than `File.type`, which browsers routinely leave empty for `.heic`, and rather than the
  * `isHeic` helper in `heic-to`, which would pull that package's three megabytes of wasm in
  * for every JPEG just to answer the question.
+ * @param buffer The file's first bytes
+ * @returns True when the brand is a HEIF one
  */
 export const isHeicBuffer = (buffer: ArrayBuffer): boolean =>
   HEIF_BRANDS.has(new TextDecoder().decode(buffer.slice(BRAND_START_BYTE, BRAND_END_BYTE)))

@@ -6,6 +6,7 @@ import type * as THREE from 'three'
  * function-length lint cap. Markers are recreated on every model load and auto-rig, so
  * `applyCurrentVisibility` re-syncs a freshly created set to whatever was last chosen.
  * @param boneMarkers The rig's current bone markers
+ * @returns Whether markers show, a setter, and applyCurrentVisibility.
  */
 export const useRigBoneMarkerVisibility = (boneMarkers: ShallowRef<THREE.Mesh[]>) => {
   const areMarkersVisible = ref(true)

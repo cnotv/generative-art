@@ -15,6 +15,14 @@ import {
   PHYSICS_SPHERE_RADIUS
 } from '../config'
 
+/**
+ * Moves a model one frame along its path, without physics.
+ * @param model The model.
+ * @param state The path and where the model is on it.
+ * @param speed Units per second.
+ * @param delta Seconds since the last frame.
+ * @returns The new state and position.
+ */
 export const modelFollowTick = (
   model: ComplexModel,
   state: PathFollowState,
@@ -31,13 +39,17 @@ export const modelFollowTick = (
  * Physics-mode path following: kinematic body moved via the Rapier
  * CharacterController so that static obstacle colliders deflect the ball
  * instead of letting it pass through.
- *
+ * @param model The model, with a kinematic body and character controller.
+ * @param state The path and where the model is on it.
+ * @param speed Units per second.
+ * @param delta Seconds since the last frame.
  * @param includeDynamic - When true (goomba mode), the CC resolves against ALL
  *   bodies and uses setApplyImpulsesToDynamicBodies to push green cubes aside.
  *   When false (physics ball mode), the CC only avoids static bodies so the ball
  *   passes through dynamic cubes and a manual proximity impulse pushes them.
  *
  * Returns the updated PathFollowState and an isComplete flag.
+ * @returns The new state, and whether the path ended.
  */
 export const modelFollowPhysicsTick = (
   model: ComplexModel,
@@ -118,6 +130,7 @@ export const modelFollowPhysicsTick = (
  * Enable the goomba's CharacterController to apply impulses to dynamic bodies it contacts,
  * so the goomba physically pushes green cubes aside rather than passing through them.
  * Must be called once after the goomba model is loaded.
+ * @param model The Goomba.
  */
 export const modelFollowEnableGoombaPhysics = (model: ComplexModel): void => {
   const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined
@@ -129,13 +142,18 @@ export const modelFollowEnableGoombaPhysics = (model: ComplexModel): void => {
 /**
  * Set the character mass used by the CC when computing impulses for dynamic bodies.
  * Higher mass → stronger push on green cubes. Call each frame (or on slider change).
+ * @param model The model.
+ * @param mass The character's mass.
  */
 export const modelFollowSetCharacterMass = (model: ComplexModel, mass: number): void => {
   const cc = model.userData?.characterController as RAPIER.KinematicCharacterController | undefined
   if (cc) cc.setCharacterMass(mass)
 }
 
-/** Syncs a kinematic Rapier body to the model's current mesh position (mesh mode). */
+/**
+ * Syncs a kinematic Rapier body to the model's current mesh position (mesh mode).
+ * @param model The model.
+ */
 export const modelFollowSyncPhysicsBody = (model: ComplexModel): void => {
   const body = model.userData?.body as RAPIER.RigidBody | undefined
   if (!body) return
@@ -143,6 +161,12 @@ export const modelFollowSyncPhysicsBody = (model: ComplexModel): void => {
   body.setNextKinematicTranslation({ x, y, z }, true)
 }
 
+/**
+ * Plays the model's walk animation at a speed.
+ * @param model The model.
+ * @param delta Seconds since the last frame.
+ * @param speed The animation speed.
+ */
 export const modelFollowPlayWalkAnimation = (
   model: ComplexModel,
   delta: number,
@@ -152,11 +176,21 @@ export const modelFollowPlayWalkAnimation = (
   updateAnimation({ actionName, player: model, delta, speed })
 }
 
+/**
+ * Plays the model's walk animation slowly, as an idle.
+ * @param model The model.
+ * @param delta Seconds since the last frame.
+ */
 export const modelFollowPlayIdleAnimation = (model: ComplexModel, delta: number): void => {
   const actionName = Object.keys(model.userData?.actions ?? {})[0] ?? GOOMBA_ANIMATION_FALLBACK_NAME
   updateAnimation({ actionName, player: model, delta, speed: 0.5 })
 }
 
+/**
+ * Advances the model's animation mixer.
+ * @param model The model.
+ * @param delta Seconds since the last frame.
+ */
 export const modelFollowUpdateMixer = (model: ComplexModel, delta: number): void => {
   const mixer = model.userData?.mixer as THREE.AnimationMixer | undefined
   if (mixer) mixer.update(delta)
@@ -166,6 +200,9 @@ export const modelFollowUpdateMixer = (model: ComplexModel, delta: number): void
  * Spawn dynamic (pushable) green cubes for physics/goomba modes.
  * Using origin:{} disables the bottom-pivot offset so position is cube center,
  * which aligns the visual and physics collider (both centered at position.y).
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @returns The cubes.
  */
 export const modelFollowSpawnDynamicObstacles = (
   scene: THREE.Scene,
@@ -189,6 +226,9 @@ export const modelFollowSpawnDynamicObstacles = (
 /**
  * Spawn fixed (static, immovable) red cubes for physics/goomba modes.
  * Using origin:{} so position is cube center — visually touches ground at y=0.75.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @returns The cubes.
  */
 export const modelFollowSpawnFixedObstacles = (
   scene: THREE.Scene,
@@ -206,7 +246,10 @@ export const modelFollowSpawnFixedObstacles = (
     })
   )
 
-/** Sync dynamic obstacle mesh positions/rotations from their Rapier physics bodies each frame. */
+/**
+ * Sync dynamic obstacle mesh positions/rotations from their Rapier physics bodies each frame.
+ * @param obstacles The pushable cubes.
+ */
 export const modelFollowSyncDynamicObstacles = (obstacles: ComplexModel[]): void => {
   obstacles.forEach((obs) => {
     const body = obs.userData?.body as RAPIER.RigidBody | undefined
@@ -223,6 +266,11 @@ export const modelFollowSyncDynamicObstacles = (obstacles: ComplexModel[]): void
  * Proximity-based impulse: world.contactPairsWith does not reliably report contacts
  * between kinematic and dynamic bodies. Instead, measure the XZ distance from the
  * ball centre to each dynamic cube centre and apply an impulse when within range.
+ * @param ball The ball.
+ * @param obstacles The pushable cubes.
+ * @param speed The ball's speed, which sets the push.
+ * @param delta Seconds since the last frame.
+ * @param impulseScale Multiplies the push.
  */
 export const modelFollowApplyContactImpulses = (
   ball: ComplexModel,
@@ -261,6 +309,9 @@ export const modelFollowApplyContactImpulses = (
 /**
  * Returns true when the goomba's XZ position is within contact range of any fixed (red) obstacle.
  * Used to halt path traversal so the goomba stops and plays idle instead of pushing endlessly.
+ * @param model The Goomba.
+ * @param obstacles The fixed cubes.
+ * @returns True when it touches one.
  */
 export const modelFollowIsBlockedByFixedObstacle = (
   model: ComplexModel,
@@ -279,7 +330,12 @@ export const modelFollowIsBlockedByFixedObstacle = (
   })
 }
 
-/** Remove all obstacle meshes and their physics bodies from the scene. */
+/**
+ * Remove all obstacle meshes and their physics bodies from the scene.
+ * @param scene The scene to remove them from.
+ * @param world The physics world.
+ * @param obstacles The cubes.
+ */
 export const modelFollowClearObstacles = (
   scene: THREE.Scene,
   world: RAPIER.World,

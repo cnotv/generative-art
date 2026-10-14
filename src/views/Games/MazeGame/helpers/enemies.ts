@@ -43,6 +43,10 @@ export interface PaperPlanePathState {
   stuckTime: number
 }
 
+/**
+ * A paper plane's path state before it has planned a route.
+ * @returns The state.
+ */
 export const createInitialPaperPlanePathState = (): PaperPlanePathState => ({
   path: null,
   currentIndex: 0,
@@ -50,6 +54,11 @@ export const createInitialPaperPlanePathState = (): PaperPlanePathState => ({
   stuckTime: 0
 })
 
+/**
+ * Builds the grid paper planes find their way on, blocking every wall and wall corner of the maze.
+ * @param mazeGrid The maze.
+ * @returns The navigation grid.
+ */
 export const buildNavigationGrid = (mazeGrid: MazeGrid): Grid => {
   const base = logicCreateGrid(NAVIGATION_GRID_CONFIG)
 
@@ -73,6 +82,12 @@ export const buildNavigationGrid = (mazeGrid: MazeGrid): Grid => {
   }, withCorners)
 }
 
+/**
+ * The direction straight from a plane to the player, on the ground plane.
+ * @param planePos The plane's position.
+ * @param playerPos The player's position.
+ * @returns A unit direction, or zero when they are on top of each other.
+ */
 export const computeChaseDirection = (planePos: THREE.Vector3, playerPos: THREE.Vector3): Vec3 => {
   const dx = playerPos.x - planePos.x
   const dz = playerPos.z - planePos.z
@@ -81,6 +96,13 @@ export const computeChaseDirection = (planePos: THREE.Vector3, playerPos: THREE.
   return { x: dx / distance, y: 0, z: dz / distance }
 }
 
+/**
+ * Places paper planes at random points on the island.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @param count How many planes.
+ * @returns The planes.
+ */
 export const spawnPaperPlanes = async (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -295,6 +317,11 @@ const logStuckState = (
   }
 }
 
+/**
+ * Moves a paper plane one frame along its path to the player, replanning the path on a timer or
+ * when the plane gets stuck.
+ * @returns The plane's new path state.
+ */
 export const updatePaperPlaneChase = ({
   plane,
   playerPosition,
@@ -348,6 +375,13 @@ export const updatePaperPlaneChase = ({
   }
 }
 
+/**
+ * Says whether any paper plane has reached the player, on the ground plane.
+ * @param playerPos The player's position.
+ * @param planes The paper planes.
+ * @param radius The distance that counts as caught.
+ * @returns True when the player is caught.
+ */
 export const checkPaperPlaneCatch = (
   playerPos: THREE.Vector3,
   planes: ComplexModel[],

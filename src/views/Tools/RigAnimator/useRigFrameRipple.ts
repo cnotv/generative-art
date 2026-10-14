@@ -17,6 +17,7 @@ interface Dependencies {
  * Owns ripple removing and inserting a frame range — changing the timeline's own length,
  * unlike deleting keyframes which only clears poses and leaves a gap — split out of
  * `useRigKeyframes` to stay under its function-length lint cap.
+ * @returns removeFrameRange and insertFrameRange.
  */
 export const useRigFrameRipple = ({
   config,
@@ -31,6 +32,8 @@ export const useRigFrameRipple = ({
    * left to close the gap, shrinking the timeline's own length by the span removed. The
    * playhead moves back by the same span if it sat past the cut, or lands on the cut's start
    * if it sat inside it.
+   * @param startFrame The range's first frame.
+   * @param endFrame Its last frame.
    */
   const removeFrameRange = (startFrame: number, endFrame: number): void => {
     const span = endFrame - startFrame + 1
@@ -48,6 +51,8 @@ export const useRigFrameRipple = ({
    * everything at or after it later and growing the timeline's own length by that much. The
    * playhead moves along with whatever now sits after it if it was at or past the insertion
    * point.
+   * @param atFrame Where the room opens.
+   * @param span How many frames to insert.
    */
   const insertFrameRange = (atFrame: number, span: number): void => {
     if (span <= 0) return

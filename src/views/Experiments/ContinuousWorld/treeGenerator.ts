@@ -107,6 +107,11 @@ type SpriteInstance = {
  * Creates a group of textured tree/bush/rock billboards for a chunk.
  * Sprites sharing the same texture are batched into a single InstancedMesh,
  * reducing draw calls from treesPerChunk to at most (distinct textures used).
+ * @param chunkX The chunk's column.
+ * @param chunkZ The chunk's row.
+ * @param chunkSize The width of one chunk.
+ * @param options How many trees, their textures and size, and the height sampler.
+ * @returns The trees' group.
  */
 export const createTreesChunk = (
   chunkX: number,

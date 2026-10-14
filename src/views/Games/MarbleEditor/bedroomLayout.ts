@@ -14,6 +14,8 @@ import {
 /**
  * Axis-aligned bounds of a track chain, extended by fixed margins so piece
  * geometry hanging off its origin (curves, loops, funnels) stays inside.
+ * @param transforms Where each piece of the track sits.
+ * @returns The track's lowest and highest corners, with margins.
  */
 export const computeTrackBounds = (transforms: PieceTransform[]): TrackBounds => {
   const positions = transforms.map((transform) => transform.position)
@@ -37,6 +39,8 @@ export const computeTrackBounds = (transforms: PieceTransform[]): TrackBounds =>
 /**
  * Bedroom shell dimensions wrapping the given track bounds: padded on every
  * side, never smaller than the minimum room, floor just below the track.
+ * @param bounds The track's bounds.
+ * @returns The room's centre, size, floor height and wall height.
  */
 export const computeRoomLayout = (bounds: TrackBounds): RoomLayout => {
   const floorY = bounds.min[1] - FLOOR_CLEARANCE
@@ -103,6 +107,8 @@ const placeSpot = (layout: RoomLayout, spot: ToySpot): ToyPlacement => {
  * Deterministic toy placements along the room perimeter: each configured spot
  * is mapped onto the wall-inset rectangle, resting on the floor and roughly
  * facing the room center.
+ * @param layout The room.
+ * @returns Each toy's kind, position, turn, scale and variant.
  */
 export const computeToyPlacements = (layout: RoomLayout): ToyPlacement[] =>
   TOY_SPOTS.map((spot) => placeSpot(layout, spot))
@@ -110,6 +116,9 @@ export const computeToyPlacements = (layout: RoomLayout): ToyPlacement[] =>
 /**
  * Whether two room layouts describe the same room, so an unchanged bedroom
  * is not rebuilt on every track edit.
+ * @param first One room.
+ * @param second The other.
+ * @returns True when they match.
  */
 export const roomLayoutsEqual = (first: RoomLayout, second: RoomLayout): boolean =>
   first.centerX === second.centerX &&

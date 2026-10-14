@@ -118,17 +118,33 @@ const buildActionMethods = (state: TimelineState) => {
 }
 
 const buildQueryMethods = (state: TimelineState) => {
-  /** @returns True if action exists */
+  /**
+   * Says whether an action with this id is on the timeline.
+   * @param id The action's id.
+   * @returns True if action exists
+   */
   const hasAction = (id: string): boolean => state.activeActions.has(id)
 
-  /** @returns Timeline action or undefined */
+  /**
+   * Looks up one action on the timeline.
+   * @param id The action's id.
+   * @returns Timeline action or undefined
+   */
   const getAction = (id: string): Timeline | undefined => state.activeActions.get(id)
 
-  /** @returns Array of generated IDs */
+  /**
+   * Adds several actions at once, giving each an id.
+   * @param actions The actions to add, in order.
+   * @returns Array of generated IDs
+   */
   const addActions = (actions: Timeline[]): string[] =>
     actions.map((action) => buildActionMethods(state).addAction(action))
 
-  /** @returns Number of actions removed */
+  /**
+   * Removes every action in a category, such as all of one view's animations.
+   * @param category The category the actions were added under.
+   * @returns Number of actions removed
+   */
   const removeByCategory = (category: string): number => {
     const toRemove = state.timeline
       .filter((a) => a.category === category)
@@ -139,7 +155,10 @@ const buildQueryMethods = (state: TimelineState) => {
     return toRemove.length
   }
 
-  /** @returns Number of actions removed */
+  /**
+   * Drops the actions that have finished, freeing their slots on the timeline.
+   * @returns Number of actions removed
+   */
   const removeCompleted = (): number => {
     const count = state.completedActions.size
     state.completedActions.forEach((id) => {
@@ -160,15 +179,25 @@ const buildQueryMethods = (state: TimelineState) => {
     state.logger?.clearLogs()
   }
 
-  /** @returns Array of active timeline actions */
+  /**
+   * Lists the actions still running, in timeline order.
+   * @returns Array of active timeline actions
+   */
   const getActiveActions = (): Timeline[] =>
     [...state.timeline].filter((a) => !state.completedActions.has(a.id!))
 
-  /** @returns Array of timeline actions in category */
+  /**
+   * Lists the actions in one category, finished or not.
+   * @param category The category to filter by.
+   * @returns Array of timeline actions in category
+   */
   const getActionsByCategory = (category: string): Timeline[] =>
     state.timeline.filter((a) => a.category === category)
 
-  /** @returns Copy of timeline array */
+  /**
+   * Hands back the whole timeline as a copy, so callers cannot reorder the original.
+   * @returns Copy of timeline array
+   */
   const getTimeline = (): Timeline[] => [...state.timeline]
 
   const _markCompleted = (id: string): void => {

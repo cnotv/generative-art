@@ -10,7 +10,6 @@ const GREEN_SHIFT = 8
  *
  * The sequence loops: past the last stage it returns to the first, so a long
  * run keeps changing character instead of settling into one look forever.
- *
  * @param distance - Distance along the track
  * @param stageCount - How many stages the area defines
  * @returns The stage index, wrapping back to the first past the last
@@ -26,7 +25,6 @@ export const stageIndexAt = (distance: number, stageCount: number): number => {
  *
  * Areas without stages keep whatever list they were given, which is what lets
  * the Textures panel add variants to them at runtime.
- *
  * @param definition - The area's catalog entry
  * @param distance - Distance the chunk being built sits at
  * @param fallback - The area's live texture list, used when it has no stages
@@ -51,7 +49,6 @@ export const texturesAt = (
  *
  * The palette loops with the stages, blending from the last colour back to the
  * first rather than settling on the last for the rest of the run.
- *
  * @param distance - Distance along the track
  * @param colors - One colour per stage
  * @returns The blended colour, wrapping back to the first past the last

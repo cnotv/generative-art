@@ -41,10 +41,18 @@ createControls({
   }
 })
 
-/** Write the HUD text. replaceChildren rather than textContent keeps the write a call. */
-const showStatus = (text: string): void => scoreLabel.replaceChildren(text)
+/**
+ * Write the HUD text. replaceChildren rather than textContent keeps the write a call.
+ * @param text The text to show.
+ */
+const showStatus = (text: string): void => {
+  scoreLabel.replaceChildren(text)
+}
 
-/** Remove an obstacle from the scene and the physics world together, so neither leaks. */
+/**
+ * Remove an obstacle from the scene and the physics world together, so neither leaks.
+ * @param obstacle The obstacle to remove.
+ */
 const removeObstacle = (obstacle: ComplexModel): void => {
   scene.remove(obstacle)
   const body = obstacle.userData.body

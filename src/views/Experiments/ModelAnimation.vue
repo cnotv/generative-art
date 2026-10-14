@@ -127,8 +127,8 @@ const createLights = (scene: THREE.Scene) => {
 
 /**
  * Get default textures
- * @param img
- * @returns
+ * @param img URL of the image to load
+ * @returns A texture set to repeat, offset by one full tile
  */
 const getTextures = (img: string) => {
   const texture = textureLoader.load(img)
@@ -144,10 +144,11 @@ const getTextures = (img: string) => {
 
 /**
  * Create scene ground with physics, texture, and shadow
- * @param size
- * @param position
- * @param scene
- * @param world
+ * @param size Width, height and depth of the ground box
+ * @param position Where the ground sits in the scene
+ * @param scene The scene to add the ground to
+ * @param world The physics world the collider is added to
+ * @returns The ground mesh, its collider and its texture
  */
 const getGround = (
   size: CoordinateTuple,
@@ -176,6 +177,7 @@ const getGround = (
 
 /**
  * Return threeJS valid 3D model
+ * @returns The loaded scene and the full glTF it came from
  */
 const loadGLTF = (): Promise<{ model: Model; gltf: any }> => {
   return new Promise((resolve, reject) => {

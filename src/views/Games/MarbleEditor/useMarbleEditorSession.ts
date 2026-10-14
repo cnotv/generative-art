@@ -139,6 +139,10 @@ const bindGameEvents = (context: SessionContext, joined: P2PSession): void => {
 /**
  * P2P session for the marble editor: live collaborative map editing plus race
  * synchronization (start, marble positions, finishes, restart, chat).
+ * @param options The room and the player's name and colour.
+ * @param callbacks Called when the map changes and when a race starts, ends or restarts.
+ * @returns The session, the local peer and whether it hosts, and the actions that sync the map, the
+ *   race and chat.
  */
 export const useMarbleEditorSession = (
   options: UseMarbleEditorSessionOptions,
