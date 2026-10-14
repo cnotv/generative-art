@@ -198,9 +198,12 @@ export const useCameraConfigStore = defineStore('cameraConfig', () => {
     if (active !== null) lastFollowView.value = active
   }
 
-  /** Turns following back on with whichever view was last in effect. */
-  const resumeFollowView = () =>
+  /**
+   * Turns following back on with whichever view was last in effect.
+   */
+  const resumeFollowView = (): void => {
     selectFollowView(lastFollowView.value ?? followViews.value[0]?.value ?? null)
+  }
 
   const unregisterFollowViews = () => {
     followViews.value = []

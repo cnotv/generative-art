@@ -6,7 +6,6 @@
  * be added to the document for the click to register.
  * @param dataUrl - The encoded contents to save
  * @param filename - Name to save under, extension included
- * @returns Nothing; a no-op when there is nothing to save
  */
 export const downloadDataUrl = (dataUrl: string, filename: string): void => {
   if (!dataUrl) return

@@ -155,20 +155,47 @@ export const useViewConfigStore = defineStore('viewConfig', () => {
   }
 })
 
+/**
+ * Copies a view's config into a ref, so the panel can edit it without touching the constant.
+ * @param config The view's default config.
+ * @returns A deep copy, wrapped in a ref.
+ */
 export const createReactiveConfig = <T extends Record<string, unknown>>(config: T): Ref<T> =>
   ref(JSON.parse(JSON.stringify(config))) as Ref<T>
 
 // Standalone convenience exports — same call site ergonomics as before
+/**
+ * Gives the Config panel to a view: its config, the schema the panel builds controls from, and
+ * callbacks for changes and buttons.
+ * @param routeName The view's route name.
+ * @param config The config the panel edits.
+ * @param schema The controls to show.
+ * @param onChange Called with each change.
+ * @param callbacks Handlers for the schema's buttons, by name.
+ */
 export const registerViewConfig = (
   routeName: string,
   config: Ref<Record<string, unknown>>,
   schema: ConfigControlsSchema,
   onChange?: OnChangeCallback,
   callbacks?: Record<string, () => void>
-) => useViewConfigStore().registerViewConfig(routeName, config, schema, onChange, callbacks)
+): void => {
+  useViewConfigStore().registerViewConfig(routeName, config, schema, onChange, callbacks)
+}
 
-export const unregisterViewConfig = (routeName: string) =>
+/**
+ * Removes a view's Config panel registration.
+ * @param routeName The view's route name.
+ */
+export const unregisterViewConfig = (routeName: string): void => {
   useViewConfigStore().unregisterViewConfig(routeName)
+}
 
-export const updateViewSchema = (routeName: string, schema: ConfigControlsSchema) =>
+/**
+ * Replaces the controls a registered view's Config panel shows.
+ * @param routeName The view's route name.
+ * @param schema The new controls.
+ */
+export const updateViewSchema = (routeName: string, schema: ConfigControlsSchema): void => {
   useViewConfigStore().updateViewSchema(routeName, schema)
+}

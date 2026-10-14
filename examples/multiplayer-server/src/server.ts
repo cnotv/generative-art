@@ -23,6 +23,8 @@ const createCoins = (): Coin[] =>
  * The coins are state the server owns, rather than something each client decides for
  * itself — two players reaching the same coin must not both score it. Keeping it in a
  * closure means nothing outside these handlers can reach in and change it.
+ * @returns The coins on offer and a claim that awards each coin once, refilling the field when it
+ *   empties.
  */
 const createCoinArena = () => {
   let coins = createCoins()

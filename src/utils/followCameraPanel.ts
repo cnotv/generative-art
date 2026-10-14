@@ -108,7 +108,11 @@ export type FollowCameraPanel = {
   teardown: () => void
 }
 
-/** The offsets one mode exposes, read off the package's own schema so the two cannot drift. */
+/**
+ * The offsets one mode exposes, read off the package's own schema so the two cannot drift.
+ * @param mode The follow camera mode.
+ * @returns One setting per offset the mode exposes.
+ */
 const settingsForMode = (mode: FollowCameraMode): CameraFollowSetting[] => {
   const { mode: _selector, ...offsets } = followCameraSchema(mode)
   return Object.entries(offsets).map(([key, control]) => {
@@ -129,7 +133,6 @@ const settingsForMode = (mode: FollowCameraMode): CameraFollowSetting[] => {
  *
  * There is no row of its own. A rig is a way of driving the camera, not a second thing in the
  * scene, and splitting the two left a player toggling one while the other quietly overrode it.
- *
  * @param options - The view's camera mode, what it follows, and any overrides
  * @returns The shared config to place the camera from, the on switch, and a teardown
  */
@@ -161,8 +164,10 @@ export const registerFollowCameraPanel = (options: FollowCameraPanelOptions): Fo
   const publishSettings = (mode: FollowCameraMode) =>
     cameraConfigStore.registerFollowSettings(settingsForMode(mode), config, targetName.value)
 
-  /** Offers whatever the elements panel is showing that a camera could sensibly follow. */
-  const publishTargets = () =>
+  /**
+   * Offers whatever the elements panel is showing that a camera could sensibly follow.
+   */
+  const publishTargets = (): void => {
     cameraConfigStore.registerFollowTargets(
       followCameraCandidates(debugSceneStore.sceneElements),
       (name) => {
@@ -171,6 +176,7 @@ export const registerFollowCameraPanel = (options: FollowCameraPanelOptions): Fo
       },
       options.defaultTarget
     )
+  }
 
   // Mutated in place rather than replaced: the render loop holds this object.
   cameraConfigStore.registerFollowReset(() => Object.assign(config, declared))

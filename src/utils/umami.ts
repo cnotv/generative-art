@@ -6,6 +6,10 @@ interface UmamiConfig {
 
 const DEFAULT_SCRIPT_URL = 'https://cloud.umami.is/script.js'
 
+/**
+ * Loads Umami analytics and tracks events and page views through it.
+ * @returns The loader and the two trackers.
+ */
 export function useUmami() {
   const loadUmami = (config: UmamiConfig) => {
     // Prevent loading the script twice
@@ -46,6 +50,7 @@ export function useUmami() {
   /**
    * Manually track a page view (Usually not needed as Umami tracks automatically)
    * Use this only if you have disabled auto-tracking
+   * @param url The page URL, the current one when left out.
    */
   const trackPageView = (url?: string) => {
     if (window.umami) {

@@ -3,7 +3,6 @@ import type { HintRect } from './useMenuFocus'
 
 /**
  * Converts a DOMRect into the plain hint rect stored in hint state.
- *
  * @param rect Bounding rect of the hint's anchor element
  * @returns Plain rect with top, left, width and height
  */
@@ -17,7 +16,6 @@ export const toHintRect = (rect: DOMRect): HintRect => ({
 /**
  * Whether two hint rects describe the same box, so hint state is only
  * rewritten when the anchor actually moved.
- *
  * @param first First rect
  * @param second Second rect
  * @returns True when all four measurements match
@@ -33,7 +31,6 @@ export const hintRectsEqual = (first: HintRect, second: HintRect): boolean =>
  * glued to its anchor through any layout shift (images loading, rows swapping,
  * scrolling). `refresh` must early-return when no hint is visible and only
  * write state when the measured rect changed, so idle frames cost nothing.
- *
  * @param refresh Callback that re-measures the hint anchor
  */
 export const useHintRefreshTriggers = (refresh: () => void): void => {

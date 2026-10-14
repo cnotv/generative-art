@@ -15,7 +15,6 @@ export type TimelineAction = {
 /**
  * Creates a timeline action that makes the camera smoothly follow a mesh.
  * Skips when orbit controls are enabled.
- *
  * @param camera - The Three.js camera
  * @param getMesh - Getter returning the mesh to follow (or null to skip)
  * @param offset - Camera offset [x, y, z] relative to the mesh
@@ -43,7 +42,6 @@ export const createCameraFollowAction = (
  * Creates a timeline action that moves a DirectionalLight and its target to follow a mesh
  * with a fixed world-space offset — keeping the shadow angle constant throughout the scene.
  * Must run after the physics sync action so it reads the updated mesh position.
- *
  * @param getLight - Getter returning the DirectionalLight (or null to skip)
  * @param getMesh - Getter returning the mesh to follow (or null to skip)
  * @param offset - Light offset [x, y, z] relative to the mesh
@@ -71,7 +69,6 @@ export const createDirectionalLightFollowAction = (
 /**
  * Creates a timeline action that syncs a Rapier physics body's position and rotation
  * to its Three.js mesh each frame.
- *
  * @param getMesh - Getter returning the ComplexModel to sync (or null to skip)
  * @param visualYOffset - Added to Y so the mesh visual sits on the platform surface rather than inside it.
  *   With getCube origin.y=0, the geometry is shifted up by height/2 but the Rapier body center stays at
@@ -95,7 +92,6 @@ export const createPhysicsSyncAction = (
 /**
  * Creates a timeline action that increments an elapsed-time ref each frame.
  * Stops incrementing when isFinished() returns true.
- *
  * @param elapsed - Reactive ref holding accumulated seconds
  * @param isFinished - Returns true when the timer should stop
  * @param getDelta - Returns delta-time in seconds for the current frame
@@ -118,7 +114,6 @@ export const createTimerAction = (
 /**
  * Creates a timeline action that triggers onFall() when the mesh drops below a Y threshold.
  * Intended for respawn logic in platformer and ball-rolling games.
- *
  * @param getMesh - Getter returning the mesh to watch (or null to skip)
  * @param threshold - Y value below which onFall is triggered every frame
  * @param onFall - Called each frame the mesh is below threshold
@@ -142,7 +137,6 @@ export const createFallCheckAction = (
 /**
  * Creates a timeline action that translates a Three.js mesh to follow a target's X/Z
  * with a fixed Z offset. Used for ground/sky meshes that should track a moving player.
- *
  * @param getMesh - Getter returning the mesh to move (or null to skip)
  * @param getTarget - Getter returning the target whose position drives the follow (or null to skip)
  * @param offsetZ - Constant Z offset added to the target's z so the mesh stays slightly ahead/behind

@@ -39,6 +39,8 @@ const tupleToVec3 = (tuple?: [number, number, number]) => ({
  * Builds initial config state for a texture area from its layers.
  * Extracts area center/size, texture baseSize, instance density/seed, and rendering opacity/speed
  * from the first layer in the group.
+ * @param layers The group's texture layers.
+ * @returns The panel config, or an empty object without layers.
  */
 export const buildTextureAreaConfig = (layers: TextureAreaLayer[]): Record<string, unknown> => {
   if (layers.length === 0) return {}
@@ -69,7 +71,6 @@ export const buildTextureAreaConfig = (layers: TextureAreaLayer[]): Record<strin
 /**
  * Registers texture area element properties for the properties panel.
  * Manages nested config state and syncs changes via onUpdate callback.
- *
  * @param options.areaName - Unique area identifier (e.g., 'cloud', 'hill')
  * @param options.layers - Config layers for this area (used to build initial state)
  * @param options.schema - Schema defining the property controls (e.g., textureAreaControls)

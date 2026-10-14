@@ -34,10 +34,9 @@ const DEFAULT_GAME_ID = 'default'
  * Controls-mapper store scoped to a game id. Each id gets an isolated instance
  * with its own mapping, skin, presets and persistence, so per-game dialogs and
  * the standalone test view (default id) never share state.
- *
- * @param {string} [gameId] Game identifier for isolated state and storage
- * @param {ControlMapping} [defaultMapping] Fallback mapping when nothing is stored
- * @returns {ReturnType<ReturnType<typeof defineStore>>} The scoped store instance
+ * @param [gameId] Game identifier for isolated state and storage
+ * @param [defaultMapping] Fallback mapping when nothing is stored
+ * @returns The scoped store instance
  */
 export const useControlsMapperStore = (gameId?: string, defaultMapping?: ControlMapping) => {
   const key = gameId ?? DEFAULT_GAME_ID

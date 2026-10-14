@@ -129,8 +129,7 @@ const captureGamepad = (registerCancel: RegisterCancel): Promise<string> =>
  * Capture the next physical input for a device so it can be assigned to an
  * action. Keyboard resolves with the pressed key; gamepad resolves with its
  * mapped button/axis name. Input from the other device interrupts the capture.
- *
- * @returns {{ listeningDevice: import('vue').Ref<ControlDevice | null>, capture: (device: ControlDevice) => Promise<string>, cancel: () => void }} Capture helpers
+ * @returns Capture helpers
  */
 export function useBindingCapture() {
   const listeningDevice = ref<ControlDevice | null>(null)

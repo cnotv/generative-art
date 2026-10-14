@@ -14,6 +14,10 @@ export const playableExamples: readonly PlayableExample[] = [
   { slug: 'runner-starter', title: 'Endless Runner' }
 ]
 
-/** `BASE_URL` carries the deployment's sub-path and always ends in a separator. */
+/**
+ * `BASE_URL` carries the deployment's sub-path and always ends in a separator.
+ * @param slug The example's folder name.
+ * @returns The URL of the example's page.
+ */
 export const buildExampleUrl = (slug: string): string =>
   `${import.meta.env.BASE_URL}examples/${slug}/index.html`

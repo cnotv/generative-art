@@ -5,9 +5,8 @@ const DEFAULT_DEADZONE = 0.15
 /**
  * Track the first connected gamepad's left stick as a normalized -1..1 vector,
  * polled each animation frame. Used to drive the faux-pad preview visually.
- *
- * @param {number} deadzone Minimum absolute axis value before it registers
- * @returns {{ position: import('vue').Ref<{ x: number; y: number }> }} Reactive stick position
+ * @param deadzone Minimum absolute axis value before it registers
+ * @returns Reactive stick position
  */
 export function useGamepadStick(deadzone: number = DEFAULT_DEADZONE) {
   const position = ref({ x: 0, y: 0 })

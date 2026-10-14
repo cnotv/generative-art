@@ -30,7 +30,10 @@ PLATFORMS.forEach((platform) => getCube(scene, world, platform))
 
 const { currentActions } = createControls(CONTROLS)
 
-/** Which way the pressed keys point, on the ground plane. */
+/**
+ * Which way the pressed keys point, on the ground plane.
+ * @returns The direction's X and Z, each -1, 0 or 1.
+ */
 const movementDirection = (): { x: number; z: number } => ({
   x: (currentActions['move-right'] ? 1 : 0) - (currentActions['move-left'] ? 1 : 0),
   z: (currentActions['move-back'] ? 1 : 0) - (currentActions['move-forward'] ? 1 : 0)

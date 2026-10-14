@@ -21,7 +21,12 @@ const STEP_DESCRIPTIONS: Record<PathStepType, string> = {
   jump: 'Jump — hops straight up and back down in place (e.g. to bump a block above).'
 }
 
-/** Step type of the segment from waypoint `index` to the next (wrapping at the end). */
+/**
+ * Step type of the segment from waypoint `index` to the next (wrapping at the end).
+ * @param path The path the waypoint belongs to.
+ * @param index The waypoint's position in the path.
+ * @returns The step type of that segment.
+ */
 const stepTypeAt = (path: PathEntry, index: number): PathStepType =>
   logicClassifyPathSegment(
     path.waypoints[index],
@@ -36,7 +41,11 @@ const props = defineProps<Properties>()
 
 const debugSceneStore = useDebugSceneStore()
 
-/** True for the waypoint row currently being interacted with in the viewport. */
+/**
+ * True for the waypoint row currently being interacted with in the viewport.
+ * @param index The waypoint's position in the path.
+ * @returns True for the active waypoint of this path.
+ */
 const isActiveRow = (index: number): boolean => {
   const active = debugSceneStore.activeWaypoint
   return active?.pathId === props.path.id && active.index === index

@@ -5,11 +5,21 @@ import type { TextureGroup, GroupConfig } from '@/stores/textureGroups'
 
 const MAX_INSTANCES = 2000
 
+/**
+ * Turns a density setting into an instance count between 1 and the cap.
+ * @param density The density from the panel.
+ * @returns The instance count.
+ */
 export const densityToCount = (density: number): number => {
   if (density <= 0) return 1
   return Math.min(MAX_INSTANCES, Math.max(1, Math.round(density)))
 }
 
+/**
+ * Removes a texture group's instanced meshes and wireframe from the scene.
+ * @param scene The scene to clean.
+ * @param groupId The group's id.
+ */
 export const removeGroupMeshes = (scene: THREE.Scene, groupId: string): void => {
   const prefix = `grp-${groupId}-`
   const wireframeName = `wireframe-${groupId}`
@@ -23,6 +33,12 @@ const HALF = 0.5
 const randomVariation = (base: number, variation: number): number =>
   base + (Math.random() - HALF) * variation
 
+/**
+ * Lays out the instances of every visible texture group from its config.
+ * @param groups The texture groups.
+ * @param getGroupConfig Reads a group's area, density and texture settings.
+ * @returns One instance config per texture placed.
+ */
 export const createTextureInstances = (
   groups: TextureGroup[],
   getGroupConfig: (groupId: string) => GroupConfig
@@ -86,6 +102,14 @@ export const createTextureInstances = (
     })
 }
 
+/**
+ * Adds one texture group's instanced meshes to the scene once its textures load.
+ * @param scene The scene to add them to.
+ * @param world The physics world; unused by flat texture meshes.
+ * @param group The texture group.
+ * @param getGroupConfig Reads a group's area, density and texture settings.
+ * @param onDone Called once the meshes are in the scene.
+ */
 export const addGroupMeshes = (
   scene: THREE.Scene,
   world: unknown,

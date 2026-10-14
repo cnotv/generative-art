@@ -1,5 +1,6 @@
 /**
  * Enable zoom prevention on mobile devices
+ * @returns The viewport tag and the style element added, to restore later.
  */
 const enableZoomPrevention = () => {
   // Store original viewport and modify it
@@ -35,6 +36,8 @@ const enableZoomPrevention = () => {
 
 /**
  * Restore normal zoom functionality
+ * @param originalViewport The viewport tag to restore.
+ * @param preventZoomStyleElement The style element to remove.
  */
 const disableZoomPrevention = (
   originalViewport: Element | null,
@@ -54,6 +57,8 @@ const disableZoomPrevention = (
 
 /**
  * Load Google Fonts for this route only
+ * @param url The stylesheet URL.
+ * @param id The id to give the link, to remove it later.
  */
 const loadGoogleFont = (url: string, id: string) => {
   const link = document.createElement('link')
@@ -65,6 +70,7 @@ const loadGoogleFont = (url: string, id: string) => {
 
 /**
  * Remove Google Font from the document
+ * @param id The id the link was given.
  */
 const removeGoogleFont = (id: string) => {
   const existingLink = document.getElementById(id)

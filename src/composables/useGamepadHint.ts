@@ -21,7 +21,6 @@ const isSelectElement = (element: Element | null): element is HTMLSelectElement 
  * Composable that tracks which element has gamepad focus and returns a
  * positioned hint chip describing the active button affordance. Only
  * renders when the most recent input was a gamepad press.
- *
  * @param editingElement Reactive ref to the element currently in "edit mode"
  * (cycling via Up/Down). Pass `null` when not tracking edit mode.
  * @returns focusedHint, inputSource, updateFocusedHint, onInputSource

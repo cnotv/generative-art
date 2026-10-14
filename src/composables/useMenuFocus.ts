@@ -236,12 +236,12 @@ const runMenuAction = (
  * Roving keyboard/gamepad focus over a panel of `[data-lui-row]` rows. Up/down
  * move between rows, left/right between focusable controls in a row, activate
  * clicks buttons and edits number/select inputs, cancel blurs.
- *
- * @param {Ref<HTMLElement | null>} panel The panel element containing the rows
- * @param {() => boolean} [isPaused] When it returns true, navigation is ignored (e.g. while capturing a key binding)
- * @param {Parameters<typeof useMenuNavigation>[1]} [mapping] Optional input mapping override passed to useMenuNavigation
- * @param {Parameters<typeof useMenuNavigation>[2]} [options] Options forwarded to useMenuNavigation (e.g. `modal: true` for dialogs)
- * @returns {{ focusedHint: Ref<FocusHint | null>, inputSource: Ref<MenuFocusSource | null>, focusFirst: () => void }} Focus state and control
+ * @param panel The panel element containing the rows
+ * @param [isPaused] When it returns true, navigation is ignored (e.g. while capturing a key
+ *   binding)
+ * @param [mapping] Optional input mapping override passed to useMenuNavigation
+ * @param [options] Options forwarded to useMenuNavigation (e.g. `modal: true` for dialogs)
+ * @returns Focus state and control
  */
 export function useMenuFocus(
   panel: Ref<HTMLElement | null>,

@@ -81,6 +81,8 @@ const finishDrawing = (ctx: EditorContext): void => {
  * @param onUpdate - Callback fired after any operation that changes the canvas
  * @param onStrokeCallback - Optional callback fired per stroke segment
  * @param onFillCallback - Optional callback fired when a fill is applied
+ * @returns The history state, snapshot and restore helpers, and the pointer handlers to bind to the
+ *   canvas.
  */
 export const useCanvasEditor = (
   canvasReference: Ref<HTMLCanvasElement | null>,

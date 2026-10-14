@@ -12,7 +12,12 @@ const CYCLE_SECONDS = 60
 /** Scenes open on a moving sky, at a speed that shows a whole day without waiting a minute. */
 export const DEFAULT_SPEED = 4
 
-/** Wrap into [0, length), which `%` alone does not do for negative values. */
+/**
+ * Wrap into [0, length), which `%` alone does not do for negative values.
+ * @param value The value to wrap.
+ * @param length The cycle length.
+ * @returns The value inside [0, length).
+ */
 const wrapPhase = (value: number, length: number): number => ((value % length) + length) % length
 
 interface LightTransitionOptions {

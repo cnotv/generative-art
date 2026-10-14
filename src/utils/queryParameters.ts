@@ -4,6 +4,9 @@ import type { ConfigControlsSchema, ControlSchema } from '@/stores/viewConfig'
 /**
  * Traverses a ConfigControlsSchema and returns a map of
  * { dotted.config.path → queryParamName } for all fields with `queryParam` set.
+ * @param schema The controls schema.
+ * @param prefix The config path of the schema, for nested groups.
+ * @returns Query parameter names, by config path.
  */
 export const collectQueryParameterPaths = (
   schema: ConfigControlsSchema,
@@ -33,6 +36,8 @@ export const collectQueryParameterPaths = (
 /**
  * Composable that provides helpers for syncing a config object
  * with URL query parameters, driven by a ConfigControlsSchema.
+ * @param schema The controls schema.
+ * @returns A reader that fills a config from the URL, and a syncer that writes a config to it.
  */
 export const useQueryParameters = (schema: ConfigControlsSchema) => {
   const route = useRoute()

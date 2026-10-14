@@ -44,6 +44,8 @@ type FloodFillRegion = {
  * Recursion depth is the number of rings, which tops out at the image's own
  * width plus height — a thousand frames for a 512px map, nowhere near deep
  * enough to matter, and each ring's pixels are still handled in bulk.
+ * @param frontier Pixel indices of the current ring.
+ * @param region The image data, the target colour, the replacement and the visited pixels.
  */
 const fillRegion = (frontier: number[], region: FloodFillRegion): void => {
   const next = frontier.flatMap((position) => {
@@ -76,7 +78,6 @@ const fillRegion = (frontier: number[], region: FloodFillRegion): void => {
  * @param startX - Fill origin in canvas pixels
  * @param startY - Fill origin in canvas pixels
  * @param replacement - The colour to paint, as four 0-255 channels
- * @returns Nothing; the context's image data is replaced in place
  */
 export const floodFill = (
   context: CanvasRenderingContext2D,

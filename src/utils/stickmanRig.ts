@@ -99,7 +99,6 @@ export const buildStickmanPartRig = (stickman: THREE.Object3D): StickmanPartRig 
  * Pushes a per-limb nudge onto each node, relative to its own measured rest transform.
  * @param rig - The measured part rig
  * @param parts - Current offsets, one per limb
- * @returns Nothing; the rig's nodes are mutated in place
  */
 export const applyStickmanPartOffsets = (
   rig: StickmanPartRig,
@@ -141,7 +140,6 @@ export const applyStickmanPartOffsets = (
  * instead, which leaves nothing here to reshape.
  * @param arm - The arm node to seat onto, when the rig has one
  * @param shoulder - The cap to reseat, when the rig has one
- * @returns Nothing; the shoulder is reparented and moved in place
  */
 const seatShoulderOnArm = (
   arm: THREE.Object3D | undefined,

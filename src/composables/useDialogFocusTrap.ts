@@ -9,7 +9,6 @@ const FOCUSABLE_SELECTOR =
  * scope (muting every non-modal menu handler behind the dialog), drives
  * stick/d-pad/arrow focus over the dialog's `[data-lui-row]` rows, and cycles
  * Tab / Shift-Tab within the dialog's focusable controls.
- *
  * @param dialog The dialog root element containing the `[data-lui-row]` rows
  * @returns Focus hint state for `LobbyUIFocusHint`, input source and `focusFirst`
  */
