@@ -4,12 +4,11 @@ import type { ControlAction, ControlDevice, ControlMapping } from './types'
  * Assign a trigger to an action on a device, returning a new mapping.
  * Any other trigger already bound to the same action on that device is removed,
  * so each action keeps a single trigger per device.
- *
- * @param {ControlMapping} mapping Current mapping (not mutated)
- * @param {ControlDevice} device Device to update
- * @param {string} trigger Trigger key/button/direction to bind
- * @param {ControlAction} action Action the trigger should fire
- * @returns {ControlMapping} A new mapping with the binding applied
+ * @param mapping Current mapping (not mutated)
+ * @param device Device to update
+ * @param trigger Trigger key/button/direction to bind
+ * @param action Action the trigger should fire
+ * @returns A new mapping with the binding applied
  */
 export function assignBinding(
   mapping: ControlMapping,
@@ -26,11 +25,10 @@ export function assignBinding(
 
 /**
  * Remove a trigger from a device, returning a new mapping.
- *
- * @param {ControlMapping} mapping Current mapping (not mutated)
- * @param {ControlDevice} device Device to update
- * @param {string} trigger Trigger to remove
- * @returns {ControlMapping} A new mapping without the trigger
+ * @param mapping Current mapping (not mutated)
+ * @param device Device to update
+ * @param trigger Trigger to remove
+ * @returns A new mapping without the trigger
  */
 export function removeBinding(
   mapping: ControlMapping,
@@ -48,8 +46,7 @@ export function removeBinding(
  * Build the default control mapping used as a starting point in the mapper.
  * Covers keyboard (WASD + arrows), gamepad (face buttons + dpad) and faux-pad
  * directions for the standard movement actions.
- *
- * @returns {ControlMapping} A fresh default mapping
+ * @returns A fresh default mapping
  */
 export function createDefaultMapping(): ControlMapping {
   return {

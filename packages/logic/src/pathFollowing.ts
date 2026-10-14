@@ -25,10 +25,11 @@ type AdvanceAccumulator = {
 /**
  * Advances along the path by distributing remainingDistance across segments.
  * Uses reduce to avoid loops, crossing segment boundaries as needed.
- * @param waypoints
- * @param startIndex
- * @param startProgress
- * @param distanceToAdvance
+ * @param waypoints The path's points.
+ * @param startIndex Segment the follower is on.
+ * @param startProgress How far along that segment it is, in world units.
+ * @param distanceToAdvance How far to move.
+ * @returns The segment reached, the progress on it, and whether the path ended.
  */
 const advanceState = (
   waypoints: Waypoint[],
@@ -77,9 +78,10 @@ const advanceState = (
 /**
  * Advances a follower along a polyline of 3D waypoints by `speed * delta` world units.
  * Pure function — returns new state and position; never mutates inputs.
- * @param state
- * @param speed
- * @param delta
+ * @param state The path and where the follower is on it.
+ * @param speed World units per second.
+ * @param delta Seconds since the last frame.
+ * @returns The new state and the follower's position.
  */
 export const logicAdvanceAlongPath = (
   state: PathFollowState,

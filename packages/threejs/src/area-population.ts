@@ -44,8 +44,9 @@ type SeededRandom = {
  * Returns [newState, randomValue] where:
  * - newState: Updated generator state for next call
  * - randomValue: Pseudo-random number in range [0, 1)
- *
+ * @param randomGenerator The generator state to advance.
  * @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#mulberry32
+ * @returns The next state and a value in [0, 1).
  */
 const nextRandom = (randomGenerator: SeededRandom): [SeededRandom, number] => {
   // Step 1: Ensure 32-bit integer and add increment constant
@@ -67,6 +68,10 @@ const nextRandom = (randomGenerator: SeededRandom): [SeededRandom, number] => {
 /**
  * Generate random number in range [min, max)
  * Returns [newState, randomValue]
+ * @param randomGenerator The generator state to advance.
+ * @param minimumValue Lowest value, inclusive.
+ * @param maximumValue Highest value, exclusive.
+ * @returns The next state and the value drawn.
  */
 const randomInRange = (
   randomGenerator: SeededRandom,
@@ -83,7 +88,6 @@ const randomInRange = (
  * Callers that need several independent variations per instance (lateral
  * offset, jitter, rotation, scale, texture pick) draw one long sequence and
  * slice it, so the whole layout stays reproducible from the seed alone.
- *
  * @param seed - Seed seeding the mulberry32 state
  * @param count - How many values to draw
  * @returns `count` values in [0, 1)
@@ -99,6 +103,9 @@ export const seededRandomValues = (seed: number, count: number): number[] =>
 
 /**
  * Calculate area bounds from center and size
+ * @param centerPosition The area's centre.
+ * @param areaSize The area's full width, height and depth.
+ * @returns The area's lowest and highest corners.
  */
 const calculateBoundsFromCenterAndSize = (
   centerPosition: CoordinateTuple,
@@ -121,6 +128,8 @@ const calculateBoundsFromCenterAndSize = (
 
 /**
  * Determine area bounds from config
+ * @param configuration The area, as explicit corners or as a centre and size.
+ * @returns The area's lowest and highest corners.
  */
 const determineAreaBounds = (
   configuration: AreaConfig
@@ -150,6 +159,11 @@ const determineAreaBounds = (
  * - No clustering: Each segment gets exactly one element
  * - Predictable spacing: Elements are guaranteed to be spread out
  * - Still random: Position within each segment is randomized
+ * @param elementCount How many positions to place.
+ * @param minimumBounds The area's lowest corner.
+ * @param maximumBounds The area's highest corner.
+ * @param randomSeed Seed, so the same seed gives the same layout.
+ * @returns One position per element, left to right.
  */
 const generateStratifiedPositions = (
   elementCount: number,
@@ -195,6 +209,10 @@ const generateStratifiedPositions = (
  *
  * When one dimension (X or Z) is 0, creates a 1D line distribution.
  * Otherwise creates a square-ish 2D grid.
+ * @param elementCount How many cells are needed.
+ * @param minimumBounds The area's lowest corner.
+ * @param maximumBounds The area's highest corner.
+ * @returns The number of columns and rows.
  */
 const calculateGridDimensions = (
   elementCount: number,
@@ -221,6 +239,11 @@ const calculateGridDimensions = (
 
 /**
  * Calculate cell dimensions based on area and grid dimensions
+ * @param minimumBounds The area's lowest corner.
+ * @param maximumBounds The area's highest corner.
+ * @param gridColumns Columns in the grid.
+ * @param gridRows Rows in the grid.
+ * @returns The width and depth of one cell.
  */
 const calculateCellDimensions = (
   minimumBounds: CoordinateTuple,
@@ -247,6 +270,7 @@ type GridPositionOptions = {
 
 /**
  * Generate grid position for a specific row and column
+ * @returns The centre of that cell.
  */
 const generateGridPosition = ({
   rowIndex,
@@ -274,6 +298,7 @@ type JitterOptions = {
 /**
  * Apply jitter to a grid position
  * Returns [newState, jitteredPosition]
+ * @returns The next generator state and the jittered position, kept inside its cell.
  */
 const applyJitterToGridPosition = ({
   randomGenerator,
@@ -292,6 +317,10 @@ const applyJitterToGridPosition = ({
 
 /**
  * Generate all grid cell positions (row, col pairs) up to elementCount
+ * @param gridColumns Columns in the grid.
+ * @param gridRows Rows in the grid.
+ * @param elementCount How many cells to take, row by row.
+ * @returns The row and column of each cell taken.
  */
 const generateGridCellIndices = (
   gridColumns: number,
@@ -309,6 +338,10 @@ const generateGridCellIndices = (
 
 /**
  * Generate grid positions without jitter
+ * @param elementCount How many positions to place.
+ * @param minimumBounds The area's lowest corner.
+ * @param maximumBounds The area's highest corner.
+ * @returns One cell centre per element.
  */
 const generateGridPositions = (
   elementCount: number,
@@ -342,6 +375,11 @@ const generateGridPositions = (
 
 /**
  * Generate grid positions with jitter
+ * @param elementCount How many positions to place.
+ * @param minimumBounds The area's lowest corner.
+ * @param maximumBounds The area's highest corner.
+ * @param randomSeed Seed, so the same seed gives the same layout.
+ * @returns One position per element, each moved randomly inside its cell.
  */
 const generateGridJitterPositions = (
   elementCount: number,
@@ -393,6 +431,8 @@ const generateGridJitterPositions = (
 
 /**
  * Generate positions for elements within a defined area
+ * @param configuration The area, how many elements, the pattern and the seed.
+ * @returns One position per element.
  */
 export function generateAreaPositions(configuration: AreaConfig): CoordinateTuple[] {
   const {

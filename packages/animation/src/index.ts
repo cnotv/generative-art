@@ -5,7 +5,15 @@ import type { TimelineManager } from './TimelineManager'
 
 export * from './types'
 
-/** Compute interval cycle state for a timeline action */
+/**
+ * Compute interval cycle state for a timeline action
+ * @param interval Frames running, then frames paused, per cycle.
+ * @param frame The current frame.
+ * @param delay Frames before the first cycle, if any.
+ * @param start Frame the action starts on, if any.
+ * @returns The cycle length, the frame's position inside its cycle, and how many cycles have
+ *   passed.
+ */
 const computeIntervalState = (
   interval: [number, number],
   frame: number,
@@ -19,14 +27,27 @@ const computeIntervalState = (
   return { cycle, frameCycle, loop }
 }
 
-/** Determine if a timeline action has completed */
+/**
+ * Determine if a timeline action has completed
+ * @param duration How many frames the action runs, if set.
+ * @param start Frame the action starts on, if set.
+ * @param end Explicit last frame, used when there is no duration.
+ * @returns The last frame, or undefined for an action that never ends.
+ */
 const computeActualEnd = (
   duration: number | undefined,
   start: number | undefined,
   end: number | undefined
 ): number | undefined => (duration !== undefined && start !== undefined ? start + duration : end)
 
-/** Check if an interval action should be skipped for the current frame */
+/**
+ * Check if an interval action should be skipped for the current frame
+ * @param interval Frames running, then frames paused, per cycle.
+ * @param frame The current frame.
+ * @param delay Frames before the first cycle, if any.
+ * @param start Frame the action starts on, if any.
+ * @returns True while the cycle is in its pause.
+ */
 const shouldSkipIntervalFrame = (
   interval: [number, number],
   frame: number,
@@ -65,7 +86,13 @@ const executeActionCallbacks = <T>({
   if (action && !isComplete) action(args)
 }
 
-/** Handle completion: fire onComplete and schedule autoRemove */
+/**
+ * Handle completion: fire onComplete and schedule autoRemove
+ * @param timelineAction The action that finished.
+ * @param args Whatever the caller passes to the loop, handed on to onComplete.
+ * @param toRemove Ids collected for removal after this frame.
+ * @param timeline The timeline the action belongs to.
+ */
 const handleCompletion = <T>(
   timelineAction: Timeline,
   args: T | undefined,
@@ -101,7 +128,14 @@ const shouldSkipAction = (
   return conditions.some(Boolean)
 }
 
-/** Execute and handle a single timeline action for the given frame */
+/**
+ * Execute and handle a single timeline action for the given frame
+ * @param timelineAction The action to run.
+ * @param frame The current frame.
+ * @param args Whatever the caller passes to the loop, handed on to the callbacks.
+ * @param toRemove Ids collected for removal after this frame.
+ * @param timeline The timeline the action belongs to.
+ */
 const processTimelineAction = <T>(
   timelineAction: Timeline,
   frame: number,
@@ -165,13 +199,22 @@ const animateTimeline = <T>(
   }
 }
 
-/** Half the collider's vertical extent, used to find the distance from its center to its bottom face */
+/**
+ * Half the collider's vertical extent, used to find the distance from its center to its bottom face
+ * @param collider The collider to measure.
+ * @returns The radius for a ball, the half height for a box.
+ */
 const getColliderHalfHeight = (collider: RAPIER.Collider): number =>
   collider.shapeType() === RAPIER.ShapeType.Ball ? collider.radius() : collider.halfExtents().y
 
 const GROUND_CHECK_MARGIN = 2
 
-/** Whether the model's collider is resting on (or overlapping) another body directly beneath it */
+/**
+ * Whether the model's collider is resting on (or overlapping) another body directly beneath it
+ * @param model The model whose body is cast from.
+ * @param world The physics world to cast the ray in.
+ * @returns True when a body lies within the collider's half height plus a small margin below.
+ */
 const isGrounded = (model: ComplexModel, world: RAPIER.World): boolean => {
   const { body: rigidBody, collider } = model.userData
   const origin = rigidBody.translation()
@@ -183,7 +226,9 @@ const isGrounded = (model: ComplexModel, world: RAPIER.World): boolean => {
 
 /**
  * Bind physic to models to animate them
- * @param elements
+ * @param elements The models to move.
+ * @param world The physics world the bodies live in.
+ * @param delta Seconds since the last frame.
  */
 const bindAnimatedElements = (elements: ComplexModel[], world: RAPIER.World, delta: number) => {
   elements.forEach((model: ComplexModel) => {
@@ -211,7 +256,8 @@ const bindAnimatedElements = (elements: ComplexModel[], world: RAPIER.World, del
 
 /**
  * Reset models and bodies to their initial state (position, rotation, forces, and torques)
- * @param elements
+ * @param elements The models to reset.
+ * @returns The same models, for chaining.
  */
 const resetAnimation = (elements: ComplexModel[]) => {
   elements.forEach((model) => {
@@ -228,6 +274,14 @@ const resetAnimation = (elements: ComplexModel[]) => {
   return elements
 }
 
+/**
+ * Turns a loaded glTF's clips into actions on the model's mixer, keyed by clip name. The model is
+ * flipped to face away from the camera, as the source files face the other way.
+ * @param mixer The mixer that plays the model's animations.
+ * @param model The loaded model.
+ * @param gltf The loaded file, for its clips.
+ * @returns One action per clip, keyed by clip name.
+ */
 const getAnimationsModel = (
   mixer: THREE.AnimationMixer,
   model: Model,
@@ -264,7 +318,11 @@ interface PlayActionOptions {
   onComplete?: () => void
 }
 
-/** Fade out previous action if it differs from the current one */
+/**
+ * Fade out previous action if it differs from the current one
+ * @param player The model whose current action is faded out.
+ * @param nextAction The action about to play.
+ */
 const fadePreviousAction = (player: ComplexModel, nextAction: THREE.AnimationAction): void => {
   const previousAction = player.userData.currentAction
     ? player.userData.actions?.[player.userData.currentAction as string]
@@ -275,7 +333,10 @@ const fadePreviousAction = (player: ComplexModel, nextAction: THREE.AnimationAct
   }
 }
 
-/** Clear blocking flags on the player (restores movement/rotation) */
+/**
+ * Clear blocking flags on the player (restores movement/rotation)
+ * @param player The model to free.
+ */
 const clearBlockingFlags = (player: ComplexModel): void => {
   player.userData.performing = false
   player.userData.allowMovement = true
@@ -283,7 +344,14 @@ const clearBlockingFlags = (player: ComplexModel): void => {
   player.userData.allowedActions = []
 }
 
-/** Set blocking flags on the player */
+/**
+ * Set blocking flags on the player
+ * @param player The model to block.
+ * @param actionName The action now playing.
+ * @param allowMovement Whether the model may still move while it plays.
+ * @param allowRotation Whether the model may still turn while it plays.
+ * @param allowActions Actions that may interrupt this one.
+ */
 const setBlockingFlags = (
   player: ComplexModel,
   actionName: string,
@@ -298,7 +366,13 @@ const setBlockingFlags = (
   player.userData.allowedActions = allowActions
 }
 
-/** Register a 'finished' listener that clears blocking state and calls onComplete */
+/**
+ * Register a 'finished' listener that clears blocking state and calls onComplete
+ * @param mixer The mixer that fires 'finished'.
+ * @param action The action to wait for.
+ * @param player The model to free when it ends.
+ * @param onComplete Called once the action ends, if given.
+ */
 const registerFinishedListener = (
   mixer: THREE.AnimationMixer,
   action: THREE.AnimationAction,
@@ -330,25 +404,33 @@ const registerFinishedListener = (
  * **Comparison with playActionTimeline:**
  * - playAction: Event-driven, automatic cleanup, minimal boilerplate
  * - playActionTimeline: Frame-based, manual control, timeline integration
- *
  * @param player ComplexModel with animation mixer and actions
  * @param actionName Name of the animation to play
  * @param options Configuration for blocking behavior and lifecycle
- *
  * @example
  * playAction(player, 'attack', {
  *   loop: THREE.LoopOnce,
  *   allowMovement: false,
  * });
  */
-/** Check if an action is blocked by current performing state */
+/**
+ * Check if an action is blocked by current performing state
+ * @param player The model asked to play.
+ * @param actionName The action asked for.
+ * @returns True while another action is playing and does not allow this one.
+ */
 const isActionBlocked = (player: ComplexModel, actionName: string): boolean =>
   !!(
     player.userData.performing &&
     !(player.userData.allowedActions as string[] | undefined)?.includes(actionName)
   )
 
-/** Resolve action and mixer from player userData */
+/**
+ * Resolve action and mixer from player userData
+ * @param player The model holding the actions and mixer.
+ * @param actionName The action to find.
+ * @returns The action and the mixer, either undefined when missing.
+ */
 const resolveActionAndMixer = (
   player: ComplexModel,
   actionName: string
@@ -357,7 +439,11 @@ const resolveActionAndMixer = (
   mixer: player.userData.mixer as THREE.AnimationMixer | undefined
 })
 
-/** Start an animation action with fade in and configure loop */
+/**
+ * Start an animation action with fade in and configure loop
+ * @param action The action to start.
+ * @param loop Play once or repeat.
+ */
 const startAction = (
   action: THREE.AnimationAction,
   loop: THREE.AnimationActionLoopStyles
@@ -367,6 +453,15 @@ const startAction = (
   action.clampWhenFinished = true
 }
 
+/**
+ * Plays a named action on a model, cross-fading from the current one. While a one-shot action
+ * plays, the model can be held still and other actions refused; the 'finished' event frees it again
+ * (event-driven, unlike playActionTimeline).
+ * @param player The model to animate.
+ * @param actionName The clip name.
+ * @param options What the model may still do while it plays, the loop style, and a callback for the
+ *   end.
+ */
 const playAction = (
   player: ComplexModel,
   actionName: string,
@@ -393,7 +488,11 @@ const playAction = (
   }
 }
 
-/** Get the clip duration from an animation action (Three.js internal) */
+/**
+ * Get the clip duration from an animation action (Three.js internal)
+ * @param action The action to measure.
+ * @returns The clip's length in seconds, or 0 when the clip is not reachable.
+ */
 const getClipDuration = (action: THREE.AnimationAction): number => {
   const actionWithClip = action as THREE.AnimationAction & { _clip?: { duration: number } }
   return actionWithClip._clip?.duration ?? 0
@@ -415,13 +514,11 @@ const getClipDuration = (action: THREE.AnimationAction): number => {
  * **Comparison with playAction:**
  * - playAction: Event-driven, automatic cleanup, minimal boilerplate
  * - playActionTimeline: Frame-based, manual control, timeline integration
- *
  * @param timelineManager Timeline manager instance that orchestrates all timeline actions
  * @param player ComplexModel with animation mixer and actions
  * @param actionName Name of the animation to play
  * @param getDelta Function that returns delta time per frame (from Three.js clock)
  * @param config Configuration for blocking behavior (movement, rotation, allowed interruptions)
- *
  * @example
  * const manager = createTimelineManager();
  * playActionTimeline(manager, player, 'kick', getDelta, {
@@ -491,6 +588,15 @@ const canStartActionTimeline = (
   return !timelineManager.getTimeline().some((a) => a.name === `blocking-${actionName}`)
 }
 
+/**
+ * Plays a named action once and tracks it on the timeline, which frees the model when the clip's
+ * length has passed.
+ * @param timelineManager The timeline that tracks the action.
+ * @param player The model to animate.
+ * @param actionName The clip name.
+ * @param getDelta Returns seconds since the last frame, to advance the mixer.
+ * @param config What the model may still do while it plays, and the playback speed.
+ */
 const playActionTimeline = (
   timelineManager: TimelineManager,
   player: ComplexModel,
@@ -522,7 +628,12 @@ const playActionTimeline = (
   })
 }
 
-/** Switch from previous animation to a new action with crossfade */
+/**
+ * Switch from previous animation to a new action with crossfade
+ * @param player The model to animate.
+ * @param action The action to switch to.
+ * @param actionName Its clip name, stored as the current action.
+ */
 const switchAction = (
   player: ComplexModel,
   action: THREE.AnimationAction,
@@ -542,6 +653,7 @@ const switchAction = (
 
 /**
  * Update the animation of the model based on given time
+ * @param data The model, the action to play, the frame's delta and the playback speed.
  */
 const updateAnimation = (data: AnimationData): void => {
   const { player, actionName, delta, speed = 10 } = data
@@ -700,6 +812,11 @@ interface GroundMovementResult {
 
 /**
  * Check ground with character radius offset
+ * @param position Where the character would stand.
+ * @param forwardDirection The direction it moves, to probe ahead by its radius.
+ * @param bodies The bodies that count as ground.
+ * @param options Step height, how far down to look, and the character's radius.
+ * @returns Whether ground was found, and its height.
  */
 const checkGroundWithRadius = (
   position: THREE.Vector3,
@@ -728,7 +845,10 @@ type AxisFallbackOptions = {
   debugLabel: string
 }
 
-/** Determine movement result for a single axis fallback */
+/**
+ * Determine movement result for a single axis fallback
+ * @returns Whether the character can move along this axis alone, and where it ends up.
+ */
 const resolveAxisFallback = ({
   axisCheck,
   axisMovement,
@@ -748,7 +868,15 @@ const resolveAxisFallback = ({
   return { canMove: true, finalPosition, debugInfo: debugLabel }
 }
 
-/** Resolve axis fallback when full movement has no ground */
+/**
+ * Resolve axis fallback when full movement has no ground
+ * @param oldPosition Where the character stands now.
+ * @param newPosition Where the full move would take it.
+ * @param direction The direction of the move.
+ * @param bodies The bodies that count as ground.
+ * @param options Step height, how far down to look, and the character's radius.
+ * @returns The move along X or Z alone when one of them has ground, or no move.
+ */
 const resolveAxisFallbacks = (
   oldPosition: THREE.Vector3,
   newPosition: THREE.Vector3,
@@ -820,6 +948,12 @@ const resolveAxisFallbacks = (
 
 /**
  * Validate ground for movement and handle axis fallback for edge walking
+ * @param oldPosition Where the character stands now.
+ * @param newPosition Where the move would take it.
+ * @param direction The direction of the move.
+ * @param bodies The bodies that count as ground.
+ * @param options Step height, how far down to look, and the character's radius.
+ * @returns Whether the character can move, where to, and debug details.
  */
 const checkGroundForMovement = (
   oldPosition: THREE.Vector3,
@@ -849,6 +983,8 @@ const checkGroundForMovement = (
 
 /**
  * Apply movement to model and rigid body
+ * @param model The character to move.
+ * @param position Its new position.
  */
 const moveCharacter = (model: ComplexModel, position: THREE.Vector3): void => {
   const rigidBody = model.userData.body
@@ -856,7 +992,12 @@ const moveCharacter = (model: ComplexModel, position: THREE.Vector3): void => {
   rigidBody.setTranslation(position, true)
 }
 
-/** Log debug information for ground check result */
+/**
+ * Log debug information for ground check result
+ * @param groundResult The result of the ground check.
+ * @param groundBodies The bodies that were checked.
+ * @param groundOptions The options the check used.
+ */
 const logGroundDebug = (
   groundResult: GroundMovementResult,
   groundBodies: ComplexModel[],
@@ -959,6 +1100,14 @@ const applyControllerMovement = (
   }
 }
 
+/**
+ * Moves a character forward along its facing, or toward a target heading, stopping at obstacles and
+ * at ledges with no ground below, and plays its walk animation.
+ * @param obstacles Bodies the character cannot walk into.
+ * @param groundBodies Bodies the character can stand on.
+ * @param animationData The character, the action to play, the frame's delta, speed and distance.
+ * @param rawOptions Ground-check and collision settings; defaults fill the rest.
+ */
 const controllerForward = (
   obstacles: ComplexModel[],
   groundBodies: ComplexModel[],
@@ -1000,6 +1149,13 @@ const controllerForward = (
   if (action && mixer) updateAnimation(animationData)
 }
 
+/**
+ * Lifts a model by a fixed height, without physics.
+ * @param model The model to lift.
+ * @param _bodies Unused; kept so it matches bodyJump.
+ * @param _distance Unused; kept so it matches bodyJump.
+ * @param height How far to lift it.
+ */
 const controllerJump = (
   model: ComplexModel,
   _bodies: ComplexModel[],
@@ -1012,7 +1168,7 @@ const controllerJump = (
 
 /**
  * Rotate model on defined angle
- * @param model
+ * @param model The model to turn.
  * @param angle angle in degrees
  * @returns true if rotation was applied, false if blocked
  */
@@ -1101,6 +1257,7 @@ const ROTATION_MAP_MIRRORED: Record<string, number> = {
 /**
  * Calculate target rotation based on directional input actions
  * @param currentActions Record of active control actions
+ * @param mirrored Swap left and right, for a camera behind the character.
  * @returns Target rotation in degrees (0, 45, 90, 135, 180, 225, 270, 315) or null if no movement
  */
 const getRotation = (
@@ -1154,6 +1311,13 @@ const updatePlayerFacing = (
   return movementHeading
 }
 
+/**
+ * Lifts a model and its body by a height, unless that would put it inside another body.
+ * @param model The model to lift.
+ * @param bodies Bodies it must not overlap after the jump.
+ * @param distance How far forward the jump reaches.
+ * @param height How far to lift it.
+ */
 const bodyJump = (
   model: ComplexModel,
   bodies: ComplexModel[],

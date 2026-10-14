@@ -54,7 +54,6 @@ export interface LobbyHandle {
  * Peers in the lobby can broadcast a display name, send targeted match
  * requests to each other, and accept or ignore each request individually.
  * On acceptance, both sides receive the shared `gameRoomId` to join.
- *
  * @param lobbyRoomId - Well-known room ID all players join to discover each other
  * @param config - Optional P2P configuration
  * @param callbacks - Event handlers for peer, name, and request lifecycle events

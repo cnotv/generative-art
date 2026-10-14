@@ -32,7 +32,10 @@ const applyDirectionalShadow = (light: THREE.DirectionalLight, shadow: ShadowCon
   light.shadow.camera.updateProjectionMatrix()
 }
 
-/** Local shadow map settings for the lights that light their own surroundings. */
+/**
+ * Local shadow map settings for the lights that light their own surroundings.
+ * @param light The point or spot light to configure.
+ */
 const applyLocalShadow = (light: THREE.PointLight | THREE.SpotLight) => {
   light.shadow.mapSize.width = 2048
   light.shadow.mapSize.height = 2048
@@ -164,8 +167,8 @@ const createHemisphereLight = (
  * Create the lights a scene declares. Ambient and directional are made unless the config
  * turns them off with `false`; hemisphere, point, spot and rect area are made only when the
  * config names them, each with an optional helper.
- * @param scene
- * @param config
+ * @param scene The scene to add the lights to.
+ * @param config Which lights to create, and their settings.
  * @returns Every light created, so a caller can drive them afterwards
  */
 export const getLights = (scene: THREE.Scene, config: LightsConfig = {}) => {
@@ -288,15 +291,6 @@ const updateSkyColor = (scene: THREE.Scene, color: number) => {
   if (scene.background instanceof THREE.Color) scene.background.set(color)
 }
 
-/**
- * Apply a whole light rig onto the scene: each light group the config names is updated in
- * place, or created with the standard names when the scene lacks it, so a preset can rely
- * on its full setup of lights. The environment entry only scales
- * `scene.environmentIntensity` (never creating the environment texture), and a sky entry
- * recolours the `sky` mesh and the scene background.
- * @param scene
- * @param config
- */
 const updatePointLight = (light: THREE.PointLight, config: NonNullable<LightsConfig['point']>) => {
   if (config.color !== undefined) light.color.set(config.color)
   if (config.intensity !== undefined) light.intensity = config.intensity
@@ -324,8 +318,8 @@ const updateRectAreaLight = (
  * Update the lights that only a scene declaring them can have, so a panel can drive them.
  * Unlike the rig lights these are never created here: a scene without a spotlight did not
  * ask for one.
- * @param scene
- * @param config
+ * @param scene The scene holding the lights.
+ * @param config The settings to apply.
  */
 const updateOptionalLights = (scene: THREE.Scene, config: LightsConfig): void => {
   const point = scene.getObjectByName('point-light')
@@ -339,6 +333,15 @@ const updateOptionalLights = (scene: THREE.Scene, config: LightsConfig): void =>
     updateRectAreaLight(rectArea, config.rectArea)
 }
 
+/**
+ * Apply a whole light rig onto the scene: each light group the config names is updated in
+ * place, or created with the standard names when the scene lacks it, so a preset can rely
+ * on its full setup of lights. The environment entry only scales
+ * `scene.environmentIntensity` (never creating the environment texture), and a sky entry
+ * recolours the `sky` mesh and the scene background.
+ * @param scene The scene whose lights are updated or created.
+ * @param config The light groups to apply, with optional environment intensity and sky colour.
+ */
 export const updateLights = (scene: THREE.Scene, config: LightPresetConfig): void => {
   if (config.ambient) updateAmbientLight(ensureAmbientLight(scene), config.ambient)
   if (config.directional) updateDirectionalLight(ensureDirectionalLight(scene), config.directional)
@@ -416,9 +419,9 @@ const loadEquirectangularTexture = (url: string): THREE.Texture => {
  * Apply an environment light to the scene: indirect, image-based illumination through
  * `scene.environment`, lighting every PBR material from all directions. Bakes the neutral
  * RoomEnvironment by default, or loads an equirectangular texture when a url is configured.
- * @param renderer
- * @param scene
- * @param config
+ * @param renderer The renderer that bakes the default environment.
+ * @param scene The scene to light.
+ * @param config An equirectangular texture URL and the intensity.
  * @returns The environment texture, reusable as a material envMap
  */
 export const getEnvironmentLight = (

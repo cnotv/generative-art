@@ -5,9 +5,14 @@ export interface KeyboardController {
   unbind: (target?: HTMLElement | null) => void
 }
 
-/** Prefers a `Shift+<key>`-mapped action over the bare key's own when Shift is held and the
+/**
+ * Prefers a `Shift+<key>`-mapped action over the bare key's own when Shift is held and the
  * mapping actually defines one, so a mapping can give a modified key its own action without
- * every existing bare-key mapping needing to change. */
+ * every existing bare-key mapping needing to change.
+ * @param keyboardMap Keys mapped to actions.
+ * @param event The key event.
+ * @returns The action, or 'no action' when the key is unmapped.
+ */
 const lookupKeyboardAction = (
   keyboardMap: Record<string, string> | undefined,
   event: KeyboardEvent
@@ -19,10 +24,10 @@ const lookupKeyboardAction = (
 }
 
 /**
- *
- * @param mappingReference
- * @param mappingReference.current
- * @param handlers
+ * Turns key presses into actions through the keyboard mapping.
+ * @param mappingReference Holds the current mapping, so a remap applies without rebinding.
+ * @param handlers Receive each action as it starts and ends.
+ * @returns The controller, to bind and unbind its listeners.
  */
 export function createKeyboardController(
   mappingReference: { current: ControlMapping },

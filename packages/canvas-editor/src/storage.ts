@@ -133,6 +133,7 @@ export const storageListIdb = async (): Promise<string[]> => {
  * @param backend - Storage backend to use
  * @param name - Slot identifier
  * @param dataUrl - Canvas data URL
+ * @returns A promise for IndexedDB, nothing for localStorage, which saves synchronously.
  */
 export const storageSave = (
   backend: StorageBackend,
@@ -157,6 +158,7 @@ export const storageLoad = (
  * Delete from the chosen backend.
  * @param backend - Storage backend to use
  * @param name - Slot identifier
+ * @returns A promise for IndexedDB, nothing for localStorage, which deletes synchronously.
  */
 export const storageDelete = (backend: StorageBackend, name: string): Promise<void> | void =>
   backend === 'indexedDB' ? storageDeleteIdb(name) : storageDeleteLocal(name)

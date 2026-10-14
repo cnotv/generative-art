@@ -6,6 +6,7 @@ import vueParser from 'vue-eslint-parser'
 import functional from 'eslint-plugin-functional'
 import unicorn from 'eslint-plugin-unicorn'
 import prettierConfig from 'eslint-config-prettier'
+import jsdoc from 'eslint-plugin-jsdoc'
 import noAllocInAnimationLoop from './rules/no-alloc-in-animation-loop.js'
 import noRedundantThreejsLoader from './rules/no-redundant-threejs-loader.js'
 import noMeshInLoop from './rules/no-mesh-in-loop.js'
@@ -587,6 +588,33 @@ export default [
     rules: {
       'functional/no-loop-statements': 'off',
       complexity: 'off'
+    }
+  },
+
+  // Every exported function carries a comment saying what it is for, and a tag for each argument
+  // and the result. Tests are exempt; types stay in TypeScript rather than the comment.
+  {
+    files: ['**/*.{ts,mts,vue}'],
+    ignores: ['**/*.test.ts', '**/*.spec.ts', '**/*.d.ts'],
+    ...jsdoc.configs['flat/recommended-typescript-error'],
+    rules: {
+      ...jsdoc.configs['flat/recommended-typescript-error'].rules,
+      'jsdoc/require-jsdoc': [
+        'error',
+        {
+          publicOnly: true,
+          require: {
+            FunctionDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true
+          }
+        }
+      ],
+      // A destructured argument is described by its type; naming its parts again adds nothing.
+      'jsdoc/require-param': ['error', { checkDestructuredRoots: false }],
+      'jsdoc/check-param-names': ['error', { checkDestructured: false }],
+      // pnpm lint runs with --fix, which would otherwise satisfy require-jsdoc with an empty block.
+      'jsdoc/require-description': 'error'
     }
   },
 

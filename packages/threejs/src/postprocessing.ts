@@ -8,6 +8,10 @@ import { PostProcessingConfig } from './types'
 type ShaderDefinition = ConstructorParameters<typeof ShaderPass>[0]
 type UniformValue = number | number[] | THREE.Vector2 | THREE.Vector3 | THREE.Color | boolean
 
+/**
+ * Adds a shader pass to the composer, setting each uniform the config names, through its transform
+ * when one is given.
+ */
 async function addShaderPass({
   composer,
   Shader,
@@ -165,10 +169,7 @@ const applyOutline = async (
 
 /**
  * Abstracted postprocessing setup function
- * @param renderer
- * @param scene
- * @param camera
- * @param config
+ * @param options The renderer, scene and camera to render, and the effects to chain.
  * @returns composer and optional populateOutline callback to call after scene is built
  */
 const setupPostprocessing = async ({

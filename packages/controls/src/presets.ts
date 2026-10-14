@@ -26,9 +26,8 @@ const toPreset = (value: unknown): ControlPreset => {
 
 /**
  * Serialize a preset to a JSON string for export.
- *
- * @param {ControlPreset} preset Preset to serialize
- * @returns {string} JSON representation of the preset
+ * @param preset Preset to serialize
+ * @returns JSON representation of the preset
  */
 export function serializePreset(preset: ControlPreset): string {
   return JSON.stringify(preset)
@@ -37,9 +36,8 @@ export function serializePreset(preset: ControlPreset): string {
 /**
  * Parse and validate a preset from a JSON string. Throws when the JSON is
  * malformed or does not match the preset shape.
- *
- * @param {string} json JSON string to parse
- * @returns {ControlPreset} The validated preset
+ * @param json JSON string to parse
+ * @returns The validated preset
  */
 export function parsePreset(json: string): ControlPreset {
   return toPreset(JSON.parse(json))
@@ -52,10 +50,8 @@ const mappingKeyFor = (key: string): string => `${PRESETS_STORAGE_KEY}:mapping:$
 
 /**
  * Persist the active mapping for a key (e.g. a game id) to localStorage.
- *
- * @param {string} key Namespace key
- * @param {ControlMapping} mapping The active mapping to store
- * @returns {void}
+ * @param key Namespace key
+ * @param mapping The active mapping to store
  */
 export function saveMapping(key: string, mapping: ControlMapping): void {
   localStorage.setItem(mappingKeyFor(key), JSON.stringify(mapping))
@@ -64,9 +60,8 @@ export function saveMapping(key: string, mapping: ControlMapping): void {
 /**
  * Load the active mapping stored for a key. Returns null when nothing is stored
  * or the stored value is not a valid mapping.
- *
- * @param {string} key Namespace key used when saving
- * @returns {ControlMapping | null} The stored mapping, or null
+ * @param key Namespace key used when saving
+ * @returns The stored mapping, or null
  */
 export function loadMapping(key: string): ControlMapping | null {
   const raw = localStorage.getItem(mappingKeyFor(key))
@@ -82,10 +77,8 @@ export function loadMapping(key: string): ControlMapping | null {
 /**
  * Persist a list of presets to localStorage. Pass a key (e.g. a game id) to
  * store them in an isolated namespace.
- *
- * @param {ControlPreset[]} presets Presets to store
- * @param {string} [key] Namespace key
- * @returns {void}
+ * @param presets Presets to store
+ * @param [key] Namespace key
  */
 export function savePresets(presets: ControlPreset[], key?: string): void {
   localStorage.setItem(storageKeyFor(key), JSON.stringify(presets))
@@ -94,9 +87,8 @@ export function savePresets(presets: ControlPreset[], key?: string): void {
 /**
  * Load stored presets from localStorage. Returns an empty list when nothing is
  * stored or the stored value is corrupt.
- *
- * @param {string} [key] Namespace key used when saving
- * @returns {ControlPreset[]} The stored presets, or an empty list
+ * @param [key] Namespace key used when saving
+ * @returns The stored presets, or an empty list
  */
 export function loadPresets(key?: string): ControlPreset[] {
   const raw = localStorage.getItem(storageKeyFor(key))

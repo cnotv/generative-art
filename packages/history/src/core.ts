@@ -14,7 +14,11 @@ export const historyCreate = <TSnapshot>(
   limit: number
 ): HistoryStack<TSnapshot> => ({ past: [{ label, snapshot }], future: [], limit })
 
-/** The state on screen now, which is always the newest one not undone. */
+/**
+ * The state on screen now, which is always the newest one not undone.
+ * @param stack The current history.
+ * @returns The newest snapshot.
+ */
 export const historyState = <TSnapshot>(stack: HistoryStack<TSnapshot>): TSnapshot =>
   stack.past[stack.past.length - 1].snapshot
 
@@ -62,11 +66,19 @@ export const historyRedo = <TSnapshot>(stack: HistoryStack<TSnapshot>): HistoryS
   return { stack: { past: [...stack.past, redone], future, limit: stack.limit }, entry: redone }
 }
 
-/** Whether there is an action to step back from; the state an editor opened on is not one. */
+/**
+ * Whether there is an action to step back from; the state an editor opened on is not one.
+ * @param stack The current history.
+ * @returns True when an action can be undone.
+ */
 export const historyCanUndo = <TSnapshot>(stack: HistoryStack<TSnapshot>): boolean =>
   stack.past.length > 1
 
-/** Whether an undone action is waiting to be put back. */
+/**
+ * Whether an undone action is waiting to be put back.
+ * @param stack The current history.
+ * @returns True when an undone action can be redone.
+ */
 export const historyCanRedo = <TSnapshot>(stack: HistoryStack<TSnapshot>): boolean =>
   stack.future.length > 0
 

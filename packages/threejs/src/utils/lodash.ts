@@ -1,7 +1,8 @@
 /**
- *
- * @param n
- * @param fn
+ * Builds an array by calling a function once per index.
+ * @param n How many items to build.
+ * @param fn Builds the item for an index.
+ * @returns The items, in index order.
  */
 export const times = <T>(n: number, fn: (i: number) => T): T[] => {
   return Array.from({ length: n }, (_, i) => fn(i))
@@ -15,6 +16,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
  * Keys present only in override are included in the result.
  * @param base - The base object providing default values
  * @param override - Partial object whose defined values take precedence
+ * @returns A new object; neither input is changed.
  */
 export const deepMerge = <T extends Record<string, unknown>>(
   base: T,

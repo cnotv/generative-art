@@ -21,7 +21,6 @@ export const DEFAULT_FOLLOW_CAMERA: FollowCameraConfig = {
 /**
  * Eases a mode change so it glides in fast and settles, landing exactly on the
  * goal rather than snapping the last fraction.
- *
  * @param alpha - Progress through the change, clamped for callers passing a raw ratio
  * @returns The eased progress
  */
@@ -77,7 +76,6 @@ const placeFree = (
  * Returns the placement rather than moving anything, so a caller can ease into
  * it, hand it to orbit controls, or ignore it — the three modes differ only in
  * arithmetic, and none of them needs to know what is being followed.
- *
  * @param mode - Which of the three cameras to place
  * @param target - World position of the thing being followed
  * @param direction - Unit heading it is travelling in, on the horizontal plane
@@ -105,7 +103,6 @@ export const followCameraPlacement = (
  *
  * Only height and distance along the heading are recoverable, because that is all the follow
  * model has. A camera parked off to one side calibrates to the same distance directly behind.
- *
  * @param mode - The mode being calibrated, since each keeps its own offsets
  * @param cameraPosition - Where the camera is now
  * @param target - World position of the thing being followed
@@ -164,7 +161,6 @@ const SHARED_CONTROLS = {
  *
  * Plain data rather than components, so the package stays free of any UI
  * framework and a host can render it however its own panels work.
- *
  * @param mode - The mode whose offsets should be shown
  * @param modeLabels - Display names for the three tabs
  * @returns A schema describing the controls for that mode
@@ -184,7 +180,6 @@ export const followCameraSchema = (
 
 /**
  * Every control across every mode, which is what a config object must cover.
- *
  * @returns The union of all three modes' controls and the shared ones
  */
 export const followCameraAllControls = (): Record<string, unknown> => ({

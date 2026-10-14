@@ -7,7 +7,7 @@ export type { GameStatus, GameState }
  * @param initialConfig Initial game data configuration in a dictionary format
  * @param bindTo Optional reference to bind the game state to (e.g., Vue Ref, React State)
  * @param cleanupHook Optional lifecycle hook for cleanup for garbage collection
- * @returns
+ * @returns The game state, with its status, data and listeners.
  */
 export function createGame(
   initialConfig: Record<string, unknown> | undefined,

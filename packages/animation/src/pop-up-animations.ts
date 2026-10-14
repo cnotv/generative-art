@@ -38,6 +38,8 @@ export const easing = {
 /**
  * Create a pop-up animation with bounce effect
  * Returns a function that tracks frames internally and returns false when complete
+ * @param config The object, its start and end height, duration, easing and delay.
+ * @returns A per-frame step that returns false once the animation is done.
  */
 export function createPopUpBounce(config: PopUpAnimationConfig): () => boolean {
   const {
@@ -97,6 +99,8 @@ export function createPopUpBounce(config: PopUpAnimationConfig): () => boolean {
 /**
  * Create a pop-up animation with fade effect
  * Returns a function that tracks frames internally and returns false when complete
+ * @param config The object, its start and end height, duration, easing and delay.
+ * @returns A per-frame step that returns false once the animation is done.
  */
 export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
   const {
@@ -156,6 +160,8 @@ export function createPopUpFade(config: PopUpAnimationConfig): () => boolean {
 /**
  * Create a pop-up animation with scale effect
  * Returns a function that tracks frames internally and returns false when complete
+ * @param config The object, its start and end height, duration, easing and delay.
+ * @returns A per-frame step that returns false once the animation is done.
  */
 export function createPopUpScale(config: PopUpAnimationConfig): () => boolean {
   const {
@@ -215,6 +221,8 @@ export function createPopUpScale(config: PopUpAnimationConfig): () => boolean {
  * Create a slide-in animation from the sides
  * Clouds on left side of screen slide in from left, clouds on right slide in from right
  * Returns a function that tracks frames internally and returns false when complete
+ * @param config The object, its start and end height, duration, easing and delay.
+ * @returns A per-frame step that returns false once the animation is done.
  */
 export function createSlideInFromSides(config: PopUpAnimationConfig): () => boolean {
   const {
@@ -289,6 +297,7 @@ export const sortOrder = {
   /**
    * Sort by Z position (front to back)
    * Items with higher Z (closer to camera) animate first
+   * @returns Negative when a is closer to the camera.
    */
   zFrontToBack: (
     a: { position: [number, number, number] },
@@ -300,6 +309,7 @@ export const sortOrder = {
   /**
    * Sort by Z position (back to front)
    * Items with lower Z (further from camera) animate first
+   * @returns Negative when a is further from the camera.
    */
   zBackToFront: (
     a: { position: [number, number, number] },
@@ -310,6 +320,7 @@ export const sortOrder = {
 
   /**
    * Sort by X position (left to right)
+   * @returns Negative when a is further left.
    */
   xLeftToRight: (
     a: { position: [number, number, number] },
@@ -320,6 +331,7 @@ export const sortOrder = {
 
   /**
    * Sort by X position (right to left)
+   * @returns Negative when a is further right.
    */
   xRightToLeft: (
     a: { position: [number, number, number] },
@@ -330,6 +342,7 @@ export const sortOrder = {
 
   /**
    * Sort by distance from origin (closest first)
+   * @returns Negative when a is closer to the origin.
    */
   distanceFromOrigin: (
     a: { position: [number, number, number] },
@@ -345,6 +358,7 @@ export const sortOrder = {
    * Items closer to the target Z position animate first
    * @param items All items to analyze for min/max Z
    * @param target 'start' (min Z), 'middle', or 'end' (max Z)
+   * @returns A sort function that puts items nearest the target depth first.
    */
   byDistanceFromZ: (
     items: Array<{ position: [number, number, number] }>,
@@ -380,7 +394,7 @@ export const sortOrder = {
 /**
  * Calculate delays for sequential animation based on sort order
  * @param items Array of items with position data
- * @param sortFn Sort function to determine animation order
+ * @param sortFunction Sort function that sets the animation order.
  * @param delayIncrement Frames to add between each item (default: 2)
  * @param maxTotalDelay Maximum total delay in frames (default: 60 frames = ~1 second at 60fps)
  * @returns Array of delays in the original item order

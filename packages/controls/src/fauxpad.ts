@@ -92,10 +92,9 @@ interface DragCallbacks {
 /**
  * Wire touch and mouse dragging on the inside element to the drag callbacks.
  * Mouse move/up are bound on window so a drag keeps tracking outside the pad.
- *
- * @param {HTMLElement} inside The draggable knob element
- * @param {DragCallbacks} callbacks Start/move/end handlers
- * @returns {() => void} A function that removes every listener
+ * @param inside The draggable knob element
+ * @param callbacks Start/move/end handlers
+ * @returns A function that removes every listener
  */
 function attachDragListeners(inside: HTMLElement, callbacks: DragCallbacks): () => void {
   const onTouchStart = (event: TouchEvent) => {
@@ -131,7 +130,9 @@ function attachDragListeners(inside: HTMLElement, callbacks: DragCallbacks): () 
 
 /**
  * Create a virtual faux-pad controller that interprets touch/mouse input into directional actions
- *
+ * @param mappingReference Holds the current mapping, so a remap applies without rebinding.
+ * @param handlers Receive each action as it starts and ends.
+ * @param options Deadzone, direction threshold and whether eight directions count.
  * @example
  * ```typescript
  * const fauxpad = createFauxPadController(
@@ -141,6 +142,7 @@ function attachDragListeners(inside: HTMLElement, callbacks: DragCallbacks): () 
  * );
  * fauxpad.bind(edgeElement, insideElement);
  * ```
+ * @returns The controller, to bind to the pad's elements and unbind later.
  */
 export function createFauxPadController(
   mappingReference: { current: ControlMapping },

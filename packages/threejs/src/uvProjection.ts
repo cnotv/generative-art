@@ -30,7 +30,6 @@ export type UvProjectionLayout = 'wrapped' | 'split'
  * rounded one (cylindrical limbs, a spherical head) mostly untextured.
  * @param model The model to remap, mutated in place
  * @param layout Whether the two faces share one image or take half each
- * @returns Nothing; the model's geometry UV attributes are mutated in place
  */
 export const remapUVsToWorldProjection = (
   model: THREE.Object3D,

@@ -26,6 +26,8 @@ import { textureLoader } from './loaders'
  * Merge a partial SetupConfig over SCENE_DEFAULTS so every section has complete values.
  * Sections disabled with `false` are preserved as `false`.
  * Camera is only merged when the caller provides camera config.
+ * @param config The scene's config, any section left out.
+ * @returns The config with every enabled section complete.
  */
 export const resolveSetupConfig = (config: SetupConfig): SetupConfig => ({
   ...config,
@@ -113,33 +115,6 @@ const applySceneConfig = (
 }
 
 /**
- * Initialize ThreeJS and Rapier and retrieve common tools.
- * Add lights, ground, and camera to the scene with default values.
- * Configuration passed through the setup function.
- * Animation allows to define a timeline with looped actions, as well as a before and after function.
- * Stats, configuration and video are handled by other utilities and added by default.
- *
- * Example config for postprocessing shading effects:
- *
- * postprocessing: {
- *   pixelate: { size: 8 },
- *   bloom: { strength: 0.8, threshold: 0.2, radius: 1.0 },
- *   fxaa: {},
- *   dotScreen: { scale: 1.5, angle: Math.PI / 3, center: [0.5, 0.5] },
- *   rgbShift: { amount: 0.002 },
- *   film: { noiseIntensity: 0.5, scanlinesIntensity: 0.05, scanlinesCount: 800, grayscale: true },
- *   glitch: {},
- *   afterimage: {},
- *   ssao: {},
- *   vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
- *   colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
- * }
- *
- * @param {stats, route, canvas}
- * @param options
- * @returns {setup, animate, clock, delta, frame, renderer, scene, camera, orbit, world}
- */
-/**
  * The most-recently created WebGLRenderer from getTools().
  * Read by the debug panel to access draw-call and triangle counts without
  * requiring each view to explicitly register its renderer.
@@ -160,6 +135,10 @@ const emitProgress = (
  * a canvas docked beside a side panel is narrower than the window, and a resize event fired for
  * an unrelated reason (a scrollbar toggling, say) must not stretch the render to fill space the
  * canvas itself was never given.
+ * @param renderer The renderer to resize.
+ * @param camera The camera whose aspect or frustum follows the size.
+ * @param canvas The canvas whose CSS size is used.
+ * @returns The resize listener.
  */
 const createResizeHandler =
   (renderer: THREE.WebGLRenderer, camera: THREE.Camera, canvas: HTMLCanvasElement): (() => void) =>
@@ -178,6 +157,34 @@ const createResizeHandler =
     ;(camera as THREE.PerspectiveCamera | THREE.OrthographicCamera).updateProjectionMatrix()
   }
 
+/**
+ * Initialize ThreeJS and Rapier and retrieve common tools.
+ * Add lights, ground, and camera to the scene with default values.
+ * Configuration passed through the setup function.
+ * Animation allows to define a timeline with looped actions, as well as a before and after
+ * function.
+ * Stats, configuration and video are handled by other utilities and added by default.
+ *
+ * Example config for postprocessing shading effects:
+ *
+ * postprocessing: {
+ *   pixelate: { size: 8 },
+ *   bloom: { strength: 0.8, threshold: 0.2, radius: 1.0 },
+ *   fxaa: {},
+ *   dotScreen: { scale: 1.5, angle: Math.PI / 3, center: [0.5, 0.5] },
+ *   rgbShift: { amount: 0.002 },
+ *   film: { noiseIntensity: 0.5, scanlinesIntensity: 0.05, scanlinesCount: 800, grayscale: true },
+ *   glitch: {},
+ *   afterimage: {},
+ *   ssao: {},
+ *   vignette: { offset: 1.2, darkness: 1.3, color: 0x222222 },
+ *   colorCorrection: { contrast: 1.2, saturation: 1.1, brightness: 1.0 },
+ * }
+ * @param config The canvas and route to render for, the stats panel, whether to follow the
+ *   canvas size, and a loading progress callback.
+ * @returns The scene tools: setup and animate, the clock and frame readers, the renderer, scene,
+ *   camera, orbit and physics world, a camera switcher, and cleanup.
+ */
 export const getTools = async ({
   stats,
   route,
@@ -331,9 +338,9 @@ export const getTools = async ({
 
 /**
  * Remove elements from the threeJS scene and Rapier world, then return the emptied list
- * @param world
- * @param elements
- * @returns
+ * @param world The physics world holding the bodies.
+ * @param meshes The models to remove.
+ * @returns An empty list, to assign back to the caller's element list.
  */
 export const removeElements = (world: RAPIER.World, meshes: ComplexModel[]) => {
   meshes.forEach((mesh) => {
@@ -347,6 +354,11 @@ export const removeElements = (world: RAPIER.World, meshes: ComplexModel[]) => {
   return []
 }
 
+/**
+ * Fits the renderer and a perspective camera to the window after a resize.
+ * @param camera The camera to update.
+ * @param renderer The renderer to resize.
+ */
 export const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => {
   if (camera instanceof THREE.PerspectiveCamera) {
     camera.updateProjectionMatrix()
@@ -357,10 +369,10 @@ export const onWindowResize = (camera: THREE.Camera, renderer: THREE.WebGLRender
 // https://threejs.org/docs/#api/en/objects/InstancedMesh
 /**
  * Create multiple instances of a given mesh, based on a configuration
- * @param mesh
- * @param scene
- * @param options
- * @returns
+ * @param mesh The mesh to instance.
+ * @param scene The scene to add the instances to.
+ * @param options One position, rotation and scale per instance.
+ * @returns The instanced meshes added.
  */
 export const instanceMatrixMesh = (
   mesh: THREE.Mesh,
@@ -397,9 +409,9 @@ export const instanceMatrixMesh = (
 
 /**
  * Generate multiple instances for a model based on a configuration
- * @param model
- * @param scene
- * @param options
+ * @param model The model whose meshes are instanced.
+ * @param scene The scene to add the instances to.
+ * @param options One position, rotation and scale per instance.
  */
 export const instanceMatrixModel = (
   model: THREE.Group<THREE.Object3DEventMap>,

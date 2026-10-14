@@ -260,6 +260,13 @@ const loadClipsFromFile = async (filename: string): Promise<THREE.AnimationClip[
   return loaded.animations
 }
 
+/**
+ * Loads animation files onto a mixer, naming each clip after its file and numbering clashes.
+ * @param mixer The mixer that plays the clips.
+ * @param filenames One file or several to load.
+ * @param onProgress Called as each file loads.
+ * @returns One action per clip, keyed by its unique name.
+ */
 export const getAnimations = async (
   mixer: THREE.AnimationMixer,
   filenames: string | string[],
@@ -336,7 +343,6 @@ const getCubeSizeArray = (size: number | CoordinateTuple): CoordinateTuple =>
  * @param mesh The mesh whose material's map is set
  * @param texture URL of the texture to load, skipped when undefined
  * @param options When `displacementScale` is positive, the same texture is also set as the displacement map
- * @returns Nothing; the mesh's material is mutated in place
  */
 export const applyTextureToMesh = (
   mesh: THREE.Mesh,
@@ -768,7 +774,6 @@ export const getCube = (
  *
  * `size` reads the same way as a cube's, so one can be swapped for the other without rethinking
  * the layout: `[diameter, height, diameter]`, positioned from its underside.
- *
  * @param scene The Three.js scene
  * @param world The Rapier physics world
  * @param options Size, position, material and physics options
