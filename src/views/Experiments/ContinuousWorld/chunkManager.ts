@@ -4,18 +4,42 @@ import { createTerrainChunk, buildHeightSampler } from './terrainGenerator'
 import { createGrassChunk } from './grassGenerator'
 import { createTreesChunk } from './treeGenerator'
 
+/**
+ * The key a chunk is stored under.
+ * @param chunkX The chunk's column.
+ * @param chunkZ The chunk's row.
+ * @returns The key, "x,z".
+ */
 export const computeChunkKey = (chunkX: number, chunkZ: number): ChunkKey => `${chunkX},${chunkZ}`
 
+/**
+ * Reads a chunk's column and row back from its key.
+ * @param key The key, "x,z".
+ * @returns The column and row.
+ */
 export const parseChunkKey = (key: ChunkKey): [number, number] => {
   const [chunkX, chunkZ] = key.split(',').map(Number)
   return [chunkX, chunkZ]
 }
 
+/**
+ * The chunk a position falls in.
+ * @param position The position.
+ * @param chunkSize The width of one chunk.
+ * @returns The chunk's column and row.
+ */
 export const computePlayerChunk = (
   position: THREE.Vector3,
   chunkSize: number
 ): [number, number] => [Math.floor(position.x / chunkSize), Math.floor(position.z / chunkSize)]
 
+/**
+ * Every chunk within a radius of a centre chunk, the square around it.
+ * @param centerX The centre chunk's column.
+ * @param centerZ The centre chunk's row.
+ * @param radius How many chunks out to include.
+ * @returns The chunks' keys.
+ */
 export const computeRequiredChunks = (
   centerX: number,
   centerZ: number,
@@ -27,11 +51,25 @@ export const computeRequiredChunks = (
     return computeChunkKey(centerX + offsetX, centerZ + offsetZ)
   })
 
+/**
+ * The required chunks not loaded yet.
+ * @param requiredChunks The chunks that should be loaded.
+ * @param activeChunks The chunks loaded now.
+ * @returns The keys to load.
+ */
 export const computeChunksToLoad = (
   requiredChunks: ChunkKey[],
   activeChunks: Map<ChunkKey, ChunkData>
 ): ChunkKey[] => requiredChunks.filter((key) => !activeChunks.has(key))
 
+/**
+ * The loaded chunks now further than the unload radius from the centre.
+ * @param activeChunks The chunks loaded now.
+ * @param centerX The centre chunk's column.
+ * @param centerZ The centre chunk's row.
+ * @param unloadRadius How far out a chunk may stay loaded.
+ * @returns The keys to unload.
+ */
 export const computeChunksToUnload = (
   activeChunks: Map<ChunkKey, ChunkData>,
   centerX: number,
@@ -212,6 +250,10 @@ const buildGrassLayer = (
   return grass
 }
 
+/**
+ * Builds one chunk: its terrain, grass, trees and ground, in the current world case.
+ * @returns The chunk's key, coordinates, meshes and height sampler.
+ */
 export const createChunk = ({
   chunkX,
   chunkZ,
@@ -282,6 +324,11 @@ const disposeObject = (object: THREE.Object3D, scene: THREE.Scene): void => {
   }
 }
 
+/**
+ * Removes a chunk's meshes, disposing only what the chunk owns; shared grass and tree assets stay.
+ * @param chunk The chunk.
+ * @param scene The scene it is in.
+ */
 export const disposeChunk = (chunk: ChunkData, scene: THREE.Scene): void => {
   if (chunk.terrain) disposeObject(chunk.terrain, scene)
   if (chunk.trees) scene.remove(chunk.trees) // shared geometry/materials — don't dispose per chunk
@@ -413,6 +460,9 @@ interface RebuildAllChunksOptions {
   spawnId?: string
 }
 
+/**
+ * Rebuilds every loaded chunk with new generator settings.
+ */
 export const rebuildAllChunks = ({
   activeChunks,
   scene,
@@ -648,6 +698,11 @@ const setChunkWorldCaseVisibility = (chunk: ChunkData, options: ApplyWorldCaseOp
   if (handler) handler(ctx)
 }
 
+/**
+ * Shows each loaded chunk's meshes for a world case.
+ * @param activeChunks The chunks loaded now.
+ * @param options The world case and which meshes it shows.
+ */
 export const applyWorldCaseToAllChunks = (
   activeChunks: Map<ChunkKey, ChunkData>,
   options: ApplyWorldCaseOptions

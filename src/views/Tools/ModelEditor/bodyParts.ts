@@ -79,6 +79,8 @@ export const createPartScales = (): ModelEditorPartScales =>
  * Which of a bone's own axes runs down its length, taken from where its tip sits. A bone's scale
  * applies in its own local space, so lengthening a limb means scaling the single axis its tip
  * lies along and leaving the two across it free to carry thickness instead.
+ * @param tipOffset Where the bone's tip sits, in its own frame.
+ * @returns The axis along its length.
  */
 const lengthAxisTowards = (tipOffset: THREE.Vector3): 'x' | 'y' | 'z' =>
   AXES.reduce(
@@ -90,6 +92,8 @@ const lengthAxisTowards = (tipOffset: THREE.Vector3): 'x' | 'y' | 'z' =>
  * The offset of the bone a region runs towards, falling back to whichever chain the bone starts,
  * and for a bone at the end of its chain to the bone's own offset from its parent: a generated
  * rig ends its arms at the hand and its spine at the head, and both carry on the way they came.
+ * @param bone The bone.
+ * @returns The tip's offset, or null when there is none.
  */
 const tipOffsetOf = (bone: THREE.Bone): THREE.Vector3 | null => {
   const tipName = TIP_NAME_BY_BONE_NAME.get(canonicalBoneName(bone.name))
@@ -115,7 +119,12 @@ export const measureRigBones = (bones: THREE.Bone[]): ModelEditorBoneRest[] =>
     }
   })
 
-/** The scale a bone's own region asks it to carry: length down the bone, size across it. */
+/**
+ * The scale a bone's own region asks it to carry: length down the bone, size across it.
+ * @param rest The bone's rest measurements and region.
+ * @param parts Each region's length and size.
+ * @returns The scale.
+ */
 const partScaleVector = (
   rest: ModelEditorBoneRest,
   parts: ModelEditorPartScales
@@ -128,6 +137,10 @@ const partScaleVector = (
 /**
  * The scale a bone's chain carries at that bone: its own region's, or for a bone no region covers
  * (a finger, a toe, the end of the skull) whatever the nearest covered bone above it carries.
+ * @param object The bone, or an ancestor while walking up.
+ * @param restByBone Each bone's rest measurements.
+ * @param parts Each region's length and size.
+ * @returns The scale.
  */
 const carriedScale = (
   object: THREE.Object3D | null,
@@ -151,7 +164,6 @@ const carriedScale = (
  * it: fingers grow with the hand, toes with the foot, the crown with the head.
  * @param rig Every bone measured at load, from `measureRigBones`
  * @param parts The proportions each region is currently set to
- * @returns Nothing; the rig's bones are scaled in place
  */
 export const applyPartScales = (rig: ModelEditorBoneRest[], parts: ModelEditorPartScales): void => {
   const restByBone = new Map<THREE.Object3D, ModelEditorBoneRest>(

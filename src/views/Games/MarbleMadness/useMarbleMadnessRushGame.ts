@@ -898,6 +898,12 @@ const makeInitialState = (): RushGameState => ({
   cloudManager: null
 })
 
+/**
+ * The endless rush mode: the marble rolls on as far as it can, with a countdown, distance, best
+ * distance, penalties and pickups.
+ * @param deps The canvas, the scene setup and the player's settings.
+ * @returns The countdown, distance, best, penalties, pickups and controls, and init and destroy.
+ */
 export const useMarbleMadnessRushGame = (deps: RushDeps) => {
   const countdown = ref(RUSH_COUNTDOWN)
   const distance = ref(0)

@@ -50,7 +50,12 @@ const findBone = (bones: THREE.Bone[], name: string): THREE.Bone | undefined =>
 const ancestorsOf = (object: THREE.Object3D): THREE.Object3D[] =>
   object.parent ? [object.parent, ...ancestorsOf(object.parent)] : []
 
-/** The joint a vertex follows most, out of the four a skinned vertex can carry. */
+/**
+ * The joint a vertex follows most, out of the four a skinned vertex can carry.
+ * @param geometry The skinned geometry.
+ * @param vertexIndex The vertex.
+ * @returns The joint index.
+ */
 const dominantJoint = (geometry: THREE.BufferGeometry, vertexIndex: number): number => {
   const { skinIndex, skinWeight } = geometry.attributes
   const strongest = SKIN_COMPONENTS.reduce((best, component) =>
@@ -61,7 +66,12 @@ const dominantJoint = (geometry: THREE.BufferGeometry, vertexIndex: number): num
   return skinIndex.getComponent(vertexIndex, strongest)
 }
 
-/** Every joint in a skinned mesh's skeleton that is the head or a bone hung below it. */
+/**
+ * Every joint in a skinned mesh's skeleton that is the head or a bone hung below it.
+ * @param mesh The skinned mesh.
+ * @param headBones The head bone and every bone below it.
+ * @returns The joint indices.
+ */
 const headJointsOf = (mesh: THREE.SkinnedMesh, headBones: Set<THREE.Object3D>): number[] =>
   resolveHierarchyBones(mesh.skeleton.bones).flatMap((bone, joint) =>
     headBones.has(bone) ? [joint] : []
@@ -70,6 +80,9 @@ const headJointsOf = (mesh: THREE.SkinnedMesh, headBones: Set<THREE.Object3D>): 
 /**
  * Which of a mesh's vertices belong to the head: those a skinned mesh binds mostly to the head's
  * bones, or every vertex of a plain mesh hung below the head, the way separate eyes often are.
+ * @param mesh The mesh.
+ * @param headBones The head bone and every bone below it.
+ * @returns The head's vertex indices.
  */
 const headVertexIndices = (mesh: THREE.Mesh, headBones: Set<THREE.Object3D>): number[] => {
   const allIndices = Array.from({ length: mesh.geometry.attributes.position.count }, (_, i) => i)
@@ -94,6 +107,10 @@ const headVerticesOf = (mesh: THREE.Mesh, headBones: Set<THREE.Object3D>): HeadV
  * vertex, and its height up to the top of the skull. The skull's end bone marks that top where
  * the rig has one, since hair, hats and headphones would otherwise stretch the face to reach
  * them and push every feature down.
+ * @param vertices The head's vertices in world space.
+ * @param head The head bone.
+ * @param crown The skull's end bone, if the rig has one.
+ * @returns The face's centre line, chin and height.
  */
 const measureFaceFrame = (
   vertices: HeadVertex[],
@@ -109,7 +126,12 @@ const measureFaceFrame = (
   return { centerX: headPosition.x, centerZ: headPosition.z, chin, height: top - chin }
 }
 
-/** The line each copy of a feature is searched along: from inside the head, facing outwards. */
+/**
+ * The line each copy of a feature is searched along: from inside the head, facing outwards.
+ * @param feature The feature.
+ * @param frame The face's centre line, chin and height.
+ * @returns One ray per copy of the feature.
+ */
 const featureRays = (
   feature: FaceFeature,
   frame: FaceFrame
@@ -132,6 +154,11 @@ const featureRays = (
  * The outermost head vertex along a ray, among those lying close to it: the point where the ray
  * leaves the skin. Features are placed by proportion, which gets their height and spacing about
  * right on most heads but knows nothing about how far forward a given face sits.
+ * @param base The ray's start.
+ * @param outward The ray's direction.
+ * @param vertices The head's vertices in world space.
+ * @param snapWindow How far off the ray a vertex may lie.
+ * @returns The point, or null when no vertex lies near the ray.
  */
 const snapOntoSurface = (
   base: THREE.Vector3,
@@ -159,6 +186,9 @@ const findFaceAnchors = (vertices: HeadVertex[], frame: FaceFrame): FaceAnchor[]
  * The map from a mesh's own geometry out to the world at rest. A plain mesh's is its world
  * matrix; a skinned mesh's runs through its bind and the head joint, so a displacement worked
  * out in the world lands on the right geometry however the rig was bound.
+ * @param mesh The mesh.
+ * @param headBones The head bone and every bone below it.
+ * @returns The matrix.
  */
 const geometryToWorld = (mesh: THREE.Mesh, headBones: Set<THREE.Object3D>): THREE.Matrix4 => {
   if (!(mesh instanceof THREE.SkinnedMesh)) return mesh.matrixWorld.clone()
@@ -171,7 +201,12 @@ const geometryToWorld = (mesh: THREE.Mesh, headBones: Set<THREE.Object3D>): THRE
     .multiply(mesh.bindMatrix)
 }
 
-/** Full strength across the feature's core, easing to nothing at its radius. */
+/**
+ * Full strength across the feature's core, easing to nothing at its radius.
+ * @param distance The distance from the feature's centre.
+ * @param radius The feature's radius.
+ * @returns The strength, from 1 to 0.
+ */
 const smoothFalloff = (distance: number, radius: number): number => {
   const closeness = THREE.MathUtils.clamp(
     (radius - distance) / (radius * (1 - FACE_FALLOFF_CORE)),

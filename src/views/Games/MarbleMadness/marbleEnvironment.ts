@@ -41,6 +41,13 @@ const HALF = 0.5
 const applyVariation = (base: number, variation: number): number =>
   base + (Math.random() - HALF) * 2 * variation
 
+/**
+ * Scatters textured cloud planes over an area, each with a body when a world is given.
+ * @param scene The scene to add them to.
+ * @param world The physics world, if any.
+ * @param options The area's centre and size, density, textures and sizes.
+ * @returns The clouds.
+ */
 export const buildCloudObjects = (
   scene: THREE.Scene,
   world: WorldReference,
@@ -95,6 +102,12 @@ export const buildCloudObjects = (
   })
 }
 
+/**
+ * Removes clouds from the scene and the world, and frees their geometry.
+ * @param objects The clouds.
+ * @param scene The scene, if still there.
+ * @param world The physics world, if still there.
+ */
 export const disposeClouds = (
   objects: ComplexModel[],
   scene: THREE.Scene | null,
@@ -122,6 +135,14 @@ export const SHARED_CLOUD_OPTIONS: CloudBuildOptions = {
   opacity: 1
 }
 
+/**
+ * Builds the cloud area and registers it with the Elements panel, rebuilding it when its settings
+ * change.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @param onRebuild Called with the new clouds after a rebuild.
+ * @returns The clouds built first.
+ */
 export const setupCloudArea = (
   scene: THREE.Scene,
   world: WorldReference,
@@ -192,6 +213,9 @@ export const setupCloudArea = (
   return currentObjects
 }
 
+/**
+ * Removes the cloud area from the Elements panel.
+ */
 export const teardownCloudArea = (): void => {
   useDebugSceneStore().removeSceneElement(CLOUD_AREA_NAME)
 }
@@ -199,7 +223,6 @@ export const teardownCloudArea = (): void => {
 /**
  * Registers the cloud area as an ElementGroup in the elements panel (same style as ForestGame).
  * Wires up the textureStore group, schema controls, and rebuild handlers.
- *
  * @param scene - Three.js scene
  * @param world - Rapier world
  * @param initialOptions - Initial cloud build configuration
@@ -350,6 +373,11 @@ const GROUND_SPHERE_Z = -120
 const GROUND_SPHERE_CENTER: CoordinateTuple = [0, GROUND_SPHERE_Y, GROUND_SPHERE_Z]
 const GROUND_SPHERE_COLOR = 0x4a7a3a
 
+/**
+ * Adds the big ground sphere the track floats over.
+ * @param scene The scene to add it to.
+ * @returns The sphere.
+ */
 export const addGroundSphereToScene = (scene: THREE.Scene): THREE.Mesh => {
   const mesh = getBall(scene, undefined, {
     size: GROUND_SPHERE_RADIUS,
@@ -363,6 +391,11 @@ export const addGroundSphereToScene = (scene: THREE.Scene): THREE.Mesh => {
   return mesh as unknown as THREE.Mesh
 }
 
+/**
+ * Registers the ground sphere with the Elements panel, so its position, size and colour can be
+ * changed.
+ * @param groundMesh The sphere.
+ */
 export const registerGroundSphereProperties = (groundMesh: THREE.Mesh): void => {
   const state = reactive({
     position: { x: groundMesh.position.x, y: groundMesh.position.y, z: groundMesh.position.z },
@@ -410,10 +443,19 @@ export const registerGroundSphereProperties = (groundMesh: THREE.Mesh): void => 
   )
 }
 
+/**
+ * Removes the ground sphere from the Elements panel.
+ */
 export const teardownGroundSphere = (): void => {
   useDebugSceneStore().removeSceneElement('Ground')
 }
 
+/**
+ * Moves the ground sphere under the marble, on the ground plane.
+ * @param mesh The sphere.
+ * @param x The new X.
+ * @param z The new Z.
+ */
 export const moveGroundSphere = (mesh: THREE.Mesh, x: number, z: number): void => {
   mesh.position.x = x
   mesh.position.z = z
@@ -438,6 +480,13 @@ export type CloudChunkManager = {
   teardown: () => void
 }
 
+/**
+ * Streams clouds along the track in chunks: added ahead of the marble and removed behind it.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @param options The chunk length and the clouds' size and density.
+ * @returns ensureAhead, prune and teardown.
+ */
 export const createCloudChunkManager = (
   scene: THREE.Scene,
   world: WorldReference,

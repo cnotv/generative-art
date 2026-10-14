@@ -6,6 +6,10 @@ const STROKE_MATERIAL = new THREE.MeshBasicMaterial({ color: STROKE_COLOR, side:
 const EDGE_THRESHOLD_ANGLE = 15
 const EDGE_LINE_WIDTH = 2
 
+/**
+ * Draws an outline round a ball with a slightly larger, back-faced copy of its mesh.
+ * @param mesh The ball.
+ */
 export const attachBallStroke = (mesh: THREE.Mesh): void => {
   const hull = new THREE.Mesh(mesh.geometry, STROKE_MATERIAL)
   hull.scale.setScalar(STROKE_SCALE)
@@ -40,6 +44,10 @@ const attachEdgeLines = async (mesh: THREE.Mesh): Promise<void> => {
   mesh.add(lines)
 }
 
+/**
+ * Draws edge lines on every solid mesh in the scene.
+ * @param scene The scene.
+ */
 export const addEdgeLinesToScene = (scene: THREE.Scene): void => {
   scene.traverse((object) => {
     if (isSolidMesh(object)) attachEdgeLines(object)

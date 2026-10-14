@@ -3,6 +3,8 @@ import type { NoiseConfig } from './types'
 /**
  * Permutation table seeded deterministically.
  * Returns a 512-element array for wrapping gradient lookups.
+ * @param seed The seed.
+ * @returns The permutation table, doubled to 512 entries.
  */
 const createPermutationTable = (seed: number): number[] => {
   const base = Array.from({ length: 256 }, (_, index) => index)
@@ -40,6 +42,9 @@ const UNSKEW_FACTOR = (3 - Math.sqrt(3)) / 6
 
 /**
  * 2D simplex noise, seeded and pure.
+ * @param x The X coordinate.
+ * @param z The Z coordinate.
+ * @param seed The seed.
  * @returns Value in [-1, 1]
  */
 export const simplexNoise2D = (x: number, z: number, seed: number): number => {
@@ -86,6 +91,9 @@ export const simplexNoise2D = (x: number, z: number, seed: number): number => {
 
 /**
  * Fractal (multi-octave) noise for natural terrain variation.
+ * @param x The X coordinate.
+ * @param z The Z coordinate.
+ * @param config The seed, octaves, frequency, amplitude, lacunarity and persistence.
  * @returns Value scaled by amplitude
  */
 export const fractalNoise = (x: number, z: number, config: NoiseConfig): number => {

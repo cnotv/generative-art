@@ -9,6 +9,8 @@ const ELEMENT_MAX_WIDTH = 1.5
 /**
  * Simple seeded random number generator (mulberry32).
  * Returns a function that produces deterministic values in [0, 1).
+ * @param seed The seed.
+ * @returns A generator of values in [0, 1).
  */
 const createSeededRandom = (seed: number): (() => number) => {
   let state = seed | 0
@@ -24,6 +26,9 @@ const createSeededRandom = (seed: number): (() => number) => {
 
 /**
  * Computes a deterministic seed for a chunk based on its coordinates.
+ * @param chunkX The chunk's column.
+ * @param chunkZ The chunk's row.
+ * @returns The seed.
  */
 const computeChunkSeed = (chunkX: number, chunkZ: number): number =>
   (chunkX * 73856093) ^ (chunkZ * 19349663)
@@ -31,6 +36,11 @@ const computeChunkSeed = (chunkX: number, chunkZ: number): number =>
 /**
  * Creates a group of scattered geometric elements (cubes and cones) for a chunk.
  * Positions and sizes are deterministic based on chunk coordinates.
+ * @param chunkX The chunk's column.
+ * @param chunkZ The chunk's row.
+ * @param chunkSize The width of one chunk.
+ * @param elementsPerChunk How many elements to scatter.
+ * @returns The elements' group.
  */
 export const createElementsChunk = (
   chunkX: number,
