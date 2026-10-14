@@ -8,7 +8,7 @@ Anything with a visual outcome is documented with a picture of it, not a descrip
 to produce one from the running app, so the picture is the real thing rather than a mock-up.
 
 :::note Source files
-`.claude/rules/docs.md`, `.claude/skills/verify/SKILL.md`, `documentation/static/`
+`.claude/rules/docs.md`, `AGENTS.md` (Project facts), `documentation/static/`
 :::
 
 ## Before anything, run the app on a known port

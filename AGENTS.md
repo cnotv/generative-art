@@ -5,7 +5,8 @@ in `packages/@webgamekit/*`, and a Vue 3 playground that uses it in `src/`. Arch
 `documentation/docs/architecture/monorepo.md`.
 
 This file holds the rules that apply to every change. Rules for one area load from
-`.claude/rules/`, procedures from `.claude/skills/` — both indexed below.
+`.claude/rules/`, procedures from agent-base's `workflow` plugin and `.claude/skills/` — all
+indexed below.
 
 ## How work starts
 
@@ -36,7 +37,6 @@ owes them before the pull request is marked ready.
 - **Write it once, at the length it earns.** A one-line fix gets one line; a surprising
   constraint gets a paragraph. Prose that repeats the diff or restates something already
   written above is noise that hides what matters. Each kind of writing has one home, below.
-- **Every request starts with an issue and a draft pull request** — see "How work starts".
 - **Never modify `eslint.config.js`** unless explicitly asked. Fix violations by changing the
   code, not by loosening the rule.
 - **Never use `eslint-disable`**, in any form, and never `--no-verify`. If a hook or a rule
@@ -87,9 +87,7 @@ owes them before the pull request is marked ready.
 
 ## Where output goes
 
-Documentation is Docusaurus, in `documentation/`. Never create a standalone markdown file
-elsewhere in the repo.
-
+Documentation is Docusaurus, in `documentation/`, never a standalone markdown file elsewhere.
 Every explanation has one home. Write it there; everywhere else links to it.
 
 | What you have                                    | Where it goes                      |
@@ -102,21 +100,25 @@ Every explanation has one home. Write it there; everywhere else links to it.
 
 A PR body links to these homes; a section growing into an explanation belongs in one.
 
-## Definition of done
+## Project facts
 
-These are the steps that are easy to omit and impossible to notice missing. Run the
-`finish-change` procedure, or walk them by hand:
+- **Dev server:** `pnpm dev --port 5317 --strictPort`, served at `http://localhost:5317`
+- **Routes:** `/<dir-lowercase>/<ViewBaseName>` from the view tree, e.g. `/games/GoombaRunner`
+- **Verify notes:** `documentation/docs/guides/visual-verification-with-screenshots.md`
+- **Checks:** `pnpm lint`, `pnpm lint:css`, `pnpm test:unit`
+- **Docs home:** `documentation/docs/`, homes above; **Docs build:** `pnpm docs:build`
+- **Preview deploys:** the `deploy/netlify` check's `targetUrl`, with the view's route appended
+- **Security:** `pnpm audit --prod`; no threat model yet
+- **Scoped rules and local skills:** `.claude/rules/` and `.claude/skills/`, indexed below
+
+### Done checklist
 
 - [ ] New view has a `src/config/viewsMeta.json` entry
 - [ ] New package is in the `packages` array in `vite.config.ts`
 - [ ] New `LobbyUI*` component or variant appears in `LobbyUIShowcase.vue`
-- [ ] Changed package API is reflected in `documentation/docs/packages/`
-- [ ] Any guide that tracks a file you changed has been re-read and fixed
-- [ ] A journey doc exists if the work produced a non-obvious finding
-- [ ] The issue and the PR opened at the start still describe the work accurately, rather
-      than leaving it to be inferred from a thread of comments
-- [ ] Every artifact the issue named exists, not just the ones that were forced by a deletion
-- [ ] `pnpm lint`, `pnpm lint:css` and `pnpm test:unit` pass, and you saw them pass
+- [ ] New game has its own `documentation/docs/journey/<game-name>.md`
+- [ ] Touched a 3D scene or asset: `perf-check` ran; changed a file a guide tracks: `sync-docs` ran
+- [ ] Every artifact the issue named exists, not just the ones forced by a deletion
 
 ## Scoped rules
 
@@ -135,14 +137,12 @@ touched. Read one directly if you are working in its area without opening a matc
 
 ## Procedures
 
-Skills in `.claude/skills/<name>/SKILL.md`, as plain markdown any agent can read.
+The workflow skills, `start`, `start-issue`, `open-pr`, `verify`, `finish-change`, `journey-doc`
+and `security-audit`, come from agent-base's `workflow` plugin, which `.claude/settings.json`
+installs in every session, local or cloud. Never copy them into `.claude/skills/`, where both
+would load under two names. That folder holds only this repository's own skills:
 
-| Skill           | Use when                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| `start-issue`   | a GitHub issue is linked and work is about to begin                                       |
-| `verify`        | confirming a change works or looks right in the running app                               |
-| `perf-check`    | a 3D scene or asset changed, or something is reported slow                                |
-| `journey-doc`   | a finding is worth recording — a repeated fix, a framework quirk, an invisible constraint |
-| `sync-docs`     | you changed a file that a tutorial documents                                              |
-| `finish-change` | before claiming work is complete                                                          |
-| `open-pr`       | the work is validated and ready to ship, or a pull request was explicitly requested       |
+| Skill        | Use when                                                   |
+| ------------ | ---------------------------------------------------------- |
+| `perf-check` | a 3D scene or asset changed, or something is reported slow |
+| `sync-docs`  | you changed a file that a tutorial documents               |

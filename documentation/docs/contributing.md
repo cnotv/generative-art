@@ -72,8 +72,9 @@ CI builds every template, so an API change that breaks one is caught in the same
 
 The rules that apply to every change are in `AGENTS.md` at the repository root: TypeScript only,
 functional style, long descriptive names, tests alongside the implementation, and documentation in
-this site rather than loose markdown files. Area-specific rules live in `.claude/rules/` and
-procedures in `.claude/skills/`, both readable as plain markdown.
+this site rather than loose markdown files. Area-specific rules live in `.claude/rules/`. The
+workflow procedures come from agent-base's `workflow` plugin, which `.claude/settings.json`
+installs, and the few this repository needs on its own are in `.claude/skills/`.
 
 Branches are `<type>/<issue-number>-<description>`, rebased onto `main` rather than merged, and a
 commit subject never carries the issue number — the branch and the pull request body do.
