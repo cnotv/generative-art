@@ -23,6 +23,7 @@ import type {
  * of `useRigModel` to stay under its function-length lint cap.
  * @param bones The rig's current bones
  * @param resetAllBonesToRest Snaps every bone not excluded back to its loaded rest transform
+ * @returns Whether the rig has the bones capture needs, and applyCameraPose.
  */
 export const useRigCameraPose = (
   bones: Ref<THREE.Bone[]>,

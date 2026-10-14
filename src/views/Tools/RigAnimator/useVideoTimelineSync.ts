@@ -7,8 +7,10 @@ interface Dependencies {
   fps: () => number
   /** Whether the uploaded video is the active source right now; sync only ever applies then. */
   isVideoMode: () => boolean
-  /** Recording drives the timeline from the capture itself, not from playback or a scrub, so
-   * sync is suspended while it runs rather than fighting the frames it is producing. */
+  /**
+   * Recording drives the timeline from the capture itself, not from playback or a scrub, so
+   * sync is suspended while it runs rather than fighting the frames it is producing.
+   */
   isRecording: () => boolean
 }
 
@@ -18,6 +20,7 @@ interface Dependencies {
  * own native controls) moves the timeline. `syncEnabled` defaults on, since the whole point of
  * uploading a video is to compare it against the rig, and unsynced playback needs the person to
  * opt out rather than in.
+ * @returns Whether sync is on, and handleVideoSeeked.
  */
 export const useVideoTimelineSync = ({
   videoElement,
@@ -27,9 +30,11 @@ export const useVideoTimelineSync = ({
   isRecording
 }: Dependencies) => {
   const syncEnabled = ref(true)
-  /** Set while a timeline-driven seek is in flight, so the native `seeked` event it causes is
+  /**
+   * Set while a timeline-driven seek is in flight, so the native `seeked` event it causes is
    * recognised as an echo of that seek rather than a fresh manual scrub, and doesn't loop
-   * straight back into another timeline update. */
+   * straight back into another timeline update.
+   */
   let isSeekingFromFrame = false
 
   watch(frame, (nextFrame) => {
@@ -45,8 +50,11 @@ export const useVideoTimelineSync = ({
     video.currentTime = targetTime
   })
 
-  /** Call from the video element's native `seeked` event. Returns the timeline frame to move to,
-   * or `null` when the seek was either the sync's own echo or sync does not apply right now. */
+  /**
+   * Call from the video element's native `seeked` event. Returns the timeline frame to move to,
+   * or `null` when the seek was either the sync's own echo or sync does not apply right now.
+   * @returns The frame to move to, or null.
+   */
   const handleVideoSeeked = (): number | null => {
     if (isSeekingFromFrame) {
       isSeekingFromFrame = false

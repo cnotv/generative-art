@@ -76,8 +76,10 @@ const bundledPresetOptions = RIG_PRESETS.map((preset) => ({
   value: preset.url,
   label: preset.name
 }))
-/** A finished Record Motion take is offered here too, prefixed so `selectPreset` can tell a
- * session recording apart from a bundled preset's URL without a second event. */
+/**
+ * A finished Record Motion take is offered here too, prefixed so `selectPreset` can tell a
+ * session recording apart from a bundled preset's URL without a second event.
+ */
 const presetOptions = computed(() => [
   ...bundledPresetOptions,
   ...props.recordedPresets.map((preset, index) => ({
@@ -98,8 +100,10 @@ const frameFromClientX = (clientX: number): number => {
   return Math.round(ratio * props.frameMax)
 }
 
-/** The two ends of a drag-select, shift-click or shift-arrow range selection; either being
- * `null` means nothing is selected. `anchor` is whichever end stays put while `active` moves. */
+/**
+ * The two ends of a drag-select, shift-click or shift-arrow range selection; either being
+ * `null` means nothing is selected. `anchor` is whichever end stays put while `active` moves.
+ */
 const selectionAnchorFrame = ref<number | null>(null)
 const selectionActiveFrame = ref<number | null>(null)
 const selectionRange = computed(() =>
@@ -108,8 +112,10 @@ const selectionRange = computed(() =>
 const selectedKeyframeFrames = computed(() =>
   keyframesInRange(selectionRange.value, props.keyframeFrames)
 )
-/** What Copy and Delete act on: the current multi-select when it covers any real keyframes,
- * otherwise just the one at the current frame, if there is one. */
+/**
+ * What Copy and Delete act on: the current multi-select when it covers any real keyframes,
+ * otherwise just the one at the current frame, if there is one.
+ */
 const targetFrames = computed(() =>
   selectedKeyframeFrames.value.length > 0
     ? selectedKeyframeFrames.value
@@ -118,8 +124,10 @@ const targetFrames = computed(() =>
       : []
 )
 
-/** What Filter and Reduce act on: the keyframes in the selection when there is one, otherwise the
- * whole clip, since both only make sense across a run of keyframes rather than a single one. */
+/**
+ * What Filter and Reduce act on: the keyframes in the selection when there is one, otherwise the
+ * whole clip, since both only make sense across a run of keyframes rather than a single one.
+ */
 const cleanupFrames = computed(() =>
   selectedKeyframeFrames.value.length > 0 ? selectedKeyframeFrames.value : props.keyframeFrames
 )
@@ -129,18 +137,22 @@ const clearSelection = (): void => {
   selectionActiveFrame.value = null
 }
 
-/** Cut the selected range out of the timeline entirely, shifting everything after it back to
+/**
+ * Cut the selected range out of the timeline entirely, shifting everything after it back to
  * close the gap — unlike Delete, which only clears the poses inside the range and leaves the
  * timeline's own length untouched. The selection itself no longer means anything once the
- * frames it covered are gone, so it clears along with the cut. */
+ * frames it covered are gone, so it clears along with the cut.
+ */
 const handleRemoveFrameRange = (): void => {
   if (!selectionRange.value) return
   emit('removeFrameRange', selectionRange.value.start, selectionRange.value.end)
   clearSelection()
 }
 
-/** Open up blank room the size of the selection at its own start, shifting everything after it
- * later and growing the timeline's own length to fit. */
+/**
+ * Open up blank room the size of the selection at its own start, shifting everything after it
+ * later and growing the timeline's own length to fit.
+ */
 const handleInsertFrameRange = (): void => {
   if (!selectionRange.value) return
   const span = selectionRange.value.end - selectionRange.value.start + 1
@@ -148,13 +160,18 @@ const handleInsertFrameRange = (): void => {
   clearSelection()
 }
 
-/** Hand Pose and Presets sit in a second row, collapsed by default: they are used far less
+/**
+ * Hand Pose and Presets sit in a second row, collapsed by default: they are used far less
  * often than the always-visible transport and edit actions, and hiding them keeps the main row
- * from crowding out the track itself. */
+ * from crowding out the track itself.
+ */
 const showExtraControls = ref(false)
 
-/** Extend the selection by one frame via Shift+Arrow, starting a new one-frame selection from
- * the current playhead if nothing is selected yet. */
+/**
+ * Extend the selection by one frame via Shift+Arrow, starting a new one-frame selection from
+ * the current playhead if nothing is selected yet.
+ * @param deltaFrames Frames to extend by, negative to go back.
+ */
 const extendSelectionByFrames = (deltaFrames: number): void => {
   selectionAnchorFrame.value ??= props.frame
   const next = (selectionActiveFrame.value ?? props.frame) + deltaFrames
@@ -165,12 +182,16 @@ defineExpose({ extendSelectionByFrames })
 
 type DragKind = 'select' | 'keyframe' | 'resize'
 let dragKind: DragKind | null = null
-/** Whether the current 'select' drag actually moved the pointer: a plain click never does, and
- * releases as a seek-and-clear instead of freezing a (zero-width) selection. */
+/**
+ * Whether the current 'select' drag actually moved the pointer: a plain click never does, and
+ * releases as a seek-and-clear instead of freezing a (zero-width) selection.
+ */
 let selectDragMoved = false
 let draggingKeyframeFrame = 0
-/** Every frame being dragged along with the marker the pointer actually grabbed: just that one
- * marker normally, or the whole active selection when the drag started on a selected marker. */
+/**
+ * Every frame being dragged along with the marker the pointer actually grabbed: just that one
+ * marker normally, or the whole active selection when the drag started on a selected marker.
+ */
 let draggingSelectionFrames: number[] = []
 let resizeStartClientX = 0
 let resizeStartFrameMax = 0
@@ -229,6 +250,7 @@ const startDrag = (kind: DragKind): void => {
  * seeks the playhead there and clears any existing selection — see `stopDrag`. Holding Shift
  * extends the existing selection (or, if none is active yet, one anchored at the current
  * playhead frame) to the clicked frame instead, never seeking and never clearing.
+ * @param event The pointer event on the track.
  */
 const onTrackPointerDown = (event: PointerEvent): void => {
   const frame = frameFromClientX(event.clientX)
@@ -245,9 +267,13 @@ const onTrackPointerDown = (event: PointerEvent): void => {
   startDrag('select')
 }
 
-/** Click a keyframe marker to jump there; drag it to reposition it, taking the rest of the
+/**
+ * Click a keyframe marker to jump there; drag it to reposition it, taking the rest of the
  * active selection along when the grabbed marker is part of it. Grabbing one outside the
- * current selection drops that selection first, the same as it always dragged alone. */
+ * current selection drops that selection first, the same as it always dragged alone.
+ * @param frame The keyframe's frame.
+ * @param event The pointer event on the marker.
+ */
 const onKeyframePointerDown = (frame: number, event: PointerEvent): void => {
   const isPartOfSelection = selectedKeyframeFrames.value.includes(frame)
   if (!isPartOfSelection) clearSelection()

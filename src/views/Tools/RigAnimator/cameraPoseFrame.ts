@@ -287,7 +287,14 @@ interface SteadiedHand {
   track: CameraHandTrack | undefined
 }
 
-/** A side with no reading this time: held while recent, and remembered a little longer to judge the next reading by. */
+/**
+ * A side with no reading this time: held while recent, and remembered a little longer to judge the
+ * next reading by.
+ * @param track What was remembered about this side.
+ * @param age Milliseconds since its last accepted reading.
+ * @param settings How long to hold and remember a hand.
+ * @returns The landmarks to show, if still held, and what to remember.
+ */
 const steadyMissingHand = (
   track: CameraHandTrack | undefined,
   age: number,
@@ -300,7 +307,13 @@ const steadyMissingHand = (
   }
 }
 
-/** How many readings in a row, this one included, agree on the turn still waiting to be confirmed. */
+/**
+ * How many readings in a row, this one included, agree on the turn still waiting to be confirmed.
+ * @param track What was remembered about this side.
+ * @param orientation This reading's palm orientation.
+ * @param settings How far a turn may be before it waits for confirmation.
+ * @returns The number of agreeing readings.
+ */
 const pendingTurnReadings = (
   track: CameraHandTrack,
   orientation: THREE.Quaternion,
@@ -311,7 +324,14 @@ const pendingTurnReadings = (
     ? track.pendingReadings + 1
     : 1
 
-/** What one side shows this reading, and what to remember about it for the next. */
+/**
+ * What one side shows this reading, and what to remember about it for the next.
+ * @param track What was remembered about this side.
+ * @param reading This reading's landmarks, if the side was seen.
+ * @param timestampMilliseconds When the reading was taken.
+ * @param settings The hand smoothing settings.
+ * @returns The landmarks to show and what to remember.
+ */
 const steadyHand = (
   track: CameraHandTrack | undefined,
   reading: CameraHandLandmark[] | undefined,

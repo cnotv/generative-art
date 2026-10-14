@@ -20,10 +20,12 @@ export const RIG_BODY_PART_GROUP_LABELS: Record<RigBodyPartGroup, string> = {
   spineHead: 'Spine / Head'
 }
 
-/** The chain-root bone that marks the start of each limb group; a bone found while walking up
+/**
+ * The chain-root bone that marks the start of each limb group; a bone found while walking up
  * past this point belongs to that group. Anything that reaches the skeleton root without
  * passing through one of these (the spine chain itself, and the root bone) falls into
- * `spineHead` instead, so the mapping needs no separate entry for it. */
+ * `spineHead` instead, so the mapping needs no separate entry for it.
+ */
 const GROUP_ROOT_BONE_NAMES: Record<Exclude<RigBodyPartGroup, 'spineHead'>, string> = {
   leftArm: 'mixamorigLeftShoulder',
   rightArm: 'mixamorigRightShoulder',
@@ -36,7 +38,11 @@ const LIMB_GROUP_ENTRIES = Object.entries(GROUP_ROOT_BONE_NAMES) as [
   string
 ][]
 
-/** A bone and every Bone ancestor above it, itself first, up to the skeleton root. */
+/**
+ * A bone and every Bone ancestor above it, itself first, up to the skeleton root.
+ * @param bone The bone to start from.
+ * @returns The bone and its Bone ancestors, nearest first.
+ */
 const ancestorBoneChain = (bone: THREE.Bone): THREE.Bone[] =>
   bone.parent instanceof THREE.Bone ? [bone, ...ancestorBoneChain(bone.parent)] : [bone]
 

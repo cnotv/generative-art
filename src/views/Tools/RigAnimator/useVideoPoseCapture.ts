@@ -9,6 +9,9 @@ import type { CameraDetectionOptions, CameraSmoothingSettings } from './types'
  * against a known performance, or when there is no working camera.
  * @param smoothingSettings The Config panel's smoothing sliders, read fresh every frame
  * @param detectionOptions The Config panel's detection switches, read fresh every frame
+ * @param playbackRate How fast the video plays.
+ * @returns The video element, its state, the latest detection, and loadVideo, togglePlayback,
+ *   applyPlaybackRate and stop.
  */
 export const useVideoPoseCapture = (
   smoothingSettings: Ref<CameraSmoothingSettings>,
@@ -30,10 +33,13 @@ export const useVideoPoseCapture = (
     mirror: () => false
   })
 
-  /** Play an uploaded video file through once and start live detection against it, replacing
+  /**
+   * Play an uploaded video file through once and start live detection against it, replacing
    * whatever was loaded before. Plays once rather than looping: a caller driving Record Motion
    * from this needs a real end to stop the take on, see `CameraPoseCapture.vue`'s own
-   * `ended` handling. */
+   * `ended` handling.
+   * @param file The uploaded video.
+   */
   const loadVideo = async (file: File): Promise<void> => {
     if (isLoading.value) return
     isLoading.value = true
@@ -55,16 +61,20 @@ export const useVideoPoseCapture = (
     }
   }
 
-  /** Play the loaded video at the Config panel's speed. Loading a new file resets an element's
-   * rate to its default, so both are set. */
+  /**
+   * Play the loaded video at the Config panel's speed. Loading a new file resets an element's
+   * rate to its default, so both are set.
+   */
   const applyPlaybackRate = (): void => {
     if (!videoElement.value) return
     videoElement.value.defaultPlaybackRate = playbackRate.value
     videoElement.value.playbackRate = playbackRate.value
   }
 
-  /** Play or pause the loaded video on its own, without touching Record Motion or the timeline.
-   * Playing a video that already reached its end starts it over. */
+  /**
+   * Play or pause the loaded video on its own, without touching Record Motion or the timeline.
+   * Playing a video that already reached its end starts it over.
+   */
   const togglePlayback = async (): Promise<void> => {
     const video = videoElement.value
     if (!video || !isActive.value) return
@@ -72,8 +82,10 @@ export const useVideoPoseCapture = (
     else video.pause()
   }
 
-  /** Stop playback and detection, and release the file. Safe to call even if a video was never
-   * loaded. */
+  /**
+   * Stop playback and detection, and release the file. Safe to call even if a video was never
+   * loaded.
+   */
   const stop = (): void => {
     detection.stopDetectionLoop()
     if (videoElement.value) {

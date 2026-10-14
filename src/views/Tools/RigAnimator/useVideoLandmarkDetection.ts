@@ -21,10 +21,12 @@ interface Dependencies {
   smoothingSettings: Ref<CameraSmoothingSettings>
   /** The Config panel's detection switches, read fresh every frame. */
   detectionOptions: Ref<CameraDetectionOptions>
-  /** Whether the source reads as a mirror (a live self-view, matching how the subject sees
+  /**
+   * Whether the source reads as a mirror (a live self-view, matching how the subject sees
    * themselves) or should be taken as shown (an uploaded clip is not a self-view, the same as
    * an uploaded photo isn't). See `mirrorCameraPoseFrame` for why body, hands and head have to
-   * flip together. Read every frame, so a Config panel switch applies straight away. */
+   * flip together. Read every frame, so a Config panel switch applies straight away.
+   */
   mirror: () => boolean
 }
 
@@ -33,6 +35,8 @@ interface Dependencies {
  * `requestAnimationFrame` loop. Shared between the live webcam feed and an uploaded video file,
  * which differ only in how the video element's own source is acquired (`getUserMedia` versus a
  * local file) and whether the result reads as mirrored.
+ * @returns The preview landmarks, the detected frame, whether it is detecting, and start and stop
+ *   for the loop.
  */
 export const useVideoLandmarkDetection = ({
   videoElement,
@@ -91,9 +95,11 @@ export const useVideoLandmarkDetection = ({
     )
   }
 
-  /** Load the detectors and start the loop against whatever the video element is already
+  /**
+   * Load the detectors and start the loop against whatever the video element is already
    * playing. The caller is responsible for that: acquiring the stream or file and starting
-   * playback happens before this is called. */
+   * playback happens before this is called.
+   */
   const startDetectionLoop = async (): Promise<void> => {
     landmarkers = await createCameraLandmarkers('VIDEO')
     detectFrame()

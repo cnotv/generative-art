@@ -9,6 +9,8 @@ import type { CameraDetectionOptions, CameraSmoothingSettings } from './types'
  * @param smoothingSettings The Config panel's smoothing sliders, read fresh every frame so a
  *   change takes effect immediately rather than only on the next `start()`
  * @param detectionOptions The Config panel's detection switches, read fresh every frame
+ * @returns The video element, its active, loading and error state, the latest detection, and start
+ *   and stop.
  */
 export const useCameraPoseCapture = (
   smoothingSettings: Ref<CameraSmoothingSettings>,

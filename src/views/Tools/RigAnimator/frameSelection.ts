@@ -1,5 +1,7 @@
-/** An inclusive frame range, always normalized so `start <= end` regardless of which end the
- * user actually dragged from. */
+/**
+ * An inclusive frame range, always normalized so `start <= end` regardless of which end the
+ * user actually dragged from.
+ */
 export interface FrameSelectionRange {
   start: number
   end: number
@@ -20,11 +22,21 @@ export const computeSelectionRange = (
     ? null
     : { start: Math.min(anchorFrame, activeFrame), end: Math.max(anchorFrame, activeFrame) }
 
-/** Whether `frame` falls inside `range`, inclusive of both ends. */
+/**
+ * Whether `frame` falls inside `range`, inclusive of both ends.
+ * @param range The selected range, or null.
+ * @param frame The frame.
+ * @returns True when the frame is selected.
+ */
 export const frameIsSelected = (range: FrameSelectionRange | null, frame: number): boolean =>
   range !== null && frame >= range.start && frame <= range.end
 
-/** Every keyframe frame from `keyframeFrames` that falls inside `range`. */
+/**
+ * Every keyframe frame from `keyframeFrames` that falls inside `range`.
+ * @param range The selected range, or null.
+ * @param keyframeFrames Every keyframe's frame.
+ * @returns The keyframe frames inside the range.
+ */
 export const keyframesInRange = (
   range: FrameSelectionRange | null,
   keyframeFrames: number[]

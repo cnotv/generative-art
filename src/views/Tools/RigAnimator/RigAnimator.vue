@@ -204,8 +204,10 @@ const cameraDetectionOptions = computed(
   })
 )
 
-/** Which body-part groups the next capture, photo or preset is allowed to touch, read from the
- * Merge Target diagram's own toggled regions; see `bodyPartGroups.ts`. */
+/**
+ * Which body-part groups the next capture, photo or preset is allowed to touch, read from the
+ * Merge Target diagram's own toggled regions; see `bodyPartGroups.ts`.
+ */
 const targetBodyPartGroups = computed(() => selectedBodyPartGroups(reactiveConfig.value))
 const targetBodyPartGroupLabels = computed(() =>
   [...targetBodyPartGroups.value].map((group) => RIG_BODY_PART_GROUP_LABELS[group])
@@ -236,19 +238,24 @@ const motionRecording = useRigMotionRecording({
     rig.replaceRecordedTake(fromFrame, toFrame, keyframes)
 })
 
-/** Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
+/**
+ * Stop recording and, in the same step, pay the rebuild-and-persist cost the recording loop
  * skipped on every sampled frame — see the `addKeyframe` comment above. Both call sites that
  * stop a recording (the toggle and closing the panel) go through this so neither forgets it.
  * A take that actually captured motion is also snapshotted into the preset picker, the same
- * way a bundled mocap clip is offered there, so it can be reloaded later in the session. */
+ * way a bundled mocap clip is offered there, so it can be reloaded later in the session.
+ */
 const stopRecordingAndCommit = (): void => {
   motionRecording.stopRecording()
   rig.commitRecordedKeyframes()
   if (motionRecording.capturedFrameCount.value > 0) rig.addRecordedPreset(rig.keyframes.value)
 }
 
-/** A preset picked in the timeline dropdown is either a bundled mocap URL or a session
- * recording, encoded as `recording:<index>` by `RigTimeline`'s own option list. */
+/**
+ * A preset picked in the timeline dropdown is either a bundled mocap URL or a session
+ * recording, encoded as `recording:<index>` by `RigTimeline`'s own option list.
+ * @param value The selected option's value.
+ */
 const handleSelectPreset = (value: string): void => {
   const recordingIndex = value.startsWith('recording:')
     ? Number(value.slice('recording:'.length))
@@ -261,7 +268,11 @@ let cameraReference: THREE.Camera | null = null
 let sceneReference: THREE.Scene | null = null
 let groundReference: THREE.Mesh | null = null
 
-/** Replace the ground with one sized to the model just loaded, and point the key light's shadow at it. */
+/**
+ * Replace the ground with one sized to the model just loaded, and point the key light's shadow at
+ * it.
+ * @param model The loaded model.
+ */
 const placeGround = (model: THREE.Object3D): void => {
   if (!sceneReference) return
   if (groundReference) {
@@ -299,6 +310,7 @@ const setPointerFromEvent = (event: PointerEvent): void => {
  * selection or its target; dragging anything else selects it and poses it toward the pointer.
  * Either way the rest of the gesture (`onWindowPointerMove`) reads off a plane facing the
  * camera, so the motion always tracks the cursor 1:1 instead of jumping with a world axis.
+ * @param event The pointer event on the canvas.
  */
 const onCanvasPointerDown = (event: PointerEvent): void => {
   if (!canvas.value || !cameraReference) return
@@ -394,8 +406,10 @@ const handleCloseCamera = (): void => {
   }
 }
 
-/** Recording and timeline playback both drive the current frame, so only one may run at
- * once: starting either stops the other first rather than letting them fight over it. */
+/**
+ * Recording and timeline playback both drive the current frame, so only one may run at
+ * once: starting either stops the other first rather than letting them fight over it.
+ */
 const handleToggleRecord = (): void => {
   if (motionRecording.isRecording.value) {
     stopRecordingAndCommit()
@@ -416,8 +430,10 @@ const toggleRigPanel = (): void => {
   else showRigPanel.value = true
 }
 
-/** The docked camera starts tracking the performer, opening the rig panel first when it is closed,
- * or stops tracking when the camera is already running. */
+/**
+ * The docked camera starts tracking the performer, opening the rig panel first when it is closed,
+ * or stops tracking when the camera is already running.
+ */
 const toggleCameraTracking = async (): Promise<void> => {
   if (!showRigPanel.value) {
     showRigPanel.value = true
@@ -426,14 +442,20 @@ const toggleCameraTracking = async (): Promise<void> => {
   cameraCaptureReference.value?.toggleCamera()
 }
 
-/** Timeline playback keeps running from wherever the playhead is moved to; a paused timeline
- * leaves the jump to the frame watcher. */
+/**
+ * Timeline playback keeps running from wherever the playhead is moved to; a paused timeline
+ * leaves the jump to the frame watcher.
+ * @param frame The frame to move to.
+ */
 const moveToFrame = (frame: number): void => {
   reactiveConfig.value.frame = frame
   if (rig.isPlaying.value) rig.scrubToFrame(frame)
 }
 
-/** A region of the Merge Target diagram was clicked or activated by keyboard. */
+/**
+ * A region of the Merge Target diagram was clicked or activated by keyboard.
+ * @param group The body-part group toggled.
+ */
 const handleToggleBodyPartGroup = (group: RigBodyPartGroup): void => {
   reactiveConfig.value = toggleBodyPartGroupTarget(reactiveConfig.value, group)
 }
@@ -453,6 +475,7 @@ const toggleMarbleFlow = (): void => {
  * Optionally also turns the viewing camera to roughly the angle the photo shows the subject
  * from, the one camera-relative detail a single photo's body landmarks can actually support
  * (see `estimateCameraYaw`'s own doc comment for why not more than that).
+ * @param frame The detected body, hands and head.
  */
 const handleCameraApply = (frame: CameraPoseFrame): void => {
   // Timeline playback poses the rig from the clip every tick; a live frame landing in between
@@ -613,14 +636,20 @@ const init = async (): Promise<void> => {
   reactiveConfig.value.model = DEFAULT_MODEL_PATH
 }
 
-/** True while a text or number field elsewhere in the panel has focus, so the timeline's own
- * shortcuts (space, and especially the arrow keys) do not hijack normal field editing. */
+/**
+ * True while a text or number field elsewhere in the panel has focus, so the timeline's own
+ * shortcuts (space, and especially the arrow keys) do not hijack normal field editing.
+ * @returns True while a text field or number field has focus.
+ */
 const isEditingAFormField = (): boolean => {
   const active = document.activeElement
   return active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
 }
 
-/** Steps the current frame by a delta, clamped to the timeline's own current range. */
+/**
+ * Steps the current frame by a delta, clamped to the timeline's own current range.
+ * @param delta Frames to step, negative to go back.
+ */
 const stepFrame = (delta: number): void => {
   moveToFrame(Math.min(Math.max(reactiveConfig.value.frame + delta, 0), rig.frameMax.value))
 }

@@ -46,8 +46,14 @@ export interface BoneColliderBody {
   collider: RAPIER.Collider
 }
 
-/** Kinematic rather than dynamic: posing, IK and clip playback all write the bone transforms
- * every frame, and a dynamic body would fight them for the same values. */
+/**
+ * Kinematic rather than dynamic: posing, IK and clip playback all write the bone transforms
+ * every frame, and a dynamic body would fight them for the same values.
+ * @param world The physics world.
+ * @param bone The bone the capsule follows.
+ * @param spec The capsule's spec.
+ * @returns The body and collider.
+ */
 export const createBoneColliderBody = (
   world: RAPIER.World,
   bone: THREE.Bone,
@@ -75,7 +81,12 @@ interface MarbleSpawn {
   gravityScale: number
 }
 
-/** Drop one marble, reusing the Marble Editor's own texture assets when textures are on. */
+/**
+ * Drop one marble, reusing the Marble Editor's own texture assets when textures are on.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @returns The marble.
+ */
 export const createMarble = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -99,8 +110,14 @@ export const createMarble = (
     metalness: MARBLE_METALNESS
   }) as PhysicsMesh
 
-/** The scene's own ground collider is a fixed forty units across, too small for a rig authored
- * in centimetres; this has no mesh of its own so the visible floor stays the scene's ground. */
+/**
+ * The scene's own ground collider is a fixed forty units across, too small for a rig authored
+ * in centimetres; this has no mesh of its own so the visible floor stays the scene's ground.
+ * @param world The physics world.
+ * @param rigDiagonal The rig's size.
+ * @param sizeFraction The floor's size as a share of the rig's.
+ * @returns The floor's body.
+ */
 export const createEnclosureFloor = (
   world: RAPIER.World,
   rigDiagonal: number,
@@ -120,9 +137,17 @@ export const createEnclosureFloor = (
   return rigidBody
 }
 
-/** Each run is a wall thickness longer than the space it encloses and sits half a thickness
+/**
+ * Each run is a wall thickness longer than the space it encloses and sits half a thickness
  * past the joint line, so perpendicular walls overlap inside each corner instead of leaving
- * the quadrant a marble would squeeze through. */
+ * the quadrant a marble would squeeze through.
+ * @param scene The scene to add the walls to.
+ * @param world The physics world.
+ * @param rigDiagonal The rig's size.
+ * @param sizeFraction The enclosure's size as a share of the rig's.
+ * @param opacity How see-through the walls are.
+ * @returns The walls.
+ */
 export const createEnclosure = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -156,7 +181,11 @@ export const createEnclosure = (
   )
 }
 
-/** Take a set of physics objects back out of both the scene and the world, freeing what they own. */
+/**
+ * Take a set of physics objects back out of both the scene and the world, freeing what they own.
+ * @param world The physics world.
+ * @param meshes The objects to remove.
+ */
 export const disposePhysicsMeshes = (world: RAPIER.World, meshes: PhysicsMesh[]): void => {
   meshes.forEach((mesh) => {
     mesh.geometry.dispose()
@@ -172,9 +201,16 @@ export interface HangingLamp {
   joint: RAPIER.ImpulseJoint
 }
 
-/** A lamp on a rigid pivot arm, hung from a fixed point beside the rig: something to knock into
+/**
+ * A lamp on a rigid pivot arm, hung from a fixed point beside the rig: something to knock into
  * and watch swing, rather than only ever something marbles fall onto. The anchor carries no
- * collider of its own, only the joint the lamp swings from. */
+ * collider of its own, only the joint the lamp swings from.
+ * @param scene The scene to add the lamp to.
+ * @param world The physics world.
+ * @param anchorPosition Where the arm hangs from.
+ * @param rigDiagonal The rig's size, to scale the lamp.
+ * @returns The anchor, the lamp and the joint between them.
+ */
 export const createHangingLamp = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -225,6 +261,11 @@ export const createHangingLamp = (
   return { anchor, lamp, joint }
 }
 
+/**
+ * Takes the hanging lamp, its anchor and its joint out of the world and the scene.
+ * @param world The physics world.
+ * @param hangingLamp The lamp, or null when there is none.
+ */
 export const disposeHangingLamp = (world: RAPIER.World, hangingLamp: HangingLamp | null): void => {
   if (!hangingLamp) return
   world.removeImpulseJoint(hangingLamp.joint, true)
@@ -238,9 +279,16 @@ export interface SpawnCube {
   mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
 }
 
-/** A fixed, sensor-only cube on the rig's other side from the lamp: it never moves and never
+/**
+ * A fixed, sensor-only cube on the rig's other side from the lamp: it never moves and never
  * pushes anything back, it only reports when a bone capsule brushes it, so touching it with the
- * posed rig itself is the trigger rather than a button click. */
+ * posed rig itself is the trigger rather than a button click.
+ * @param scene The scene to add the cube to.
+ * @param world The physics world.
+ * @param position The cube's centre.
+ * @param size Its edge length.
+ * @returns The cube's mesh, body and sensor collider.
+ */
 export const createSpawnCube = (
   scene: THREE.Scene,
   world: RAPIER.World,
@@ -271,6 +319,11 @@ export const createSpawnCube = (
   return { body, collider, mesh }
 }
 
+/**
+ * Takes the spawn cube out of the world and the scene, freeing its geometry and material.
+ * @param world The physics world.
+ * @param spawnCube The cube, or null when there is none.
+ */
 export const disposeSpawnCube = (world: RAPIER.World, spawnCube: SpawnCube | null): void => {
   if (!spawnCube) return
   world.removeCollider(spawnCube.collider, true)

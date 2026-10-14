@@ -42,8 +42,10 @@ export const MEDIA_FILE_ACCEPT = 'image/*,video/*'
 export const DEFAULT_MODEL_PATH = '/character2.fbx'
 
 export const BONE_MARKER_RADIUS_FRACTION = 0.009
-/** A pointer ray picks a marker anywhere within this many of its drawn radii, so markers can be
- * drawn small without becoming hard to hit. */
+/**
+ * A pointer ray picks a marker anywhere within this many of its drawn radii, so markers can be
+ * drawn small without becoming hard to hit.
+ */
 export const BONE_MARKER_HIT_RADIUS_MULTIPLIER = 3
 export const BONE_MARKER_COLOR_DEFAULT = 0xb8c4f0
 export const BONE_MARKER_COLOR_SELECTED = 0xf0a8a0
@@ -91,16 +93,20 @@ export const BONE_COLLIDER_MIN_LENGTH_FRACTION = 0.004
 export const BONE_COLLIDER_RESTITUTION = 0.3
 export const BONE_COLLIDER_FRICTION = 0.6
 
-/** Frames between one marble dropping and the next, same pattern as the Timeline view's
- * ball-spawn action, so the flow can be walked into rather than landing as one dump. */
+/**
+ * Frames between one marble dropping and the next, same pattern as the Timeline view's
+ * ball-spawn action, so the flow can be walked into rather than landing as one dump.
+ */
 export const DEFAULT_MARBLE_SPAWN_INTERVAL_FRAMES = 1
 export const MARBLE_SPAWN_INTERVAL_RANGE = { min: 1, max: 200, step: 1 }
 /** Marble radius range, as fractions of the rig's spread, so marbles scale with any model. */
 export const MARBLE_RADIUS_FRACTION_RANGE: [number, number] = [0.014, 0.028]
 /** Height of the drop point above the rig's feet, as a fraction of the rig's spread. */
 export const MARBLE_DROP_HEIGHT_FRACTION = 3
-/** Horizontal jitter of the drop point, as a fraction of the rig's spread, so a continuous
- * flow doesn't stack every marble on the exact same spot. */
+/**
+ * Horizontal jitter of the drop point, as a fraction of the rig's spread, so a continuous
+ * flow doesn't stack every marble on the exact same spot.
+ */
 export const MARBLE_FLOW_JITTER_FRACTION = 0.05
 /**
  * Marbles keep little of the speed they land with, and shed a little more on every step.
@@ -122,8 +128,10 @@ export const MARBLE_DEFAULT_COLOR = 0xd9e4f5
  */
 export const MARBLE_GRAVITY_REFERENCE_SPREAD = 2
 
-/** Inner width of the enclosure, as a fraction of the rig's spread. Sized to the narrow drop
- * column rather than the rig's full spread, since marbles now flow through one point. */
+/**
+ * Inner width of the enclosure, as a fraction of the rig's spread. Sized to the narrow drop
+ * column rather than the rig's full spread, since marbles now flow through one point.
+ */
 export const DEFAULT_ENCLOSURE_SIZE_FRACTION = 0.55
 export const ENCLOSURE_SIZE_RANGE = { min: 0.55, max: 3, step: 0.05 }
 export const ENCLOSURE_HEIGHT_FRACTION = 1.1
@@ -134,11 +142,15 @@ export const DEFAULT_ENCLOSURE_OPACITY = 0
 
 /** How far above the rig's feet the lamp's pivot sits, as a fraction of the rig's spread. */
 export const LAMP_ANCHOR_HEIGHT_FRACTION = 1
-/** How far to the side of the rig the pivot sits: close against the body rather than out by
- * the wall. */
+/**
+ * How far to the side of the rig the pivot sits: close against the body rather than out by
+ * the wall.
+ */
 export const LAMP_ANCHOR_SIDE_OFFSET_FRACTION = 0.08
-/** How far toward the camera the lamp and the spawn cube both sit, in front of the rig rather
- * than level with it, so the two read as a matched pair at the same depth. */
+/**
+ * How far toward the camera the lamp and the spawn cube both sit, in front of the rig rather
+ * than level with it, so the two read as a matched pair at the same depth.
+ */
 export const PHYSICS_PROP_DEPTH_FRACTION = 0.2
 /** Length of the rigid arm between the pivot and the lamp, as a fraction of the rig's spread. */
 export const LAMP_ARM_LENGTH_FRACTION = 0.4
@@ -148,21 +160,27 @@ export const LAMP_HEIGHT_FRACTION = 0.1
 export const LAMP_CONE_SEGMENTS = 24
 export const LAMP_COLOR = 0xf3e6d0
 export const LAMP_OPACITY = 1
-/** Next to nothing: a knock should barely move it, and gravity should pull it straight back to
- * hanging still rather than let it keep swinging. */
+/**
+ * Next to nothing: a knock should barely move it, and gravity should pull it straight back to
+ * hanging still rather than let it keep swinging.
+ */
 export const LAMP_RESTITUTION = 0.02
 export const LAMP_FRICTION = 0.5
 export const LAMP_DAMPING = 3
 export const LAMP_ANGULAR_DAMPING = 4
 export const LAMP_ROUGHNESS = 0.4
 export const LAMP_METALNESS = 0.1
-/** On top of the same rig-scaled gravity marbles get, so the lamp reads as a heavy fixture a
- * knock can barely budge rather than something light hanging off a wire. */
+/**
+ * On top of the same rig-scaled gravity marbles get, so the lamp reads as a heavy fixture a
+ * knock can barely budge rather than something light hanging off a wire.
+ */
 export const LAMP_WEIGHT_MULTIPLIER = 4
 
-/** A touch-sensor cube on the rig's other side, no collision response, just detects the rig's
+/**
+ * A touch-sensor cube on the rig's other side, no collision response, just detects the rig's
  * own bones brushing it and spawns a marble. Further out than the lamp sits close in, so
- * reaching it takes an actual, deliberate stretch. */
+ * reaching it takes an actual, deliberate stretch.
+ */
 export const SPAWN_CUBE_SIDE_OFFSET_FRACTION = 0.35
 export const SPAWN_CUBE_SIZE_FRACTION = 0.1
 /** Same height as the lamp's own resting point, so both read as a matched pair. */
@@ -254,8 +272,10 @@ export const CAMERA_VISIBILITY_THRESHOLD_RANGE = { min: 0.05, max: 0.95, step: 0
 export const CAMERA_VIDEO_SLOWDOWN_RATIO = 2
 export const CAMERA_VIDEO_SLOWDOWN_RATIO_RANGE = { min: 1, max: 6, step: 1 }
 
-/** Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
- * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible. */
+/**
+ * Width of the docked camera/photo panel, as a fraction of the viewport, in both its own
+ * layout and the 3D camera's re-centering onto the part of the canvas it leaves visible.
+ */
 export const CAMERA_PANEL_WIDTH_VW = 30
 
 /**
@@ -325,8 +345,10 @@ export const CAMERA_BODY_TURN_MAX_DEGREES_PER_SECOND = 360
  */
 export const CAMERA_KEYFRAME_ROLL_FLIP_DEGREES = 90
 
-/** How far, in metres, a smoothed landmark may move in a single frame before the excess past
- * this is clamped off as a sudden jump rather than genuine motion. */
+/**
+ * How far, in metres, a smoothed landmark may move in a single frame before the excess past
+ * this is clamped off as a sudden jump rather than genuine motion.
+ */
 export const CAMERA_LANDMARK_MAX_JUMP_METERS = 0.15
 /** Range and step the Config panel's max jump slider offers. */
 export const CAMERA_MAX_JUMP_RANGE = { min: 0.02, max: 0.5, step: 0.01 }
