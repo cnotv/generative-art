@@ -194,6 +194,18 @@ Check `src/utils/` and `src/stores/` before implementing a Three.js pattern:
   bones, and `skeleton.bones` may hand back the copies. Rotating a copy moves only its own
   vertices, so the model comes apart at every joint. Walk up while the parent shares the name
   (`resolveHierarchyBones` in the Rig Animator).
+- **A ball's size is a radius; every other primitive's size is an extent.** The cube and
+  cylinder builders read size as the full measurement across the shape, but the ball builder
+  hands it straight to the sphere underneath, where it is a radius — a canopy declared at
+  three units is six across. Size canopies in radii and everything else in extents, and check
+  a mixed-primitive layout against a known reference rather than the numbers alone.
+  Reasoning: `documentation/docs/journey/forest-road-scenery.md`.
+- **An instanced scatter is culled by the seed it was grown from.** An `InstancedMesh`
+  computes its bounds from the base geometry — one leaf at the origin — so the renderer culls
+  thousands of scattered instances against that single small box and the whole layer vanishes
+  the moment the origin plane leaves the frame. Opt the scatter out with
+  `frustumCulled = false`, since no single box can honestly bound it. Reasoning:
+  `documentation/docs/journey/forest-road-scenery.md`.
 - Always call `destroyControls()` and the cleanup functions in `onUnmounted`.
 - Use `shallowRef` for game state to avoid deep reactivity overhead.
 - Check the canvas ref is not null before calling `getTools()`.
