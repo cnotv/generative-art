@@ -53,7 +53,6 @@ const createGroupBody = (world: RAPIER.World, group: ColliderGroup): RAPIER.Rigi
  * distinct (friction, restitution) surface class, instead of one collider per
  * piece. Welding removes the piece-to-piece seams that made a marble catch or
  * snag at track-part edges.
- *
  * @param world The Rapier world
  * @param specs World-space collider triangles collected from every piece
  * @returns The created bodies and a dispose that removes them

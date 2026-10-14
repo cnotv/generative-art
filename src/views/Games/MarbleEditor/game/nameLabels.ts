@@ -23,6 +23,13 @@ const drawLabelCanvas = (text: string, color: string): HTMLCanvasElement => {
   return canvas
 }
 
+/**
+ * Adds a player-name sprite to the scene, always drawn on top.
+ * @param scene The scene to add it to.
+ * @param text The name.
+ * @param color The text colour.
+ * @returns The sprite.
+ */
 export const createNameLabel = (scene: THREE.Scene, text: string, color: string): THREE.Sprite => {
   const texture = new THREE.CanvasTexture(drawLabelCanvas(text, color))
   texture.colorSpace = THREE.SRGBColorSpace
@@ -38,6 +45,11 @@ export const createNameLabel = (scene: THREE.Scene, text: string, color: string)
   return sprite
 }
 
+/**
+ * Keeps a name label floating above its marble.
+ * @param sprite The label.
+ * @param position The marble's position.
+ */
 export const updateNameLabelPosition = (
   sprite: THREE.Sprite,
   position: { x: number; y: number; z: number }
@@ -45,6 +57,11 @@ export const updateNameLabelPosition = (
   sprite.position.set(position.x, position.y + LABEL_OFFSET_Y, position.z)
 }
 
+/**
+ * Removes a name label and frees its texture and material.
+ * @param scene The scene it is in.
+ * @param sprite The label.
+ */
 export const disposeNameLabel = (scene: THREE.Scene, sprite: THREE.Sprite): void => {
   scene.remove(sprite)
   sprite.material.map?.dispose()

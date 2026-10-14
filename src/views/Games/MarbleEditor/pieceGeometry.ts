@@ -185,6 +185,11 @@ const LANE_CROSS_SECTION: [number, number][] = laneCrossSection()
 // A left turn (side 1) curves toward -x so its outer edge is +x (the right
 // wall); a right turn mirrors it. The outer wall is raised to hold a fast
 // marble in the arc.
+/**
+ * The cross-section of a banked lane, its high wall on the outside of the turn.
+ * @param side The turn's direction.
+ * @returns The cross-section's points.
+ */
 export const bankedCrossSection = (side: 1 | -1): [number, number][] =>
   side === 1
     ? laneCrossSection(WALL_HEIGHT, BANK_WALL_HEIGHT)
@@ -221,6 +226,12 @@ const arcSweepStations = (side: 1 | -1): SweepStation[] => {
   return [entry, ...arc, exit]
 }
 
+/**
+ * Sweeps a cross-section along a curve piece's arc.
+ * @param side The turn's direction.
+ * @param crossSection The lane's cross-section.
+ * @returns The geometry.
+ */
 export const buildArcSweepGeometry = (
   side: 1 | -1,
   crossSection: [number, number][] = LANE_CROSS_SECTION
@@ -285,6 +296,10 @@ const reverseGeometryWinding = (geometry: THREE.BufferGeometry): THREE.BufferGeo
   return geometry
 }
 
+/**
+ * The funnel's bowl, lathed from its profile with its faces turned inward.
+ * @returns The geometry.
+ */
 export const buildFunnelGeometry = (): THREE.BufferGeometry =>
   reverseGeometryWinding(
     new THREE.LatheGeometry(
@@ -514,7 +529,6 @@ const trimeshColliderSpec = (spec: TrimeshSpec, transform: PieceTransform): Trac
  * World-space collision triangles for a piece, grouped later by friction and
  * restitution into merged colliders. Decorative (`visualOnly`) boxes are
  * excluded.
- *
  * @param piece The placed piece
  * @param transform The piece's world transform
  * @returns One collider spec per collidable box and trimesh part
@@ -544,6 +558,13 @@ const makeGhostMaterial = (color: number): THREE.MeshStandardMaterial =>
     side: THREE.DoubleSide
   })
 
+/**
+ * A see-through preview of a piece at a position, for placing it.
+ * @param scene The scene to add it to.
+ * @param type The piece type.
+ * @param transform Where it would sit.
+ * @returns The preview's group.
+ */
 export const buildPieceGhost = (
   scene: THREE.Scene,
   type: TrackPieceType,
@@ -579,7 +600,6 @@ export const buildPieceGhost = (
  * Visual meshes for a piece (one per box and trimesh part), coloured and
  * tagged with the piece id for selection and highlighting. Physics is handled
  * separately by the merged track colliders.
- *
  * @param scene The scene to add the meshes to
  * @param piece The placed piece
  * @param transform The piece's world transform

@@ -566,6 +566,8 @@ const createMapCommitter = ({
  * Editor state and scene lifecycle for the marble track editor: holds the
  * current map, applies edit operations, rebuilds the 3D track on change,
  * autosaves to localStorage and supports piece selection and ghost previews.
+ * @param deps The canvas, the scene setup and the callbacks it needs.
+ * @returns The map, selection, saved maps and history, the edit actions, and init and destroy.
  */
 export const useMarbleEditor = (deps: UseMarbleEditorDeps) => {
   const currentMap = ref<MarbleMap>(loadCurrentMap() ?? SAMPLE_MAPS[0])

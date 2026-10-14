@@ -15,6 +15,11 @@ const withPieces = (map: MarbleMap, pieces: PlacedPiece[]): MarbleMap => ({
 
 const isTerminalType = (type: TrackPieceType): boolean => type === 'start' || type === 'finish'
 
+/**
+ * A new map with only a start and a finish.
+ * @param name The map's name.
+ * @returns The map.
+ */
 export const createEmptyMap = (name: string): MarbleMap => ({
   version: 1,
   name,
@@ -22,6 +27,12 @@ export const createEmptyMap = (name: string): MarbleMap => ({
   pieces: [makePiece('start'), makePiece('finish')]
 })
 
+/**
+ * Adds a piece before the finish; a start goes first and a finish last, and neither twice.
+ * @param map The map.
+ * @param type The piece type.
+ * @returns The new map, or the same map when the piece cannot be added.
+ */
 export const appendPiece = (map: MarbleMap, type: TrackPieceType): MarbleMap => {
   if (isTerminalType(type) && map.pieces.some((piece) => piece.type === type)) return map
   const finishIndex = map.pieces.findIndex((piece) => piece.type === 'finish')
@@ -34,6 +45,13 @@ export const appendPiece = (map: MarbleMap, type: TrackPieceType): MarbleMap => 
   ])
 }
 
+/**
+ * Inserts a piece at an index, kept between the start and the finish.
+ * @param map The map.
+ * @param index Where to insert it.
+ * @param type The piece type; a start or finish is refused.
+ * @returns The new map, or the same map when the piece cannot be inserted.
+ */
 export const insertPiece = (map: MarbleMap, index: number, type: TrackPieceType): MarbleMap => {
   if (isTerminalType(type)) return map
   const hasStart = map.pieces[0]?.type === 'start'
@@ -48,6 +66,12 @@ export const insertPiece = (map: MarbleMap, index: number, type: TrackPieceType)
   ])
 }
 
+/**
+ * Removes a piece, unless it is the start or the finish.
+ * @param map The map.
+ * @param pieceId The piece's id.
+ * @returns The new map, or the same map when nothing was removed.
+ */
 export const removePiece = (map: MarbleMap, pieceId: string): MarbleMap => {
   const target = map.pieces.find((piece) => piece.id === pieceId)
   if (!target || isTerminalType(target.type)) return map
@@ -57,6 +81,13 @@ export const removePiece = (map: MarbleMap, pieceId: string): MarbleMap => {
   )
 }
 
+/**
+ * Changes a piece's colour.
+ * @param map The map.
+ * @param pieceId The piece's id.
+ * @param color The new colour.
+ * @returns The new map, or the same map when the piece is missing.
+ */
 export const recolorPiece = (map: MarbleMap, pieceId: string, color: number): MarbleMap => {
   if (!map.pieces.some((piece) => piece.id === pieceId)) return map
   return withPieces(

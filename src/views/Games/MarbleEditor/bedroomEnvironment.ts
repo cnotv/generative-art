@@ -443,6 +443,7 @@ const disposeGroup = (group: THREE.Group): void => {
 
 /**
  * Warm room tint for fog and background shared by editor and race mode.
+ * @param scene The scene to tint.
  */
 export const applyBedroomAtmosphere = (scene: THREE.Scene): void => {
   scene.fog = new THREE.FogExp2(BEDROOM_BACKDROP_COLOR, BEDROOM_FOG_DENSITY)
@@ -453,6 +454,9 @@ export const applyBedroomAtmosphere = (scene: THREE.Scene): void => {
  * Builds the giant children-bedroom shell (wood floor, rug, striped walls,
  * window, ceiling) with low-poly toys around the perimeter, sized from the
  * given room layout. Purely visual: no physics colliders are created.
+ * @param scene The scene to add the room to.
+ * @param layout The room's centre, size, floor height and wall height.
+ * @returns The room's layout, its group, and a function to dispose it.
  */
 export const buildBedroom = (scene: THREE.Scene, layout: RoomLayout): BedroomEnvironment => {
   const group = new THREE.Group()

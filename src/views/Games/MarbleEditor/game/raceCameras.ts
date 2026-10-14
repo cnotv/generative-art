@@ -18,11 +18,17 @@ const scratchCameraGoal = new THREE.Vector3()
 
 const REVERSE_DOT_THRESHOLD = -0.3
 
+/**
+ * The starting travel heading, straight ahead along -Z.
+ * @returns A new heading vector.
+ */
 export const createSmoothedDirection = (): THREE.Vector3 => new THREE.Vector3(0, 0, -1)
 
 /**
  * Tracks the marble's travel heading, ignoring brief reversals so that
  * backward pushes do not flip the whole control frame.
+ * @param smoothedDirection The heading, updated in place.
+ * @param velocity The marble's velocity.
  */
 export const updateSmoothedDirection = (
   smoothedDirection: THREE.Vector3,
@@ -38,6 +44,11 @@ export const updateSmoothedDirection = (
 // easeOutCubic: a mode switch glides in fast then settles, landing exactly on
 // the goal at alpha 1 (no residual snap). Clamped so callers can pass a raw
 // elapsed/duration ratio.
+/**
+ * Eases a camera transition: fast at first, settling at the end.
+ * @param alpha Progress from 0 to 1.
+ * @returns The eased progress.
+ */
 export const easeTransition = (alpha: number): number => {
   const clamped = Math.min(1, Math.max(0, alpha))
   return 1 - (1 - clamped) ** 3
@@ -70,6 +81,10 @@ export type RaceCameraOptions = {
   freeCamBack?: number
 }
 
+/**
+ * Puts the camera at the marble, looking along its heading, easing in from where it was.
+ * @param options The camera, marble, heading, orbit controls and transition state.
+ */
 export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
   const { camera, marble, smoothedDirection, orbit, transitionStart, transitionAlpha } = options
   if (!marble) return
@@ -91,6 +106,10 @@ export const updateFirstPersonCamera = (options: RaceCameraOptions): void => {
   camera.lookAt(scratchLookTarget)
 }
 
+/**
+ * Puts the camera behind and above the marble, looking at it.
+ * @param options The camera, marble, heading, orbit controls and offsets.
+ */
 export const updateThirdPersonCamera = (options: RaceCameraOptions): void => {
   const { camera, marble, smoothedDirection, orbit } = options
   if (!marble) return
@@ -108,6 +127,10 @@ export const updateThirdPersonCamera = (options: RaceCameraOptions): void => {
 // Free-cam entry frames the whole track (high and far back), then eases in and
 // hands control to orbit at alpha 1. Orbit is held disabled during the glide so
 // orbit.update() does not fight the lerp; once settled, the player owns it.
+/**
+ * Hands the camera to orbit controls around the marble, once the transition to it ends.
+ * @param options The camera, marble, heading, orbit controls and transition state.
+ */
 export const updateFreeCamera = (options: RaceCameraOptions): void => {
   const { camera, marble, smoothedDirection, orbit, transitionStart, transitionAlpha } = options
   if (!marble) return
@@ -132,6 +155,10 @@ export const updateFreeCamera = (options: RaceCameraOptions): void => {
   camera.lookAt(marble.position)
 }
 
+/**
+ * Places the camera for the current mode.
+ * @param options The mode, camera, marble, heading, orbit controls and transition state.
+ */
 export const applyRaceCamera = (options: RaceCameraOptions): void => {
   const { mode, marble, orbit } = options
   if (!marble) return
