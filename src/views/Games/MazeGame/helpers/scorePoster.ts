@@ -86,6 +86,11 @@ const addPosterGroup = (
   parent.add(group)
 }
 
+/**
+ * Adds a poster to the scene that shows the score and level, redrawn on its canvas.
+ * @param scene The scene to add it to.
+ * @returns Redraws the poster with a score and level.
+ */
 export const createScorePoster = (scene: THREE.Scene) => {
   const canvas = Object.assign(document.createElement('canvas'), {
     width: POSTER_CANVAS_SIZE,

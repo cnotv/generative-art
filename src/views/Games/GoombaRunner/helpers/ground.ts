@@ -6,6 +6,12 @@ interface Physics {
   addMesh: (mesh: THREE.Mesh) => void
 }
 
+/**
+ * Adds the zigzag-patterned ground, with a collider when physics is given.
+ * @param scene The scene to add it to.
+ * @param physics The Rapier physics object, for its collider.
+ * @returns The ground's texture, scrolled to make the ground move.
+ */
 export const getGround = (scene: THREE.Scene, physics?: Physics) => {
   const geometry = new THREE.BoxGeometry(2000, 0.5, 2000)
 
@@ -45,6 +51,12 @@ export const getGround = (scene: THREE.Scene, physics?: Physics) => {
   return texture
 }
 
+/**
+ * Scrolls the ground texture while the game plays.
+ * @param groundTexture The ground's texture.
+ * @param isPlaying Whether the game is running.
+ * @param gameScore The score, which speeds the game up.
+ */
 export const moveGround = (
   groundTexture: THREE.Texture | null,
   isPlaying: boolean,
@@ -55,6 +67,10 @@ export const moveGround = (
   }
 }
 
+/**
+ * Puts the ground texture back to its start.
+ * @param groundTexture The ground's texture.
+ */
 export const resetGround = (groundTexture: THREE.Texture | null) => {
   if (groundTexture) {
     groundTexture.offset.x = 0

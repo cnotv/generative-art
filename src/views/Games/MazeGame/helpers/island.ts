@@ -19,6 +19,12 @@ import {
 } from '../config'
 import { generateMazeAndSegments, type MazeWallSegment, type MazeGrid } from './maze'
 
+/**
+ * Builds the maze on the island: its walls, the desks and the extra physics bodies.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @returns The walls, their segments, the maze grid, the extra bodies and the desks.
+ */
 export const createIslandMaze = async (
   scene: THREE.Scene,
   world: RAPIER.World
@@ -165,6 +171,12 @@ const OFFICE_DIVIDER_COLOR = ISLAND_COLOR
 const DIVIDER_GAP = 0
 const WALL_DESK_SPREAD = MAZE_CELL_SIZE / 4
 
+/**
+ * Lines the island's edges with office shelves.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @returns The shelves.
+ */
 export const createOfficeShelves = async (
   scene: THREE.Scene,
   world: RAPIER.World
@@ -239,6 +251,12 @@ export const createOfficeShelves = async (
   )
 }
 
+/**
+ * Adds the office's outer walls around the island.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @returns The walls' group.
+ */
 export const createOfficeWalls = (scene: THREE.Scene, world: RAPIER.World): THREE.Group => {
   const group = getWalls(scene, world, {
     name: 'office-wall',
@@ -249,6 +267,12 @@ export const createOfficeWalls = (scene: THREE.Scene, world: RAPIER.World): THRE
   return group
 }
 
+/**
+ * Places the office desks.
+ * @param scene The scene to add them to.
+ * @param world The physics world.
+ * @returns The desks.
+ */
 export const createDeskModels = (
   scene: THREE.Scene,
   world: RAPIER.World

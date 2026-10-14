@@ -43,6 +43,12 @@ const buildStaticLayer = (segments: MazeWallSegment[], size: number): HTMLCanvas
   return offscreen
 }
 
+/**
+ * Draws the maze once onto a static layer and returns a drawer for the moving parts.
+ * @param canvas The minimap's canvas.
+ * @param segments The maze's wall segments.
+ * @returns Draws the player, coins and planes over the maze.
+ */
 export const createMinimap = (
   canvas: HTMLCanvasElement,
   segments: MazeWallSegment[]

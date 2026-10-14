@@ -17,10 +17,18 @@ export interface Obstacle {
   collider: RAPIER.Collider
 }
 
+/**
+ * Restarts the obstacle numbering for a new game.
+ */
 export const resetObstacleCounter = () => {
   obstacleState.counter = 0
 }
 
+/**
+ * Creates the group every obstacle is added to.
+ * @param scene The scene to add it to.
+ * @returns The group.
+ */
 export const createObstaclesGroup = (scene: THREE.Scene): THREE.Group => {
   obstacleState.group = new THREE.Group()
   obstacleState.group.name = 'Obstacles'
@@ -28,6 +36,14 @@ export const createObstaclesGroup = (scene: THREE.Scene): THREE.Group => {
   return obstacleState.group
 }
 
+/**
+ * Adds one sand-block obstacle at a position, with a collider when physics is given.
+ * @param scene The scene to add it to.
+ * @param position Its x and y.
+ * @param world The physics world for the model.
+ * @param physics The Rapier physics object, for its collider.
+ * @returns The obstacle's mesh.
+ */
 export const addBlock = async (
   scene: THREE.Scene,
   position: [number, number],
@@ -85,11 +101,23 @@ export const addBlock = async (
   return { mesh }
 }
 
+/**
+ * Moves an obstacle left at the game's speed.
+ * @param obstacle The obstacle.
+ * @param gameScore The score, which speeds the game up.
+ */
 export const moveBlock = (obstacle: Obstacle, gameScore: number) => {
   const speed = getSpeed(config.game.speed, gameScore)
   moveController(obstacle.mesh, { x: -speed, y: 0, z: 0 })
 }
 
+/**
+ * Removes an obstacle from the scene, the physics and the list.
+ * @param obstacle The obstacle.
+ * @param obstacles The list, changed in place.
+ * @param index Its index in the list.
+ * @param physics The Rapier physics object.
+ */
 export const removeBlock = (
   obstacle: Obstacle,
   obstacles: Obstacle[],
@@ -116,6 +144,9 @@ interface MoveBlocksOptions {
   onScore: (points: number) => void
 }
 
+/**
+ * Moves every obstacle, scores the ones the player has passed, and removes the ones off screen.
+ */
 export const moveBlocks = ({
   obstacles,
   physics,
@@ -141,6 +172,12 @@ export const moveBlocks = ({
   }, null)
 }
 
+/**
+ * Removes every obstacle, ready for a new game.
+ * @param obstacles The obstacles, emptied in place.
+ * @param _scene Unused.
+ * @param physics The Rapier physics object.
+ */
 export const resetObstacles = (
   obstacles: Obstacle[],
   _scene: THREE.Scene,
@@ -158,6 +195,13 @@ export const resetObstacles = (
   resetObstacleCounter()
 }
 
+/**
+ * Adds a new obstacle off the right edge of the screen.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @param physics The Rapier physics object.
+ * @param obstacles Collects the obstacle added.
+ */
 export const createCubes = async (
   scene: THREE.Scene,
   world: RAPIER.World,

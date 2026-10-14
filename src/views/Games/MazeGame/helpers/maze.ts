@@ -83,7 +83,12 @@ const pickRandom = <T>(array: T[]): T => array[Math.floor(Math.random() * array.
 
 // --- 1. Winding Path Algorithms ---
 
-/** DFS with backtracking — long winding corridors */
+/**
+ * DFS with backtracking — long winding corridors
+ * @param grid The maze being carved.
+ * @param stack The cells on the current path.
+ * @returns False once the maze is finished.
+ */
 const stepRecursiveBacktracker = (grid: MazeGrid, stack: MazeCell[]): boolean => {
   if (stack.length === 0) return false
   const current = stack[stack.length - 1]
@@ -153,7 +158,12 @@ const stepHuntAndKill = (
   }
 }
 
-/** Like recursive backtracker but scans grid when stuck — memory efficient */
+/**
+ * Like recursive backtracker but scans grid when stuck — memory efficient
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateHuntAndKill = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
   const start = grid[0][0]
@@ -164,7 +174,12 @@ const generateHuntAndKill = (rows: number, cols: number): MazeGrid => {
 
 // --- 2. Spiky/Organic Algorithms ---
 
-/** Frontier-based — natural branching patterns */
+/**
+ * Frontier-based — natural branching patterns
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generatePrims = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
   const frontier: MazeCell[] = []
@@ -215,7 +230,12 @@ const generatePrims = (rows: number, cols: number): MazeGrid => {
   return grid
 }
 
-/** Union-Find based — carves passages simultaneously across grid */
+/**
+ * Union-Find based — carves passages simultaneously across grid
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateKruskals = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
   const parent: number[] = Array.from({ length: rows * cols }, (_, i) => i)
@@ -321,7 +341,12 @@ const wilsonsStep = (ctx: WilsonsContext, allCells: MazeCell[]): void => {
   wilsonsStep(ctx, allCells)
 }
 
-/** Loop-erased random walks — perfectly unbiased */
+/**
+ * Loop-erased random walks — perfectly unbiased
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateWilsons = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
   const inMaze = new Set<string>()
@@ -360,7 +385,12 @@ const stepAldousBroder = (
   stepAldousBroder(grid, rows, cols, next, newCount)
 }
 
-/** Random walk — extremely simple, extremely slow */
+/**
+ * Random walk — extremely simple, extremely slow
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateAldousBroder = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
   const start = grid[0][0]
@@ -371,7 +401,12 @@ const generateAldousBroder = (rows: number, cols: number): MazeGrid => {
 
 // --- 4. Specialized Algorithms ---
 
-/** Row-by-row generation — can produce infinite mazes */
+/**
+ * Row-by-row generation — can produce infinite mazes
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateEllers = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
   const sets = Array.from({ length: rows * cols }, (_, i) => i)
@@ -426,7 +461,12 @@ const generateEllers = (rows: number, cols: number): MazeGrid => {
   return grid
 }
 
-/** Divide space with walls — fractal appearance */
+/**
+ * Divide space with walls — fractal appearance
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateRecursiveDivision = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
 
@@ -482,7 +522,12 @@ const generateRecursiveDivision = (rows: number, cols: number): MazeGrid => {
   return grid
 }
 
-/** Fastest — biased toward northwest */
+/**
+ * Fastest — biased toward northwest
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateBinaryTree = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
 
@@ -501,7 +546,12 @@ const generateBinaryTree = (rows: number, cols: number): MazeGrid => {
   return grid
 }
 
-/** Fast — biased toward north */
+/**
+ * Fast — biased toward north
+ * @param rows Rows of cells.
+ * @param cols Columns of cells.
+ * @returns The maze.
+ */
 const generateSidewinder = (rows: number, cols: number): MazeGrid => {
   const grid = createGrid(rows, cols)
 
@@ -548,8 +598,11 @@ const algorithmMap: Record<MazeAlgorithm, (rows: number, cols: number) => MazeGr
 
 /**
  * Returns world-space cell centre positions for coin/item placement.
+ * @param islandSize The island's width.
+ * @param cellSize The width of one cell.
  * @param step  pick every Nth cell in each axis (default 5 → 4×4 = 16 positions for a 20-cell grid)
  * @param height  Y position for the returned coordinates
+ * @returns The chosen cells' centres.
  */
 export const getMazeCellCenters = (
   islandSize: number,
@@ -614,6 +667,12 @@ export interface MazeWallSegment {
 /**
  * Convert a maze grid into oriented wall segments for 3D scene construction.
  * Entrance at top-left, exit at bottom-right.
+ * @param grid The maze.
+ * @param boardWidth The board's width.
+ * @param boardDepth The board's depth.
+ * @param cellSize The width of one cell.
+ * @param wallY The walls' height above the ground.
+ * @returns The wall segments.
  */
 const mazeGridToSegments = (
   grid: MazeGrid,
@@ -713,6 +772,14 @@ export const generateRectangularMazeAndSegments = (
   return { grid, segments: mazeGridToSegments(grid, boardWidth, boardDepth, cellSize, wallY) }
 }
 
+/**
+ * Generates a square maze and its wall segments.
+ * @param islandSize The island's width.
+ * @param cellSize The width of one cell.
+ * @param algorithm The generation algorithm.
+ * @param wallY The walls' height above the ground.
+ * @returns The maze and its segments.
+ */
 export const generateMazeAndSegments = (
   islandSize: number,
   cellSize: number,
@@ -721,6 +788,14 @@ export const generateMazeAndSegments = (
 ): { grid: MazeGrid; segments: MazeWallSegment[] } =>
   generateRectangularMazeAndSegments(islandSize, islandSize, cellSize, algorithm, wallY)
 
+/**
+ * Generates a square maze and keeps only its wall segments.
+ * @param islandSize The island's width.
+ * @param cellSize The width of one cell.
+ * @param algorithm The generation algorithm.
+ * @param wallY The walls' height above the ground.
+ * @returns The wall segments.
+ */
 export const generateMazeWallSegments = (
   islandSize: number,
   cellSize: number,
@@ -731,6 +806,11 @@ export const generateMazeWallSegments = (
 /**
  * Convert a maze grid into wall positions for the 3D scene.
  * Entrance at top-left, exit at bottom-right.
+ * @param islandSize The island's width.
+ * @param cellSize The width of one cell.
+ * @param algorithm The generation algorithm.
+ * @param wallY The walls' height above the ground.
+ * @returns One position per wall block.
  */
 export const generateMazeWallPositions = (
   islandSize: number,

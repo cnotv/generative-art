@@ -68,6 +68,12 @@ const createElevator = async (
   return { model, isOpen: false, isOpening: false, isClosing: false, closeTimer: null }
 }
 
+/**
+ * Places the elevator the player starts in, at the maze's entrance.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @returns The elevator's state.
+ */
 export const createStartElevator = async (
   scene: THREE.Scene,
   world: RAPIER.World
@@ -84,6 +90,12 @@ export const createStartElevator = async (
   return state
 }
 
+/**
+ * Places the elevator the player leaves by, at the maze's exit.
+ * @param scene The scene to add it to.
+ * @param world The physics world.
+ * @returns The elevator's state.
+ */
 export const createExitElevator = async (
   scene: THREE.Scene,
   world: RAPIER.World
@@ -100,6 +112,11 @@ export const createExitElevator = async (
   return state
 }
 
+/**
+ * Plays the elevator's door-opening animation, unless the doors are already open or moving.
+ * @param elevator The elevator.
+ * @param onComplete Called once the doors are open.
+ */
 export const openElevator = (elevator: ElevatorState, onComplete?: () => void): void => {
   if (elevator.isOpen || elevator.isOpening || elevator.isClosing) return
   if (elevator.closeTimer !== null) {
@@ -154,6 +171,10 @@ export const openElevator = (elevator: ElevatorState, onComplete?: () => void): 
   setTimeout(fireOnce, (ELEVATOR_OPEN_FALLBACK_DELAY / 3) * 1000)
 }
 
+/**
+ * Plays the elevator's door-closing animation, cancelling any close already scheduled.
+ * @param elevator The elevator.
+ */
 export const closeElevator = (elevator: ElevatorState): void => {
   if (!elevator.isOpen) return
   if (elevator.closeTimer !== null) {
@@ -210,16 +231,32 @@ export const closeElevator = (elevator: ElevatorState): void => {
   setTimeout(fireOnce, (openAction.getClip().duration + 0.5) * 1000)
 }
 
+/**
+ * Advances the elevator's door animation.
+ * @param elevator The elevator.
+ * @param delta Seconds since the last frame.
+ */
 export const updateElevatorMixer = (elevator: ElevatorState, delta: number): void => {
   ;(elevator.model.userData.mixer as THREE.AnimationMixer | undefined)?.update(delta)
 }
 
+/**
+ * Cancels a scheduled door close.
+ * @param elevator The elevator.
+ */
 export const cancelElevatorClose = (elevator: ElevatorState): void => {
   if (elevator.closeTimer === null) return
   clearTimeout(elevator.closeTimer)
   elevator.closeTimer = null
 }
 
+/**
+ * Says whether the player is within a radius of the elevator, on the ground plane.
+ * @param playerPos The player's position.
+ * @param elevator The elevator.
+ * @param radius The distance that counts as near.
+ * @returns True when the player is near.
+ */
 export const isPlayerNearElevator = (
   playerPos: THREE.Vector3,
   elevator: ElevatorState,

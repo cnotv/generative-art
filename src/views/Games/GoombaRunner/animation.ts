@@ -234,6 +234,11 @@ const createRegenerateTextureArea =
     state.textureAreaBackgrounds = [...remaining, ...newElements]
   }
 
+/**
+ * Builds the game's timeline: the player, obstacles, backgrounds, ground and camera each advanced
+ * every frame, and the game ended on a collision.
+ * @returns The timeline manager and a function to regenerate the texture-area backgrounds.
+ */
 const createTimeline = async ({
   scene,
   getDelta,
