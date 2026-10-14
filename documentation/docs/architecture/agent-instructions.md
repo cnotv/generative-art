@@ -10,7 +10,7 @@ obvious home rather than landing in whichever file was open at the time.
 
 :::note Source files
 This page tracks `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
-`.claude/rules/`, `.claude/skills/` and `.vscode/settings.json`. If you change any of them,
+`.claude/settings.json`, `.claude/rules/`, `.claude/skills/` and `.vscode/settings.json`. If you change any of them,
 update this page in the same change.
 :::
 
@@ -20,12 +20,13 @@ update this page in the same change.
 generative-art/
 ├── AGENTS.md                          Tier 1 — the constitution. Tool-neutral, read by
 │                                      Claude Code, Copilot, Codex, Cursor and Gemini.
-│                                      Non-negotiables, the definition-of-done checklist,
-│                                      and an index of everything below.
+│                                      Non-negotiables, the Project facts the workflow
+│                                      skills read, and an index of everything below.
 ├── CLAUDE.md                          Imports AGENTS.md. Claude-specific wiring only.
 │
 ├── .claude/
-│   ├── settings.json                  Shared tool permissions, committed.
+│   ├── settings.json                  Shared tool permissions, committed, and the
+│   │                                  agent-base `workflow` plugin every session installs.
 │   ├── settings.local.json            Personal permissions, gitignored.
 │   ├── rules/                         Tier 2 — area rules, each declaring a paths: glob so
 │   │   │                              it loads only when a matching file is touched.
@@ -35,15 +36,10 @@ generative-art/
 │   │   ├── packages.md                packages/**
 │   │   ├── tests.md                   **/*.test.ts
 │   │   └── docs.md                    documentation/**
-│   └── skills/                        Tier 3 — procedures. Read natively by both Claude
-│       │                              Code and Copilot.
-│       ├── start-issue/SKILL.md       Read the issue, sync main, branch, post the plan.
-│       ├── verify/SKILL.md            Drive the running app and confirm it looks right.
+│   └── skills/                        Tier 3 — procedures only this repository needs. The
+│       │                              shared workflow ones come from the plugin.
 │       ├── perf-check/SKILL.md        The performance gate and its thresholds.
-│       ├── open-pr/SKILL.md           Rebase, push, PR body, CI, abstraction review.
-│       ├── journey-doc/SKILL.md       Decide whether a journey doc is needed, and write it.
-│       ├── sync-docs/SKILL.md         Update tutorials that track a file you changed.
-│       └── finish-change/SKILL.md     The definition-of-done sweep.
+│       └── sync-docs/SKILL.md         Update tutorials that track a file you changed.
 │
 ├── .github/
 │   ├── copilot-instructions.md        Points at AGENTS.md. Copilot-specific wiring only.
@@ -120,6 +116,23 @@ directory, native scoping in both tools, and no pointer files bridging between t
 The one caveat is that `paths:`-scoped rules are not re-injected after `/compact`; they
 reload the next time a matching file is touched. Anything that must hold for every request
 regardless belongs in Tier 1, not here.
+
+## Shared procedures come from a plugin
+
+The procedures every cnotv repository shares (`start`, `start-issue`, `open-pr`, `verify`,
+`finish-change`, `journey-doc`, `security-audit`) live once, in
+[agent-base](https://github.com/cnotv/agent-base), as its `workflow` plugin.
+`.claude/settings.json` registers the marketplace and enables the plugin, and every Claude Code
+session installs it, cloud sessions included, as `/workflow:<name>`. The skills are generic:
+they read the commands, port, routes and done checklist from **Project facts** in `AGENTS.md`,
+and the app's own selectors and waits from the page its Verify notes line names.
+
+Copying those skills into `.claude/skills/` as well looks like a safety net, and it is the
+opposite. Both copies load, as `open-pr` and `workflow:open-pr`, with texts that drift apart, and
+the agent picks between them. This happened once, on the belief that cloud sessions skip
+plugins. They do not. What this repository knows that the generic text cannot belongs in
+Project facts, a guide or a rule, and a procedure only it needs is a local skill with a name of
+its own.
 
 Tier 3 works because skills are selected by description. Only each skill's name and
 description are loaded at startup; the body is read when the request matches. The description
