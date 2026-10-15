@@ -6,7 +6,7 @@ const SEMITONES_PER_OCTAVE = 12
 const PARABOLA_VERTEX_SCALE = 0.5
 
 /**
- * Nearest equal-tempered MIDI note; the inverse of midiNoteToFreq in @webgamekit/audio.
+ * Nearest equal-tempered MIDI note; the inverse of midiNoteToFreq in `@webgamekit/audio`.
  * @param frequencyHz - frequency to name
  * @returns the closest MIDI note number
  */
@@ -24,6 +24,9 @@ export const midiNoteToName = (midiNote: number): string =>
 /**
  * Refines a peak bin to a fractional bin by fitting a parabola through it and its two
  * neighbours, since low notes sit only a few bins apart.
+ * @param spectrum - magnitude spectrum
+ * @param peakBin - index of the strongest bin
+ * @returns the peak position in fractional bins
  */
 const interpolatePeakBin = (spectrum: Float64Array, peakBin: number): number => {
   const left = spectrum[peakBin - 1] ?? 0

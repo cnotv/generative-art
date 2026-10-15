@@ -19,6 +19,9 @@ type CombScore = {
  * Onset strength summed over the frames either side of a beat. A click can split its
  * flux across two frames, differently on each beat, and reading a single frame let a
  * comb at half the tempo win by landing only on the cleanly aligned clicks.
+ * @param envelope - onset strength per frame
+ * @param position - fractional frame of the beat
+ * @returns the summed strength around the beat
  */
 const envelopeNear = (envelope: Float64Array, position: number): number => {
   const centerFrame = Math.round(position)
@@ -47,6 +50,8 @@ const bestPhaseFor = (envelope: Float64Array, periodFrames: number): CombScore =
  * the tempo. A comb at half the true tempo hits every onset it touches just as well, so
  * the square root tips the tie towards the faster reading, while a comb at double the
  * tempo misses half its teeth and still loses.
+ * @param beatsPerMinute - candidate tempo
+ * @returns the weight multiplied into the candidate's comb score
  */
 const tempoWeight = (beatsPerMinute: number): number => {
   const octavesFromCenter = Math.log2(beatsPerMinute / TEMPO_PRIOR_CENTER_BPM)
@@ -60,6 +65,9 @@ const tempoWeight = (beatsPerMinute: number): number => {
  * A beat found just short of a full period is really the one at time zero, missed by
  * frame rounding. Leaving it there makes the first beat the second one, and the whole
  * first bar is lost before the grid starts.
+ * @param phaseSeconds - first beat found by the comb
+ * @param beatSeconds - beat length
+ * @returns the phase, moved back one beat when it sits just short of a full one
  */
 const wrapPhaseToNearestBeat = (phaseSeconds: number, beatSeconds: number): number =>
   beatSeconds - phaseSeconds < beatSeconds / STEPS_PER_BEAT / 2

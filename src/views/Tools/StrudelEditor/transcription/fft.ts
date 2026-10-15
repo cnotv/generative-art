@@ -25,6 +25,9 @@ const isPowerOfTwo = (value: number): boolean => value > 0 && (value & (value - 
  * Where each output of one radix-2 Stockham stage reads its butterfly inputs from. The
  * tables depend only on the frame size, so they are built once and every frame reuses
  * them: computing the indices inside the transform made it about fifty times slower.
+ * @param size - frame length
+ * @param stride - distance between butterfly lanes in this stage
+ * @returns the read indices, twiddle index and output parity for every output
  */
 const buildStageIndices = (size: number, stride: number): StageIndices => {
   const halfSpan = size / stride / 2
@@ -49,6 +52,10 @@ const buildStageIndices = (size: number, stride: number): StageIndices => {
 /**
  * One radix-2 Stockham stage. Each stage reads the previous arrays and writes fresh ones,
  * so the transform needs no bit-reversal pass and never mutates its input.
+ * @param spectrum - output of the previous stage
+ * @param indices - this stage's precomputed indexing
+ * @param twiddles - cosine and sine of the frame's twiddle factors
+ * @returns the spectrum after this stage
  */
 const applyStockhamStage = (
   spectrum: ComplexSpectrum,
