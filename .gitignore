@@ -35,3 +35,7 @@ coverage
 .env
 # Throwaway checkouts of this repo, created for isolated agent work
 .claude/worktrees/
+
+# Blender verification artifacts (reproducible via blender/forest-road.py)
+blender/forest-road-render.png
+blender/.blender-cache/

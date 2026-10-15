@@ -77,6 +77,9 @@
   "Forest Game": {
     "description": "3D forest exploration game with character movement and environment."
   },
+  "Forest Road": {
+    "description": "Overcast forest road with wet leaf-covered asphalt, recreated from a reference photo."
+  },
   "Goomba Runner": {
     "description": "Side-scrolling platformer featuring Goomba-style enemies."
   },
