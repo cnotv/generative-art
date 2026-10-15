@@ -37,6 +37,7 @@ of these is a bug, not a variation — add a prop instead.
 | `IconButton`         | an icon-only button in app chrome, with size and variant                       |
 | `LoadingOverlay`     | a blocking load state with stage and detail text                               |
 | `LoaderCube`         | the small inline spinner                                                       |
+| `DropZone`           | a drag-and-drop file picker with a click-to-browse fallback and its own label  |
 | `RecordingControls`  | start/stop capture UI for a scene                                              |
 | `DebugStats`         | a list of live numeric readouts while debugging                                |
 | `ControlsLogger`     | a rolling log of input events, for verifying a mapping                         |
