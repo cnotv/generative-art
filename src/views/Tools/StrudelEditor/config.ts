@@ -200,6 +200,26 @@ stack(
   .degradeBy(.4).room(1),
   note("<b4 eb4>").s('sd').delay(.8).slow(8).room(.5)
 )`
+  },
+  {
+    id: 'bike',
+    label: 'Bike (Autechre)',
+    code: `// "Bike" by Autechre, typed in from a songscription score
+// Approximate: 22 bars of 3/4 at 125 BPM, pitches read off the chord symbols
+// (Dm/A, Am, Dm, Am/C, Dm) rather than every printed note.
+
+setcps(125/60/3)
+
+stack(
+  // sampler: staccato sixteenth-note chord stabs
+  note("<[a4,d5,f5]!2 [a4,c5,e5]!4 [d5,f5,a5]!7 [c5,e5,a5]!4 [d5,f5,a5]!5>")
+  .struct("<[~ ~ ~ ~ ~ ~ ~ ~ x x x x] [x*12]!2 [x x x x x x x x x@3 x] [~ ~ x ~ ~ x x ~ ~ ~ x ~] [x*12]!9 [x x x x x x x x x ~ ~ x] [x ~ x ~ ~ x ~ x x x x x] [~ x@2 ~ x x x ~ x x ~ x] [x ~ x x ~ x ~ x ~ x x ~] [x x x ~ x x x x x x x x] [x x x x x x ~ x ~ ~ x ~] [~ x x ~ ~ x x x x x x x] [x x x ~ ~ ~ ~ ~ ~ ~ ~ ~]>")
+  .s("square").decay(.09).sustain(0).lpf(2800).gain(.35).room(.3),
+  // drums: hi-hats from bar 17, kick and snare in the last bar
+  s("<~!16 hh(5,12,2)!5 [bd hh sd hh bd sd ~ ~ ~ ~ ~ ~]>").gain(.8),
+  // bass: only in the last bar
+  note("<~!21 [d2 d2 d2 ~ a1 a1 ~ ~ ~ ~ ~ ~]>").s("sawtooth").lpf(500).gain(.6)
+)`
   }
 ]
 
