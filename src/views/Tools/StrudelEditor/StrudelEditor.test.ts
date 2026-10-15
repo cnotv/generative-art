@@ -68,7 +68,7 @@ describe('StrudelEditor view', () => {
     expect((codeField.element as HTMLTextAreaElement).value).toBe('s("hh*8")')
   })
 
-  it('renders all seven player menu tabs', () => {
+  it('renders all eight player menu tabs', () => {
     // Arrange
     const wrapper = mount(StrudelEditor)
 
@@ -76,11 +76,12 @@ describe('StrudelEditor view', () => {
     const tabButtons = wrapper.findAll('.strudel-editor__tab')
 
     // Assert
-    expect(tabButtons.length).toBe(7)
+    expect(tabButtons.length).toBe(8)
     const tabLabels = tabButtons.map((tab) => tab.text())
     expect(tabLabels).toEqual([
       'welcome',
       'patterns',
+      'import',
       'sounds',
       'reference',
       'export',

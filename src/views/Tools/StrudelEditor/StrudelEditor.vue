@@ -7,6 +7,7 @@ import { useStrudelEditor } from './useStrudelEditor'
 import type { StrudelTabId } from './types'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
+import ImportTab from './tabs/ImportTab.vue'
 import SoundsTab from './tabs/SoundsTab.vue'
 import ReferenceTab from './tabs/ReferenceTab.vue'
 import ExportTab from './tabs/ExportTab.vue'
@@ -29,7 +30,14 @@ const {
   playPattern,
   stopPattern,
   setActiveTab,
-  clearLogEntries
+  clearLogEntries,
+  transcriptionStatus,
+  transcriptionProgress,
+  transcriptionResult,
+  transcribedCode,
+  transcriptionError,
+  transcribeAudioFile,
+  loadTranscription
 } = useStrudelEditor()
 
 const onExampleSelected = (exampleId: string): void => {
@@ -54,6 +62,10 @@ const onPlayRequested = (): void => {
 
 const onStopRequested = (): void => {
   void stopPattern()
+}
+
+const onAudioFileChosen = (audioFile: File): void => {
+  void transcribeAudioFile(audioFile)
 }
 
 const onTabSelected = (tabId: string): void => {
@@ -123,6 +135,16 @@ onUnmounted(() => {
           :electro-tunes="electroTunes"
           :current-code="patternCode"
           @select="onElectroTuneSelected"
+        />
+        <ImportTab
+          v-else-if="activeTab === 'import'"
+          :status="transcriptionStatus"
+          :progress="transcriptionProgress"
+          :result="transcriptionResult"
+          :code="transcribedCode"
+          :error-message="transcriptionError"
+          @file="onAudioFileChosen"
+          @load="loadTranscription"
         />
         <SoundsTab v-else-if="activeTab === 'sounds'" />
         <ReferenceTab v-else-if="activeTab === 'reference'" />
