@@ -1,4 +1,4 @@
-import type { StrudelExample } from './types'
+import type { StrudelExample, StrudelTabId, TranscriptionStage } from './types'
 
 /**
  * The Strudel audio engine stays under AGPL-3.0-or-later while this repo is MIT.
@@ -211,21 +211,65 @@ export const DEFAULT_STRUDEL_EXAMPLE_ID = 'first-beat'
  */
 export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'
 
-export type StrudelTabId =
-  | 'welcome'
-  | 'patterns'
-  | 'sounds'
-  | 'reference'
-  | 'export'
-  | 'console'
-  | 'settings'
-
 export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
+  { id: 'import', label: 'import' },
   { id: 'sounds', label: 'sounds' },
   { id: 'reference', label: 'reference' },
   { id: 'export', label: 'export' },
   { id: 'console', label: 'console' },
   { id: 'settings', label: 'settings' }
 ]
+
+/** Analysis runs on mono audio resampled to this rate; it keeps hi-hats below Nyquist. */
+export const TRANSCRIPTION_SAMPLE_RATE = 22050
+export const TRANSCRIPTION_MAX_SECONDS = 90
+export const TRANSCRIPTION_MAX_BARS = 64
+export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac'
+
+export const ONSET_FRAME_SIZE = 1024
+export const ONSET_HOP_SIZE = 512
+export const ONSET_THRESHOLD_RADIUS_FRAMES = 8
+export const ONSET_THRESHOLD_OFFSET = 0.1
+
+/** Four times the onset frame, so neighbouring bass semitones land in different bins. */
+export const PITCH_FRAME_SIZE = 4096
+
+export const TEMPO_MIN_BPM = 70
+export const TEMPO_MAX_BPM = 180
+/** Centre of the log-tempo prior that breaks ties between related tempos. */
+export const TEMPO_PRIOR_CENTER_BPM = 120
+export const TEMPO_PRIOR_WIDTH_OCTAVES = 1
+
+export const STEPS_PER_BEAT = 4
+export const STEPS_PER_BAR = 16
+
+export const DRUM_LOW_BAND_MAX_HZ = 150
+export const DRUM_HIGH_BAND_MIN_HZ = 5000
+export const DRUM_KICK_MIN_SHARE = 0.4
+export const DRUM_HAT_MIN_SHARE = 0.3
+export const DRUM_SNARE_MIN_SHARE = 0.5
+
+export const BASS_MIN_HZ = 40
+export const BASS_MAX_HZ = 250
+/** A bass peak quieter than this fraction of the loudest bin is treated as no bass. */
+export const BASS_MIN_RELATIVE_LEVEL = 0.25
+
+export const CHROMA_MIN_HZ = 110
+export const CHROMA_MAX_HZ = 2000
+/** A flat, noise-like chroma scores 0.5 against every triad, so the bar sits above it. */
+export const CHORD_MIN_SIMILARITY = 0.6
+
+export const NOTE_NAMES = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b']
+export const CHORD_ROOT_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+export const TRANSCRIPTION_STAGE_LABELS: Record<TranscriptionStage, string> = {
+  decoding: 'Decoding audio',
+  onsets: 'Finding note onsets',
+  tempo: 'Estimating tempo',
+  notes: 'Reading drums, bass and chords',
+  done: 'Done'
+}
+
+export const SECONDS_PER_MINUTE = 60

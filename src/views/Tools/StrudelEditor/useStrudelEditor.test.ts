@@ -504,6 +504,7 @@ describe('useStrudelEditor', () => {
     expect(tabLabels).toEqual([
       'welcome',
       'patterns',
+      'import',
       'sounds',
       'reference',
       'export',
@@ -544,11 +545,12 @@ describe('useStrudelEditor', () => {
 })
 
 describe('STRUDEL_TABS', () => {
-  it('matches the strudel.cc player menu order', () => {
+  it('matches the strudel.cc player menu order, with import after patterns', () => {
     // Arrange
     const expectedOrder = [
       'welcome',
       'patterns',
+      'import',
       'sounds',
       'reference',
       'export',
@@ -602,5 +604,28 @@ describe('ELECTRO_TUNES', () => {
 
     // Assert
     expect(uniqueIds.size).toBe(tuneIds.length)
+  })
+})
+
+describe('useStrudelEditor transcription', () => {
+  it('loads a transcription into the editor and leaves the error state', async () => {
+    // Arrange
+    const transcriptionRunner = vi.fn().mockResolvedValue({
+      beatsPerMinute: 100,
+      bars: [{ steps: [{ drums: ['bd'], bassNote: null }], chord: null }]
+    })
+    const { patternCode, editorStatus, transcribeAudioFile, loadTranscription } = useStrudelEditor({
+      transcriptionRunner
+    })
+    editorStatus.value = 'error'
+
+    // Act
+    await transcribeAudioFile(new File(['audio'], 'beat.mp3'))
+    loadTranscription()
+
+    // Assert
+    expect(patternCode.value).toContain('setcps(100/60/4)')
+    expect(patternCode.value).toContain('s("bd")')
+    expect(editorStatus.value).toBe('idle')
   })
 })

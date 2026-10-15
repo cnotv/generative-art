@@ -14,8 +14,12 @@ import type {
   StrudelExampleOption,
   StrudelLogEntry,
   StrudelPlayback,
-  StrudelTabId
+  StrudelTabId,
+  StrudelTranscriptionState,
+  TranscriptionRunner
 } from './types'
+import { runTranscriptionInWorker } from './transcription/runTranscription'
+import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 
 export const findStrudelExample = (
   exampleList: StrudelExample[],
@@ -134,9 +138,10 @@ type StrudelEditorOptions = {
   initialExamples?: StrudelExample[]
   initialExampleId?: string
   playbackLoader?: () => Promise<StrudelPlayback>
+  transcriptionRunner?: TranscriptionRunner
 }
 
-type StrudelEditorState = {
+type StrudelEditorState = StrudelTranscriptionState & {
   selectedExampleId: Ref<string>
   patternCode: Ref<string>
   editorStatus: Ref<StrudelEditorStatus>
@@ -252,6 +257,16 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     appendLog('Stopped')
   }
 
+  const transcription = useStrudelTranscription({
+    runner: editorOptions?.transcriptionRunner ?? runTranscriptionInWorker,
+    applyCode: (transcribedCode) => {
+      patternCode.value = transcribedCode
+      editorStatus.value = 'idle'
+      errorMessage.value = ''
+    },
+    appendLog
+  })
+
   const setActiveTab = (tabId: StrudelTabId): void => {
     activeTab.value = tabId
   }
@@ -276,6 +291,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     playPattern,
     stopPattern,
     setActiveTab,
-    clearLogEntries
+    clearLogEntries,
+    ...transcription
   }
 }
