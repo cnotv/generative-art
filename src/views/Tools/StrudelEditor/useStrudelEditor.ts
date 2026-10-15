@@ -21,14 +21,31 @@ import type {
 import { runTranscriptionInWorker } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 
+/**
+ * Example with the given id.
+ * @param exampleList - examples to search
+ * @param exampleId - id to find
+ * @returns the matching example, or undefined
+ */
 export const findStrudelExample = (
   exampleList: StrudelExample[],
   exampleId: string
 ): StrudelExample | undefined => exampleList.find((example) => example.id === exampleId)
 
+/**
+ * Select options for the example picker.
+ * @param exampleList - examples to list
+ * @returns one option per example
+ */
 export const listStrudelExampleOptions = (exampleList: StrudelExample[]): StrudelExampleOption[] =>
   exampleList.map((example) => ({ value: example.id, label: example.label }))
 
+/**
+ * The example to open with: the requested one, or the first when it does not exist.
+ * @param exampleList - examples to choose from
+ * @param defaultExampleId - id of the preferred example
+ * @returns the example to show first, or undefined for an empty list
+ */
 export const resolveDefaultStrudelExample = (
   exampleList: StrudelExample[],
   defaultExampleId: string
@@ -61,6 +78,11 @@ const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
   await resumeFunction.call(audioContext)
 }
 
+/**
+ * Loads the Strudel engine on demand, starts audio, loads the default sample kit and
+ * returns a playback handle around one REPL (read-eval-print loop) instance.
+ * @returns functions to evaluate code and stop playback
+ */
 export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => {
   const [coreModule, miniModule, webaudioModule, tonalModule, transpilerModule]: unknown[] =
     await Promise.all([
@@ -172,6 +194,12 @@ const loadCachedPlayback = async (
   return playback
 }
 
+/**
+ * Editor state: the selected example, the code, playback, the console log, the active tab
+ * and audio transcription.
+ * @param editorOptions - examples, playback loader and transcription runner, for tests
+ * @returns reactive editor state and its actions
+ */
 export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelEditorState => {
   const exampleList = editorOptions?.initialExamples ?? STRUDEL_EXAMPLES
   const defaultExample =

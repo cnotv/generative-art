@@ -82,6 +82,9 @@ const positiveModulo = (value: number, divisor: number): number =>
  * Kicks landing on beats and on bar starts if bars begin at this offset. Positions wrap
  * rather than skip the steps before the offset, or every later offset loses the kicks
  * ahead of it and offset zero wins regardless of the music.
+ * @param kickSteps - step index of every kick
+ * @param offset - candidate step for the first bar start
+ * @returns kicks on beats, plus a bonus for each on a bar start
  */
 const kickAlignmentScore = (kickSteps: number[], offset: number): number =>
   kickSteps.reduce((score, stepIndex) => {
@@ -96,6 +99,8 @@ const kickAlignmentScore = (kickSteps: number[], offset: number): number =>
  * tempo comb can lock onto off-beat hi-hats, which this shifts back onto the kick. A kick
  * on every beat ties all four rotations, which the harmony then has to settle; so does a
  * lead of a single bar-start kick, which one missed or extra hit at the edge can decide.
+ * @param drumSteps - classified drum hits per step
+ * @returns the bar-start offsets worth comparing, all on the same beat phase
  */
 const bestKickOffsets = (drumSteps: DrumStep[]): number[] => {
   const kickSteps = drumSteps
@@ -126,7 +131,12 @@ const chromaDistance = (first: Float64Array, second: Float64Array): number => {
   return 1 - overlap / lengths
 }
 
-/** How much the harmony changes across each bar line if bars start on this beat. */
+/**
+ * How much the harmony changes across each bar line if bars start on this beat.
+ * @param beatChromas - chroma per beat
+ * @param barStartBeat - beat the first bar starts on
+ * @returns summed chroma change across every bar line
+ */
 const harmonicChangeScore = (beatChromas: Float64Array[], barStartBeat: number): number =>
   beatChromas.reduce(
     (score, chroma, beatIndex) =>
