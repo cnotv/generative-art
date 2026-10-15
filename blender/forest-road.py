@@ -32,8 +32,8 @@ ROAD_TOP_Y = 0.06
 CAMERA_POSITION = (0.0, 1.6, 7.0)
 CAMERA_LOOK_AT = (0.0, 1.3, -30.0)
 
-TREES_PER_SIDE = 34
-LEAF_COUNT = 2600
+TREES_PER_SIDE = 60
+LEAF_COUNT = 6000
 
 TRUNK_COLORS = [
     (0.29, 0.24, 0.19, 1.0),
@@ -58,8 +58,8 @@ LITTER_COLORS = [
 # scene falls back to procedural materials when the download fails.
 FREE_ASSETS = {
     "hdri_overcast": "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/forest_slope_1k.exr",
-    "asphalt": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02_diff_1k.jpg",
-    "forest_floor": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_floor_02_diff_1k.jpg",
+    "asphalt": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_diff_1k.jpg",
+    "forest_floor": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_leaves_02/forest_leaves_02_diffuse_1k.jpg",
 }
 
 randomGenerator = random.Random(SEED)
@@ -130,7 +130,7 @@ def principled_material(name, baseColor, roughness=0.8, clearcoat=0.0):
     return material
 
 
-def add_textured_fallback(material, imagePath, repeat=12.0):
+def add_textured_fallback(material, imagePath, repeat=(12.0, 12.0), strength=0.65):
     """Multiply a downloaded CC0 texture over the base color when present."""
     if not imagePath or not os.path.exists(imagePath):
         return
@@ -140,13 +140,13 @@ def add_textured_fallback(material, imagePath, repeat=12.0):
     imageNode = nodes.new("ShaderNodeTexImage")
     imageNode.image = bpy.data.images.load(imagePath)
     mapping = nodes.new("ShaderNodeMapping")
-    mapping.inputs["Scale"].default_value = (repeat, repeat, repeat)
+    mapping.inputs["Scale"].default_value = (repeat[0], repeat[1], 1.0)
     coordinates = nodes.new("ShaderNodeTexCoord")
     links.new(coordinates.outputs["UV"], mapping.inputs["Vector"])
     links.new(mapping.outputs["Vector"], imageNode.inputs["Vector"])
     mix = nodes.new("ShaderNodeMix")
     mix.data_type = "RGBA"
-    mix.inputs["Factor"].default_value = 0.65
+    mix.inputs["Factor"].default_value = strength
     mix.inputs["A"].default_value = bsdf.inputs["Base Color"].default_value
     links.new(imageNode.outputs["Color"], mix.inputs["B"])
     links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
@@ -161,7 +161,10 @@ def build_ground(asphaltImage, floorImage):
     floorMaterial = principled_material(
         "ForestRoad_ForestFloor", (0.42, 0.35, 0.26, 1.0), roughness=0.95
     )
-    add_textured_fallback(floorMaterial, floorImage)
+    # One tile per 2 m, square on the 60 x 150 m plane.
+    add_textured_fallback(
+        floorMaterial, floorImage, repeat=(30.0, 75.0), strength=1.0
+    )
     ground.data.materials.append(floorMaterial)
 
     bpy.ops.mesh.primitive_plane_add(
@@ -175,7 +178,10 @@ def build_ground(asphaltImage, floorImage):
     roadMaterial = principled_material(
         "ForestRoad_AsphaltWet", (0.14, 0.15, 0.17, 1.0), roughness=0.32, clearcoat=0.7
     )
-    add_textured_fallback(roadMaterial, asphaltImage, repeat=30.0)
+    # One tile per ROAD_WIDTH, square along the road.
+    add_textured_fallback(
+        roadMaterial, asphaltImage, repeat=(1.0, ROAD_LENGTH / ROAD_WIDTH)
+    )
     road.data.materials.append(roadMaterial)
 
 
@@ -187,7 +193,7 @@ def scatter_transforms(count, roadHalfWidth, startZ, endZ):
         along = randomGenerator.random()
         across = randomGenerator.random()
         z = startZ - along * (startZ - endZ)
-        if selector < 0.4:
+        if selector < 0.25:
             x = (randomGenerator.random() - 0.5) * 2.0 * roadHalfWidth
             y = ROAD_TOP_Y + 0.02
         else:
@@ -213,7 +219,7 @@ def build_leaf_litter():
     for index, (x, y, z) in enumerate(
         scatter_transforms(LEAF_COUNT, ROAD_WIDTH / 2.0, 8.0, -110.0)
     ):
-        size = randomGenerator.uniform(0.06, 0.11)
+        size = randomGenerator.uniform(0.03, 0.06)
         angle = randomGenerator.uniform(0.0, math.pi * 2.0)
         rotation = Matrix.Rotation(angle, 4, "Z")
         corners = [
@@ -234,20 +240,25 @@ def build_leaf_litter():
 
 
 def build_trees():
+    """Tall thin trunks whose canopies lean over the road and close into a
+    tunnel overhead, as in the photo."""
     trunkMaterial = principled_material(
         "ForestRoad_Bark", TRUNK_COLORS[0], roughness=0.95
     )
-    canopyMaterial = principled_material(
-        "ForestRoad_Canopy", CANOPY_COLORS[1], roughness=0.9
-    )
+    canopyMaterials = [
+        principled_material("ForestRoad_Canopy_%d" % i, color, roughness=0.9)
+        for i, color in enumerate(CANOPY_COLORS)
+    ]
+    rowSpacing = 116.0 / (TREES_PER_SIDE / 2)
     for side in (-1.0, 1.0):
         for index in range(TREES_PER_SIDE):
             row = index // 2
-            x = side * randomGenerator.uniform(2.6, 14.0)
-            z = 6.0 - row * (116.0 / (TREES_PER_SIDE / 2)) + randomGenerator.uniform(-2, 2)
-            trunkHeight = randomGenerator.uniform(7.0, 11.0)
-            trunkRadius = randomGenerator.uniform(0.14, 0.25)
+            x = side * randomGenerator.uniform(2.4, 14.0)
+            z = 6.0 - row * rowSpacing + randomGenerator.uniform(-1.5, 1.5)
+            trunkHeight = randomGenerator.uniform(12.0, 18.0)
+            trunkRadius = randomGenerator.uniform(0.09, 0.18)
             bpy.ops.mesh.primitive_cylinder_add(
+                vertices=12,
                 radius=trunkRadius,
                 depth=trunkHeight,
                 location=to_blender_space(x, trunkHeight / 2.0, z),
@@ -255,24 +266,35 @@ def build_trees():
             trunk = bpy.context.active_object
             trunk.name = "ForestRoad_Trunk_%d_%d" % (side, index)
             trunk.data.materials.append(trunkMaterial)
-            canopySize = randomGenerator.uniform(2.2, 3.4)
-            bpy.ops.mesh.primitive_ico_sphere_add(
-                radius=canopySize / 2.0,
-                subdivisions=2,
-                location=to_blender_space(x, trunkHeight + canopySize * 0.4, z),
-            )
-            canopy = bpy.context.active_object
-            canopy.name = "ForestRoad_Canopy_%d_%d" % (side, index)
-            canopy.scale = (
-                randomGenerator.uniform(0.9, 1.2),
-                randomGenerator.uniform(0.9, 1.2),
-                randomGenerator.uniform(0.9, 1.3),
-            )
-            canopy.data.materials.append(canopyMaterial)
+            for cluster in range(3):
+                canopySize = randomGenerator.uniform(2.5, 4.5)
+                # Clusters drift toward the road the higher they sit.
+                lean = -side * randomGenerator.uniform(0.0, 2.5) * (cluster + 1) / 3.0
+                bpy.ops.mesh.primitive_ico_sphere_add(
+                    radius=canopySize / 2.0,
+                    subdivisions=2,
+                    location=to_blender_space(
+                        x + lean,
+                        trunkHeight - cluster * 2.2 + randomGenerator.uniform(-0.5, 0.5),
+                        z + randomGenerator.uniform(-1.5, 1.5),
+                    ),
+                )
+                canopy = bpy.context.active_object
+                canopy.name = "ForestRoad_Canopy_%d_%d_%d" % (side, index, cluster)
+                bpy.ops.object.shade_smooth()
+                canopy.scale = (
+                    randomGenerator.uniform(1.0, 1.4),
+                    randomGenerator.uniform(1.0, 1.4),
+                    randomGenerator.uniform(0.7, 1.0),
+                )
+                canopy.data.materials.append(randomGenerator.choice(canopyMaterials))
 
 
 def build_lighting(hdriPath):
-    world = bpy.context.scene.world
+    scene = bpy.context.scene
+    # A scene made with bpy.data.scenes.new() has no world.
+    world = scene.world or bpy.data.worlds.new("ForestRoad_World")
+    scene.world = world
     world.use_nodes = True
     background = next(
         node for node in world.node_tree.nodes if node.type == "BACKGROUND"
@@ -328,7 +350,7 @@ def main():
     print("Downloading free CC0 assets (falling back when offline)...")
     hdriPath = download_asset(FREE_ASSETS["hdri_overcast"], "forest_slope_1k.exr")
     asphaltImage = download_asset(FREE_ASSETS["asphalt"], "asphalt_02_diff_1k.jpg")
-    floorImage = download_asset(FREE_ASSETS["forest_floor"], "forest_floor_02_diff_1k.jpg")
+    floorImage = download_asset(FREE_ASSETS["forest_floor"], "forest_leaves_02_diffuse_1k.jpg")
     build_ground(asphaltImage, floorImage)
     build_trees()
     build_leaf_litter()
