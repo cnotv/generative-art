@@ -5,18 +5,12 @@ import { cn } from '@/lib/utilities'
 
 defineProps<{
   class?: string
-  /** `canvas` sits on the dark canvas-overlay pages, where the document colours do not apply. */
-  variant?: 'default' | 'canvas'
 }>()
 </script>
 
 <template>
   <AccordionHeader as="div" class="flex">
-    <AccordionTrigger
-      :class="
-        cn('accordion__trigger', variant === 'canvas' && 'accordion__trigger--canvas', $props.class)
-      "
-    >
+    <AccordionTrigger :class="cn('accordion__trigger', $props.class)">
       <slot />
       <ChevronDown class="accordion__chevron" />
     </AccordionTrigger>
@@ -46,21 +40,6 @@ defineProps<{
 
 .accordion__trigger[data-state='open'] .accordion__chevron {
   transform: rotate(180deg);
-}
-
-.accordion__trigger--canvas {
-  align-items: flex-end;
-  padding: 0;
-  font-weight: normal;
-  color: var(--color-canvas-overlay-accent);
-}
-
-.accordion__trigger--canvas:hover {
-  text-decoration: none;
-}
-
-.accordion__trigger--canvas .accordion__chevron {
-  color: var(--color-canvas-overlay-muted);
 }
 
 .accordion__chevron {

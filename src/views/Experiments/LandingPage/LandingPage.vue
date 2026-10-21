@@ -12,12 +12,6 @@ import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent
-} from '@/components/ui/accordion'
-import {
   CodeXml,
   Workflow,
   Bot,
@@ -858,42 +852,14 @@ onUnmounted(() => {
       <p class="landing-page__eyebrow">Knowledge</p>
       <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
       <p class="landing-page__lead">{{ OWNER_SUMMARY }}</p>
-      <Accordion type="single" collapsible class="landing-page__skills">
-        <AccordionItem
-          v-for="(area, index) in SKILL_AREAS"
-          :key="area.title"
-          :value="area.title"
-          class="landing-page__skill"
-        >
-          <span class="landing-page__skill-index" aria-hidden="true">{{ formatIndex(index) }}</span>
-          <AccordionTrigger variant="canvas">
-            <span class="landing-page__skill-head">
-              <component
-                :is="ICONS[area.icon]"
-                class="landing-page__skill-icon"
-                aria-hidden="true"
-              />
-              <span class="landing-page__skill-title">{{ area.title }}</span>
-              <span class="landing-page__skill-line">{{ area.line }}</span>
-            </span>
-          </AccordionTrigger>
-          <AccordionContent>
-            <ul class="landing-page__roles">
-              <li v-for="job in area.experience" :key="job.company" class="landing-page__role">
-                <p class="landing-page__role-name">{{ job.role }} at {{ job.company }}</p>
-                <p class="landing-page__role-period">{{ job.period }}</p>
-                <ul class="landing-page__role-points">
-                  <li v-for="point in job.points" :key="point">{{ point }}</li>
-                </ul>
-              </li>
-            </ul>
-            <blockquote v-if="area.quote" class="landing-page__quote">
-              <p class="landing-page__quote-text">{{ area.quote.text }}</p>
-              <footer class="landing-page__quote-author">{{ area.quote.author }}</footer>
-            </blockquote>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+      <ol class="landing-page__skills">
+        <li v-for="(area, index) in SKILL_AREAS" :key="area.title" class="landing-page__skill">
+          <span class="landing-page__skill-index">{{ formatIndex(index) }}</span>
+          <component :is="ICONS[area.icon]" class="landing-page__skill-icon" aria-hidden="true" />
+          <h3 class="landing-page__skill-title">{{ area.title }}</h3>
+          <p class="landing-page__skill-line">{{ area.line }}</p>
+        </li>
+      </ol>
     </section>
     <section class="landing-page__section" aria-labelledby="sectors-title">
       <p class="landing-page__eyebrow">Market knowledge</p>
@@ -1098,78 +1064,6 @@ onUnmounted(() => {
 
 .landing-page__skill:last-child {
   grid-column: 1 / -1;
-}
-
-.landing-page__skill[data-state='open'] {
-  grid-column: 1 / -1;
-  border-color: var(--color-canvas-overlay-muted);
-}
-
-.landing-page__skill-head {
-  display: grid;
-  gap: var(--spacing-3);
-  text-align: left;
-  font-family: var(--font-mono);
-}
-
-.landing-page__roles {
-  margin: var(--spacing-4) 0 0;
-  padding: var(--spacing-4) 0 0;
-  border-top: var(--spacing-px) solid var(--color-canvas-overlay-border);
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: var(--spacing-6);
-}
-
-.landing-page__role-name,
-.landing-page__role-period {
-  margin: 0;
-}
-
-.landing-page__role-name {
-  color: var(--color-canvas-overlay-accent);
-  font-size: var(--font-size-sm);
-}
-
-.landing-page__role-period {
-  margin-bottom: var(--spacing-2);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-xs);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-
-.landing-page__role-points {
-  margin: 0;
-  padding-left: var(--spacing-4);
-  display: grid;
-  gap: var(--spacing-1-5);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
-}
-
-.landing-page__quote {
-  margin: var(--spacing-6) 0 0;
-  padding-left: var(--spacing-4);
-  border-left: var(--spacing-0-5) solid var(--color-canvas-overlay-border);
-}
-
-.landing-page__quote-text {
-  margin: 0;
-  color: var(--color-canvas-overlay-accent);
-  font-size: var(--font-size-sm);
-  font-style: italic;
-  line-height: 1.6;
-}
-
-.landing-page__quote-author {
-  margin-top: var(--spacing-1);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-xs);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
 }
 
 .landing-page__skill:hover {
