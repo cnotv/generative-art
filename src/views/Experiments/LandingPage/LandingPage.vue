@@ -23,10 +23,10 @@ import {
 } from './introScene'
 import {
   INTRO_TIMING,
-  LETTERS_DROP_START,
-  LETTERS_DROP_DURATION,
-  LETTERS_DROP_STAGGER,
-  LETTERS_DROP_HEIGHT,
+  LETTERS_POP_START,
+  LETTERS_POP_DURATION,
+  LETTERS_POP_STAGGER,
+  LETTERS_POP_DEPTH,
   LOGO_ON_LETTERS_GAP,
   CORNER_MARGIN,
   WALL_GAP,
@@ -278,6 +278,7 @@ interface Letter {
   mesh: THREE.Mesh
   body: PhysicsBody
   restY: number
+  restZ: number
   bottomOffset: number
   topOffset: number
 }
@@ -362,6 +363,7 @@ const loadText = (
       mesh,
       body: rigidBody as PhysicsBody,
       restY: mesh.position.y,
+      restZ: mesh.position.z,
       bottomOffset: bounds.min.y - mesh.position.y,
       topOffset: bounds.max.y - mesh.position.y
     }
@@ -404,17 +406,18 @@ interface IntroDirectorOptions {
   onAwake: () => void
 }
 
-const placeDroppingLetter = (letter: Letter, index: number, elapsed: number): void => {
+// Starting behind the wall, the wall itself hides each letter until it breaks through.
+const placePoppingLetter = (letter: Letter, index: number, elapsed: number): void => {
   const progress = THREE.MathUtils.clamp(
-    (elapsed - LETTERS_DROP_START - index * LETTERS_DROP_STAGGER) / LETTERS_DROP_DURATION,
+    (elapsed - LETTERS_POP_START - index * LETTERS_POP_STAGGER) / LETTERS_POP_DURATION,
     0,
     1
   )
   letter.mesh.visible = progress > 0
-  letter.mesh.position.y = THREE.MathUtils.lerp(
-    letter.restY + LETTERS_DROP_HEIGHT,
-    letter.restY,
-    easing.easeOutBounce(progress)
+  letter.mesh.position.z = THREE.MathUtils.lerp(
+    ROOM_WALL_Z - LETTERS_POP_DEPTH,
+    letter.restZ,
+    easing.easeOutBack(progress)
   )
 }
 
@@ -440,7 +443,7 @@ const createIntroDirector = ({
     const pose = sinceWake === null ? getSleepPose(path) : getLogoIntroPose(sinceWake, path)
     applyLogoPose(logo.model, pose, logo.rest)
     setEyelidsOpen(logo.eyelids, pose.eyeOpenness)
-    letters.forEach((letter, index) => placeDroppingLetter(letter, index, sinceWake ?? 0))
+    letters.forEach((letter, index) => placePoppingLetter(letter, index, sinceWake ?? 0))
 
     aimSpot(spot, spotTarget.lerpVectors(startFeet, endFeet, pose.lightProgress))
     lights.ambientLight.intensity = THREE.MathUtils.lerp(
