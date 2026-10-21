@@ -83,7 +83,6 @@ const ICONS: Record<string, Component> = {
   defense: Shield,
   public: Building2
 }
-const formatIndex = (index: number): string => String(index + 1).padStart(2, '0')
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -849,21 +848,18 @@ onUnmounted(() => {
       </a>
     </header>
     <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
-      <p class="landing-page__eyebrow">Knowledge</p>
       <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
       <p class="landing-page__lead">{{ OWNER_SUMMARY }}</p>
-      <ol class="landing-page__skills">
-        <li v-for="(area, index) in SKILL_AREAS" :key="area.title" class="landing-page__skill">
-          <span class="landing-page__skill-index">{{ formatIndex(index) }}</span>
+      <ul class="landing-page__skills">
+        <li v-for="area in SKILL_AREAS" :key="area.title" class="landing-page__skill">
           <component :is="ICONS[area.icon]" class="landing-page__skill-icon" aria-hidden="true" />
           <h3 class="landing-page__skill-title">{{ area.title }}</h3>
           <p class="landing-page__skill-line">{{ area.line }}</p>
         </li>
-      </ol>
+      </ul>
     </section>
     <section class="landing-page__section" aria-labelledby="sectors-title">
-      <p class="landing-page__eyebrow">Market knowledge</p>
-      <h2 id="sectors-title" class="landing-page__heading">Products in daily use at</h2>
+      <h2 id="sectors-title" class="landing-page__heading">Market knowledge</h2>
       <ul class="landing-page__sectors">
         <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
           <component
@@ -989,14 +985,6 @@ onUnmounted(() => {
   padding: var(--spacing-16) var(--spacing-6);
 }
 
-.landing-page__eyebrow {
-  margin: 0 0 var(--spacing-2);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-xs);
-  letter-spacing: 0.35em;
-  text-transform: uppercase;
-}
-
 .landing-page__heading {
   margin: 0 0 var(--spacing-8);
   color: var(--color-canvas-overlay-accent);
@@ -1053,29 +1041,15 @@ onUnmounted(() => {
 }
 
 .landing-page__skill {
-  position: relative;
   display: grid;
   align-content: start;
   gap: var(--spacing-3);
   padding: var(--spacing-6);
   border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-  transition: border-color var(--transition-fast) ease-out;
 }
 
 .landing-page__skill:last-child {
   grid-column: 1 / -1;
-}
-
-.landing-page__skill:hover {
-  border-color: var(--color-canvas-overlay-muted);
-}
-
-.landing-page__skill-index {
-  position: absolute;
-  top: var(--spacing-4);
-  right: var(--spacing-4);
-  color: var(--color-canvas-overlay-border);
-  font-size: var(--font-size-lg);
 }
 
 .landing-page__skill-icon,
