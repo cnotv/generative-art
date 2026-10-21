@@ -6,9 +6,9 @@ import { createCityStage, fitCityCamera, pickDistrict, updateDistrictLift } from
 import type { SkillsCityStage } from './types'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
-const hovered = ref<string | null>(null)
-const labelPosition = ref({ x: 0, y: 0 })
-const hoveredArea = computed(() => SKILL_AREAS.find(({ district }) => district === hovered.value))
+const selected = ref<string | null>(null)
+const isPointing = ref(false)
+const selectedArea = computed(() => SKILL_AREAS.find(({ district }) => district === selected.value))
 
 let stage: SkillsCityStage | null = null
 let frameId = 0
@@ -17,7 +17,7 @@ let resizeObserver: ResizeObserver | null = null
 // The city is still, so it only renders while a district is moving or the canvas changes size.
 const renderFrame = (): void => {
   if (!stage) return
-  const isMoving = updateDistrictLift(stage, hovered.value)
+  const isMoving = updateDistrictLift(stage, selected.value)
   stage.renderer.render(stage.scene, stage.camera)
   frameId = isMoving ? requestAnimationFrame(renderFrame) : 0
 }
@@ -34,18 +34,14 @@ const resizeStage = (): void => {
   requestRender()
 }
 
+// The last district pointed at stays selected, so the overlay keeps showing it after the
+// pointer leaves the city or the finger lifts.
 const onPointerMove = (event: PointerEvent): void => {
-  if (!stage || !canvas.value) return
-  const bounds = canvas.value.getBoundingClientRect()
-  labelPosition.value = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+  if (!stage) return
   const district = pickDistrict(stage, event.clientX, event.clientY)
-  if (district === hovered.value) return
-  hovered.value = district
-  requestRender()
-}
-
-const onPointerLeave = (): void => {
-  hovered.value = null
+  isPointing.value = district !== null
+  if (!district || district === selected.value) return
+  selected.value = district
   requestRender()
 }
 
@@ -71,20 +67,18 @@ onUnmounted(() => {
     <canvas
       ref="canvas"
       class="skills-city__canvas"
-      :class="{ 'skills-city__canvas--pointing': hoveredArea }"
+      :class="{ 'skills-city__canvas--pointing': isPointing }"
       role="img"
       aria-label="A small city with one district for each area of work"
       @pointermove="onPointerMove"
       @pointerdown="onPointerMove"
-      @pointerleave="onPointerLeave"
     />
-    <div
-      v-if="hoveredArea"
-      class="skills-city__label"
-      :style="{ left: `${labelPosition.x}px`, top: `${labelPosition.y}px` }"
-    >
-      <p class="skills-city__label-title">{{ hoveredArea.title }}</p>
-      <p class="skills-city__label-line">{{ hoveredArea.line }}</p>
+    <div class="skills-city__overlay" aria-live="polite">
+      <template v-if="selectedArea">
+        <p class="skills-city__overlay-title">{{ selectedArea.title }}</p>
+        <p class="skills-city__overlay-line">{{ selectedArea.line }}</p>
+      </template>
+      <p v-else class="skills-city__overlay-line">Hover or tap a district</p>
     </div>
     <ul class="sr-only">
       <li v-for="area in SKILL_AREAS" :key="area.title">{{ area.title }}: {{ area.line }}</li>
@@ -110,10 +104,13 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.skills-city__label {
+.skills-city__overlay {
   position: absolute;
-  transform: translate(-50%, calc(-100% - var(--spacing-4)));
-  max-width: 18rem;
+  top: 0;
+  left: 0;
+  width: 18rem;
+  min-height: var(--spacing-16);
+  box-sizing: border-box;
   padding: var(--spacing-3) var(--spacing-4);
   border: var(--spacing-px) solid var(--color-canvas-overlay-border);
   background-color: var(--color-canvas-overlay-surface);
@@ -121,18 +118,27 @@ onUnmounted(() => {
   font-family: var(--font-mono);
 }
 
-.skills-city__label-title,
-.skills-city__label-line {
+/* On a phone the city is too small to cover, so the overlay sits under it instead. */
+@media (width <= 640px) {
+  .skills-city__overlay {
+    position: static;
+    width: auto;
+    margin-top: var(--spacing-3);
+  }
+}
+
+.skills-city__overlay-title,
+.skills-city__overlay-line {
   margin: 0;
 }
 
-.skills-city__label-title {
+.skills-city__overlay-title {
   margin-bottom: var(--spacing-1);
   color: var(--color-canvas-overlay-accent);
   font-size: var(--font-size-sm);
 }
 
-.skills-city__label-line {
+.skills-city__overlay-line {
   color: var(--color-canvas-overlay-muted);
   font-size: var(--font-size-xs);
   line-height: 1.6;
