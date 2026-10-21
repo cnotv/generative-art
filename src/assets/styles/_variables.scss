@@ -108,6 +108,10 @@
   // and dark: the outline is what makes the text readable, not the surrounding surface.
   --color-canvas-overlay-foreground: hsl(0deg 0% 100%);
   --shadow-text-canvas-overlay: 0 1px 3px hsl(0deg 0% 0% / 80%);
+  --color-canvas-overlay-accent: hsl(218deg 60% 80%);
+  --color-canvas-overlay-muted: hsl(218deg 30% 62%);
+  --color-canvas-overlay-surface: hsl(218deg 32% 9% / 88%);
+  --color-canvas-overlay-border: hsl(218deg 30% 30% / 60%);
 
   // Panel item colors
   --panel-item-bg: hsl(0deg 0% 98%);
