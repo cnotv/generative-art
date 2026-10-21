@@ -110,7 +110,10 @@ onUnmounted(() => {
         @pointerenter="setHovered(anchor.district)"
         @pointerleave="setHovered(null)"
       >
-        <p class="skills-city__label-title">{{ findArea(anchor.district)?.title }}</p>
+        <p class="skills-city__label-title">
+          <span class="skills-city__label-full">{{ findArea(anchor.district)?.title }}</span>
+          <span class="skills-city__label-short">{{ findArea(anchor.district)?.short }}</span>
+        </p>
         <p class="skills-city__label-line">{{ findArea(anchor.district)?.line }}</p>
       </li>
     </ul>
@@ -164,6 +167,10 @@ onUnmounted(() => {
   margin: 0;
 }
 
+.skills-city__label-short {
+  display: none;
+}
+
 .skills-city__label-title {
   color: var(--color-canvas-overlay-accent);
   font-size: var(--font-size-sm);
@@ -186,8 +193,13 @@ onUnmounted(() => {
     font-size: var(--font-size-2xs);
   }
 
-  .skills-city__label-line {
+  .skills-city__label-line,
+  .skills-city__label-full {
     display: none;
+  }
+
+  .skills-city__label-short {
+    display: inline;
   }
 }
 </style>

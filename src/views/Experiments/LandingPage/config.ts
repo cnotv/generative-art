@@ -17,6 +17,9 @@ export const SETTLE_ROCK = 0.15
 export const SETTLE_FREQUENCY = 14
 export const SETTLE_DAMPING = 5
 
+/** Session storage key set once the intro has played, so it does not replay in the session. */
+export const INTRO_SEEN_KEY = 'landing-intro-seen'
+
 /** Seconds after the scene is ready before the logo wakes up on its own. */
 export const AUTO_WAKE_DELAY = 0.5
 
@@ -61,7 +64,10 @@ export const SPOT_PENUMBRA = 0.8
 export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'
 export const OWNER_SUMMARY = '15+ years building, from startup to enterprise.'
-export const OWNER_PROFILE_URL = 'https://www.linkedin.com/in/leogiuseppe/'
+export const OWNER_PROFILES = [
+  { label: 'LinkedIn', url: 'https://www.linkedin.com/in/leogiuseppe/' },
+  { label: 'GitHub', url: 'https://github.com/cnotv' }
+]
 export const SPOT_COLOR = 0xc9d8ff
 
 /** Areas of work, each with its district in the skills city model. */
@@ -69,41 +75,49 @@ export const SKILL_AREAS = [
   {
     district: 'district-frontend',
     title: 'Frontend development',
+    short: 'Frontend',
     line: 'Interfaces, design systems and real-time 3D in the browser.'
   },
   {
     district: 'district-ci',
     title: 'CI automation',
+    short: 'CI',
     line: 'Pipelines that test, build and ship every change.'
   },
   {
     district: 'district-ai',
     title: 'AI automations',
+    short: 'AI',
     line: 'Agents and workflows that take over the repetitive work.'
   },
   {
     district: 'district-ux',
     title: 'UX',
+    short: 'UX',
     line: 'Flows shaped around how people actually use them.'
   },
   {
     district: 'district-k8s',
     title: 'Kubernetes',
+    short: 'Kubernetes',
     line: 'Running and scaling services on K8S clusters.'
   },
   {
     district: 'district-nlg',
     title: 'NLG and NLU',
+    short: 'NLG and NLU',
     line: 'Language understanding and generation on self-hosted and trained models.'
   },
   {
     district: 'district-mentoring',
     title: 'Mentoring',
+    short: 'Mentoring',
     line: 'Growing developers and teams through reviews, guidelines and regular sessions.'
   },
   {
     district: 'district-architecture',
     title: 'Architecture and modern robust tools',
+    short: 'Architecture',
     line: 'Planning architecture and paying down tech debt across projects and teams.'
   }
 ]

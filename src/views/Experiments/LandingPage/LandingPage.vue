@@ -42,13 +42,14 @@ import {
   ROOM_WALL_COLOR,
   ROOM_ROUGHNESS,
   SLEEP_YAW,
+  INTRO_SEEN_KEY,
   AUTO_WAKE_DELAY,
   ROOM_SIZE,
   ROOM_COLLIDER_DEPTH,
   OWNER_NAME,
   OWNER_PROFESSION,
   OWNER_SUMMARY,
-  OWNER_PROFILE_URL,
+  OWNER_PROFILES,
   PRODUCT_SECTORS
 } from './config'
 import type { LogoJumpPath, LogoRest } from './types'
@@ -121,6 +122,23 @@ const GRAIN_MIN = 90
 const GRAIN_MAX = 255
 
 type IntroStage = 'asleep' | 'jumping' | 'awake'
+
+// Session storage can be blocked or throw in private windows; the intro then simply plays again.
+const hasSeenIntro = (): boolean => {
+  try {
+    return sessionStorage.getItem(INTRO_SEEN_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+const rememberIntroSeen = (): void => {
+  try {
+    sessionStorage.setItem(INTRO_SEEN_KEY, 'true')
+  } catch {
+    // Nothing to do: the next visit plays the intro again.
+  }
+}
 const introStage = ref<IntroStage>('asleep')
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
@@ -744,6 +762,12 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     introStage.value = 'jumping'
     wokenAt = clock.elapsedTime
   }
+  // A visitor who already watched the intro in this session lands straight on the awake page:
+  // waking up infinitely long ago resolves the whole intro on the first frame.
+  if (hasSeenIntro()) {
+    introStage.value = 'jumping'
+    wokenAt = -Infinity
+  }
   const onPointerDown = (event: PointerEvent): void => {
     if (introStage.value === 'awake') return onPhysicsPointerDown(event)
     if (isPointerOnObject(event, camera, logo.model)) wakeUp()
@@ -756,6 +780,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     spot,
     onAwake: () => {
       introStage.value = 'awake'
+      rememberIntroSeen()
       handOverToPhysics(logo, letters, bodies)
     }
   })
@@ -856,8 +881,15 @@ onUnmounted(() => {
       </ul>
     </section>
     <footer class="landing-page__footer">
-      <a class="landing-page__profile" :href="OWNER_PROFILE_URL" target="_blank" rel="me noopener">
-        LinkedIn
+      <a
+        v-for="profile in OWNER_PROFILES"
+        :key="profile.label"
+        class="landing-page__profile"
+        :href="profile.url"
+        target="_blank"
+        rel="me noopener"
+      >
+        {{ profile.label }}
         <ArrowUpRight class="landing-page__profile-icon" aria-hidden="true" />
       </a>
     </footer>
@@ -988,6 +1020,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
+  gap: var(--spacing-8);
 }
 
 .landing-page__profile {
