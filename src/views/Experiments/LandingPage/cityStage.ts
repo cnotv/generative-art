@@ -19,7 +19,7 @@ import {
   DISTRICT_LIFT_EASE,
   DISTRICT_LIFT_SETTLED
 } from './config'
-import type { SkillsCityStage } from './types'
+import type { SkillsCityStage, DistrictAnchor } from './types'
 
 const DISTRICT_PREFIX = 'district-'
 
@@ -71,7 +71,11 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
   model.traverse((child) => {
     if (isDistrict(child) && !isDistrict(child.parent)) districts.push(child)
   })
-  districts.forEach((district) => (district.userData.restY = district.position.y))
+  districts.forEach((district) => {
+    district.userData.restY = district.position.y
+    const bounds = new THREE.Box3().setFromObject(district)
+    district.userData.anchor = bounds.getCenter(new THREE.Vector3()).setY(bounds.max.y)
+  })
   const outline = collectOutline(model)
 
   const camera = new THREE.OrthographicCamera(
@@ -195,3 +199,41 @@ export const updateDistrictLift = (stage: SkillsCityStage, hovered: string | nul
       return district.position.y !== target
     })
     .some(Boolean)
+
+const anchorPoint = new THREE.Vector3()
+
+/**
+ * Where each district's top sits on the canvas, for pinning its label to it.
+ * @param stage The city stage.
+ * @param width Canvas width in pixels.
+ * @param height Canvas height in pixels.
+ * @returns Each district's name and its top centre in canvas pixels.
+ */
+export const projectDistrictAnchors = (
+  stage: SkillsCityStage,
+  width: number,
+  height: number
+): DistrictAnchor[] =>
+  stage.districts.map((district) => {
+    anchorPoint.copy(district.userData.anchor).project(stage.camera)
+    return {
+      district: district.name,
+      x: ((anchorPoint.x + 1) / 2) * width,
+      y: ((1 - anchorPoint.y) / 2) * height
+    }
+  })
+
+/**
+ * Splits the districts into a row of labels above the city, for the ones at the back, and a
+ * row below, for the ones at the front, each ordered left to right so no two lines cross.
+ * @param anchors Every district's anchor on the canvas.
+ * @returns The labels for the top and bottom rows.
+ */
+export const splitLabelRows = (
+  anchors: DistrictAnchor[]
+): { top: DistrictAnchor[]; bottom: DistrictAnchor[] } => {
+  const byHeight = [...anchors].sort((first, second) => first.y - second.y)
+  const half = Math.ceil(byHeight.length / 2)
+  const byX = (first: DistrictAnchor, second: DistrictAnchor): number => first.x - second.x
+  return { top: byHeight.slice(0, half).sort(byX), bottom: byHeight.slice(half).sort(byX) }
+}

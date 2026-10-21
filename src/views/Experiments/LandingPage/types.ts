@@ -36,3 +36,10 @@ export interface SkillsCityStage {
   outline: THREE.Vector3[]
   districts: THREE.Object3D[]
 }
+
+/** A district's top centre on the canvas, in pixels. */
+export interface DistrictAnchor {
+  district: string
+  x: number
+  y: number
+}

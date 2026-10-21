@@ -1,14 +1,41 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { assetsRelease } from '@webgamekit/threejs'
 import { SKILL_AREAS, SKILLS_CITY_MODEL } from './config'
-import { createCityStage, fitCityCamera, pickDistrict, updateDistrictLift } from './cityStage'
-import type { SkillsCityStage } from './types'
+import {
+  createCityStage,
+  fitCityCamera,
+  pickDistrict,
+  updateDistrictLift,
+  projectDistrictAnchors,
+  splitLabelRows
+} from './cityStage'
+import type { SkillsCityStage, DistrictAnchor } from './types'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
-const selected = ref<string | null>(null)
-const isPointing = ref(false)
-const selectedArea = computed(() => SKILL_AREAS.find(({ district }) => district === selected.value))
+const hovered = ref<string | null>(null)
+const anchors = ref<DistrictAnchor[]>([])
+const canvasBox = ref({ top: 0, width: 0, height: 0 })
+const rows = computed(() => splitLabelRows(anchors.value))
+
+const findArea = (district: string) => SKILL_AREAS.find((area) => area.district === district)
+
+// Labels sit in equal columns across the full width, so a label's centre is its column's centre.
+const columnCentre = (index: number, count: number): number =>
+  ((index + 0.5) / count) * canvasBox.value.width
+
+const leaderLines = computed(() => {
+  const { top, height } = canvasBox.value
+  const toLine =
+    (edge: number) => (anchor: DistrictAnchor, index: number, row: DistrictAnchor[]) => ({
+      district: anchor.district,
+      x1: columnCentre(index, row.length),
+      y1: edge,
+      x2: anchor.x,
+      y2: top + anchor.y
+    })
+  return [...rows.value.top.map(toLine(top)), ...rows.value.bottom.map(toLine(top + height))]
+})
 
 let stage: SkillsCityStage | null = null
 let frameId = 0
@@ -17,7 +44,7 @@ let resizeObserver: ResizeObserver | null = null
 // The city is still, so it only renders while a district is moving or the canvas changes size.
 const renderFrame = (): void => {
   if (!stage) return
-  const isMoving = updateDistrictLift(stage, selected.value)
+  const isMoving = updateDistrictLift(stage, hovered.value)
   stage.renderer.render(stage.scene, stage.camera)
   frameId = isMoving ? requestAnimationFrame(renderFrame) : 0
 }
@@ -26,23 +53,26 @@ const requestRender = (): void => {
   if (!frameId) frameId = requestAnimationFrame(renderFrame)
 }
 
-const resizeStage = (): void => {
+const resizeStage = async (): Promise<void> => {
   if (!stage || !canvas.value) return
   const { clientWidth, clientHeight } = canvas.value
   stage.renderer.setSize(clientWidth, clientHeight, false)
   fitCityCamera(stage.camera, stage.outline, clientWidth / clientHeight)
+  anchors.value = projectDistrictAnchors(stage, clientWidth, clientHeight)
+  requestRender()
+  // The label rows only take their height once they render, which moves the canvas down.
+  await nextTick()
+  canvasBox.value = { top: canvas.value.offsetTop, width: clientWidth, height: clientHeight }
+}
+
+const setHovered = (district: string | null): void => {
+  if (district === hovered.value) return
+  hovered.value = district
   requestRender()
 }
 
-// The last district pointed at stays selected, so the overlay keeps showing it after the
-// pointer leaves the city or the finger lifts.
 const onPointerMove = (event: PointerEvent): void => {
-  if (!stage) return
-  const district = pickDistrict(stage, event.clientX, event.clientY)
-  isPointing.value = district !== null
-  if (!district || district === selected.value) return
-  selected.value = district
-  requestRender()
+  if (stage) setHovered(pickDistrict(stage, event.clientX, event.clientY))
 }
 
 onMounted(async () => {
@@ -64,39 +94,85 @@ onUnmounted(() => {
 
 <template>
   <div class="skills-city">
+    <ol
+      v-for="(row, position) in [rows.top, rows.bottom]"
+      :key="position"
+      class="skills-city__labels"
+      :class="position === 0 ? 'skills-city__labels--top' : 'skills-city__labels--bottom'"
+    >
+      <li
+        v-for="anchor in row"
+        :key="anchor.district"
+        class="skills-city__label"
+        :class="{ 'skills-city__label--active': anchor.district === hovered }"
+        @pointerenter="setHovered(anchor.district)"
+        @pointerleave="setHovered(null)"
+      >
+        <p class="skills-city__label-title">{{ findArea(anchor.district)?.title }}</p>
+        <p class="skills-city__label-line">{{ findArea(anchor.district)?.line }}</p>
+      </li>
+    </ol>
     <canvas
       ref="canvas"
       class="skills-city__canvas"
-      :class="{ 'skills-city__canvas--pointing': isPointing }"
+      :class="{ 'skills-city__canvas--pointing': hovered }"
       role="img"
       aria-label="A small city with one district for each area of work"
       @pointermove="onPointerMove"
       @pointerdown="onPointerMove"
+      @pointerleave="setHovered(null)"
     />
-    <div class="skills-city__overlay" aria-live="polite">
-      <template v-if="selectedArea">
-        <p class="skills-city__overlay-title">{{ selectedArea.title }}</p>
-        <p class="skills-city__overlay-line">{{ selectedArea.line }}</p>
-      </template>
-      <p v-else class="skills-city__overlay-line">Hover or tap a district</p>
-    </div>
-    <ul class="sr-only">
-      <li v-for="area in SKILL_AREAS" :key="area.title">{{ area.title }}: {{ area.line }}</li>
-    </ul>
+    <svg class="skills-city__leaders" aria-hidden="true">
+      <line
+        v-for="line in leaderLines"
+        :key="line.district"
+        class="skills-city__leader"
+        :class="{ 'skills-city__leader--active': line.district === hovered }"
+        :x1="line.x1"
+        :y1="line.y1"
+        :x2="line.x2"
+        :y2="line.y2"
+      />
+    </svg>
   </div>
 </template>
 
 <style scoped>
 .skills-city {
   position: relative;
+  display: grid;
+  grid-template-areas:
+    'top'
+    'city'
+    'bottom';
+}
+
+.skills-city__labels {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+}
+
+.skills-city__labels--top {
+  grid-area: top;
+  align-items: end;
+}
+
+.skills-city__labels--bottom {
+  grid-area: bottom;
+  align-items: start;
 }
 
 /* App.vue positions every canvas absolutely for full-screen scenes; this one sits in the flow. */
 .skills-city__canvas {
+  grid-area: city;
   position: relative;
   display: block;
   width: 100%;
-  height: clamp(12rem, 50vw, 32rem);
+  height: clamp(12rem, 40vw, 28rem);
   touch-action: pan-y;
 }
 
@@ -104,43 +180,66 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.skills-city__overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 18rem;
-  min-height: var(--spacing-16);
-  box-sizing: border-box;
-  padding: var(--spacing-3) var(--spacing-4);
+.skills-city__label {
+  margin: 0 var(--spacing-1);
+  padding: var(--spacing-2) var(--spacing-3);
   border: var(--spacing-px) solid var(--color-canvas-overlay-border);
   background-color: var(--color-canvas-overlay-surface);
-  pointer-events: none;
   font-family: var(--font-mono);
+  text-align: center;
 }
 
-/* On a phone the city is too small to cover, so the overlay sits under it instead. */
-@media (width <= 640px) {
-  .skills-city__overlay {
-    position: static;
-    width: auto;
-    margin-top: var(--spacing-3);
-  }
+.skills-city__label--active {
+  border-color: var(--color-canvas-overlay-muted);
 }
 
-.skills-city__overlay-title,
-.skills-city__overlay-line {
+.skills-city__label-title,
+.skills-city__label-line {
   margin: 0;
 }
 
-.skills-city__overlay-title {
-  margin-bottom: var(--spacing-1);
+.skills-city__label-title {
   color: var(--color-canvas-overlay-accent);
   font-size: var(--font-size-sm);
 }
 
-.skills-city__overlay-line {
+.skills-city__label-line {
+  margin-top: var(--spacing-1);
   color: var(--color-canvas-overlay-muted);
   font-size: var(--font-size-xs);
-  line-height: 1.6;
+  line-height: 1.5;
+}
+
+.skills-city__leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.skills-city__leader {
+  stroke: var(--color-canvas-overlay-border);
+  stroke-width: 1;
+}
+
+.skills-city__leader--active {
+  stroke: var(--color-canvas-overlay-muted);
+}
+
+/* On a phone the columns are too narrow for the descriptions; the titles carry the labels. */
+@media (width <= 640px) {
+  .skills-city__label {
+    padding: var(--spacing-1-5);
+  }
+
+  .skills-city__label-title {
+    font-size: var(--font-size-2xs);
+  }
+
+  .skills-city__label-line {
+    display: none;
+  }
 }
 </style>

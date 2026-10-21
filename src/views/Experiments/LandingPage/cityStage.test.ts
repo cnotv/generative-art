@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { fitCityCamera, updateDistrictLift } from './cityStage'
+import { fitCityCamera, updateDistrictLift, splitLabelRows } from './cityStage'
 import { DISTRICT_LIFT } from './config'
 import type { SkillsCityStage } from './types'
 
@@ -72,5 +72,24 @@ describe('fitCityCamera', () => {
     expect(camera.right).toBeGreaterThanOrEqual(4)
     expect(camera.bottom).toBeLessThanOrEqual(-1)
     expect(camera.top).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('splitLabelRows', () => {
+  it('puts the back half on top and the front half below, each left to right', () => {
+    // Arrange
+    const anchors = [
+      { district: 'front-right', x: 300, y: 200 },
+      { district: 'back-left', x: 100, y: 50 },
+      { district: 'front-left', x: 120, y: 220 },
+      { district: 'back-right', x: 280, y: 40 }
+    ]
+
+    // Act
+    const { top, bottom } = splitLabelRows(anchors)
+
+    // Assert
+    expect(top.map(({ district }) => district)).toEqual(['back-left', 'back-right'])
+    expect(bottom.map(({ district }) => district)).toEqual(['front-left', 'front-right'])
   })
 })
