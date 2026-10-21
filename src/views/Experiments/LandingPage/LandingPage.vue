@@ -1,17 +1,65 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { ref, onMounted, onUnmounted } from 'vue'
+import type { Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import type { Font } from 'three/addons/loaders/FontLoader.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import helvetikerBoldUrl from 'three/examples/fonts/helvetiker_bold.typeface.json?url'
-import { getTools, getWalls, getModel, getPhysic } from '@webgamekit/threejs'
+import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import {
+  CodeXml,
+  Workflow,
+  Bot,
+  Pointer,
+  Container,
+  Languages,
+  GraduationCap,
+  Layers,
+  Landmark,
+  RadioTower,
+  Newspaper,
+  Scale,
+  Shield,
+  Building2,
+  ArrowUpRight
+} from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
+import { getLogoIntroPose, getSleepPose } from './logoIntro'
+import {
+  createRoom,
+  aimSpot,
+  createCornerSpot,
+  createLogoEyelids,
+  setEyelidsOpen,
+  applyLogoPose
+} from './introScene'
+import {
+  INTRO_TIMING,
+  LOGO_ON_LETTERS_GAP,
+  CORNER_MARGIN,
+  WALL_GAP,
+  SLEEP_AMBIENT_INTENSITY,
+  SLEEP_DIRECTIONAL_INTENSITY,
+  ROOM_WALL_COLOR,
+  ROOM_ROUGHNESS,
+  SLEEP_YAW,
+  AUTO_WAKE_DELAY,
+  ROOM_SIZE,
+  ROOM_COLLIDER_DEPTH,
+  OWNER_NAME,
+  OWNER_PROFESSION,
+  OWNER_SUMMARY,
+  OWNER_PROFILE_URL,
+  SKILL_AREAS,
+  PRODUCT_SECTORS
+} from './config'
+import type { LogoJumpPath, LogoRest } from './types'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { cameraSchema } from '@/views/Tools/SceneEditor/config'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
@@ -20,6 +68,24 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const skills = ref<HTMLElement | null>(null)
+const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
+const ICONS: Record<string, Component> = {
+  code: CodeXml,
+  pipeline: Workflow,
+  agent: Bot,
+  pointer: Pointer,
+  cluster: Container,
+  language: Languages,
+  mentor: GraduationCap,
+  architecture: Layers,
+  bank: Landmark,
+  telco: RadioTower,
+  publisher: Newspaper,
+  governance: Scale,
+  defense: Shield,
+  public: Building2
+}
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -33,9 +99,11 @@ const handleProgress = (progress: LoadProgress): void => {
 let animationId = 0
 let cleanupReference: (() => void) | null = null
 
-const CAMERA_X = -0.03
-const CAMERA_Y = 3.81
-const CAMERA_Z = 13.79
+// Four times further back along the same view line than the original framing: an orthographic
+// view looks identical, but the near plane no longer cuts the floor off above the bottom edge.
+const CAMERA_X = 0.48
+const CAMERA_Y = 9.57
+const CAMERA_Z = 55.4
 const ORBIT_TARGET_X = -0.2
 const ORBIT_TARGET_Y = 1.89
 const ORBIT_TARGET_Z = -0.08
@@ -43,12 +111,11 @@ const CAMERA_NEAR = 0.1
 const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
 const WHITE = 0xffffff
-const AMBIENT_INTENSITY = 0.2
-const DIR_LIGHT_INTENSITY = 0.3
+const AMBIENT_INTENSITY = 0.8
+const DIR_LIGHT_INTENSITY = 1.2
 const DIR_LIGHT_POS = 5
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
-const GAP = 1.4
 const LETTER_SPACING = 0.3
 const COLLIDER_RESTITUTION = 0.4
 const COLLIDER_FRICTION = 0.6
@@ -62,46 +129,15 @@ const LOGO_IMPULSE_MULTIPLIER = 0.15
 const DEFAULT_TORQUE = 3
 const RESET_DURATION_FRAMES = 60
 const RESET_INTERVAL_FRAMES = 300
-const WALL_DEPTH = 0.3
-const WALL_Z = -2
-const WALL_SIZE_MULTIPLIER = 10
-const WAVE_PLANE_Z = -3.5
-const WAVE_PLANE_SIZE = 80
-const WAVE_AMPLITUDE_MAX = 1.0
-const WAVE_LERP_SPEED = 0.05
-const BACKGROUND_COLOR = 0x1c1814
-const WAVE_PLANE_COLOR = 0x2e2318
+const ROOM_WALL_Z = -3.5
+const BACKGROUND_COLOR = 0x141b26
 const GRAIN_TEXTURE_SIZE = 256
 const GRAIN_WORLD_DENSITY = 1.5
 const GRAIN_MIN = 90
 const GRAIN_MAX = 255
-const BACKGROUND_GRAIN_STRENGTH = 0.04
 
-const WAVE_VERTEX_SHADER = `
-  varying vec2 vUv;
-
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`
-
-const WAVE_FRAGMENT_SHADER = `
-  uniform float uGrainTime;
-  uniform float uGrainStrength;
-  uniform vec3 uColor;
-  varying vec2 vUv;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-
-  void main() {
-    float grain = (hash(gl_FragCoord.xy + uGrainTime) - 0.5) * uGrainStrength;
-    vec3 col = uColor + grain;
-    gl_FragColor = vec4(col, 1.0);
-  }
-`
+type IntroStage = 'asleep' | 'jumping' | 'awake'
+const introStage = ref<IntroStage>('asleep')
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
   const aspect = window.innerWidth / window.innerHeight
@@ -130,7 +166,7 @@ const createLights = (scene: THREE.Scene) => {
 
   const dirLight = new THREE.DirectionalLight(WHITE, DIR_LIGHT_INTENSITY)
   dirLight.name = 'directional-light'
-  dirLight.position.set(DIR_LIGHT_POS, DIR_LIGHT_POS * 2, DIR_LIGHT_POS)
+  dirLight.position.set(DIR_LIGHT_POS * 2, DIR_LIGHT_POS / 2, DIR_LIGHT_POS)
   dirLight.castShadow = true
   scene.add(dirLight)
 
@@ -150,17 +186,6 @@ interface PhysicsBody {
 }
 type BodyEntry = { body: PhysicsBody; originalPos: THREE.Vector3 }
 type PhysicsBodies = Map<THREE.Object3D, BodyEntry>
-
-interface WaveState {
-  targetAmplitude: number
-  currentAmplitude: number
-  grainTime: number
-}
-
-interface WavePlane {
-  mesh: THREE.Mesh
-  material: THREE.ShaderMaterial
-}
 
 const createGrainTexture = (): THREE.CanvasTexture => {
   const canvas = document.createElement('canvas')
@@ -216,29 +241,19 @@ const applyTriplanarGrainUVs = (mesh: THREE.Mesh): void => {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
 }
 
-const createWavePlane = (scene: THREE.Scene): WavePlane => {
-  const geometry = new THREE.PlaneGeometry(WAVE_PLANE_SIZE, WAVE_PLANE_SIZE)
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      uGrainTime: { value: 0 },
-      uGrainStrength: { value: BACKGROUND_GRAIN_STRENGTH },
-      uColor: { value: new THREE.Color(WAVE_PLANE_COLOR) }
-    },
-    vertexShader: WAVE_VERTEX_SHADER,
-    fragmentShader: WAVE_FRAGMENT_SHADER
-  })
-  const mesh = new THREE.Mesh(geometry, material)
-  mesh.position.set(0, FRUSTUM_HEIGHT / 2, WAVE_PLANE_Z)
-  scene.add(mesh)
-  return { mesh, material }
+interface Logo {
+  model: THREE.Object3D
+  body: PhysicsBody
+  rest: LogoRest
+  size: THREE.Vector3
+  eyelids: THREE.Mesh[]
 }
 
 const loadLogo = async (
   scene: THREE.Scene,
   world: PhysicsWorld,
-  bodies: PhysicsBodies,
   material: THREE.Material
-): Promise<void> => {
+): Promise<Logo> => {
   const model = await getModel(scene, world, 'cnotv.glb', {
     type: 'dynamic',
     weight: 0,
@@ -250,15 +265,14 @@ const loadLogo = async (
   })
 
   const box = new THREE.Box3().setFromObject(model)
-  const size = box.getSize(new THREE.Vector3())
-  model.scale.setScalar(TARGET_WIDTH / size.x)
+  const scale = TARGET_WIDTH / box.getSize(new THREE.Vector3()).x
+  model.scale.setScalar(scale)
+  model.updateMatrixWorld(true)
 
   box.setFromObject(model)
   const center = box.getCenter(new THREE.Vector3())
-  const scaledSize = box.getSize(new THREE.Vector3())
-  const logoPos = new THREE.Vector3(-center.x, -center.y + scaledSize.y / 2 + GAP, -center.z)
-  model.position.copy(logoPos)
-  model.updateMatrixWorld(true)
+  const size = box.getSize(new THREE.Vector3())
+  const feetOffset = model.position.clone().sub(new THREE.Vector3(center.x, box.min.y, center.z))
 
   model.traverse((child) => {
     const childMesh = child as THREE.Mesh
@@ -269,9 +283,14 @@ const loadLogo = async (
     }
   })
 
-  const logoBody = model.userData.body as PhysicsBody
-  logoBody.setTranslation({ x: logoPos.x, y: logoPos.y, z: logoPos.z }, true)
-  bodies.set(model, { body: logoBody, originalPos: logoPos.clone() })
+  const eyelids = createLogoEyelids(model, material)
+  return {
+    model,
+    body: model.userData.body as PhysicsBody,
+    rest: { feetOffset },
+    size,
+    eyelids
+  }
 }
 
 const buildTextOptions = (font: Font) => ({
@@ -288,13 +307,20 @@ const buildTextOptions = (font: Font) => ({
 const getSpacingAfter = (index: number): number =>
   index === 2 || index === 3 ? LETTER_SPACING / 2 : LETTER_SPACING
 
+interface Letter {
+  mesh: THREE.Mesh
+  body: PhysicsBody
+  restY: number
+  bottomOffset: number
+  topOffset: number
+}
+
 const loadText = (
   scene: THREE.Scene,
   world: PhysicsWorld,
-  bodies: PhysicsBodies,
   material: THREE.Material,
   font: Font
-): void => {
+): Letter[] => {
   const referenceGeometry = new TextGeometry('CNOTV', buildTextOptions(font))
   referenceGeometry.computeBoundingBox()
   const fullWidth = referenceGeometry.boundingBox!.max.x - referenceGeometry.boundingBox!.min.x
@@ -304,6 +330,11 @@ const loadText = (
   const letters = ['C', 'N', 'O', 'T', 'V']
   const letterGeometries = letters.map((letter) => {
     const geometry = new TextGeometry(letter, buildTextOptions(font))
+    geometry.computeBoundingBox()
+    // Centred vertically so the physics box, which sits on the mesh origin, wraps the glyph
+    // instead of hanging half below it into the floor.
+    const { min, max } = geometry.boundingBox!
+    geometry.translate(0, -(min.y + max.y) / 2, 0)
     geometry.computeBoundingBox()
     return geometry
   })
@@ -333,8 +364,9 @@ const loadText = (
 
     const mesh = new THREE.Mesh(geometry, material)
     mesh.scale.setScalar(textScale)
-    mesh.position.set(currentX - scaledMinX, -(scaledHeight / 2), 0)
+    mesh.position.set(currentX - scaledMinX, 0, 0)
     mesh.castShadow = true
+    mesh.visible = false
     scene.add(mesh)
 
     currentX += scaledWidth + (i < letters.length - 1 ? getSpacingAfter(i) : 0)
@@ -343,7 +375,7 @@ const loadText = (
   })
 
   const centerX = currentX / 2
-  meshes.forEach(({ mesh, scaledWidth, scaledHeight, scaledDepth }) => {
+  return meshes.map(({ mesh, scaledWidth, scaledHeight, scaledDepth }) => {
     mesh.position.x -= centerX
     applyTriplanarGrainUVs(mesh)
     const { rigidBody } = getPhysic(world, {
@@ -357,12 +389,22 @@ const loadText = (
       restitution: COLLIDER_RESTITUTION,
       friction: COLLIDER_FRICTION
     })
-    bodies.set(mesh, {
+    mesh.updateMatrixWorld()
+    const bounds = new THREE.Box3().setFromObject(mesh)
+    return {
+      mesh,
       body: rigidBody as PhysicsBody,
-      originalPos: mesh.position.clone()
-    })
+      restY: mesh.position.y,
+      bottomOffset: bounds.min.y - mesh.position.y,
+      topOffset: bounds.max.y - mesh.position.y
+    }
   })
 }
+
+const getLettersBounds = (letters: Letter[]): { top: number; bottom: number } => ({
+  top: Math.max(...letters.map(({ restY, topOffset }) => restY + topOffset)),
+  bottom: Math.min(...letters.map(({ restY, bottomOffset }) => restY + bottomOffset))
+})
 
 const getAncestors = (object: THREE.Object3D): THREE.Object3D[] =>
   object.parent ? [object, ...getAncestors(object.parent)] : [object]
@@ -373,6 +415,125 @@ const findBodyForObject = (object: THREE.Object3D, bodies: PhysicsBodies): Physi
     null
   )
 
+// Measured against the canvas rather than the window, since the canvas scrolls with the page.
+const createPointerRaycaster = (event: PointerEvent, camera: THREE.Camera): THREE.Raycaster => {
+  const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const pointer = new THREE.Vector2(
+    ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+    -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+  )
+  const raycaster = new THREE.Raycaster()
+  raycaster.setFromCamera(pointer, camera)
+  return raycaster
+}
+
+const isPointerOnObject = (event: PointerEvent, camera: THREE.Camera, object: THREE.Object3D) =>
+  createPointerRaycaster(event, camera).intersectObject(object, true).length > 0
+
+const LANDING_TIME = INTRO_TIMING.wake + INTRO_TIMING.anticipation + INTRO_TIMING.air
+
+interface IntroDirectorOptions {
+  logo: Logo
+  letters: Letter[]
+  path: LogoJumpPath
+  lights: { ambientLight: THREE.AmbientLight; dirLight: THREE.DirectionalLight }
+  spot: THREE.SpotLight
+  onAwake: () => void
+}
+
+/**
+ * Drives the sleeping logo, its wake up and jump, the letters showing once it lands and the
+ * lights coming up, then reports when it is done.
+ * @param options Everything the intro moves.
+ * @returns A per-frame update taking seconds since the wake click, or null while asleep.
+ */
+const createIntroDirector = ({
+  logo,
+  letters,
+  path,
+  lights,
+  spot,
+  onAwake
+}: IntroDirectorOptions) => {
+  const spotTarget = new THREE.Vector3()
+  const startFeet = new THREE.Vector3(...path.start)
+  const endFeet = new THREE.Vector3(...path.end)
+
+  return (sinceWake: number | null): boolean => {
+    const pose = sinceWake === null ? getSleepPose(path) : getLogoIntroPose(sinceWake, path)
+    applyLogoPose(logo.model, pose, logo.rest)
+    setEyelidsOpen(logo.eyelids, pose.eyeOpenness)
+    const hasLanded = sinceWake !== null && sinceWake >= LANDING_TIME
+    letters.forEach(({ mesh }) => (mesh.visible = hasLanded))
+
+    aimSpot(spot, spotTarget.lerpVectors(startFeet, endFeet, pose.lightProgress))
+    lights.ambientLight.intensity = THREE.MathUtils.lerp(
+      SLEEP_AMBIENT_INTENSITY,
+      AMBIENT_INTENSITY,
+      pose.lightProgress
+    )
+    lights.dirLight.intensity = THREE.MathUtils.lerp(
+      SLEEP_DIRECTIONAL_INTENSITY,
+      DIR_LIGHT_INTENSITY,
+      pose.lightProgress
+    )
+
+    if (pose.done) onAwake()
+    return pose.done
+  }
+}
+
+// Turned by SLEEP_YAW, the logo's footprint grows wider and deeper; both are measured so its
+// side clears the screen edge and its back corner touches the wall.
+const getJumpPath = (logo: Logo, letters: Letter[], halfWidth: number): LogoJumpPath => {
+  const { top, bottom } = getLettersBounds(letters)
+  const [cosine, sine] = [Math.cos(SLEEP_YAW), Math.sin(SLEEP_YAW)]
+  const turnedWidth = logo.size.x * cosine + logo.size.z * sine
+  const turnedDepth = logo.size.x * sine + logo.size.z * cosine
+  return {
+    start: [
+      Math.min(0, -halfWidth + CORNER_MARGIN + turnedWidth / 2),
+      bottom,
+      ROOM_WALL_Z + turnedDepth / 2 + WALL_GAP
+    ],
+    end: [0, top + LOGO_ON_LETTERS_GAP, 0]
+  }
+}
+
+// Solid floor and back wall where the room draws them, so a clicked letter or logo stops
+// against the surface it is seen on instead of sinking through it.
+const createRoomColliders = (world: PhysicsWorld, floorY: number): void => {
+  getPhysic(world, {
+    type: 'fixed',
+    position: [0, floorY - ROOM_COLLIDER_DEPTH / 2, ROOM_WALL_Z + ROOM_SIZE / 2],
+    size: [ROOM_SIZE, ROOM_COLLIDER_DEPTH, ROOM_SIZE]
+  })
+  getPhysic(world, {
+    type: 'fixed',
+    position: [0, floorY + ROOM_SIZE / 2, ROOM_WALL_Z - ROOM_COLLIDER_DEPTH / 2],
+    size: [ROOM_SIZE, ROOM_SIZE, ROOM_COLLIDER_DEPTH]
+  })
+}
+
+// The logo's body waits at the landing spot from the start, so it never overlaps the letters'
+// bodies and shoves them out of place while the mesh is still asleep in the corner.
+const parkLogoBody = (logo: Logo, path: LogoJumpPath): void => {
+  applyLogoPose(logo.model, getLogoIntroPose(Infinity, path), logo.rest)
+  const { x, y, z } = logo.model.position
+  logo.body.setTranslation({ x, y, z }, true)
+}
+
+const handOverToPhysics = (logo: Logo, letters: Letter[], bodies: PhysicsBodies): void => {
+  const entries: [THREE.Object3D, PhysicsBody][] = [
+    [logo.model, logo.body],
+    ...letters.map(({ mesh, body }): [THREE.Object3D, PhysicsBody] => [mesh, body])
+  ]
+  entries.forEach(([object, body]) => {
+    const { x, y, z } = body.translation()
+    bodies.set(object, { body, originalPos: new THREE.Vector3(x, y, z) })
+  })
+}
+
 type PhysicsConfig = { impulse: number; torque: number }
 
 const physicsConfigSchema = {
@@ -381,20 +542,9 @@ const physicsConfigSchema = {
 }
 
 const createClickHandler =
-  (
-    camera: THREE.OrthographicCamera,
-    bodies: PhysicsBodies,
-    config: { value: PhysicsConfig },
-    onInteract: () => void
-  ) =>
+  (camera: THREE.OrthographicCamera, bodies: PhysicsBodies, config: { value: PhysicsConfig }) =>
   (event: PointerEvent): void => {
-    const pointer = new THREE.Vector2(
-      (event.clientX / window.innerWidth) * 2 - 1,
-      -(event.clientY / window.innerHeight) * 2 + 1
-    )
-    const raycaster = new THREE.Raycaster()
-    raycaster.setFromCamera(pointer, camera)
-
+    const raycaster = createPointerRaycaster(event, camera)
     const targets = [...bodies.keys()].flatMap((object) =>
       object instanceof THREE.Group ? [...object.children] : [object]
     )
@@ -404,8 +554,6 @@ const createClickHandler =
     const hit = hits[0]
     const body = findBodyForObject(hit.object, bodies)
     if (!body) return
-
-    onInteract()
 
     const center = body.translation()
     const offset = new THREE.Vector3(
@@ -445,7 +593,6 @@ interface RegisterPanelsOptions {
   orbit: OrbitControls
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
-  wallsGroup: THREE.Group
   contentMaterial: THREE.MeshStandardMaterial
 }
 
@@ -477,7 +624,6 @@ const registerPanels = ({
   orbit,
   ambientLight,
   dirLight,
-  wallsGroup,
   contentMaterial
 }: RegisterPanelsOptions): void => {
   const orthoCameraSchema = {
@@ -507,34 +653,6 @@ const registerPanels = ({
     { name: 'cnotv-text', type: 'Group', hidden: false },
     createContentConfig(contentMaterial, 'CNOTV Text')
   )
-
-  const elementStore = useElementPropertiesStore()
-  elementStore.registerElementProperties('walls', {
-    title: 'Walls',
-    schema: {
-      position: {
-        label: 'Position',
-        x: { label: 'X', min: -20, max: 20, step: 0.1 },
-        y: { label: 'Y', min: -20, max: 20, step: 0.1 },
-        z: { label: 'Z', min: -20, max: 20, step: 0.1 }
-      }
-    },
-    getValue: (path) => {
-      if (path === 'position')
-        return {
-          x: wallsGroup.position.x,
-          y: wallsGroup.position.y,
-          z: wallsGroup.position.z
-        }
-      return undefined
-    },
-    updateValue: (path, value) => {
-      if (path === 'position') {
-        const pos = value as { x: number; y: number; z: number }
-        wallsGroup.position.set(pos.x, pos.y, pos.z)
-      }
-    }
-  })
 }
 
 const createResetTimeline = (bodies: PhysicsBodies) => {
@@ -598,40 +716,22 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const { ambientLight, dirLight } = createLights(scene)
   const grainTexture = createGrainTexture()
   const contentMaterial = new THREE.MeshStandardMaterial({
-    color: 0xdddddd,
-    roughness: 0.5,
-    metalness: 0.6,
+    color: ROOM_WALL_COLOR,
+    roughness: ROOM_ROUGHNESS,
     map: grainTexture,
     roughnessMap: grainTexture
   })
 
   const bodies: PhysicsBodies = new Map()
-  await loadLogo(scene, world, bodies, contentMaterial)
+  const logo = await loadLogo(scene, world, contentMaterial)
+  const font = await new FontLoader().loadAsync(helvetikerBoldUrl)
+  const letters = loadText(scene, world, contentMaterial, font)
+  const path = getJumpPath(logo, letters, camera.right)
+  parkLogoBody(logo, path)
 
-  new FontLoader().load(helvetikerBoldUrl, (font) => {
-    loadText(scene, world, bodies, contentMaterial, font)
-  })
-
-  const wallAspect = window.innerWidth / window.innerHeight
-  const wallLength = Math.ceil(FRUSTUM_HEIGHT * wallAspect)
-  const wallsGroup = getWalls(scene, world, {
-    length: wallLength * WALL_SIZE_MULTIPLIER,
-    height: FRUSTUM_HEIGHT * WALL_SIZE_MULTIPLIER,
-    depth: WALL_DEPTH
-  })
-  wallsGroup.rotation.x = Math.PI / 2
-  wallsGroup.position.z = WALL_Z
-  wallsGroup.visible = false
-
-  const wavePlane = createWavePlane(scene)
-  const waveState: WaveState = {
-    targetAmplitude: 0,
-    currentAmplitude: 0,
-    grainTime: 0
-  }
-  const startWave = (): void => {
-    waveState.targetAmplitude = WAVE_AMPLITUDE_MAX
-  }
+  const room = createRoom(scene, path.start[1], ROOM_WALL_Z)
+  createRoomColliders(world, path.start[1])
+  const spot = createCornerSpot(scene, new THREE.Vector3(...path.start))
 
   const orbit = new OrbitControls(camera, renderer.domElement)
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
@@ -647,16 +747,37 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     physicsConfig as ReturnType<typeof createReactiveConfig>,
     physicsConfigSchema
   )
-  registerPanels({ camera, orbit, ambientLight, dirLight, wallsGroup, contentMaterial })
+  registerPanels({ camera, orbit, ambientLight, dirLight, contentMaterial })
 
   const timelineManager = createResetTimeline(bodies)
 
   const onResize = createResizeHandler(camera, renderer)
-  const onPointerDown = createClickHandler(camera, bodies, physicsConfig, startWave)
+  const clock = new THREE.Clock()
+  const onPhysicsPointerDown = createClickHandler(camera, bodies, physicsConfig)
+  let wokenAt: number | null = null
+  const wakeUp = (): void => {
+    if (introStage.value !== 'asleep') return
+    introStage.value = 'jumping'
+    wokenAt = clock.elapsedTime
+  }
+  const onPointerDown = (event: PointerEvent): void => {
+    if (introStage.value === 'awake') return onPhysicsPointerDown(event)
+    if (isPointerOnObject(event, camera, logo.model)) wakeUp()
+  }
+  const updateIntro = createIntroDirector({
+    logo,
+    letters,
+    path,
+    lights: { ambientLight, dirLight },
+    spot,
+    onAwake: () => {
+      introStage.value = 'awake'
+      handOverToPhysics(logo, letters, bodies)
+    }
+  })
   window.addEventListener('resize', onResize)
   canvasElement.addEventListener('pointerdown', onPointerDown)
 
-  const clock = new THREE.Clock()
   let accumulator = 0
   let frame = 0
 
@@ -672,20 +793,17 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
 
     animateTimeline(timelineManager, frame)
 
+    if (clock.elapsedTime >= AUTO_WAKE_DELAY) wakeUp()
+    if (introStage.value !== 'awake') {
+      updateIntro(wokenAt === null ? null : clock.elapsedTime - wokenAt)
+    }
+
     bodies.forEach(({ body }, mesh) => {
       const pos = body.translation()
       const rot = body.rotation()
       mesh.position.set(pos.x, pos.y, pos.z)
       mesh.quaternion.set(rot.x, rot.y, rot.z, rot.w)
     })
-
-    waveState.currentAmplitude +=
-      (waveState.targetAmplitude - waveState.currentAmplitude) * WAVE_LERP_SPEED
-    const grainActivation = waveState.currentAmplitude / WAVE_AMPLITUDE_MAX
-    waveState.grainTime += delta * grainActivation
-    wavePlane.material.uniforms.uGrainTime.value = waveState.grainTime
-    wavePlane.material.uniforms.uGrainStrength.value =
-      BACKGROUND_GRAIN_STRENGTH * (1 + grainActivation)
 
     renderer.render(scene, camera)
   }
@@ -697,8 +815,9 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     canvasElement.removeEventListener('pointerdown', onPointerDown)
     grainTexture.dispose()
     contentMaterial.dispose()
-    wavePlane.material.dispose()
-    wavePlane.mesh.geometry.dispose()
+    room.materials.forEach((material) => material.dispose())
+    room.meshes.forEach((mesh) => mesh.geometry.dispose())
+    logo.eyelids.forEach((eyelid) => eyelid.geometry.dispose())
     renderer.dispose()
   }
 }
@@ -718,161 +837,304 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <canvas ref="canvas" class="landing-page__canvas" />
-  <div class="landing-page__frame">
-    <div class="landing-page__corner landing-page__corner--tl" />
-    <div class="landing-page__corner landing-page__corner--tr" />
-    <div class="landing-page__corner landing-page__corner--bl" />
-    <div class="landing-page__corner landing-page__corner--br" />
-    <span class="landing-page__label landing-page__label--top">Generative playground</span>
-    <span class="landing-page__label landing-page__label--bottom">2026</span>
-    <span class="landing-page__flyer landing-page__flyer--tagline">
-      Generative and Game Development
-    </span>
-    <span class="landing-page__flyer landing-page__flyer--left">UI · K8S</span>
-    <span class="landing-page__flyer landing-page__flyer--right"> Web · Three.js · Physics </span>
-    <span class="landing-page__flyer landing-page__flyer--sub"> Click the logo or letters </span>
-  </div>
-  <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
+  <main class="landing-page" :class="{ 'landing-page--awake': introStage === 'awake' }">
+    <header class="landing-page__hero">
+      <canvas ref="canvas" class="landing-page__canvas" />
+      <h1 class="landing-page__name">{{ OWNER_NAME }}</h1>
+      <p class="landing-page__profession">{{ OWNER_PROFESSION }}</p>
+      <a
+        class="landing-page__scroll"
+        href="#skills"
+        aria-label="Scroll to skills"
+        @click.prevent="scrollToSkills"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="landing-page__scroll-icon">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </a>
+    </header>
+    <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
+      <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
+      <p class="landing-page__lead">{{ OWNER_SUMMARY }}</p>
+      <ul class="landing-page__skills">
+        <li v-for="area in SKILL_AREAS" :key="area.title" class="landing-page__skill">
+          <component :is="ICONS[area.icon]" class="landing-page__skill-icon" aria-hidden="true" />
+          <h3 class="landing-page__skill-title">{{ area.title }}</h3>
+          <p class="landing-page__skill-line">{{ area.line }}</p>
+        </li>
+      </ul>
+    </section>
+    <section class="landing-page__section" aria-labelledby="sectors-title">
+      <h2 id="sectors-title" class="landing-page__heading">Market knowledge</h2>
+      <ul class="landing-page__sectors">
+        <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
+          <component
+            :is="ICONS[sector.icon]"
+            class="landing-page__sector-icon"
+            aria-hidden="true"
+          />
+          <span class="landing-page__sector-title">{{ sector.title }}</span>
+        </li>
+      </ul>
+    </section>
+    <footer class="landing-page__footer">
+      <a class="landing-page__profile" :href="OWNER_PROFILE_URL" target="_blank" rel="me noopener">
+        LinkedIn
+        <ArrowUpRight class="landing-page__profile-icon" aria-hidden="true" />
+      </a>
+    </footer>
+    <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
+  </main>
 </template>
 
 <style scoped>
-.landing-page__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
+.landing-page {
   position: fixed;
   inset: 0;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  background-color: var(--color-canvas-overlay-surface);
+  font-family: var(--font-mono);
+}
+
+/* Scrolling down only opens up once the logo has woken up and the hero is shown. */
+.landing-page:not(.landing-page--awake) {
+  overflow: hidden;
+}
+
+.landing-page__hero {
+  position: relative;
+  height: 100dvh;
+}
+
+.landing-page__canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   background-color: var(--color-paper-dark);
-  z-index: calc(var(--z-base) + 0);
 }
 
-.landing-page__frame {
-  position: fixed;
-  inset: var(--spacing-8);
-  pointer-events: none;
-  z-index: calc(var(--z-base) + 1);
+.landing-page__name,
+.landing-page__profession,
+.landing-page__scroll {
+  opacity: 0;
+  transition: opacity var(--transition-game-phase) ease-out;
 }
 
-.landing-page__corner {
+.landing-page--awake .landing-page__name,
+.landing-page--awake .landing-page__profession,
+.landing-page--awake .landing-page__scroll {
+  opacity: 1;
+}
+
+.landing-page__name,
+.landing-page__profession {
   position: absolute;
-  width: 14px;
-  height: 14px;
-}
-
-.landing-page__corner--tl {
-  top: 0;
-  left: 0;
-  border-top: 1px solid rgb(255, 255, 255, 0.22);
-  border-left: 1px solid rgb(255, 255, 255, 0.22);
-}
-
-.landing-page__corner--tr {
-  top: 0;
-  right: 0;
-  border-top: 1px solid rgb(255, 255, 255, 0.22);
-  border-right: 1px solid rgb(255, 255, 255, 0.22);
-}
-
-.landing-page__corner--bl {
-  bottom: 0;
-  left: 0;
-  border-bottom: 1px solid rgb(255, 255, 255, 0.22);
-  border-left: 1px solid rgb(255, 255, 255, 0.22);
-}
-
-.landing-page__corner--br {
-  bottom: 0;
-  right: 0;
-  border-bottom: 1px solid rgb(255, 255, 255, 0.22);
-  border-right: 1px solid rgb(255, 255, 255, 0.22);
-}
-
-.landing-page__label {
-  position: absolute;
-  font-size: var(--font-size-2xs);
-  letter-spacing: 0.18em;
-  color: rgb(255, 255, 255, 0.18);
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-}
-
-.landing-page__label--top {
-  top: var(--spacing-2);
-  left: var(--spacing-4);
-}
-
-.landing-page__label--bottom {
-  bottom: var(--spacing-2);
-  right: var(--spacing-4);
-}
-
-.landing-page__flyer {
-  position: absolute;
-  font-family: var(--font-mono);
-  color: rgb(255, 255, 255, 0.13);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.landing-page__flyer--tagline {
-  bottom: var(--spacing-8);
   left: 50%;
   transform: translateX(-50%);
-  font-size: var(--font-size-xs);
-  letter-spacing: 0.22em;
-  color: rgb(255, 255, 255, 0.16);
+  margin: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: var(--shadow-text-canvas-overlay);
+  text-transform: uppercase;
 }
 
-.landing-page__flyer--left {
-  left: var(--spacing-2);
-  top: 50%;
-  transform: translateY(-50%) rotate(-90deg);
-  font-size: var(--font-size-2xs);
+.landing-page__name {
+  top: 76%;
+  color: var(--color-canvas-overlay-accent);
+  font-size: var(--font-size-xl);
   letter-spacing: 0.3em;
 }
 
-.landing-page__flyer--right {
-  right: var(--spacing-2);
-  top: 50%;
-  transform: translateY(-50%) rotate(90deg);
-  font-size: var(--font-size-2xs);
-  letter-spacing: 0.2em;
+.landing-page__profession {
+  top: calc(76% + var(--spacing-12));
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.35em;
 }
 
-.landing-page__flyer--sub {
-  bottom: var(--spacing-4);
+.landing-page__scroll {
+  position: absolute;
+  bottom: var(--spacing-6);
   left: 50%;
   transform: translateX(-50%);
-  font-size: var(--font-size-2xs);
-  letter-spacing: 0.35em;
-  color: rgb(255, 255, 255, 0.08);
+  padding: var(--spacing-2);
+  color: var(--color-canvas-overlay-muted);
 }
 
-/* On narrow screens the side flyers overlap the centered logo, so lay them out
-   horizontally under the tagline instead of vertically along the edges. */
+.landing-page:not(.landing-page--awake) .landing-page__scroll {
+  pointer-events: none;
+}
+
+.landing-page__scroll:hover,
+.landing-page__scroll:focus-visible {
+  color: var(--color-canvas-overlay-accent);
+}
+
+.landing-page__scroll-icon {
+  display: block;
+  width: var(--spacing-8);
+  height: var(--spacing-8);
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.landing-page__section {
+  box-sizing: border-box;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--spacing-16) var(--spacing-6);
+}
+
+.landing-page__heading {
+  margin: 0 0 var(--spacing-8);
+  color: var(--color-canvas-overlay-accent);
+  font-size: var(--font-size-xl);
+  font-weight: normal;
+  letter-spacing: 0.12em;
+}
+
+.landing-page__lead {
+  margin: calc(-1 * var(--spacing-4)) 0 var(--spacing-8);
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.08em;
+}
+
+.landing-page__footer {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
+}
+
+.landing-page__profile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.2em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.landing-page__profile:hover,
+.landing-page__profile:focus-visible {
+  color: var(--color-canvas-overlay-accent);
+}
+
+.landing-page__profile-icon {
+  width: var(--spacing-4);
+  height: var(--spacing-4);
+}
+
+.landing-page__skills,
+.landing-page__sectors {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.landing-page__skills {
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.landing-page__skill {
+  display: grid;
+  align-content: start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-6);
+  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
+}
+
+.landing-page__skill-icon,
+.landing-page__sector-icon {
+  color: var(--color-canvas-overlay-accent);
+  stroke-width: 1.25;
+}
+
+.landing-page__skill-icon {
+  width: var(--spacing-8);
+  height: var(--spacing-8);
+}
+
+.landing-page__skill-title {
+  margin: 0;
+  color: var(--color-canvas-overlay-accent);
+  font-size: var(--font-size-md);
+  font-weight: normal;
+}
+
+.landing-page__skill-line {
+  margin: 0;
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.landing-page__sectors {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 @media (width <= 640px) {
-  .landing-page__flyer--tagline {
-    bottom: var(--spacing-12);
+  .landing-page__sectors {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.landing-page__sector {
+  display: grid;
+  justify-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8) var(--spacing-4);
+  border-top: var(--spacing-px) solid var(--color-canvas-overlay-border);
+  text-align: center;
+}
+
+.landing-page__sector-icon {
+  width: var(--spacing-12);
+  height: var(--spacing-12);
+}
+
+.landing-page__sector-title {
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-page__scroll-icon {
+    animation: landing-page-bob 2s ease-in-out infinite;
   }
 
-  .landing-page__flyer--left,
-  .landing-page__flyer--right {
-    top: auto;
-    bottom: var(--spacing-8);
-    transform: none;
+  @supports (animation-timeline: view()) {
+    .landing-page__skill,
+    .landing-page__sector {
+      animation: landing-page-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
   }
+}
 
-  .landing-page__flyer--left {
-    left: auto;
-    right: 50%;
-    margin-right: var(--spacing-2);
+@keyframes landing-page-bob {
+  50% {
+    transform: translateY(var(--spacing-1-5));
   }
+}
 
-  .landing-page__flyer--right {
-    right: auto;
-    left: 50%;
-    margin-left: var(--spacing-2);
+@keyframes landing-page-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--spacing-8));
   }
 }
 </style>
