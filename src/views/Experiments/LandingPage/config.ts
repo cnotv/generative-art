@@ -108,7 +108,7 @@ export const SKILL_AREAS = [
   },
   {
     icon: 'architecture',
-    title: 'Architecture and tech debt',
+    title: 'Architecture and modern robust tools',
     line: 'Planning architecture and paying down tech debt across projects and teams.'
   }
 ]
