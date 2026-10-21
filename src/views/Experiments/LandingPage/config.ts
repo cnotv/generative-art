@@ -94,7 +94,7 @@ export const SKILL_AREAS = [
   {
     icon: 'language',
     title: 'NLG and NLU',
-    line: 'Language understanding and generation for publishers, on self-hosted and trained models.'
+    line: 'Language understanding and generation on self-hosted and trained models.'
   },
   {
     icon: 'classify',
