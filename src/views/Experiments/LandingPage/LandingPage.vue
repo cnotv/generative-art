@@ -48,6 +48,7 @@ import {
   ROOM_WALL_COLOR,
   ROOM_ROUGHNESS,
   SLEEP_YAW,
+  AUTO_WAKE_DELAY,
   ROOM_SIZE,
   ROOM_COLLIDER_DEPTH,
   OWNER_NAME,
@@ -752,12 +753,14 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const clock = new THREE.Clock()
   const onPhysicsPointerDown = createClickHandler(camera, bodies, physicsConfig)
   let wokenAt: number | null = null
+  const wakeUp = (): void => {
+    if (introStage.value !== 'asleep') return
+    introStage.value = 'jumping'
+    wokenAt = clock.elapsedTime
+  }
   const onPointerDown = (event: PointerEvent): void => {
     if (introStage.value === 'awake') return onPhysicsPointerDown(event)
-    if (introStage.value === 'asleep' && isPointerOnObject(event, camera, logo.model)) {
-      introStage.value = 'jumping'
-      wokenAt = clock.elapsedTime
-    }
+    if (isPointerOnObject(event, camera, logo.model)) wakeUp()
   }
   const updateIntro = createIntroDirector({
     logo,
@@ -788,6 +791,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
 
     animateTimeline(timelineManager, frame)
 
+    if (clock.elapsedTime >= AUTO_WAKE_DELAY) wakeUp()
     if (introStage.value !== 'awake') {
       updateIntro(wokenAt === null ? null : clock.elapsedTime - wokenAt)
     }

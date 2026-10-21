@@ -17,6 +17,9 @@ export const SETTLE_ROCK = 0.15
 export const SETTLE_FREQUENCY = 14
 export const SETTLE_DAMPING = 5
 
+/** Seconds after the scene is ready before the logo wakes up on its own. */
+export const AUTO_WAKE_DELAY = 0.5
+
 /** Radians the sleeping logo is turned towards the room, its back against the wall. */
 export const SLEEP_YAW = (35 * Math.PI) / 180
 
