@@ -20,12 +20,6 @@ export const SETTLE_DAMPING = 5
 /** Radians the sleeping logo is turned towards the room, its back against the wall. */
 export const SLEEP_YAW = (35 * Math.PI) / 180
 
-/** The letters pop out of the back wall while the logo wakes, so they are there to land on. */
-export const LETTERS_POP_START = 0.3
-export const LETTERS_POP_DURATION = 0.6
-export const LETTERS_POP_STAGGER = 0.08
-/** How far behind the wall's surface the letters start, deep enough to be fully hidden. */
-export const LETTERS_POP_DEPTH = 1.5
 export const LOGO_ON_LETTERS_GAP = 0.6
 
 export const CORNER_MARGIN = 0.6
@@ -62,7 +56,7 @@ export const SPOT_ANGLE = 0.6
 export const SPOT_PENUMBRA = 0.8
 
 export const OWNER_NAME = 'Giuseppe Leo'
-export const OWNER_PROFESSION = 'Frontend Developer'
+export const OWNER_PROFESSION = 'Senior Frontend Developer'
 export const SPOT_COLOR = 0xc9d8ff
 
 /** Areas of work, each with the lucide icon that stands for it. */

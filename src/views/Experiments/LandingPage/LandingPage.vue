@@ -26,7 +26,7 @@ import {
   Shield,
   Building2
 } from 'lucide-vue-next'
-import { createTimelineManager, animateTimeline, easing } from '@webgamekit/animation'
+import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { getLogoIntroPose, getSleepPose } from './logoIntro'
 import {
@@ -39,10 +39,6 @@ import {
 } from './introScene'
 import {
   INTRO_TIMING,
-  LETTERS_POP_START,
-  LETTERS_POP_DURATION,
-  LETTERS_POP_STAGGER,
-  LETTERS_POP_DEPTH,
   LOGO_ON_LETTERS_GAP,
   CORNER_MARGIN,
   WALL_GAP,
@@ -310,7 +306,6 @@ interface Letter {
   mesh: THREE.Mesh
   body: PhysicsBody
   restY: number
-  restZ: number
   bottomOffset: number
   topOffset: number
 }
@@ -366,7 +361,6 @@ const loadText = (
     mesh.scale.setScalar(textScale)
     mesh.position.set(currentX - scaledMinX, 0, 0)
     mesh.castShadow = true
-    mesh.visible = false
     scene.add(mesh)
 
     currentX += scaledWidth + (i < letters.length - 1 ? getSpacingAfter(i) : 0)
@@ -395,7 +389,6 @@ const loadText = (
       mesh,
       body: rigidBody as PhysicsBody,
       restY: mesh.position.y,
-      restZ: mesh.position.z,
       bottomOffset: bounds.min.y - mesh.position.y,
       topOffset: bounds.max.y - mesh.position.y
     }
@@ -433,42 +426,19 @@ const isPointerOnObject = (event: PointerEvent, camera: THREE.Camera, object: TH
 
 interface IntroDirectorOptions {
   logo: Logo
-  letters: Letter[]
   path: LogoJumpPath
   lights: { ambientLight: THREE.AmbientLight; dirLight: THREE.DirectionalLight }
   spot: THREE.SpotLight
   onAwake: () => void
 }
 
-// Starting behind the wall, the wall itself hides each letter until it breaks through.
-const placePoppingLetter = (letter: Letter, index: number, elapsed: number): void => {
-  const progress = THREE.MathUtils.clamp(
-    (elapsed - LETTERS_POP_START - index * LETTERS_POP_STAGGER) / LETTERS_POP_DURATION,
-    0,
-    1
-  )
-  letter.mesh.visible = progress > 0
-  letter.mesh.position.z = THREE.MathUtils.lerp(
-    ROOM_WALL_Z - LETTERS_POP_DEPTH,
-    letter.restZ,
-    easing.easeOutBack(progress)
-  )
-}
-
 /**
- * Drives the sleeping logo, its wake up and jump, the letters rising to meet it and the lights
- * coming up, then hands logo and letters over to physics.
+ * Drives the sleeping logo, its wake up and jump onto the letters and the lights coming up,
+ * then reports when it is done.
  * @param options Everything the intro moves.
  * @returns A per-frame update taking seconds since the wake click, or null while asleep.
  */
-const createIntroDirector = ({
-  logo,
-  letters,
-  path,
-  lights,
-  spot,
-  onAwake
-}: IntroDirectorOptions) => {
+const createIntroDirector = ({ logo, path, lights, spot, onAwake }: IntroDirectorOptions) => {
   const spotTarget = new THREE.Vector3()
   const startFeet = new THREE.Vector3(...path.start)
   const endFeet = new THREE.Vector3(...path.end)
@@ -477,7 +447,6 @@ const createIntroDirector = ({
     const pose = sinceWake === null ? getSleepPose(path) : getLogoIntroPose(sinceWake, path)
     applyLogoPose(logo.model, pose, logo.rest)
     setEyelidsOpen(logo.eyelids, pose.eyeOpenness)
-    letters.forEach((letter, index) => placePoppingLetter(letter, index, sinceWake ?? 0))
 
     aimSpot(spot, spotTarget.lerpVectors(startFeet, endFeet, pose.lightProgress))
     lights.ambientLight.intensity = THREE.MathUtils.lerp(
@@ -777,7 +746,6 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   }
   const updateIntro = createIntroDirector({
     logo,
-    letters,
     path,
     lights: { ambientLight, dirLight },
     spot,
