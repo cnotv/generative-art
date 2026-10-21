@@ -6,6 +6,7 @@ import {
   CITY_CAMERA_DISTANCE,
   CITY_CAMERA_NEAR,
   CITY_FRAME_PADDING,
+  CITY_LABEL_HEADROOM,
   CITY_SKY_COLOR,
   CITY_GROUND_COLOR,
   CITY_AMBIENT_INTENSITY,
@@ -167,12 +168,14 @@ export const fitCityCamera = (
   })
   const xs = projected.map(([x]) => x)
   const ys = projected.map(([, y]) => y)
+  // Room above the city for the labels that sit over the districts at the back.
+  const headroom = (Math.max(...ys) - Math.min(...ys)) * CITY_LABEL_HEADROOM
   const width = (Math.max(...xs) - Math.min(...xs)) * CITY_FRAME_PADDING
-  const height = (Math.max(...ys) - Math.min(...ys)) * CITY_FRAME_PADDING
+  const height = (Math.max(...ys) - Math.min(...ys)) * CITY_FRAME_PADDING + headroom
   const [frameWidth, frameHeight] =
     width / height > aspect ? [width, width / aspect] : [height * aspect, height]
   const centerX = (Math.max(...xs) + Math.min(...xs)) / 2
-  const centerY = (Math.max(...ys) + Math.min(...ys)) / 2
+  const centerY = (Math.max(...ys) + Math.min(...ys)) / 2 + headroom / 2
   Object.assign(camera, {
     left: centerX - frameWidth / 2,
     right: centerX + frameWidth / 2,
@@ -255,21 +258,6 @@ export const projectDistrictAnchors = (
       y: ((1 - anchorPoint.y) / 2) * height
     }
   })
-
-/**
- * Splits the districts into a row of labels above the city, for the ones at the back, and a
- * row below, for the ones at the front, each ordered left to right so no two lines cross.
- * @param anchors Every district's anchor on the canvas.
- * @returns The labels for the top and bottom rows.
- */
-export const splitLabelRows = (
-  anchors: DistrictAnchor[]
-): { top: DistrictAnchor[]; bottom: DistrictAnchor[] } => {
-  const byHeight = [...anchors].sort((first, second) => first.y - second.y)
-  const half = Math.ceil(byHeight.length / 2)
-  const byX = (first: DistrictAnchor, second: DistrictAnchor): number => first.x - second.x
-  return { top: byHeight.slice(0, half).sort(byX), bottom: byHeight.slice(half).sort(byX) }
-}
 
 const fraction = (value: number): number => value - Math.floor(value)
 

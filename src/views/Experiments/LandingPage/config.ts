@@ -123,7 +123,9 @@ export const SKILLS_CITY_MODEL = 'skills-city.glb'
 export const CITY_VIEW_DIRECTION = [14, 18, 20] as const
 export const CITY_CAMERA_DISTANCE = 60
 export const CITY_CAMERA_NEAR = 0.1
-export const CITY_FRAME_PADDING = 1.08
+export const CITY_FRAME_PADDING = 1.04
+/** Share of the city's height added above it, for the labels over the back districts. */
+export const CITY_LABEL_HEADROOM = 0.22
 export const CITY_SKY_COLOR = 0xc9d8ff
 export const CITY_GROUND_COLOR = 0x1d2738
 export const CITY_AMBIENT_INTENSITY = 2.2
@@ -136,3 +138,6 @@ export const DISTRICT_LIFT = 0.6
 export const DISTRICT_LIFT_EASE = 0.2
 export const DISTRICT_LIFT_SETTLED = 0.002
 export const CITY_MAX_PIXEL_RATIO = 2
+/** Half the widest a district label gets (11rem), and the share of the canvas it is capped to. */
+export const LABEL_MAX_HALF_WIDTH = 88
+export const LABEL_EDGE_SHARE = 0.13
