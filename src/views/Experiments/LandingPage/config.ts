@@ -100,6 +100,16 @@ export const SKILL_AREAS = [
     icon: 'classify',
     title: 'Tailor-made classification and generation',
     line: "Software built to sort and write content in each client's own domain."
+  },
+  {
+    icon: 'mentor',
+    title: 'Mentoring',
+    line: 'Growing developers and teams through reviews, guidelines and regular sessions.'
+  },
+  {
+    icon: 'architecture',
+    title: 'Architecture and tech debt',
+    line: 'Planning architecture and paying down tech debt across projects and teams.'
   }
 ]
 

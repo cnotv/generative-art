@@ -19,6 +19,8 @@ import {
   Container,
   Languages,
   Tags,
+  GraduationCap,
+  Layers,
   Landmark,
   RadioTower,
   Newspaper,
@@ -77,6 +79,8 @@ const ICONS: Record<string, Component> = {
   cluster: Container,
   language: Languages,
   classify: Tags,
+  mentor: GraduationCap,
+  architecture: Layers,
   bank: Landmark,
   telco: RadioTower,
   publisher: Newspaper,
@@ -1050,10 +1054,6 @@ onUnmounted(() => {
   gap: var(--spacing-3);
   padding: var(--spacing-6);
   border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-}
-
-.landing-page__skill:last-child {
-  grid-column: 1 / -1;
 }
 
 .landing-page__skill-icon,
