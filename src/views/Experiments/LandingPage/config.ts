@@ -61,42 +61,147 @@ export const OWNER_SUMMARY = '15+ years building, from startup to enterprise.'
 export const OWNER_PROFILE_URL = 'https://www.linkedin.com/in/leogiuseppe/'
 export const SPOT_COLOR = 0xc9d8ff
 
-/** Areas of work, each with the lucide icon that stands for it. */
+/** Areas of work, each with its lucide icon and the experience a recruiter would look for. */
 export const SKILL_AREAS = [
   {
     icon: 'code',
     title: 'Frontend development',
-    line: 'Interfaces, design systems and real-time 3D in the browser.'
+    line: 'Interfaces, design systems and real-time 3D in the browser.',
+    experience: [
+      {
+        company: 'SUSE',
+        role: 'Senior Frontend Engineer',
+        period: 'since 2022',
+        points: [
+          'Rancher dashboard, the open source UI for cloud orchestration.',
+          'Planned and led a one year Vue 2 to Vue 3 migration across several repositories, with a migration script for internal and external plugins.',
+          'Mentored a team of 15 developers through code reviews, guidelines and bi-weekly sessions.'
+        ]
+      },
+      {
+        company: 'Retresco',
+        role: 'Senior Frontend Developer',
+        period: '2018-2022',
+        points: [
+          'Mentored frontend and full stack developers in 4 teams and the frontend guild.',
+          'Defined code guidelines and the interview process for frontend positions.'
+        ]
+      },
+      {
+        company: 'firma.de',
+        role: 'Frontend Developer',
+        period: '2017-2018',
+        points: ['Built the UI framework, the KSS style guide and the WordPress theme.']
+      }
+    ],
+    quote: {
+      text: 'His work has always been the highest standard when it comes to documentation, testing and architectural decisions.',
+      author: 'Ling Vu'
+    }
   },
   {
     icon: 'pipeline',
     title: 'CI automation',
-    line: 'Pipelines that test, build and ship every change.'
+    line: 'Pipelines that test, build and ship every change.',
+    experience: [
+      {
+        company: 'SUSE',
+        role: 'Senior Frontend Engineer',
+        period: 'since 2022',
+        points: [
+          'Cut the E2E pipeline from 2 hours to 5 minutes, 95% faster, through parallelisation.',
+          'Set up GitHub Actions for unit and E2E tests, linting, coverage, documentation and style guide.'
+        ]
+      },
+      {
+        company: 'Retresco',
+        role: 'Senior Frontend Developer',
+        period: '2018-2022',
+        points: [
+          'Internal libraries in private Nexus repositories, with GitLab CI.',
+          'Migrated the E2E suite from Protractor to Cypress.'
+        ]
+      }
+    ]
   },
   {
     icon: 'agent',
     title: 'AI automations',
-    line: 'Agents and workflows that take over the repetitive work.'
+    line: 'Agents and workflows that take over the repetitive work.',
+    experience: [
+      {
+        company: 'SUSE',
+        role: 'Senior Frontend Engineer',
+        period: 'since 2022',
+        points: ['Agentic GitHub workflows that automate issues and pull requests.']
+      }
+    ]
   },
   {
     icon: 'pointer',
     title: 'UX',
-    line: 'Flows shaped around how people actually use them.'
+    line: 'Flows shaped around how people actually use them.',
+    experience: [
+      {
+        company: 'Retresco',
+        role: 'Senior Frontend Developer',
+        period: '2018-2022',
+        points: ['Planned the architecture and UX decisions of new projects.']
+      },
+      {
+        company: 'firma.de',
+        role: 'Frontend Developer',
+        period: '2017-2018',
+        points: ['Style guide and UI framework for a legal e-commerce platform.']
+      }
+    ]
   },
   {
     icon: 'cluster',
     title: 'Kubernetes',
-    line: 'Running and scaling services on K8S clusters.'
+    line: 'Running and scaling services on K8S clusters.',
+    experience: [
+      {
+        company: 'SUSE',
+        role: 'Senior Frontend Engineer',
+        period: 'since 2022',
+        points: [
+          'Daily work with K8S: features and updates for newer Kubernetes versions in the Rancher dashboard.',
+          'Coordinated releases across several Rancher ecosystem teams.'
+        ]
+      }
+    ]
   },
   {
     icon: 'language',
     title: 'NLG and NLU without LLMs',
-    line: 'Language understanding and generation for publishers, no large model needed.'
+    line: 'Language understanding and generation for publishers, no large model needed.',
+    experience: [
+      {
+        company: 'Retresco',
+        role: 'Senior Frontend Developer',
+        period: '2018-2022',
+        points: [
+          'Built from the ground up several stateful single page apps for NLP and NLG, used by top nationwide publishers and enterprises.'
+        ]
+      }
+    ]
   },
   {
     icon: 'classify',
     title: 'Tailor-made classification and generation',
-    line: "Software built to sort and write content in each client's own domain."
+    line: "Software built to sort and write content in each client's own domain.",
+    experience: [
+      {
+        company: 'Retresco',
+        role: 'Senior Frontend Developer',
+        period: '2018-2022',
+        points: [
+          'Bootstrap templates distributed through a private Nexus repository, with CLI generation.',
+          'Keycloak user roles, JWT authentication, Sentry monitoring and IE11 support for clients such as banks.'
+        ]
+      }
+    ]
   }
 ]
 
