@@ -93,8 +93,8 @@ export const SKILL_AREAS = [
   },
   {
     icon: 'language',
-    title: 'NLG and NLU without LLMs',
-    line: 'Language understanding and generation for publishers, no large model needed.'
+    title: 'NLG and NLU',
+    line: 'Language understanding and generation for publishers, on self-hosted and trained models.'
   },
   {
     icon: 'classify',
