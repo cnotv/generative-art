@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { fitCityCamera, updateDistrictLift, splitLabelRows } from './cityStage'
+import { fitCityCamera, updateDistrictLift, splitLabelRows, getMotionValue } from './cityStage'
 import { DISTRICT_LIFT } from './config'
 import type { SkillsCityStage } from './types'
 
@@ -16,7 +16,8 @@ const createStage = (districts: THREE.Object3D[]): SkillsCityStage => ({
   scene: new THREE.Scene(),
   camera: new THREE.OrthographicCamera(),
   outline: [],
-  districts
+  districts,
+  movers: []
 })
 
 const settle = (stage: SkillsCityStage, hovered: string | null): number =>
@@ -91,5 +92,25 @@ describe('splitLabelRows', () => {
     // Assert
     expect(top.map(({ district }) => district)).toEqual(['back-left', 'back-right'])
     expect(bottom.map(({ district }) => district)).toEqual(['front-left', 'front-right'])
+  })
+})
+
+describe('getMotionValue', () => {
+  const base = { speed: 1, amount: 2, phase: 0 }
+
+  it.each([
+    ['spin', 3, 3],
+    ['slide', 0.25, 0.5],
+    ['puff', 1.25, 0.25],
+    ['grow', 0.5, 0.5],
+    ['bob', Math.PI / 2, 2],
+    ['swing', 0, 0],
+    ['pulse', Math.PI / 2, 3]
+  ] as const)('%s at %s seconds is %s', (kind, seconds, expected) => {
+    expect(getMotionValue({ ...base, kind }, seconds)).toBeCloseTo(expected)
+  })
+
+  it('loops a slide back to its start', () => {
+    expect(getMotionValue({ ...base, kind: 'slide' }, 1)).toBeCloseTo(0)
   })
 })

@@ -19,9 +19,41 @@ import {
   DISTRICT_LIFT_EASE,
   DISTRICT_LIFT_SETTLED
 } from './config'
-import type { SkillsCityStage, DistrictAnchor } from './types'
+import type { SkillsCityStage, DistrictAnchor, CityMover, MotionKind } from './types'
 
 const DISTRICT_PREFIX = 'district-'
+const MOTION_KINDS: MotionKind[] = ['spin', 'swing', 'bob', 'slide', 'puff', 'grow', 'pulse']
+const AXES = ['x', 'y', 'z'] as const
+const PUFF_SHRINK = 0.6
+const MIN_SCALE = 0.001
+
+const isMotionKind = (value: unknown): value is MotionKind =>
+  MOTION_KINDS.some((kind) => kind === value)
+
+const isAxis = (value: unknown): value is CityMover['axis'] => AXES.some((axis) => axis === value)
+
+const readNumber = (value: unknown): number => (typeof value === 'number' ? value : 0)
+
+// The motion tags come from the model file's extras, so each one is checked rather than trusted.
+const collectMovers = (model: THREE.Object3D): CityMover[] => {
+  const movers: CityMover[] = []
+  model.traverse((object) => {
+    const { anim, axis, speed, amount, phase } = object.userData
+    if (!isMotionKind(anim)) return
+    movers.push({
+      object,
+      kind: anim,
+      axis: isAxis(axis) ? axis : 'y',
+      speed: readNumber(speed),
+      amount: readNumber(amount),
+      phase: readNumber(phase),
+      basePosition: object.position.clone(),
+      baseRotation: object.rotation.clone(),
+      baseScale: object.scale.clone()
+    })
+  })
+  return movers
+}
 
 const isDistrict = (object: THREE.Object3D | null): boolean =>
   object?.name.startsWith(DISTRICT_PREFIX) ?? false
@@ -77,6 +109,7 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
     district.userData.anchor = bounds.getCenter(new THREE.Vector3()).setY(bounds.max.y)
   })
   const outline = collectOutline(model)
+  const movers = collectMovers(model)
 
   const camera = new THREE.OrthographicCamera(
     -1,
@@ -94,7 +127,7 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
     .add(center)
   camera.lookAt(center)
 
-  return { renderer, scene, camera, outline, districts }
+  return { renderer, scene, camera, outline, districts, movers }
 }
 
 // Every vertex in world space: framing the box corners instead leaves the empty air above the
@@ -236,4 +269,48 @@ export const splitLabelRows = (
   const half = Math.ceil(byHeight.length / 2)
   const byX = (first: DistrictAnchor, second: DistrictAnchor): number => first.x - second.x
   return { top: byHeight.slice(0, half).sort(byX), bottom: byHeight.slice(half).sort(byX) }
+}
+
+const fraction = (value: number): number => value - Math.floor(value)
+
+/**
+ * The value a motion takes at a moment: an angle, an offset, a 0 to 1 progress or a scale.
+ * @param mover The moving part and its motion.
+ * @param seconds Time since the city started moving.
+ * @returns The motion's value at that time.
+ */
+export const getMotionValue = (
+  mover: Pick<CityMover, 'kind' | 'speed' | 'amount' | 'phase'>,
+  seconds: number
+): number => {
+  const { kind, speed, amount, phase } = mover
+  const wave = Math.sin(seconds * speed + phase * Math.PI * 2)
+  if (kind === 'spin') return seconds * speed
+  if (kind === 'swing' || kind === 'bob') return wave * amount
+  if (kind === 'slide') return fraction(seconds * speed + phase) * amount
+  if (kind === 'puff') return fraction(seconds * speed + phase)
+  if (kind === 'grow') return Math.max(MIN_SCALE, fraction(seconds * speed + phase))
+  return 1 + wave * amount
+}
+
+const applyMotion = (mover: CityMover, seconds: number): void => {
+  const { object, kind, axis, amount, basePosition, baseRotation, baseScale } = mover
+  const value = getMotionValue(mover, seconds)
+  if (kind === 'spin' || kind === 'swing') object.rotation[axis] = baseRotation[axis] + value
+  if (kind === 'bob' || kind === 'slide') object.position[axis] = basePosition[axis] + value
+  if (kind === 'grow') object.scale[axis] = baseScale[axis] * value
+  if (kind === 'pulse') object.scale.copy(baseScale).multiplyScalar(value)
+  if (kind === 'puff') {
+    object.position.y = basePosition.y + value * amount
+    object.scale.copy(baseScale).multiplyScalar(1 - value * PUFF_SHRINK)
+  }
+}
+
+/**
+ * Moves every animated part of the city to where it is at a given time.
+ * @param stage The city stage.
+ * @param seconds Time since the city started moving.
+ */
+export const updateCityMotion = (stage: SkillsCityStage, seconds: number): void => {
+  stage.movers.forEach((mover) => applyMotion(mover, seconds))
 }

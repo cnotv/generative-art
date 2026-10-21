@@ -7,10 +7,13 @@ import {
   fitCityCamera,
   pickDistrict,
   updateDistrictLift,
+  updateCityMotion,
   projectDistrictAnchors,
   splitLabelRows
 } from './cityStage'
 import type { SkillsCityStage, DistrictAnchor } from './types'
+
+const MILLISECONDS_PER_SECOND = 1000
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const hovered = ref<string | null>(null)
@@ -39,14 +42,19 @@ const leaderLines = computed(() => {
 
 let stage: SkillsCityStage | null = null
 let frameId = 0
+let isOnScreen = false
 let resizeObserver: ResizeObserver | null = null
+let visibilityObserver: IntersectionObserver | null = null
+const startedAt = performance.now()
 
-// The city is still, so it only renders while a district is moving or the canvas changes size.
+// The city animates only while it is on screen; off screen it renders just enough to finish a
+// lift and to stay correct after a resize.
 const renderFrame = (): void => {
   if (!stage) return
-  const isMoving = updateDistrictLift(stage, hovered.value)
+  updateCityMotion(stage, (performance.now() - startedAt) / MILLISECONDS_PER_SECOND)
+  const isLifting = updateDistrictLift(stage, hovered.value)
   stage.renderer.render(stage.scene, stage.camera)
-  frameId = isMoving ? requestAnimationFrame(renderFrame) : 0
+  frameId = isOnScreen || isLifting ? requestAnimationFrame(renderFrame) : 0
 }
 
 const requestRender = (): void => {
@@ -80,12 +88,18 @@ onMounted(async () => {
   stage = await createCityStage(canvas.value)
   resizeObserver = new ResizeObserver(resizeStage)
   resizeObserver.observe(canvas.value)
+  visibilityObserver = new IntersectionObserver(([entry]) => {
+    isOnScreen = entry.isIntersecting
+    if (isOnScreen) requestRender()
+  })
+  visibilityObserver.observe(canvas.value)
   resizeStage()
 })
 
 onUnmounted(() => {
   cancelAnimationFrame(frameId)
   resizeObserver?.disconnect()
+  visibilityObserver?.disconnect()
   stage?.renderer.dispose()
   stage = null
   assetsRelease(`${import.meta.env.BASE_URL}${SKILLS_CITY_MODEL}`)
