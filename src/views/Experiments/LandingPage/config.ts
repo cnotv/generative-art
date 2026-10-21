@@ -57,6 +57,8 @@ export const SPOT_PENUMBRA = 0.8
 
 export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'
+export const OWNER_SUMMARY = '15+ years building, from startup to enterprise.'
+export const OWNER_PROFILE_URL = 'https://www.linkedin.com/in/leogiuseppe/'
 export const SPOT_COLOR = 0xc9d8ff
 
 /** Areas of work, each with the lucide icon that stands for it. */

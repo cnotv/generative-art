@@ -24,7 +24,8 @@ import {
   Newspaper,
   Scale,
   Shield,
-  Building2
+  Building2,
+  ArrowUpRight
 } from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
@@ -51,6 +52,8 @@ import {
   ROOM_COLLIDER_DEPTH,
   OWNER_NAME,
   OWNER_PROFESSION,
+  OWNER_SUMMARY,
+  OWNER_PROFILE_URL,
   SKILL_AREAS,
   PRODUCT_SECTORS
 } from './config'
@@ -848,6 +851,7 @@ onUnmounted(() => {
     <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
       <p class="landing-page__eyebrow">Knowledge</p>
       <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
+      <p class="landing-page__lead">{{ OWNER_SUMMARY }}</p>
       <ol class="landing-page__skills">
         <li v-for="(area, index) in SKILL_AREAS" :key="area.title" class="landing-page__skill">
           <span class="landing-page__skill-index">{{ formatIndex(index) }}</span>
@@ -871,6 +875,12 @@ onUnmounted(() => {
         </li>
       </ul>
     </section>
+    <footer class="landing-page__footer">
+      <a class="landing-page__profile" :href="OWNER_PROFILE_URL" target="_blank" rel="me noopener">
+        LinkedIn
+        <ArrowUpRight class="landing-page__profile-icon" aria-hidden="true" />
+      </a>
+    </footer>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   </main>
 </template>
@@ -993,6 +1003,40 @@ onUnmounted(() => {
   font-size: var(--font-size-xl);
   font-weight: normal;
   letter-spacing: 0.12em;
+}
+
+.landing-page__lead {
+  margin: calc(-1 * var(--spacing-4)) 0 var(--spacing-8);
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.08em;
+}
+
+.landing-page__footer {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
+}
+
+.landing-page__profile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.2em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.landing-page__profile:hover,
+.landing-page__profile:focus-visible {
+  color: var(--color-canvas-overlay-accent);
+}
+
+.landing-page__profile-icon {
+  width: var(--spacing-4);
+  height: var(--spacing-4);
 }
 
 .landing-page__skills,
