@@ -97,11 +97,6 @@ export const SKILL_AREAS = [
     line: 'Language understanding and generation on self-hosted and trained models.'
   },
   {
-    icon: 'classify',
-    title: 'Tailor-made classification and generation',
-    line: "Software built to sort and write content in each client's own domain."
-  },
-  {
     icon: 'mentor',
     title: 'Mentoring',
     line: 'Growing developers and teams through reviews, guidelines and regular sessions.'

@@ -18,7 +18,6 @@ import {
   Pointer,
   Container,
   Languages,
-  Tags,
   GraduationCap,
   Layers,
   Landmark,
@@ -78,7 +77,6 @@ const ICONS: Record<string, Component> = {
   pointer: Pointer,
   cluster: Container,
   language: Languages,
-  classify: Tags,
   mentor: GraduationCap,
   architecture: Layers,
   bank: Landmark,
@@ -1045,7 +1043,7 @@ onUnmounted(() => {
 }
 
 .landing-page__skills {
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
 }
 
 .landing-page__skill {
