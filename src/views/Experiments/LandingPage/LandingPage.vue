@@ -11,15 +11,8 @@ import helvetikerBoldUrl from 'three/examples/fonts/helvetiker_bold.typeface.jso
 import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import SkillsCity from './SkillsCity.vue'
 import {
-  CodeXml,
-  Workflow,
-  Bot,
-  Pointer,
-  Container,
-  Languages,
-  GraduationCap,
-  Layers,
   Landmark,
   RadioTower,
   Newspaper,
@@ -56,7 +49,6 @@ import {
   OWNER_PROFESSION,
   OWNER_SUMMARY,
   OWNER_PROFILE_URL,
-  SKILL_AREAS,
   PRODUCT_SECTORS
 } from './config'
 import type { LogoJumpPath, LogoRest } from './types'
@@ -71,14 +63,6 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 const skills = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
 const ICONS: Record<string, Component> = {
-  code: CodeXml,
-  pipeline: Workflow,
-  agent: Bot,
-  pointer: Pointer,
-  cluster: Container,
-  language: Languages,
-  mentor: GraduationCap,
-  architecture: Layers,
   bank: Landmark,
   telco: RadioTower,
   publisher: Newspaper,
@@ -856,13 +840,7 @@ onUnmounted(() => {
     <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
       <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
       <p class="landing-page__lead">{{ OWNER_SUMMARY }}</p>
-      <ul class="landing-page__skills">
-        <li v-for="area in SKILL_AREAS" :key="area.title" class="landing-page__skill">
-          <component :is="ICONS[area.icon]" class="landing-page__skill-icon" aria-hidden="true" />
-          <h3 class="landing-page__skill-title">{{ area.title }}</h3>
-          <p class="landing-page__skill-line">{{ area.line }}</p>
-        </li>
-      </ul>
+      <SkillsCity />
     </section>
     <section class="landing-page__section" aria-labelledby="sectors-title">
       <h2 id="sectors-title" class="landing-page__heading">Market knowledge</h2>
@@ -1033,7 +1011,6 @@ onUnmounted(() => {
   height: var(--spacing-4);
 }
 
-.landing-page__skills,
 .landing-page__sectors {
   margin: 0;
   padding: 0;
@@ -1042,41 +1019,9 @@ onUnmounted(() => {
   gap: var(--spacing-4);
 }
 
-.landing-page__skills {
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-}
-
-.landing-page__skill {
-  display: grid;
-  align-content: start;
-  gap: var(--spacing-3);
-  padding: var(--spacing-6);
-  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-}
-
-.landing-page__skill-icon,
 .landing-page__sector-icon {
   color: var(--color-canvas-overlay-accent);
   stroke-width: 1.25;
-}
-
-.landing-page__skill-icon {
-  width: var(--spacing-8);
-  height: var(--spacing-8);
-}
-
-.landing-page__skill-title {
-  margin: 0;
-  color: var(--color-canvas-overlay-accent);
-  font-size: var(--font-size-md);
-  font-weight: normal;
-}
-
-.landing-page__skill-line {
-  margin: 0;
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
 }
 
 .landing-page__sectors {
@@ -1116,7 +1061,6 @@ onUnmounted(() => {
   }
 
   @supports (animation-timeline: view()) {
-    .landing-page__skill,
     .landing-page__sector {
       animation: landing-page-reveal linear both;
       animation-timeline: view();

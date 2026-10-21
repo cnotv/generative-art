@@ -64,45 +64,45 @@ export const OWNER_SUMMARY = '15+ years building, from startup to enterprise.'
 export const OWNER_PROFILE_URL = 'https://www.linkedin.com/in/leogiuseppe/'
 export const SPOT_COLOR = 0xc9d8ff
 
-/** Areas of work, each with the lucide icon that stands for it. */
+/** Areas of work, each with its district in the skills city model. */
 export const SKILL_AREAS = [
   {
-    icon: 'code',
+    district: 'district-frontend',
     title: 'Frontend development',
     line: 'Interfaces, design systems and real-time 3D in the browser.'
   },
   {
-    icon: 'pipeline',
+    district: 'district-ci',
     title: 'CI automation',
     line: 'Pipelines that test, build and ship every change.'
   },
   {
-    icon: 'agent',
+    district: 'district-ai',
     title: 'AI automations',
     line: 'Agents and workflows that take over the repetitive work.'
   },
   {
-    icon: 'pointer',
+    district: 'district-ux',
     title: 'UX',
     line: 'Flows shaped around how people actually use them.'
   },
   {
-    icon: 'cluster',
+    district: 'district-k8s',
     title: 'Kubernetes',
     line: 'Running and scaling services on K8S clusters.'
   },
   {
-    icon: 'language',
+    district: 'district-nlg',
     title: 'NLG and NLU',
     line: 'Language understanding and generation on self-hosted and trained models.'
   },
   {
-    icon: 'mentor',
+    district: 'district-mentoring',
     title: 'Mentoring',
     line: 'Growing developers and teams through reviews, guidelines and regular sessions.'
   },
   {
-    icon: 'architecture',
+    district: 'district-architecture',
     title: 'Architecture and modern robust tools',
     line: 'Planning architecture and paying down tech debt across projects and teams.'
   }
@@ -117,3 +117,22 @@ export const PRODUCT_SECTORS = [
   { icon: 'defense', title: 'Defense' },
   { icon: 'public', title: 'Public institutions' }
 ]
+
+export const SKILLS_CITY_MODEL = 'skills-city.glb'
+/** Direction the isometric camera looks at the city from, matching the Blender preview. */
+export const CITY_VIEW_DIRECTION = [14, 18, 20] as const
+export const CITY_CAMERA_DISTANCE = 60
+export const CITY_CAMERA_NEAR = 0.1
+export const CITY_FRAME_PADDING = 1.08
+export const CITY_SKY_COLOR = 0xc9d8ff
+export const CITY_GROUND_COLOR = 0x1d2738
+export const CITY_AMBIENT_INTENSITY = 2.2
+export const CITY_KEY_COLOR = 0xe6eeff
+export const CITY_KEY_INTENSITY = 2.4
+export const CITY_KEY_POSITION = [18, 14, 6] as const
+export const CITY_SHADOW_EXTENT = 14
+export const CITY_SHADOW_MAP_SIZE = 2048
+export const DISTRICT_LIFT = 0.6
+export const DISTRICT_LIFT_EASE = 0.2
+export const DISTRICT_LIFT_SETTLED = 0.002
+export const CITY_MAX_PIXEL_RATIO = 2

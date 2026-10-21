@@ -27,3 +27,12 @@ export interface Room {
 export interface LogoRest {
   feetOffset: THREE.Vector3
 }
+
+/** The skills city scene, ready to render into its own canvas. */
+export interface SkillsCityStage {
+  renderer: THREE.WebGLRenderer
+  scene: THREE.Scene
+  camera: THREE.OrthographicCamera
+  outline: THREE.Vector3[]
+  districts: THREE.Object3D[]
+}
