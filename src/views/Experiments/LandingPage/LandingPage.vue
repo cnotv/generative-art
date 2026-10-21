@@ -361,6 +361,7 @@ const loadText = (
     mesh.scale.setScalar(textScale)
     mesh.position.set(currentX - scaledMinX, 0, 0)
     mesh.castShadow = true
+    mesh.visible = false
     scene.add(mesh)
 
     currentX += scaledWidth + (i < letters.length - 1 ? getSpacingAfter(i) : 0)
@@ -424,8 +425,11 @@ const createPointerRaycaster = (event: PointerEvent, camera: THREE.Camera): THRE
 const isPointerOnObject = (event: PointerEvent, camera: THREE.Camera, object: THREE.Object3D) =>
   createPointerRaycaster(event, camera).intersectObject(object, true).length > 0
 
+const LANDING_TIME = INTRO_TIMING.wake + INTRO_TIMING.anticipation + INTRO_TIMING.air
+
 interface IntroDirectorOptions {
   logo: Logo
+  letters: Letter[]
   path: LogoJumpPath
   lights: { ambientLight: THREE.AmbientLight; dirLight: THREE.DirectionalLight }
   spot: THREE.SpotLight
@@ -433,12 +437,19 @@ interface IntroDirectorOptions {
 }
 
 /**
- * Drives the sleeping logo, its wake up and jump onto the letters and the lights coming up,
- * then reports when it is done.
+ * Drives the sleeping logo, its wake up and jump, the letters showing once it lands and the
+ * lights coming up, then reports when it is done.
  * @param options Everything the intro moves.
  * @returns A per-frame update taking seconds since the wake click, or null while asleep.
  */
-const createIntroDirector = ({ logo, path, lights, spot, onAwake }: IntroDirectorOptions) => {
+const createIntroDirector = ({
+  logo,
+  letters,
+  path,
+  lights,
+  spot,
+  onAwake
+}: IntroDirectorOptions) => {
   const spotTarget = new THREE.Vector3()
   const startFeet = new THREE.Vector3(...path.start)
   const endFeet = new THREE.Vector3(...path.end)
@@ -447,6 +458,8 @@ const createIntroDirector = ({ logo, path, lights, spot, onAwake }: IntroDirecto
     const pose = sinceWake === null ? getSleepPose(path) : getLogoIntroPose(sinceWake, path)
     applyLogoPose(logo.model, pose, logo.rest)
     setEyelidsOpen(logo.eyelids, pose.eyeOpenness)
+    const hasLanded = sinceWake !== null && sinceWake >= LANDING_TIME
+    letters.forEach(({ mesh }) => (mesh.visible = hasLanded))
 
     aimSpot(spot, spotTarget.lerpVectors(startFeet, endFeet, pose.lightProgress))
     lights.ambientLight.intensity = THREE.MathUtils.lerp(
@@ -746,6 +759,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   }
   const updateIntro = createIntroDirector({
     logo,
+    letters,
     path,
     lights: { ambientLight, dirLight },
     spot,
