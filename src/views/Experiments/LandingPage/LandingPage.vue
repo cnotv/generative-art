@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { ref, onMounted, onUnmounted } from 'vue'
+import type { Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
@@ -10,6 +11,21 @@ import helvetikerBoldUrl from 'three/examples/fonts/helvetiker_bold.typeface.jso
 import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import {
+  CodeXml,
+  Workflow,
+  Bot,
+  Pointer,
+  Container,
+  Languages,
+  Tags,
+  Landmark,
+  RadioTower,
+  Newspaper,
+  Scale,
+  Shield,
+  Building2
+} from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline, easing } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { getLogoIntroPose, getSleepPose } from './logoIntro'
@@ -53,6 +69,22 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '
 const canvas = ref<HTMLCanvasElement | null>(null)
 const skills = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
+const ICONS: Record<string, Component> = {
+  code: CodeXml,
+  pipeline: Workflow,
+  agent: Bot,
+  pointer: Pointer,
+  cluster: Container,
+  language: Languages,
+  classify: Tags,
+  bank: Landmark,
+  telco: RadioTower,
+  publisher: Newspaper,
+  governance: Scale,
+  defense: Shield,
+  public: Building2
+}
+const formatIndex = (index: number): string => String(index + 1).padStart(2, '0')
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -384,10 +416,12 @@ const findBodyForObject = (object: THREE.Object3D, bodies: PhysicsBodies): Physi
     null
   )
 
+// Measured against the canvas rather than the window, since the canvas scrolls with the page.
 const createPointerRaycaster = (event: PointerEvent, camera: THREE.Camera): THREE.Raycaster => {
+  const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const pointer = new THREE.Vector2(
-    (event.clientX / window.innerWidth) * 2 - 1,
-    -(event.clientY / window.innerHeight) * 2 + 1
+    ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+    -((event.clientY - bounds.top) / bounds.height) * 2 + 1
   )
   const raycaster = new THREE.Raycaster()
   raycaster.setFromCamera(pointer, camera)
@@ -814,8 +848,8 @@ onUnmounted(() => {
 
 <template>
   <main class="landing-page" :class="{ 'landing-page--awake': introStage === 'awake' }">
-    <canvas ref="canvas" class="landing-page__canvas" />
     <header class="landing-page__hero">
+      <canvas ref="canvas" class="landing-page__canvas" />
       <h1 class="landing-page__name">{{ OWNER_NAME }}</h1>
       <p class="landing-page__profession">{{ OWNER_PROFESSION }}</p>
       <a
@@ -829,15 +863,29 @@ onUnmounted(() => {
         </svg>
       </a>
     </header>
-    <section id="skills" ref="skills" class="landing-page__skills" aria-labelledby="skills-title">
-      <h2 id="skills-title" class="landing-page__skills-title">What I work on</h2>
-      <ul class="landing-page__skill-list">
-        <li v-for="area in SKILL_AREAS" :key="area" class="landing-page__skill">{{ area }}</li>
-      </ul>
-      <h3 class="landing-page__sectors-title">Products used by</h3>
-      <ul class="landing-page__sector-list">
-        <li v-for="sector in PRODUCT_SECTORS" :key="sector" class="landing-page__sector">
-          {{ sector }}
+    <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
+      <p class="landing-page__eyebrow">Knowledge</p>
+      <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
+      <ol class="landing-page__skills">
+        <li v-for="(area, index) in SKILL_AREAS" :key="area.title" class="landing-page__skill">
+          <span class="landing-page__skill-index">{{ formatIndex(index) }}</span>
+          <component :is="ICONS[area.icon]" class="landing-page__skill-icon" aria-hidden="true" />
+          <h3 class="landing-page__skill-title">{{ area.title }}</h3>
+          <p class="landing-page__skill-line">{{ area.line }}</p>
+        </li>
+      </ol>
+    </section>
+    <section class="landing-page__section" aria-labelledby="sectors-title">
+      <p class="landing-page__eyebrow">Market knowledge</p>
+      <h2 id="sectors-title" class="landing-page__heading">Products in daily use at</h2>
+      <ul class="landing-page__sectors">
+        <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
+          <component
+            :is="ICONS[sector.icon]"
+            class="landing-page__sector-icon"
+            aria-hidden="true"
+          />
+          <span class="landing-page__sector-title">{{ sector.title }}</span>
         </li>
       </ul>
     </section>
@@ -851,33 +899,39 @@ onUnmounted(() => {
   inset: 0;
   overflow: hidden auto;
   overscroll-behavior: contain;
+  background-color: var(--color-canvas-overlay-surface);
+  font-family: var(--font-mono);
 }
 
-/* Scrolling to the skills only opens up once the logo has woken up and the hero is shown. */
+/* Scrolling down only opens up once the logo has woken up and the hero is shown. */
 .landing-page:not(.landing-page--awake) {
   overflow: hidden;
-}
-
-.landing-page__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  position: fixed;
-  inset: 0;
-  background-color: var(--color-paper-dark);
-  z-index: calc(var(--z-base) + 0);
 }
 
 .landing-page__hero {
   position: relative;
   height: 100dvh;
-  pointer-events: none;
-  z-index: calc(var(--z-base) + 1);
+}
+
+.landing-page__canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-paper-dark);
+}
+
+.landing-page__name,
+.landing-page__profession,
+.landing-page__scroll {
   opacity: 0;
   transition: opacity var(--transition-game-phase) ease-out;
 }
 
-.landing-page--awake .landing-page__hero {
+.landing-page--awake .landing-page__name,
+.landing-page--awake .landing-page__profession,
+.landing-page--awake .landing-page__scroll {
   opacity: 1;
 }
 
@@ -888,8 +942,8 @@ onUnmounted(() => {
   transform: translateX(-50%);
   margin: 0;
   white-space: nowrap;
+  pointer-events: none;
   text-shadow: var(--shadow-text-canvas-overlay);
-  font-family: var(--font-mono);
   text-transform: uppercase;
 }
 
@@ -914,7 +968,10 @@ onUnmounted(() => {
   transform: translateX(-50%);
   padding: var(--spacing-2);
   color: var(--color-canvas-overlay-muted);
-  pointer-events: auto;
+}
+
+.landing-page:not(.landing-page--awake) .landing-page__scroll {
+  pointer-events: none;
 }
 
 .landing-page__scroll:hover,
@@ -933,9 +990,136 @@ onUnmounted(() => {
   stroke-linejoin: round;
 }
 
+.landing-page__section {
+  box-sizing: border-box;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--spacing-16) var(--spacing-6);
+}
+
+.landing-page__eyebrow {
+  margin: 0 0 var(--spacing-2);
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+}
+
+.landing-page__heading {
+  margin: 0 0 var(--spacing-8);
+  color: var(--color-canvas-overlay-accent);
+  font-size: var(--font-size-xl);
+  font-weight: normal;
+  letter-spacing: 0.12em;
+}
+
+.landing-page__skills,
+.landing-page__sectors {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.landing-page__skills {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.landing-page__skill {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-6);
+  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
+  transition: border-color var(--transition-fast) ease-out;
+}
+
+.landing-page__skill:last-child {
+  grid-column: 1 / -1;
+}
+
+.landing-page__skill:hover {
+  border-color: var(--color-canvas-overlay-muted);
+}
+
+.landing-page__skill-index {
+  position: absolute;
+  top: var(--spacing-4);
+  right: var(--spacing-4);
+  color: var(--color-canvas-overlay-border);
+  font-size: var(--font-size-lg);
+}
+
+.landing-page__skill-icon,
+.landing-page__sector-icon {
+  color: var(--color-canvas-overlay-accent);
+  stroke-width: 1.25;
+}
+
+.landing-page__skill-icon {
+  width: var(--spacing-8);
+  height: var(--spacing-8);
+}
+
+.landing-page__skill-title {
+  margin: 0;
+  color: var(--color-canvas-overlay-accent);
+  font-size: var(--font-size-md);
+  font-weight: normal;
+}
+
+.landing-page__skill-line {
+  margin: 0;
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.landing-page__sectors {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (width <= 640px) {
+  .landing-page__sectors {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.landing-page__sector {
+  display: grid;
+  justify-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8) var(--spacing-4);
+  border-top: var(--spacing-px) solid var(--color-canvas-overlay-border);
+  text-align: center;
+}
+
+.landing-page__sector-icon {
+  width: var(--spacing-12);
+  height: var(--spacing-12);
+}
+
+.landing-page__sector-title {
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .landing-page__scroll-icon {
     animation: landing-page-bob 2s ease-in-out infinite;
+  }
+
+  @supports (animation-timeline: view()) {
+    .landing-page__skill,
+    .landing-page__sector {
+      animation: landing-page-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
   }
 }
 
@@ -945,61 +1129,10 @@ onUnmounted(() => {
   }
 }
 
-.landing-page__skills {
-  position: relative;
-  z-index: calc(var(--z-base) + 1);
-  min-height: 100dvh;
-  box-sizing: border-box;
-  padding: var(--spacing-12) var(--spacing-6);
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: var(--spacing-6);
-  background-color: var(--color-canvas-overlay-surface);
-  font-family: var(--font-mono);
-  text-align: center;
-}
-
-.landing-page__skills-title,
-.landing-page__sectors-title {
-  margin: 0;
-  color: var(--color-canvas-overlay-accent);
-  text-transform: uppercase;
-  letter-spacing: 0.3em;
-  font-weight: normal;
-}
-
-.landing-page__skills-title {
-  font-size: var(--font-size-lg);
-}
-
-.landing-page__sectors-title {
-  margin-top: var(--spacing-6);
-  font-size: var(--font-size-sm);
-}
-
-.landing-page__skill-list,
-.landing-page__sector-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--spacing-3);
-  max-width: 48rem;
-}
-
-.landing-page__skill,
-.landing-page__sector {
-  padding: var(--spacing-2) var(--spacing-4);
-  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.08em;
-}
-
-.landing-page__skill {
-  color: var(--color-canvas-overlay-accent);
+@keyframes landing-page-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--spacing-8));
+  }
 }
 </style>

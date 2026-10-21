@@ -65,21 +65,51 @@ export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Frontend Developer'
 export const SPOT_COLOR = 0xc9d8ff
 
+/** Areas of work, each with the lucide icon that stands for it. */
 export const SKILL_AREAS = [
-  'Frontend development',
-  'CI automation',
-  'AI automations',
-  'UX',
-  'Kubernetes (K8S)',
-  'NLG and NLU domain knowledge without LLMs, for publishers',
-  'Tailor-made classification and generation software'
+  {
+    icon: 'code',
+    title: 'Frontend development',
+    line: 'Interfaces, design systems and real-time 3D in the browser.'
+  },
+  {
+    icon: 'pipeline',
+    title: 'CI automation',
+    line: 'Pipelines that test, build and ship every change.'
+  },
+  {
+    icon: 'agent',
+    title: 'AI automations',
+    line: 'Agents and workflows that take over the repetitive work.'
+  },
+  {
+    icon: 'pointer',
+    title: 'UX',
+    line: 'Flows shaped around how people actually use them.'
+  },
+  {
+    icon: 'cluster',
+    title: 'Kubernetes',
+    line: 'Running and scaling services on K8S clusters.'
+  },
+  {
+    icon: 'language',
+    title: 'NLG and NLU without LLMs',
+    line: 'Language understanding and generation for publishers, no large model needed.'
+  },
+  {
+    icon: 'classify',
+    title: 'Tailor-made classification and generation',
+    line: "Software built to sort and write content in each client's own domain."
+  }
 ]
 
+/** Sectors whose organisations use the products, each with its lucide icon. */
 export const PRODUCT_SECTORS = [
-  'Banks',
-  'Telco',
-  'Publishers',
-  'Governance',
-  'Defense',
-  'Public institutions'
+  { icon: 'bank', title: 'Banks' },
+  { icon: 'telco', title: 'Telco' },
+  { icon: 'publisher', title: 'Publishers' },
+  { icon: 'governance', title: 'Governance' },
+  { icon: 'defense', title: 'Defense' },
+  { icon: 'public', title: 'Public institutions' }
 ]

@@ -40,6 +40,7 @@
 
   // Fade transition between game phases (lobby/playing/summary).
   --transition-game-phase: 1s;
+  --transition-fast: 150ms;
 }
 
 @keyframes slide-up {
@@ -110,7 +111,7 @@
   --shadow-text-canvas-overlay: 0 1px 3px hsl(0deg 0% 0% / 80%);
   --color-canvas-overlay-accent: hsl(218deg 60% 80%);
   --color-canvas-overlay-muted: hsl(218deg 30% 62%);
-  --color-canvas-overlay-surface: hsl(218deg 32% 9% / 88%);
+  --color-canvas-overlay-surface: hsl(218deg 30% 11%);
   --color-canvas-overlay-border: hsl(218deg 30% 30% / 60%);
 
   // Panel item colors
@@ -135,6 +136,7 @@
   --spacing-8: 2rem; // 32px
   --spacing-10: 2.5rem; // 40px
   --spacing-12: 3rem; // 48px
+  --spacing-16: 4rem; // 64px
 
   // Border radius scale
   --radius-sm: 0.125rem; // 2px
