@@ -108,14 +108,18 @@ onUnmounted(() => {
     <div v-if="screenStyle" class="skills-city__lcd" :style="screenStyle" aria-hidden="true">
       <!-- Keyed on the district so the typing effect replays for every new one. -->
       <div :key="hovered ?? 'idle'" class="skills-city__lcd-screen">
+        <!-- The signs in the city already name the district, so only a phone's screen needs it. -->
         <template v-if="hoveredArea">
-          <p class="skills-city__lcd-title">{{ hoveredArea.title }}</p>
-          <p class="skills-city__lcd-line">{{ hoveredArea.line }}</p>
+          <p class="skills-city__lcd-title skills-city__lcd-title--district">
+            {{ hoveredArea.title }}
+          </p>
+          <p class="skills-city__lcd-line skills-city__lcd-line--district">
+            {{ hoveredArea.line }}
+          </p>
         </template>
         <template v-else>
           <p class="skills-city__lcd-title">What I work on</p>
           <p class="skills-city__lcd-line">{{ OWNER_SUMMARY }}</p>
-          <p class="skills-city__lcd-idle">Hover a district</p>
         </template>
       </div>
     </div>
@@ -165,8 +169,7 @@ onUnmounted(() => {
 }
 
 .skills-city__lcd-title,
-.skills-city__lcd-line,
-.skills-city__lcd-idle {
+.skills-city__lcd-line {
   margin: 0;
 }
 
@@ -184,11 +187,13 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-.skills-city__lcd-idle {
-  margin-top: var(--spacing-2);
-  color: var(--color-lcd-dim);
-  font-size: var(--font-size-lcd-line);
-  letter-spacing: 0.2em;
+.skills-city__lcd-title--district {
+  display: none;
+}
+
+.skills-city__lcd-line--district {
+  margin-top: 0;
+  font-size: var(--font-size-lcd-description);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -201,8 +206,8 @@ onUnmounted(() => {
     animation-delay: 0.25s;
   }
 
-  .skills-city__lcd-idle {
-    animation: skills-city-blink 1.2s steps(2) infinite;
+  .skills-city__lcd-line--district {
+    animation-delay: 0s;
   }
 }
 
@@ -216,20 +221,16 @@ onUnmounted(() => {
   }
 }
 
-@keyframes skills-city-blink {
-  50% {
-    opacity: 0.4;
-  }
-}
-
-/* On a phone the screen is too small for a sentence, so it shows just the name, larger. */
-@container (width < 20rem) {
-  .skills-city__lcd-line,
-  .skills-city__lcd-idle {
+/* On a phone the screen is too small for a sentence and the signs are too small to read, so it
+   shows the name instead, larger. */
+@container (width < 15rem) {
+  .skills-city__lcd-line {
     display: none;
   }
 
-  .skills-city__lcd-title {
+  .skills-city__lcd-title,
+  .skills-city__lcd-title--district {
+    display: block;
     font-size: var(--font-size-lcd-title-compact);
   }
 }

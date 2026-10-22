@@ -165,8 +165,9 @@ orthographic, those corners always land on an upright rectangle, so no perspecti
 needed and the text stays sharp at any size with no texture work. The rectangle is recomputed only
 when the canvas is resized, since nothing moves the sign.
 
-Its text is sized in container units of that rectangle, so it scales with the city. On a phone the
-screen is too small for a sentence and shows only the name; the full descriptions stay in the page
+Its text is sized in container units of that rectangle, so it scales with the city. A hovered district shows only its description, since its sign already names
+it. On a phone the screen is too small for a sentence and the signs too small to read, so it shows
+the name instead; the full descriptions stay in the page
 as a list for screen readers. The look comes from three layers: a dark surface, a repeating gradient
 of thin dark lines for the scan lines, and a soft glow on the text. The sign's metal frame is the
 bezel.
@@ -174,6 +175,6 @@ bezel.
 The typing effect is a clip that uncovers the text in a fixed number of steps, from left to right,
 with the description starting a moment after the title. Replaying it for every new district needs
 one detail: the screen's content is keyed on the hovered district, so it is rebuilt each time and
-its animation starts over. With nothing hovered it shows the heading and blinks a prompt; with reduced motion requested
+its animation starts over. With nothing hovered it shows the section heading; with reduced motion requested
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.
