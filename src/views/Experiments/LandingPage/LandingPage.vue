@@ -790,6 +790,8 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
       introStage.value = 'awake'
       rememberIntroSeen()
       handOverToPhysics(logo, letters, bodies)
+      // The panel copied the lights while the room slept, before the spot moved to the letters.
+      refreshLookElements(lookParts)
     }
   })
   window.addEventListener('resize', onResize)

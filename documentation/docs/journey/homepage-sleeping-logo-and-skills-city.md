@@ -154,7 +154,8 @@ pixel of the screen.
 ### Every attempt kept as a preset
 
 Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
-lighting, the first pass with a rim, navy cardstock, a light letterpress card with the logo in navy
+lighting, the first pass with a rim, navy cardstock, the same cardstock tuned by hand to a spotlit
+room with no key light and a wider, softer spot (now the default), a light letterpress card with the logo in navy
 ink, and two chromes reflecting the skills city: a dark satin one tuned by hand in the panel, with a
 faint blurred reflection, and a polished dark mirror, also tuned by hand, with a stronger one. A glossy take and a layered cut-paper look were tried too and dropped.
 The Config panel switches between them live, and an address such as `?look=letterpress` opens one
@@ -164,14 +165,18 @@ every few seconds regardless, so it checks first whether any piece was moved or 
 and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
 rather than a fixed answer. The Lights section recognises its lights by name, so the hero's spot is
 named as the scene's spot light to join the ambient and key lights there instead of getting a row of
-its own.
+its own. The spot also shows where it hangs and the point it aims at, both movable. The panel copies
+the lights once, while the room is still asleep and the spot is still on the logo's feet, so it
+copies them again once the logo is awake; otherwise it would show the sleeping position.
+
+![The Lights panel with the spot's beam, position and target, beside the spotlit cardstock](/img/homepage/hero-spot-panel.webp)
 
 The panel's controls first looked frozen: a slider moved and snapped back. The panel redraws a
 control only when the value it reads is reactive, and a three.js material is not, so every control
 now reads a reactive copy of its values, updated on each edit and rebuilt on each preset switch.
 The logo and the letters share one material, so they share one set of controls too.
 
-![The six hero presets: original, rim light, navy cardstock, letterpress, chrome and polished chrome](/img/homepage/hero-looks.webp)
+![The first six hero presets: original, rim light, navy cardstock, letterpress, chrome and polished chrome](/img/homepage/hero-looks.webp)
 
 A preset is plain data, one entry per look, and a switch blends from the look on screen to the next
 over a second and a half instead of snapping. Every number, colour and light position is mixed

@@ -11,10 +11,10 @@ export const LIGHT_ELEMENT_NAMES: Set<string> = new Set([
   'sky'
 ])
 
-const asPanelPosition = (light: THREE.Object3D) => ({
-  x: light.position.x,
-  y: light.position.y,
-  z: light.position.z
+const asPanelPosition = ({ position }: THREE.Object3D) => ({
+  x: position.x,
+  y: position.y,
+  z: position.z
 })
 
 /**
@@ -68,7 +68,9 @@ export const readLightsFromScene = (
               color: spot.color.getHex(),
               intensity: spot.intensity,
               angle: spot.angle,
-              penumbra: spot.penumbra
+              penumbra: spot.penumbra,
+              position: asPanelPosition(spot),
+              target: asPanelPosition(spot.target)
             }
           }
         : {}),

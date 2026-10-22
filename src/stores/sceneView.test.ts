@@ -502,6 +502,27 @@ describe('useSceneViewStore', () => {
     })
   })
 
+  describe('adoptSceneLights', () => {
+    it.each([
+      ['position', (spot: THREE.SpotLight) => spot.position],
+      ['target', (spot: THREE.SpotLight) => spot.target.position]
+    ] as const)('moves the spot light %s from the panel', (path, read) => {
+      // Arrange
+      const store = useSceneViewStore()
+      const scene = new THREE.Scene()
+      const spot = new THREE.SpotLight()
+      spot.name = 'spot-light'
+      scene.add(spot, spot.target)
+      store.adoptSceneLights(scene)
+
+      // Act
+      store.updateLightValue('spot', path, { x: 1, y: 2, z: 3 })
+
+      // Assert
+      expect(read(spot).toArray()).toEqual([1, 2, 3])
+    })
+  })
+
   describe('cleanup', () => {
     it('should clear all stores and reset refs', async () => {
       const store = useSceneViewStore()

@@ -139,6 +139,20 @@ describe('updateLights and lightPresets', () => {
     expect(skyMaterial.color.getHex()).toBe(0x1f2740)
   })
 
+  it('moves a spot light and its target, so a panel can place and aim it', () => {
+    // Arrange
+    const scene = new THREE.Scene()
+    getLights(scene, { spot: {} })
+
+    // Act
+    updateLights(scene, { spot: { position: [5, 10, 7], target: [0, -2, 1] } })
+
+    // Assert
+    const spot = scene.getObjectByName('spot-light') as THREE.SpotLight
+    expect(spot.position.toArray()).toEqual([5, 10, 7])
+    expect(spot.target.position.toArray()).toEqual([0, -2, 1])
+  })
+
   it('updates a hemisphere light in place when the config names it', () => {
     const scene = new THREE.Scene()
     getLights(scene, { hemisphere: { colors: [0xffffff, 0x444444] } })

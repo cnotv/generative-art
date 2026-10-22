@@ -232,11 +232,27 @@ export const pointLightSchema = {
   intensity: { min: 0, max: 20, step: 0.1, label: 'Intensity' }
 }
 
+// Physically based lighting falls off with distance squared, so a spot a few units away needs
+// hundreds where the old range stopped at 20.
 export const spotLightSchema = {
   color: { color: true, label: 'Color' },
-  intensity: { min: 0, max: 20, step: 0.1, label: 'Intensity' },
+  intensity: { min: 0, max: 1000, step: 1, label: 'Intensity' },
   angle: { min: 0, max: 1.57, step: 0.01, label: 'Angle' },
-  penumbra: { min: 0, max: 1, step: 0.05, label: 'Penumbra' }
+  penumbra: { min: 0, max: 1, step: 0.05, label: 'Penumbra' },
+  position: {
+    component: 'CoordinateInput',
+    label: 'Position',
+    min: { x: -50, y: -50, z: -50 },
+    max: { x: 50, y: 50, z: 50 },
+    step: { x: 0.1, y: 0.1, z: 0.1 }
+  },
+  target: {
+    component: 'CoordinateInput',
+    label: 'Target',
+    min: { x: -50, y: -50, z: -50 },
+    max: { x: 50, y: 50, z: 50 },
+    step: { x: 0.1, y: 0.1, z: 0.1 }
+  }
 }
 
 export const rectAreaLightSchema = {

@@ -155,6 +155,32 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     reflection: 0,
     reflectionBlur: 0
   },
+  spotlitCardstock: {
+    label: 'Spotlit cardstock',
+    wallColor: 0x1d2738,
+    floorColor: 0x2a3547,
+    logoColor: 0x243049,
+    logoRoughness: 0.95,
+    logoMetalness: 0,
+    paper: true,
+    embossStrength: 0.9,
+    rimStrength: 0,
+    ambientIntensity: 0.6,
+    key: { color: 0xffffff, intensity: 0, position: [-4, 6, 10] },
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 200,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.77,
+      penumbra: 0.75
+    },
+    shadowRadius: 10,
+    ink: false,
+    reflection: 0,
+    reflectionBlur: 0
+  },
   letterpress: {
     label: 'Letterpress',
     wallColor: 0xf6f0e4,
@@ -234,7 +260,7 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     reflectionBlur: 0.36
   }
 }
-export const DEFAULT_HERO_LOOK = 'cardstock'
+export const DEFAULT_HERO_LOOK = 'spotlitCardstock'
 /** Seconds a switch from one look to the next takes to blend. */
 export const HERO_LOOK_TRANSITION_SECONDS = 1.5
 /**
