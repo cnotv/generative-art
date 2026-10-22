@@ -863,8 +863,9 @@ onUnmounted(() => {
       </a>
     </header>
     <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
-      <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
-      <p class="landing-page__lead">{{ OWNER_SUMMARY }}</p>
+      <!-- The city's title sign shows these; they stay in the page for screen readers and search. -->
+      <h2 id="skills-title" class="sr-only">What I work on</h2>
+      <p class="sr-only">{{ OWNER_SUMMARY }}</p>
       <SkillsCity />
     </section>
     <section class="landing-page__section" aria-labelledby="sectors-title">
@@ -1007,13 +1008,6 @@ onUnmounted(() => {
   font-size: var(--font-size-xl);
   font-weight: normal;
   letter-spacing: 0.12em;
-}
-
-.landing-page__lead {
-  margin: calc(-1 * var(--spacing-4)) 0 var(--spacing-8);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.08em;
 }
 
 .landing-page__footer {

@@ -51,6 +51,7 @@ ROOF = ("roof", "#5d6f92")
 GLASS = ("glass", "#e9f0ff")
 TRUNK = ("trunk", "#8a7a6a")
 LEAF = ("leaf", "#a8d8a8")
+LEAF_DARK = ("leaf-dark", "#7fb89a")
 LAWN = ("lawn", "#46655f")
 WATER = ("water", "#8fc0f0")
 SMOKE = ("smoke", "#dfe6f2")
@@ -438,6 +439,18 @@ SIGN_TEXT = ("sign-text", "#f4f6fb")
 SIGN_BOARD = ("sign-board", "#1b2238")
 SIGN_METAL = ("sign-metal", "#9aaac6")
 SIGN_FRAME = 0.06
+TITLE_TEXT = "What I work on"
+TREE_GRID = 0.45
+TREE_SPACING = 0.68
+TREE_SHORE = 0.96
+TREE_DENSITY = 0.85
+TREE_CLEAR_HEIGHT = 0.1
+TITLE_SUMMARY = "15+ years building, from startup to enterprise."
+TITLE_SIZE = 1.05
+TITLE_SUMMARY_SIZE = 0.56
+TITLE_SIGN_DEPTH = 9.75
+TITLE_POST_HEIGHT = 1.9
+TITLE_WIDTH = 13.0
 SIGN_TEXT_SIZE = 0.66
 SIGN_PADDING = 0.18
 SIGN_POST_HEIGHT = 0.75
@@ -648,45 +661,59 @@ def sign_font():
     return None
 
 
-def district_sign(name, text, polygon, parent):
-    """The district's name on a signboard planted on its front edge, standing up and facing the
-    camera so it reads like a street sign."""
-    depth, left, right = text_line(polygon)
+def sign_text(name, text, size, widest):
+    """One line of bold text as a mesh, shrunk if it would be wider than the room it has."""
     bpy.ops.object.text_add(location=(0, 0, 0))
     label = bpy.context.active_object
     font = sign_font()
     if font:
         label.data.font = font
     label.data.body = text
-    label.data.size = SIGN_TEXT_SIZE
+    label.data.size = size
     label.data.align_x = "CENTER"
     label.data.align_y = "CENTER"
     label.data.resolution_u = 1
     bpy.ops.object.convert(target="MESH")
     label = bpy.context.active_object
-    label.name = f"{name}-text"
-    widest = (right - left) * TEXT_MAX_WIDTH - SIGN_PADDING * 2
+    label.name = name
     if label.dimensions.x > widest:
         label.scale = (widest / label.dimensions.x,) * 3
         bpy.ops.object.transform_apply(scale=True, rotation=False, location=False)
-    width, height = label.dimensions.x + SIGN_PADDING * 2, label.dimensions.y + SIGN_PADDING * 1.4
-    x, y = from_screen((left + right) / 2, depth)
-    # Upright and turned to face the camera: the board's front looks along minus screen depth.
+    return label
+
+
+def signboard(name, lines, x, y, parent, post_height, widest):
+    """A signboard in a metal frame, standing up and facing the camera, with one or more lines
+    of text: the legs run up the board's sides to its top and rails close its top and bottom
+    edges, so the board is held by the frame rather than floating on two sticks."""
+    labels = [sign_text(f"{name}-text-{index}", text, size, widest - SIGN_PADDING * 2)
+              for index, (text, size) in enumerate(lines)]
+    gap = SIGN_PADDING * 0.5
+    width = max(label.dimensions.x for label in labels) + SIGN_PADDING * 2
+    height = sum(label.dimensions.y for label in labels) + gap * (len(labels) - 1) + SIGN_PADDING * 1.4
     sign = empty(f"{name}-sign", (x, y, AREA_HEIGHT), parent, rot=(0, 0, SCREEN_ANGLE))
-    bottom = SIGN_POST_HEIGHT - height / 2
-    top = SIGN_POST_HEIGHT + height / 2
-    # A metal frame: the legs run up the board's sides to its top, with rails along its top
-    # and bottom edges, so the board is held by the frame rather than floating on two sticks.
+    bottom, top = post_height - height / 2, post_height + height / 2
     for side in (-1, 1):
         box(f"{name}-sign-leg-{side}", (SIGN_FRAME, SIGN_FRAME, top + SIGN_FRAME),
             (side * (width / 2 + SIGN_FRAME / 2), 0, 0), SIGN_METAL, sign)
     for edge, z in (("top", top), ("bottom", bottom - SIGN_FRAME)):
         box(f"{name}-sign-rail-{edge}", (width + SIGN_FRAME * 2, SIGN_FRAME, SIGN_FRAME), (0, 0, z), SIGN_METAL, sign)
     box(f"{name}-sign-board", (width, 0.05, height), (0, 0, bottom), SIGN_BOARD, sign)
-    label.parent = sign
-    label.location = (0, -0.04, SIGN_POST_HEIGHT)
-    label.rotation_euler = (math.pi / 2, 0, 0)
-    finish(label, SIGN_TEXT, sign)
+    line_top = top - SIGN_PADDING * 0.7
+    for label in labels:
+        label.parent = sign
+        label.location = (0, -0.04, line_top - label.dimensions.y / 2)
+        label.rotation_euler = (math.pi / 2, 0, 0)
+        finish(label, SIGN_TEXT, sign)
+        line_top -= label.dimensions.y + gap
+    return sign
+
+
+def district_sign(name, text, polygon, parent):
+    """The district's name on a signboard planted on its front edge, like a street sign."""
+    depth, left, right = text_line(polygon)
+    x, y = from_screen((left + right) / 2, depth)
+    signboard(name, [(text, SIGN_TEXT_SIZE)], x, y, parent, SIGN_POST_HEIGHT, (right - left) * TEXT_MAX_WIDTH)
     return depth
 
 
@@ -731,6 +758,7 @@ builders = {key: build for key, _, build in DISTRICTS}
 for key, filler_index in FILLER_OF.items():
     _, accents[key], builders[key] = FILLERS[filler_index]
 
+district_roads = []
 for index, key in enumerate(SLOTS):
     is_district = key not in FILLER_OF
     area = bpy.data.objects.new(f"district-{key}" if is_district else f"block-{key}", None)
@@ -748,6 +776,7 @@ for index, key in enumerate(SLOTS):
     # A district is a raised tile with a ring of road around it; neighbouring rings meet into
     # the streets between districts, and the land beyond the outer ring stays one piece.
     road = cell(key, sites, city_limit)
+    district_roads.append([(x + sites[key][0], y + sites[key][1]) for x, y in road])
     tile = inset(road, STREET_WIDTH)
     slab(f"{key}-road", road, ROAD_HEIGHT, 0.0, ROAD, area)
     tint = LAWN if key == "ux" else (f"{key}-area", blend("#34405a", accents[key], AREA_TINT))
@@ -769,6 +798,48 @@ box("harbour-boat-hull", (1.8, 0.65, 0.28), (0, 0, 0), ("k8s-accent", "#e8a8b8")
 box("harbour-boat-cabin", (0.6, 0.48, 0.3), (0.3 * SCREEN_RIGHT[0], 0.3 * SCREEN_RIGHT[1], 0.28), WALL, boat,
     rot_z=SCREEN_ANGLE)
 anim(boat, "bob", axis="y", speed=1.4, amount=0.05)
+
+# The section's heading and summary on a big sign planted on the land behind the city.
+title_x, title_y = from_screen(0.0, TITLE_SIGN_DEPTH)
+signboard("title", [(TITLE_TEXT, TITLE_SIZE), (TITLE_SUMMARY, TITLE_SUMMARY_SIZE)], title_x, title_y, ground,
+          TITLE_POST_HEIGHT, TITLE_WIDTH)
+
+
+def pine(name, loc, parent, scale):
+    x, y, z = loc
+    cylinder(f"{name}-trunk", 0.06 * scale, 0.3 * scale, (x, y, z + 0.15 * scale), TRUNK, parent, vertices=5)
+    cone(f"{name}-crown", 0.32 * scale, 0.9 * scale, (x, y, z + 0.72 * scale), LEAF_DARK, parent, vertices=6)
+
+
+# Trees wherever the land is still bare: off the districts and their roads, clear of anything
+# already standing, and a step in from the shore.
+bpy.context.view_layer.update()
+occupied = set()
+for obj in [o for o in scene.objects if o.type == "MESH"]:
+    for vertex in obj.data.vertices:
+        point = obj.matrix_world @ vertex.co
+        if point.z > TREE_CLEAR_HEIGHT:
+            occupied.add((round(point.x / TREE_GRID), round(point.y / TREE_GRID)))
+shore = [(x * TREE_SHORE, y * TREE_SHORE) for x, y in island]
+tree_rng = random.Random(23)
+planted = 0
+for column in range(-30, 31):
+    for row in range(-26, 27):
+        x = column * TREE_SPACING + tree_rng.uniform(-0.3, 0.3)
+        y = row * TREE_SPACING + tree_rng.uniform(-0.3, 0.3)
+        cell_key = (round(x / TREE_GRID), round(y / TREE_GRID))
+        crowded = any((cell_key[0] + dx, cell_key[1] + dy) in occupied for dx in (-1, 0, 1) for dy in (-1, 0, 1))
+        if crowded or not inside((x, y), shore) or to_screen(x, y)[0] < COAST + 0.6:
+            continue
+        if any(inside((x, y), road) for road in district_roads) or tree_rng.random() > TREE_DENSITY:
+            continue
+        scale = tree_rng.uniform(0.55, 0.9)
+        if tree_rng.random() < 0.65:
+            pine(f"land-pine-{planted}", (x, y, 0), ground, scale)
+        else:
+            tree(f"land-tree-{planted}", (x, y, 0), ground, scale)
+        planted += 1
+print(f"TREES {planted}")
 
 bpy.context.view_layer.update()
 
