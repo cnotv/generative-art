@@ -129,11 +129,6 @@ export const PRODUCT_SECTORS = [
 export const MARKET_AVATARS_MODEL = 'market-avatars.glb'
 /** How far past its bounding sphere each avatar's camera frames it. */
 export const AVATAR_FRAME_PADDING = 1.05
-/** Each avatar turns gently to and fro: how far, in radians, and how fast. */
-export const AVATAR_SWING = 0.6
-export const AVATAR_SWING_SPEED = 0.8
-/** The share of a full swing cycle between one avatar and the next, so they do not move in step. */
-export const AVATAR_SWING_STAGGER = 0.15
 
 /** How far above the market section the traces to the sectors start: the island's southern tip. */
 export const SECTOR_TRACE_ORIGIN_RISE = 104

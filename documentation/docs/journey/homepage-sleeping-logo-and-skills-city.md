@@ -31,6 +31,11 @@ comes from a short list of phases, each describing only its own slice of the mot
 | Settle       | 1.9 to 2.8           | a damped rock on landing; the letters appear under it           |
 | Lights       | 0.9 to 2.8           | the room brightens throughout, ending in the awake look         |
 
+The intro never holds the page: scrolling works from the first frame, and there is no scroll
+arrow, which misbehaved on phones. A phone held upright crops the room to a sliver, so it shows a
+small phone icon tipping over to suggest landscape. The name and profession use the bold face of
+the city's signs, tying the hero to the section below.
+
 Treating the intro as a pure function paid off three times. It is testable without a renderer.
 Skipping it is trivial: a return visit in the same session asks for the pose "infinitely long
 after waking", which is simply the final one. And no state machine has to remember where it was.
@@ -180,26 +185,26 @@ its animation starts over. With nothing hovered it shows the section heading; wi
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.
 
-## Arrows to the market
+## Lines to the market
 
-![Dotted arrows fanning out from the dock at the island's tip to six small 3D sector avatars](/img/homepage/sector-traces.webp)
+![Dotted lines fanning out from the dock at the island's tip to six small 3D sector avatars](/img/homepage/sector-traces.webp)
 
 The sectors the products serve have no heading of their own: a boat sails from the harbour round
-the island to a dock at its southern tip, and dotted arrows fan out from that dock to six small
-avatars, one per sector, with the dots marching towards them. The arrows are an SVG drawn behind
+the island to a dock at its southern tip, and dotted lines fan out from that dock to six small 3D
+avatars, one per sector, with the dots marching towards them. The lines are an SVG drawn behind
 the section from where the avatars actually are, and redrawn whenever the list changes size.
 
 The first version was a circuit board: orthogonal traces routed down lanes between a grid of
 cells, with rules about which trace turns off highest so none would cross. It read as wiring
 rather than as an outcome reaching a market. Small avatars in a row make the fan-out the whole
 picture, and a curve that leaves straight down and arrives straight down needs no routing at all.
-On a phone the six sit in two staggered rows, the second shifted by half an avatar, so each arrow
+On a phone the six sit in two staggered rows, the second shifted by half an avatar, so each line
 to the second row drops through a gap in the first instead of across an avatar.
 
-The dock and the arrows live in different worlds, one in the 3D model and one in the page, and
+The dock and the lines live in different worlds, one in the 3D model and one in the page, and
 nothing measures one against the other. They meet because the camera frames the whole model and
 its widest part is the sea: a point halfway across the sea always lands in the middle of the
-canvas, whatever its size, which is where the arrows start. The boat's course is stored on the
+canvas, whatever its size, which is where the lines start. The boat's course is stored on the
 model as a list of points, like the other motion tags, so the page sails it without knowing it
 is a boat.
 
@@ -207,9 +212,11 @@ Each avatar is a small 3D model built by its own Blender script, in the city's p
 a telecom mast, a stack of publications, the scales of governance, a shield and a town hall. Six
 canvases would mean six WebGL contexts, and browsers cap how many a page may hold, so one canvas
 covers the whole section and each model is drawn only into the square over its circle, with its
-own camera, before the next. The circles are measured every frame for that, so the models stay on
-them whatever moves the layout. The canvas comes after the list in the page, so it paints over the
-circles' backgrounds rather than under them.
+own camera, before the next. The models stand still, so the canvas is drawn again only when the
+section changes size. Arrowheads, circle outlines and a gentle to-and-fro turn were all tried and
+dropped: each competed with the models for attention. Drawing only on demand also exposed a
+trap: three.js sets its clear colour inside `render()`, so a manual clear before the first render
+filled the whole canvas with opaque black until the colour was set to transparent up front.
 
-The arrows, by contrast, measure the avatars once per resize, by their offsets summed up through
+The lines measure the avatars the same way, once per resize, by their offsets summed up through
 every offset parent to the section, so a transformed ancestor on the way cannot leave them short.

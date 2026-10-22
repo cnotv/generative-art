@@ -6,10 +6,7 @@ import {
   CITY_CAMERA_DISTANCE,
   CITY_CAMERA_NEAR,
   CITY_MAX_PIXEL_RATIO,
-  AVATAR_FRAME_PADDING,
-  AVATAR_SWING,
-  AVATAR_SWING_SPEED,
-  AVATAR_SWING_STAGGER
+  AVATAR_FRAME_PADDING
 } from './config'
 import { createCityLights } from './cityStage'
 import type { AvatarStage, SectorAvatar, ViewportRect } from './types'
@@ -17,7 +14,7 @@ import type { AvatarStage, SectorAvatar, ViewportRect } from './types'
 const AVATAR_PREFIX = 'avatar-'
 
 // Each avatar gets its own camera, seen from the same direction as the city and framing the
-// sphere around the model, so the model can turn without leaving its circle.
+// sphere around the model.
 const frameAvatar = (object: THREE.Object3D): SectorAvatar => {
   const sphere = new THREE.Box3().setFromObject(object).getBoundingSphere(new THREE.Sphere())
   const extent = sphere.radius * AVATAR_FRAME_PADDING
@@ -35,7 +32,7 @@ const frameAvatar = (object: THREE.Object3D): SectorAvatar => {
     .multiplyScalar(CITY_CAMERA_DISTANCE)
     .add(sphere.center)
   camera.lookAt(sphere.center)
-  return { object, camera, baseYaw: object.rotation.y }
+  return { object, camera }
 }
 
 /**
@@ -51,6 +48,9 @@ export const createAvatarStage = async (
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, CITY_MAX_PIXEL_RATIO))
   renderer.autoClear = false
+  // The page shows through everywhere but the models; three.js only sets its own clear colour
+  // inside render(), so the manual clear before the first one would otherwise be opaque.
+  renderer.setClearColor(0x000000, 0)
   const scene = new THREE.Scene()
   const { model } = await loadGLTF(MARKET_AVATARS_MODEL)
   scene.add(model)
@@ -80,26 +80,11 @@ export const toViewportRect = (
 })
 
 /**
- * How far an avatar has turned from its resting pose at a moment.
- * @param seconds Time since the avatars started moving.
- * @param index The avatar's place in the row.
- * @returns The turn in radians.
- */
-export const getAvatarSwing = (seconds: number, index: number): number =>
-  Math.sin((seconds * AVATAR_SWING_SPEED + index * AVATAR_SWING_STAGGER) * Math.PI * 2) *
-  AVATAR_SWING
-
-/**
  * Draws every avatar into the part of the canvas that covers its circle.
  * @param stage The avatar stage.
  * @param viewports Where each avatar's circle is in the canvas, in page order.
- * @param seconds Time since the avatars started moving.
  */
-export const renderAvatars = (
-  stage: AvatarStage,
-  viewports: ViewportRect[],
-  seconds: number
-): void => {
+export const renderAvatars = (stage: AvatarStage, viewports: ViewportRect[]): void => {
   const { renderer, scene } = stage
   renderer.setScissorTest(false)
   renderer.clear()
@@ -107,7 +92,6 @@ export const renderAvatars = (
   stage.avatars.forEach((avatar, index) => {
     const viewport = viewports[index]
     if (!avatar || !viewport) return
-    avatar.object.rotation.y = avatar.baseYaw + getAvatarSwing(seconds, index)
     renderer.setViewport(viewport.x, viewport.y, viewport.width, viewport.height)
     renderer.setScissor(viewport.x, viewport.y, viewport.width, viewport.height)
     renderer.render(scene, avatar.camera)

@@ -99,7 +99,6 @@ export interface RouteSpot {
 export interface SectorAvatar {
   object: THREE.Object3D
   camera: THREE.OrthographicCamera
-  baseYaw: number
 }
 
 /** The market avatars' shared renderer and scene, one avatar per sector in page order. */

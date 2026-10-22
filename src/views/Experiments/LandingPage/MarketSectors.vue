@@ -6,39 +6,29 @@ import { createAvatarStage, renderAvatars, toViewportRect } from './avatarStage'
 import { PRODUCT_SECTORS, MARKET_AVATARS_MODEL } from './config'
 import type { AvatarStage } from './types'
 
-const MILLISECONDS_PER_SECOND = 1000
-
 const list = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
 
 let stage: AvatarStage | null = null
 let frameId = 0
-let isOnScreen = false
 let resizeObserver: ResizeObserver | null = null
-let visibilityObserver: IntersectionObserver | null = null
-const startedAt = performance.now()
 
-// The circles are measured every frame rather than once, so the models stay on them while the
-// page lays out, and the avatars only move while the section is on screen.
+// The avatars stand still, so they are drawn only when the section changes size.
 const renderFrame = (): void => {
+  frameId = 0
   if (!stage || !canvas.value || !list.value) return
   const canvasBox = canvas.value.getBoundingClientRect()
   // Each item's first child is its circle; the list keeps them in page order.
   const viewports = [...list.value.children].flatMap(({ firstElementChild: circle }) =>
     circle ? [toViewportRect(circle.getBoundingClientRect(), canvasBox)] : []
   )
-  renderAvatars(stage, viewports, (performance.now() - startedAt) / MILLISECONDS_PER_SECOND)
-  frameId = isOnScreen ? requestAnimationFrame(renderFrame) : 0
-}
-
-const requestRender = (): void => {
-  if (!frameId) frameId = requestAnimationFrame(renderFrame)
+  renderAvatars(stage, viewports)
 }
 
 const resizeStage = (): void => {
   if (!stage || !canvas.value) return
   stage.renderer.setSize(canvas.value.clientWidth, canvas.value.clientHeight, false)
-  requestRender()
+  if (!frameId) frameId = requestAnimationFrame(renderFrame)
 }
 
 onMounted(async () => {
@@ -51,18 +41,11 @@ onMounted(async () => {
   if (!canvas.value) return
   resizeObserver = new ResizeObserver(resizeStage)
   resizeObserver.observe(canvas.value)
-  visibilityObserver = new IntersectionObserver(([entry]) => {
-    isOnScreen = entry.isIntersecting
-    if (isOnScreen) requestRender()
-  })
-  visibilityObserver.observe(canvas.value)
-  resizeStage()
 })
 
 onUnmounted(() => {
   cancelAnimationFrame(frameId)
   resizeObserver?.disconnect()
-  visibilityObserver?.disconnect()
   stage?.renderer.dispose()
   stage = null
   assetsRelease(`${import.meta.env.BASE_URL}${MARKET_AVATARS_MODEL}`)
@@ -160,11 +143,9 @@ onUnmounted(() => {
 }
 
 .market-sectors__avatar {
+  display: block;
   width: var(--spacing-20);
   height: var(--spacing-20);
-  border: var(--spacing-px) solid var(--color-canvas-overlay-muted);
-  border-radius: var(--radius-full);
-  background-color: var(--color-canvas-overlay-surface);
 }
 
 .market-sectors__item-icon {
