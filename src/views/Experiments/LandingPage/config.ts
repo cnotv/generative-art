@@ -72,8 +72,8 @@ export const RIM_LIGHT_POWER = 3
 
 /**
  * Every finish tried for the hero, picked from the Config panel or with ?look= in the address.
- * The original lighting, the first pass with a rim, a glossy take with light from behind, navy
- * cardstock with an embossed logo, and a light letterpress card with the logo in ink.
+ * The original lighting, the first pass with a rim, navy cardstock with an embossed logo, and a
+ * light letterpress card with the logo in ink.
  */
 export const HERO_LOOKS: Record<string, HeroLook> = {
   original: {
@@ -82,13 +82,11 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     floorColor: 0x2a3547,
     logoColor: 0x1d2738,
     logoRoughness: 0.9,
-    logoMetalness: 0,
     paper: false,
     embossStrength: 0,
     rimStrength: 0,
     ambientIntensity: 0.8,
     key: { color: 0xffffff, intensity: 1.2, position: [5, 3, 5] },
-    back: null,
     spot: {
       color: 0xc9d8ff,
       intensity: 500,
@@ -107,13 +105,11 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     floorColor: 0x2a3547,
     logoColor: 0x27334c,
     logoRoughness: 0.7,
-    logoMetalness: 0,
     paper: false,
     embossStrength: 0,
     rimStrength: 0.22,
     ambientIntensity: 0.8,
     key: { color: 0xffffff, intensity: 0.9, position: [3, 5, 10] },
-    back: null,
     spot: {
       color: 0xc9d8ff,
       intensity: 500,
@@ -126,44 +122,17 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     shadowRadius: 6,
     ink: false
   },
-  glossy: {
-    label: 'Glossy',
-    wallColor: 0x0d121c,
-    floorColor: 0x1c2030,
-    logoColor: 0x1e2840,
-    logoRoughness: 0.35,
-    logoMetalness: 0.25,
-    paper: false,
-    embossStrength: 0,
-    rimStrength: 0.35,
-    ambientIntensity: 0.55,
-    key: { color: 0xffffff, intensity: 0.7, position: [3, 5, 10] },
-    back: { color: 0xc9d8ff, intensity: 1.4, position: [-2, 7, -9] },
-    spot: {
-      color: 0xc9d8ff,
-      intensity: 420,
-      side: 5,
-      height: 10,
-      forward: 7,
-      angle: 0.36,
-      penumbra: 0.75
-    },
-    shadowRadius: 8,
-    ink: false
-  },
   cardstock: {
     label: 'Navy cardstock',
     wallColor: 0x1d2738,
     floorColor: 0x2a3547,
     logoColor: 0x243049,
     logoRoughness: 0.95,
-    logoMetalness: 0,
     paper: true,
     embossStrength: 0.9,
     rimStrength: 0,
     ambientIntensity: 0.95,
     key: { color: 0xffffff, intensity: 0.9, position: [-4, 6, 10] },
-    back: null,
     spot: {
       color: 0xc9d8ff,
       intensity: 380,
@@ -182,13 +151,11 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     floorColor: 0xeee5d4,
     logoColor: 0x26324d,
     logoRoughness: 0.9,
-    logoMetalness: 0,
     paper: true,
     embossStrength: 0.5,
     rimStrength: 0,
     ambientIntensity: 1.25,
     key: { color: 0xfff0dc, intensity: 1.4, position: [-4, 6, 10] },
-    back: null,
     spot: {
       color: 0xfff4e6,
       intensity: 260,

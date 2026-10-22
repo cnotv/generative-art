@@ -171,7 +171,6 @@ const createResizeHandler =
 interface HeroLights {
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
-  backLight: THREE.DirectionalLight
 }
 
 // Colours, strengths and positions come from the chosen look once the scene is built.
@@ -183,12 +182,8 @@ const createLights = (scene: THREE.Scene): HeroLights => {
   dirLight.name = 'directional-light'
   dirLight.castShadow = true
 
-  const backLight = new THREE.DirectionalLight(WHITE, 0)
-  backLight.name = 'back-light'
-  backLight.castShadow = true
-
-  scene.add(ambientLight, dirLight, backLight)
-  return { ambientLight, dirLight, backLight }
+  scene.add(ambientLight, dirLight)
+  return { ambientLight, dirLight }
 }
 
 type PhysicsWorld = Parameters<typeof getPhysic>[0]
@@ -586,9 +581,16 @@ interface RegisterPanelsOptions {
   orbit: OrbitControls
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
+  spot: THREE.SpotLight
 }
 
-const registerPanels = ({ camera, orbit, ambientLight, dirLight }: RegisterPanelsOptions): void => {
+const registerPanels = ({
+  camera,
+  orbit,
+  ambientLight,
+  dirLight,
+  spot
+}: RegisterPanelsOptions): void => {
   const orthoCameraSchema = {
     position: cameraSchema.position,
     orbitTarget: cameraSchema.orbitTarget,
@@ -607,7 +609,11 @@ const registerPanels = ({ camera, orbit, ambientLight, dirLight }: RegisterPanel
     title: 'Directional Light'
   })
   const debugStore = useDebugSceneStore()
-  debugStore.registerSceneElements(camera as unknown as THREE.Camera, [ambientLight, dirLight])
+  debugStore.registerSceneElements(camera as unknown as THREE.Camera, [
+    ambientLight,
+    dirLight,
+    spot
+  ])
 }
 
 const createResetTimeline = (bodies: PhysicsBodies) => {
@@ -669,7 +675,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   scene.background = null
 
   const camera = createOrthographicCamera()
-  const { ambientLight, dirLight, backLight } = createLights(scene)
+  const { ambientLight, dirLight } = createLights(scene)
   const grainTexture = createPaperTexture()
   const contentMaterial = new THREE.MeshStandardMaterial()
   const shading = addCardShading(contentMaterial)
@@ -690,7 +696,6 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const lookParts: HeroLookParts = {
     ambientLight,
     keyLight: dirLight,
-    backLight,
     spot,
     wallMaterial,
     floorMaterial,
@@ -729,7 +734,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     () => heroConfig.value.look,
     (name) => (lookName.value = name)
   )
-  registerPanels({ camera, orbit, ambientLight, dirLight })
+  registerPanels({ camera, orbit, ambientLight, dirLight, spot })
   registerLookElements(lookParts)
 
   const timelineManager = createResetTimeline(bodies)

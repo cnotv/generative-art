@@ -80,7 +80,8 @@ export const createRoom = (
  */
 export const createCornerSpot = (scene: THREE.Scene): THREE.SpotLight => {
   const spot = new THREE.SpotLight()
-  spot.name = 'corner-spot'
+  // The Lights panel recognises its lights by name; this one joins it as the scene's spot.
+  spot.name = 'spot-light'
   spot.castShadow = true
   scene.add(spot, spot.target)
   return spot

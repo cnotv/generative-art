@@ -172,15 +172,12 @@ export interface HeroLook {
   floorColor: number
   logoColor: number
   logoRoughness: number
-  logoMetalness: number
   /** Whether the room and logo are cardstock, with grain, fibres and tooth. */
   paper: boolean
   embossStrength: number
   rimStrength: number
   ambientIntensity: number
   key: KeyLight
-  /** A light from behind that throws soft shadows forward onto the floor; null for none. */
-  back: KeyLight | null
   spot: SpotPlacement
   /** How far shadows blur at their edges, in shadow map texels. */
   shadowRadius: number
@@ -192,7 +189,6 @@ export interface HeroLook {
 export interface HeroLookParts {
   ambientLight: THREE.AmbientLight
   keyLight: THREE.DirectionalLight
-  backLight: THREE.DirectionalLight
   spot: THREE.SpotLight
   wallMaterial: THREE.MeshStandardMaterial
   floorMaterial: THREE.MeshStandardMaterial

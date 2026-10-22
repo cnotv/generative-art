@@ -154,15 +154,16 @@ pixel of the screen.
 ### Every attempt kept as a preset
 
 Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
-lighting, the first pass with a rim, a glossy take with a light from behind throwing soft shadows
-forward, navy cardstock, and a light letterpress card with the logo in navy ink. A layered cut-paper
-look was tried too and dropped.
+lighting, the first pass with a rim, navy cardstock, and a light letterpress card with the logo in
+navy ink. A glossy take and a layered cut-paper look were tried too and dropped.
 The Config panel switches between them live, and an address such as `?look=letterpress` opens one
 directly. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
 and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
-rather than a fixed answer.
+rather than a fixed answer. The Lights section recognises its lights by name, so the hero's spot is
+named as the scene's spot light to join the ambient and key lights there instead of getting a row of
+its own.
 
-![The five hero presets: original, rim light, glossy, navy cardstock and letterpress](/img/homepage/hero-looks.webp)
+![The four hero presets: original, rim light, navy cardstock and letterpress](/img/homepage/hero-looks.webp)
 
 A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
 colours and lights change in place, and the paper texture is put on or taken off. The

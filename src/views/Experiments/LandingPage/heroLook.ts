@@ -2,12 +2,10 @@ import * as THREE from 'three'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import type { ElementPropertiesConfig } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
-import { registerLightProperties } from '@/utils/lightProperties'
+import { useSceneViewStore } from '@/stores/sceneView'
 import { aimSpot, setPaper } from './introScene'
 import { SLEEP_AMBIENT_INTENSITY, SLEEP_DIRECTIONAL_INTENSITY } from './config'
 import type { HeroLook, HeroLookParts } from './types'
-
-const OFF_POSITION = [0, 1, 0] as const
 
 /**
  * Drives the hero's finish: puts a look on every light and surface, and brings the lights
@@ -33,7 +31,6 @@ export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) =>
       look.key.intensity,
       progress
     )
-    parts.backLight.intensity = (look.back?.intensity ?? 0) * progress
     parts.rim.value = look.rimStrength * progress
   }
 
@@ -45,16 +42,12 @@ export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) =>
 
     parts.logoMaterial.color.set(look.logoColor)
     parts.logoMaterial.roughness = look.logoRoughness
-    parts.logoMaterial.metalness = look.logoMetalness
     setPaper(parts.logoMaterial, look.paper ? parts.logoPaper : null)
     parts.emboss.value = look.embossStrength
 
     parts.keyLight.color.set(look.key.color)
     parts.keyLight.position.set(...look.key.position)
     parts.keyLight.shadow.radius = look.shadowRadius
-    parts.backLight.color.set(look.back?.color ?? 0xffffff)
-    parts.backLight.position.set(...(look.back?.position ?? OFF_POSITION))
-    parts.backLight.shadow.radius = look.shadowRadius
 
     parts.spot.color.set(look.spot.color)
     parts.spot.intensity = look.spot.intensity
@@ -119,42 +112,13 @@ const createLogoConfig = (parts: HeroLookParts, title: string): ElementPropertie
   }
 }
 
-const spotSchema = {
-  intensity: { min: 0, max: 1000, step: 10, label: 'Intensity' },
-  color: { color: true, label: 'Color' },
-  angle: { min: 0.1, max: 1.2, step: 0.01, label: 'Beam angle' },
-  penumbra: { min: 0, max: 1, step: 0.05, label: 'Edge softness' }
-}
-
-const backSchema = {
-  intensity: { min: 0, max: 5, step: 0.1, label: 'Intensity' },
-  color: { color: true, label: 'Color' }
-}
-
-// Reads the light itself rather than a copy, so after a look switch the panel shows the new values.
-const createLightConfig = (
-  light: THREE.SpotLight | THREE.DirectionalLight,
-  title: string,
-  schema: Record<string, unknown>
-): ElementPropertiesConfig => ({
-  title,
-  schema,
-  getValue: (path) => (path === 'color' ? light.color.getHex() : Reflect.get(light, path)),
-  updateValue: (path, value) => {
-    if (path === 'color') light.color.set(value as number)
-    else Reflect.set(light, path, value)
-  }
-})
-
 // Each element the looks change, with its panel. Registered again after every switch, so the
 // panel shows the new look's values.
 const getLookElements = (parts: HeroLookParts): [string, string, ElementPropertiesConfig][] => [
   ['logo', 'Group', createLogoConfig(parts, 'Logo')],
   ['cnotv-text', 'Group', createLogoConfig(parts, 'CNOTV Text')],
   ['room-wall', 'Mesh', createMaterialConfig(parts.wallMaterial, 'Wall')],
-  ['room-floor', 'Mesh', createMaterialConfig(parts.floorMaterial, 'Floor')],
-  ['corner-spot', 'SpotLight', createLightConfig(parts.spot, 'Spot Light', spotSchema)],
-  ['back-light', 'DirectionalLight', createLightConfig(parts.backLight, 'Back Light', backSchema)]
+  ['room-floor', 'Mesh', createMaterialConfig(parts.floorMaterial, 'Floor')]
 ]
 
 /**
@@ -178,14 +142,8 @@ export const refreshLookElements = (parts: HeroLookParts): void => {
   getLookElements(parts).forEach(([name, , config]) =>
     store.registerElementProperties(name, config)
   )
-  registerLightProperties({
-    light: parts.ambientLight,
-    name: 'ambient-light',
-    title: 'Ambient Light'
-  })
-  registerLightProperties({
-    light: parts.keyLight,
-    name: 'directional-light',
-    title: 'Directional Light'
-  })
+  // The Lights panel copies the scene's lights when it adopts them; adopting again shows the new
+  // look's values.
+  if (parts.spot.parent instanceof THREE.Scene)
+    useSceneViewStore().adoptSceneLights(parts.spot.parent)
 }

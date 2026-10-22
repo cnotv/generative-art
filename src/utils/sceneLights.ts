@@ -62,7 +62,16 @@ export const readLightsFromScene = (
           }
         : {}),
       ...(point ? { point: { color: point.color.getHex(), intensity: point.intensity } } : {}),
-      ...(spot ? { spot: { color: spot.color.getHex(), intensity: spot.intensity } } : {}),
+      ...(spot
+        ? {
+            spot: {
+              color: spot.color.getHex(),
+              intensity: spot.intensity,
+              angle: spot.angle,
+              penumbra: spot.penumbra
+            }
+          }
+        : {}),
       ...(rectArea
         ? { rectArea: { color: rectArea.color.getHex(), intensity: rectArea.intensity } }
         : {}),
