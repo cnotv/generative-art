@@ -154,21 +154,62 @@ pixel of the screen.
 ### Every attempt kept as a preset
 
 Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
-lighting, the first pass with a rim, a glossy take with a light from behind throwing soft shadows
-forward, navy cardstock, and a light letterpress card with the logo in navy ink. A layered cut-paper
-look was tried too and dropped.
+lighting, the first pass with a rim, navy cardstock, the same cardstock tuned by hand to a spotlit
+room with no key light and a wider, softer spot (now the default), a light letterpress card with the logo in navy
+ink, and two chromes reflecting the skills city: a dark satin one tuned by hand in the panel, with a
+faint blurred reflection, and a polished dark mirror, also tuned by hand, with a stronger one. A glossy take and a layered cut-paper look were tried too and dropped.
 The Config panel switches between them live, and an address such as `?look=letterpress` opens one
-directly. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
+directly. Knocking the logo or the letters also moves the hero on to the next look
+once they ease back into place, but only when something was actually knocked: the easing back runs
+every few seconds regardless, so it checks first whether any piece was moved or turned. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
 and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
-rather than a fixed answer.
+rather than a fixed answer. The Lights section recognises its lights by name, so the hero's spot is
+named as the scene's spot light to join the ambient and key lights there instead of getting a row of
+its own. The spot also shows where it hangs and the point it aims at, both movable. The panel copies
+the lights once, while the room is still asleep and the spot is still on the logo's feet, so it
+copies them again once the logo is awake; otherwise it would show the sleeping position.
 
-![The five hero presets: original, rim light, glossy, navy cardstock and letterpress](/img/homepage/hero-looks.webp)
+![The Lights panel with the spot's beam, position and target, beside the spotlit cardstock](/img/homepage/hero-spot-panel.webp)
 
-A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
-colours and lights change in place, and the paper texture is put on or taken off. The
-emboss and rim are values the logo's material reads every frame, so they change without rebuilding
-anything. On the light letterpress card the name and profession switch to navy ink, since light
-text on cream would vanish.
+The panel's controls first looked frozen: a slider moved and snapped back. The panel redraws a
+control only when the value it reads is reactive, and a three.js material is not, so every control
+now reads a reactive copy of its values, updated on each edit and rebuilt on each preset switch.
+The logo and the letters share one material, so they share one set of controls too.
+
+![The first six hero presets: original, rim light, navy cardstock, letterpress, chrome and polished chrome](/img/homepage/hero-looks.webp)
+
+A preset is plain data, one entry per look, and a switch blends from the look on screen to the next
+over a second and a half instead of snapping. Every number, colour and light position is mixed
+between the two each frame, with an ease in and out, and the result applied to the scene as it
+stands: colours and lights change in place, and the emboss, rim and reflection are values the logo's
+material reads every frame, so nothing is rebuilt. Two things cannot be mixed: the paper texture is
+either on or off, and so is the navy ink the name and profession switch to on the light letterpress
+card, since light text on cream would vanish. Both change at the halfway point, where the two looks
+are closest, and the text eases its colour over the same second and a half in CSS. A switch that
+arrives mid blend starts from wherever the blend had reached, so nothing jumps.
+
+![Cardstock blending into letterpress: four frames across the second and a half](/img/homepage/hero-look-blend.webp)
+
+### A chrome logo that mirrors the city
+
+![The polished chrome logo mirroring the skills city](/img/homepage/hero-chrome.webp)
+
+The chrome preset reflects a short loop of the skills city, recorded from the page below and played
+forward then backward so it loops without a jump. The obvious route, the video as a reflection map
+the material lights itself with, failed twice. First the logo stayed black: three.js only prepares
+a reflection map from an image whose height is above zero, and a video element's height is its HTML
+attribute, zero until set, not the size of the footage. Then it reflected a single flat colour:
+under an orthographic camera every point of a flat face looks in exactly the same direction, so a
+mirror face shows one spot of the map, not a picture.
+
+What works is closer to a real mirror in front of the scene: each face shows the footage at its own
+place in the view, mirrored left to right, shifted by the face's tilt so the bevels and sides catch
+other parts of it. The city barely moves, so the reflection also sways slowly sideways, as if the
+logo caught a moving view. The video only plays while the chrome preset is on. A blur setting
+turns the mirror into satin metal. Averaging a dozen samples along a spiral was tried first and
+looked grainy rather than blurred; the blur now reads a smaller copy of each frame from the video's
+mipmaps, the shrunken copies the GPU keeps of a texture, and smooths it with four close samples, so
+it softens evenly at any strength.
 
 ## The city of skills
 

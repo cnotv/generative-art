@@ -179,20 +179,21 @@ export interface HeroLook {
   rimStrength: number
   ambientIntensity: number
   key: KeyLight
-  /** A light from behind that throws soft shadows forward onto the floor; null for none. */
-  back: KeyLight | null
   spot: SpotPlacement
   /** How far shadows blur at their edges, in shadow map texels. */
   shadowRadius: number
   /** Dark text for a light page, instead of light text for a dark one. */
   ink: boolean
+  /** How strongly the logo mirrors the looping video of the skills city; 0 for no reflection. */
+  reflection: number
+  /** How blurred the reflection is, from 0 for a sharp mirror to 1 for the softest. */
+  reflectionBlur: number
 }
 
 /** Everything in the hero a look changes: the lights, the room and the logo. */
 export interface HeroLookParts {
   ambientLight: THREE.AmbientLight
   keyLight: THREE.DirectionalLight
-  backLight: THREE.DirectionalLight
   spot: THREE.SpotLight
   wallMaterial: THREE.MeshStandardMaterial
   floorMaterial: THREE.MeshStandardMaterial
@@ -201,4 +202,9 @@ export interface HeroLookParts {
   logoPaper: THREE.Texture
   emboss: THREE.IUniform<number>
   rim: THREE.IUniform<number>
+  /** How strongly the logo mirrors the video, and the video itself once the mirror finish is on. */
+  reflection: THREE.IUniform<number>
+  reflectionMap: THREE.IUniform<THREE.Texture | null>
+  reflectionShift: THREE.IUniform<number>
+  reflectionBlur: THREE.IUniform<number>
 }

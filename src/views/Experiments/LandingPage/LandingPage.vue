@@ -37,6 +37,8 @@ import {
   PAPER_WORLD_DENSITY,
   HERO_LOOKS,
   DEFAULT_HERO_LOOK,
+  HERO_MOVED_DISTANCE,
+  HERO_MOVED_ANGLE,
   HERO_SCROLL_DIMMING,
   SLEEP_YAW,
   INTRO_SEEN_KEY,
@@ -50,7 +52,7 @@ import {
   BUILD_NOTES
 } from './config'
 import type { LogoJumpPath, LogoRest, HeroLook, HeroLookParts } from './types'
-import { createHeroLook, registerLookElements, refreshLookElements } from './heroLook'
+import { createHeroLook, registerLookElements, refreshLookElements, getNextLook } from './heroLook'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { cameraSchema } from '@/views/Tools/SceneEditor/config'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
@@ -171,7 +173,6 @@ const createResizeHandler =
 interface HeroLights {
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
-  backLight: THREE.DirectionalLight
 }
 
 // Colours, strengths and positions come from the chosen look once the scene is built.
@@ -183,12 +184,8 @@ const createLights = (scene: THREE.Scene): HeroLights => {
   dirLight.name = 'directional-light'
   dirLight.castShadow = true
 
-  const backLight = new THREE.DirectionalLight(WHITE, 0)
-  backLight.name = 'back-light'
-  backLight.castShadow = true
-
-  scene.add(ambientLight, dirLight, backLight)
-  return { ambientLight, dirLight, backLight }
+  scene.add(ambientLight, dirLight)
+  return { ambientLight, dirLight }
 }
 
 type PhysicsWorld = Parameters<typeof getPhysic>[0]
@@ -586,9 +583,16 @@ interface RegisterPanelsOptions {
   orbit: OrbitControls
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
+  spot: THREE.SpotLight
 }
 
-const registerPanels = ({ camera, orbit, ambientLight, dirLight }: RegisterPanelsOptions): void => {
+const registerPanels = ({
+  camera,
+  orbit,
+  ambientLight,
+  dirLight,
+  spot
+}: RegisterPanelsOptions): void => {
   const orthoCameraSchema = {
     position: cameraSchema.position,
     orbitTarget: cameraSchema.orbitTarget,
@@ -607,10 +611,16 @@ const registerPanels = ({ camera, orbit, ambientLight, dirLight }: RegisterPanel
     title: 'Directional Light'
   })
   const debugStore = useDebugSceneStore()
-  debugStore.registerSceneElements(camera as unknown as THREE.Camera, [ambientLight, dirLight])
+  debugStore.registerSceneElements(camera as unknown as THREE.Camera, [
+    ambientLight,
+    dirLight,
+    spot
+  ])
 }
 
-const createResetTimeline = (bodies: PhysicsBodies) => {
+// Every few seconds the logo and letters ease back to their places. When that brings back
+// something that was knocked away, onReturn is called, so the page can mark the moment.
+const createResetTimeline = (bodies: PhysicsBodies, onReturn: () => void) => {
   const timelineManager = createTimelineManager()
   let resetFrame = 0
   const resetStartPositions = new Map<THREE.Object3D, THREE.Vector3>()
@@ -625,6 +635,18 @@ const createResetTimeline = (bodies: PhysicsBodies) => {
       resetFrame = 0
       resetStartPositions.clear()
       resetStartRotations.clear()
+      const wasMoved = [...bodies.values()].some(({ body, originalPos }) => {
+        const { x, y, z } = body.translation()
+        const rotation = body.rotation()
+        const turned = scratchRot
+          .set(rotation.x, rotation.y, rotation.z, rotation.w)
+          .angleTo(identityQuat)
+        return (
+          originalPos.distanceTo(scratchPos.set(x, y, z)) > HERO_MOVED_DISTANCE ||
+          turned > HERO_MOVED_ANGLE
+        )
+      })
+      if (wasMoved) onReturn()
       bodies.forEach(({ body }, mesh) => {
         const pos = body.translation()
         const rot = body.rotation()
@@ -669,7 +691,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   scene.background = null
 
   const camera = createOrthographicCamera()
-  const { ambientLight, dirLight, backLight } = createLights(scene)
+  const { ambientLight, dirLight } = createLights(scene)
   const grainTexture = createPaperTexture()
   const contentMaterial = new THREE.MeshStandardMaterial()
   const shading = addCardShading(contentMaterial)
@@ -690,7 +712,6 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const lookParts: HeroLookParts = {
     ambientLight,
     keyLight: dirLight,
-    backLight,
     spot,
     wallMaterial,
     floorMaterial,
@@ -698,14 +719,16 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     logoMaterial: contentMaterial,
     logoPaper: grainTexture,
     emboss: shading.emboss,
-    rim: shading.rim
+    rim: shading.rim,
+    reflection: shading.reflection,
+    reflectionMap: shading.reflectionMap,
+    reflectionShift: shading.reflectionShift,
+    reflectionBlur: shading.reflectionBlur
   }
-  const heroLook = createHeroLook(lookParts, () => look.value)
-  heroLook.apply(look.value)
-  const stopLookWatch = watch(look, (next) => {
-    heroLook.apply(next)
-    refreshLookElements(lookParts)
-  })
+  const heroLook = createHeroLook(lookParts, look.value)
+  const stopLookWatch = watch(look, (next) =>
+    heroLook.transitionTo(next, () => refreshLookElements(lookParts))
+  )
 
   const orbit = new OrbitControls(camera, renderer.domElement)
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
@@ -729,10 +752,13 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     () => heroConfig.value.look,
     (name) => (lookName.value = name)
   )
-  registerPanels({ camera, orbit, ambientLight, dirLight })
+  registerPanels({ camera, orbit, ambientLight, dirLight, spot })
   registerLookElements(lookParts)
 
-  const timelineManager = createResetTimeline(bodies)
+  // Each time the knocked logo or letters come back, the hero changes to the next look.
+  const timelineManager = createResetTimeline(bodies, () => {
+    heroConfig.value.look = getNextLook(heroConfig.value.look, Object.keys(HERO_LOOKS))
+  })
 
   const onResize = createResizeHandler(camera, renderer)
   const clock = new THREE.Clock()
@@ -764,6 +790,8 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
       introStage.value = 'awake'
       rememberIntroSeen()
       handOverToPhysics(logo, letters, bodies)
+      // The panel copied the lights while the room slept, before the spot moved to the letters.
+      refreshLookElements(lookParts)
     }
   })
   window.addEventListener('resize', onResize)
@@ -783,6 +811,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     accumulator -= steps * PHYSICS_STEP
 
     animateTimeline(timelineManager, frame)
+    heroLook.update(clock.elapsedTime)
 
     if (clock.elapsedTime >= AUTO_WAKE_DELAY) wakeUp()
     if (introStage.value !== 'awake') {
@@ -817,6 +846,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     contentMaterial.dispose()
     stopLookWatch()
     stopLookPick()
+    heroLook.dispose()
     room.materials.forEach((material) => material.dispose())
     room.paper.dispose()
     room.meshes.forEach((mesh) => mesh.geometry.dispose())
@@ -941,7 +971,10 @@ onUnmounted(() => {
 .landing-page__profession,
 .landing-page__scroll {
   opacity: 0;
-  transition: opacity var(--transition-game-phase) ease-out;
+  transition:
+    opacity var(--transition-game-phase) ease-out,
+    color var(--transition-hero-look) ease-in-out,
+    text-shadow var(--transition-hero-look) ease-in-out;
 }
 
 .landing-page--awake .landing-page__name,

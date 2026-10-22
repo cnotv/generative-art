@@ -430,6 +430,8 @@ const buildHemisphereUpdate = (
   }
 }
 
+const toTuple = ({ x, y, z }: Vec3): CoordinateTuple => [x, y, z]
+
 const buildDirectionalUpdate = (
   lightsConfig: Record<string, unknown>
 ): Parameters<typeof updateLights>[1] => {
@@ -443,7 +445,23 @@ const buildDirectionalUpdate = (
     directional: {
       ...(directional.color !== undefined ? { color: directional.color } : {}),
       ...(directional.intensity !== undefined ? { intensity: directional.intensity } : {}),
-      ...(position ? { position: [position.x, position.y, position.z] as CoordinateTuple } : {})
+      ...(position ? { position: toTuple(position) } : {})
+    }
+  }
+}
+
+const buildSpotUpdate = (
+  lightsConfig: Record<string, unknown>
+): Parameters<typeof updateLights>[1] => {
+  const { position, target, ...spot } = (lightsConfig.spot ?? {}) as Omit<
+    NonNullable<LightsConfig['spot']>,
+    'position' | 'target'
+  > & { position?: Vec3; target?: Vec3 }
+  return {
+    spot: {
+      ...spot,
+      ...(position ? { position: toTuple(position) } : {}),
+      ...(target ? { target: toTuple(target) } : {})
     }
   }
 }
@@ -468,7 +486,7 @@ const LIGHT_GROUP_UPDATE_BUILDERS: Record<
     ambient: (lightsConfig.ambient ?? {}) as { color?: number; intensity?: number }
   }),
   point: (lightsConfig) => ({ point: (lightsConfig.point ?? {}) as LightsConfig['point'] }),
-  spot: (lightsConfig) => ({ spot: (lightsConfig.spot ?? {}) as LightsConfig['spot'] }),
+  spot: buildSpotUpdate,
   rectArea: (lightsConfig) => ({
     rectArea: (lightsConfig.rectArea ?? {}) as LightsConfig['rectArea']
   })

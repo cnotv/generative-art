@@ -127,7 +127,7 @@ Configure scene with camera, lights, ground, and sky.
     },
     hemisphere?: { colors?: [number, number], intensity?: number, helper?: boolean },
     point?: { color?: number, intensity?: number, position?: CoordinateTuple, helper?: boolean },
-    spot?: { color?: number, intensity?: number, angle?: number, penumbra?: number, helper?: boolean },
+    spot?: { color?: number, intensity?: number, position?: CoordinateTuple, target?: CoordinateTuple, angle?: number, penumbra?: number, helper?: boolean },
     rectArea?: { color?: number, intensity?: number, width?: number, height?: number, helper?: boolean }
   },
   ground?: false | {
@@ -689,7 +689,7 @@ getLights(scene, {
   ambient: { intensity: 0.2 },
   directional: { intensity: 10, position: [5, 10, 5], helper: true },
   point: { intensity: 1, position: [5, 5, 5] },
-  spot: { intensity: 1, position: [5, 5, 5], angle: Math.PI / 6 },
+  spot: { intensity: 1, position: [5, 5, 5], target: [0, 0, 0], angle: Math.PI / 6 },
   rectArea: { intensity: 1, width: 10, height: 10, position: [5, 5, 5], lookAt: [0, 0, 0] }
 })
 ```
@@ -714,7 +714,7 @@ without the key render exactly as before.
 `updateLights` applies a whole light rig onto the scene: every group the config names
 (`ambient`, `directional`, `hemisphere`) is updated in place, or created with the standard
 names when the scene lacks it. `point`, `spot` and `rectArea` are updated when the scene
-already has them and never created, since a scene without a spotlight did not ask for one. An `environment` entry scales `scene.environmentIntensity`,
+already has them and never created, since a scene without a spotlight did not ask for one. A spot's `target` moves the point its beam aims at; the target is added to the scene with the light, since it only moves the beam while it is part of the scene. An `environment` entry scales `scene.environmentIntensity`,
 and a `sky` entry recolours the `sky` mesh and the scene background. `lightPresets` holds
 one such rig per time of day, keyed by `LightPreset` (`dawn`, `noon`, `dusk`, `night`):
 a hemisphere carrying sky and ground bounce, a sun or moon at that hour's elevation and

@@ -75,13 +75,15 @@ const createSpotLight = (
   const light = new THREE.SpotLight(config.color ?? 0xffffff, config.intensity ?? 1)
   light.name = 'spot-light'
   if (config.position) light.position.set(...(config.position as CoordinateTuple))
+  if (config.target) light.target.position.set(...config.target)
   if (config.angle !== undefined) light.angle = config.angle
   if (config.penumbra !== undefined) light.penumbra = config.penumbra
   if (config.distance !== undefined) light.distance = config.distance
   if (config.decay !== undefined) light.decay = config.decay
   light.castShadow = config.castShadow ?? true
   applyLocalShadow(light)
-  scene.add(light)
+  // The target only updates its world matrix, and so moves the beam, while it is in the scene.
+  scene.add(light, light.target)
   if (config.helper) addHelper(scene, new THREE.SpotLightHelper(light), 'spot-light-helper')
   return light
 }
@@ -302,6 +304,8 @@ const updateSpotLight = (light: THREE.SpotLight, config: NonNullable<LightsConfi
   if (config.intensity !== undefined) light.intensity = config.intensity
   if (config.angle !== undefined) light.angle = config.angle
   if (config.penumbra !== undefined) light.penumbra = config.penumbra
+  if (config.position) light.position.set(...config.position)
+  if (config.target) light.target.position.set(...config.target)
 }
 
 const updateRectAreaLight = (

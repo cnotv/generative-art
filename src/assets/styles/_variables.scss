@@ -40,6 +40,9 @@
 
   // Fade transition between game phases (lobby/playing/summary).
   --transition-game-phase: 1s;
+
+  // Matches HERO_LOOK_TRANSITION_SECONDS, so the hero's text recolours with its scene.
+  --transition-hero-look: 1.5s;
 }
 
 @keyframes slide-up {

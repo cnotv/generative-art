@@ -185,6 +185,8 @@ export interface LightsConfig {
     color?: number
     intensity?: number
     position?: CoordinateTuple
+    /** The point the beam aims at. */
+    target?: CoordinateTuple
     angle?: number
     penumbra?: number
     distance?: number

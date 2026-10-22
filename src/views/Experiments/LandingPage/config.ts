@@ -72,8 +72,9 @@ export const RIM_LIGHT_POWER = 3
 
 /**
  * Every finish tried for the hero, picked from the Config panel or with ?look= in the address.
- * The original lighting, the first pass with a rim, a glossy take with light from behind, navy
- * cardstock with an embossed logo, and a light letterpress card with the logo in ink.
+ * The original lighting, the first pass with a rim, navy cardstock with an embossed logo, a light
+ * letterpress card with the logo in ink, dark satin chrome with a faint, blurred reflection of the
+ * skills city, and polished chrome mirroring it clearly.
  */
 export const HERO_LOOKS: Record<string, HeroLook> = {
   original: {
@@ -88,7 +89,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     rimStrength: 0,
     ambientIntensity: 0.8,
     key: { color: 0xffffff, intensity: 1.2, position: [5, 3, 5] },
-    back: null,
     spot: {
       color: 0xc9d8ff,
       intensity: 500,
@@ -99,7 +99,9 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 0.8
     },
     shadowRadius: 1,
-    ink: false
+    ink: false,
+    reflection: 0,
+    reflectionBlur: 0
   },
   rim: {
     label: 'Rim light',
@@ -113,7 +115,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     rimStrength: 0.22,
     ambientIntensity: 0.8,
     key: { color: 0xffffff, intensity: 0.9, position: [3, 5, 10] },
-    back: null,
     spot: {
       color: 0xc9d8ff,
       intensity: 500,
@@ -124,32 +125,9 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 0.75
     },
     shadowRadius: 6,
-    ink: false
-  },
-  glossy: {
-    label: 'Glossy',
-    wallColor: 0x0d121c,
-    floorColor: 0x1c2030,
-    logoColor: 0x1e2840,
-    logoRoughness: 0.35,
-    logoMetalness: 0.25,
-    paper: false,
-    embossStrength: 0,
-    rimStrength: 0.35,
-    ambientIntensity: 0.55,
-    key: { color: 0xffffff, intensity: 0.7, position: [3, 5, 10] },
-    back: { color: 0xc9d8ff, intensity: 1.4, position: [-2, 7, -9] },
-    spot: {
-      color: 0xc9d8ff,
-      intensity: 420,
-      side: 5,
-      height: 10,
-      forward: 7,
-      angle: 0.36,
-      penumbra: 0.75
-    },
-    shadowRadius: 8,
-    ink: false
+    ink: false,
+    reflection: 0,
+    reflectionBlur: 0
   },
   cardstock: {
     label: 'Navy cardstock',
@@ -163,7 +141,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     rimStrength: 0,
     ambientIntensity: 0.95,
     key: { color: 0xffffff, intensity: 0.9, position: [-4, 6, 10] },
-    back: null,
     spot: {
       color: 0xc9d8ff,
       intensity: 380,
@@ -174,7 +151,35 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 1
     },
     shadowRadius: 10,
-    ink: false
+    ink: false,
+    reflection: 0,
+    reflectionBlur: 0
+  },
+  spotlitCardstock: {
+    label: 'Spotlit cardstock',
+    wallColor: 0x1d2738,
+    floorColor: 0x2a3547,
+    logoColor: 0x243049,
+    logoRoughness: 0.95,
+    logoMetalness: 0,
+    paper: true,
+    embossStrength: 0.9,
+    rimStrength: 0,
+    ambientIntensity: 0.6,
+    key: { color: 0xffffff, intensity: 0, position: [-4, 6, 10] },
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 200,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.77,
+      penumbra: 0.75
+    },
+    shadowRadius: 10,
+    ink: false,
+    reflection: 0,
+    reflectionBlur: 0
   },
   letterpress: {
     label: 'Letterpress',
@@ -188,7 +193,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     rimStrength: 0,
     ambientIntensity: 1.25,
     key: { color: 0xfff0dc, intensity: 1.4, position: [-4, 6, 10] },
-    back: null,
     spot: {
       color: 0xfff4e6,
       intensity: 260,
@@ -199,10 +203,85 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 1
     },
     shadowRadius: 10,
-    ink: true
+    ink: true,
+    reflection: 0,
+    reflectionBlur: 0
+  },
+  chrome: {
+    label: 'Chrome',
+    wallColor: 0x10151f,
+    floorColor: 0x1a2030,
+    logoColor: 0x252b3d,
+    logoRoughness: 0.55,
+    logoMetalness: 1,
+    paper: false,
+    embossStrength: 0,
+    rimStrength: 0,
+    ambientIntensity: 0.6,
+    key: { color: 0xffffff, intensity: 0.8, position: [-4, 6, 10] },
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 380,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 1
+    },
+    shadowRadius: 8,
+    ink: false,
+    reflection: 0.02,
+    reflectionBlur: 0.5
+  },
+  polishedChrome: {
+    label: 'Polished chrome',
+    wallColor: 0x10151f,
+    floorColor: 0x1a2030,
+    logoColor: 0x13161e,
+    logoRoughness: 0,
+    logoMetalness: 1,
+    paper: false,
+    embossStrength: 0,
+    rimStrength: 0,
+    ambientIntensity: 0.6,
+    key: { color: 0xffffff, intensity: 0.8, position: [-4, 6, 10] },
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 380,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 1
+    },
+    shadowRadius: 8,
+    ink: false,
+    reflection: 0.25,
+    reflectionBlur: 0.36
   }
 }
-export const DEFAULT_HERO_LOOK = 'cardstock'
+export const DEFAULT_HERO_LOOK = 'spotlitCardstock'
+/** Seconds a switch from one look to the next takes to blend. */
+export const HERO_LOOK_TRANSITION_SECONDS = 1.5
+/**
+ * How far the logo or a letter must be from its place, in scene units, or turned from it, in
+ * radians, for its return to count as coming back from a knock.
+ */
+export const HERO_MOVED_DISTANCE = 0.05
+export const HERO_MOVED_ANGLE = 0.05
+/** A short loop of the skills city, played forward then back, that the chrome look mirrors. */
+export const REFLECTION_VIDEO = 'hero/skills-city-reflection.mp4'
+/**
+ * How the mirror finish lays the video across the logo: the scene units the footage spans, and how
+ * far a face's tilt shifts what it reflects, so bevels and sides show a different part of it.
+ */
+export const REFLECTION_SPAN = 14
+export const REFLECTION_TILT = 0.25
+/** How many halvings of the footage's resolution the strongest reflection blur reaches. */
+export const REFLECTION_BLUR_LEVELS = 6
+/** The reflection sways slowly side to side: how far, as a share of the footage, and how fast. */
+export const REFLECTION_SWAY = 0.08
+export const REFLECTION_SWAY_SPEED = 0.25
 
 export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'
