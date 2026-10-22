@@ -31,6 +31,10 @@ comes from a short list of phases, each describing only its own slice of the mot
 | Settle       | 1.9 to 2.8           | a damped rock on landing; the letters appear under it           |
 | Lights       | 0.9 to 2.8           | the room brightens throughout, ending in the awake look         |
 
+The intro never holds the page: scrolling works from the first frame, and the arrow at the
+bottom is a shortcut rather than the way out. The name and profession use the bold face of
+the city's signs, tying the hero to the section below.
+
 Treating the intro as a pure function paid off three times. It is testable without a renderer.
 Skipping it is trivial: a return visit in the same session asks for the pose "infinitely long
 after waking", which is simply the final one. And no state machine has to remember where it was.
@@ -117,6 +121,7 @@ knowing which building it belongs to. Adding motion to the city is a change to t
 | `stretch` | the bar chart on the same display                         |
 | `pulse`   | signal lights and the antenna tip                         |
 | `arc`     | fountain water leaving the bowl and falling into the pool |
+| `route`   | the boat sailing between the harbour and the dock         |
 
 Still meshes are joined per district to keep draw calls low; moving parts stay separate children of
 their district so they lift with it on hover. A fading part gets its own copy of its material, or
@@ -178,3 +183,59 @@ one detail: the screen's content is keyed on the hovered district, so it is rebu
 its animation starts over. With nothing hovered it shows the section heading; with reduced motion requested
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.
+
+## Lines to the market
+
+![Dotted lines fanning out from the dock at the island's tip to six small 3D sector avatars](/img/homepage/sector-traces.webp)
+
+The sectors the products serve have no heading of their own: a boat sails from the harbour round
+the island to a dock at its southern tip, and dotted lines fan out from that dock to six small 3D
+avatars, one per sector, with the dots marching towards them. The lines are an SVG drawn behind
+the section from where the avatars actually are, and redrawn whenever the list changes size.
+
+The first version was a circuit board: orthogonal traces routed down lanes between a grid of
+cells, with rules about which trace turns off highest so none would cross. It read as wiring
+rather than as an outcome reaching a market. Small avatars in a row make the fan-out the whole
+picture, and a curve that leaves straight down and arrives straight down needs no routing at all.
+On a phone the six sit in two staggered rows, the second shifted by half an avatar, so each line
+to the second row drops through a gap in the first instead of across an avatar.
+
+The dock and the lines live in different worlds, one in the 3D model and one in the page, and
+nothing measures one against the other. They meet because the camera frames the whole model and
+its widest part is the sea: a point halfway across the sea always lands in the middle of the
+canvas, whatever its size, which is where the lines start. The boat's course is stored on the
+model as a list of points, like the other motion tags, so the page sails it without knowing it
+is a boat.
+
+Each avatar is a small 3D model built by its own Blender script, in the city's palette: a bank,
+a telecom mast, a stack of publications, the scales of governance, a shield and a town hall. Six
+canvases would mean six WebGL contexts, and browsers cap how many a page may hold, so one canvas
+covers the whole section and each model is drawn only into the square over its circle, with its
+own camera, before the next. The models stand still, so the canvas is drawn again only when the
+section changes size. Arrowheads, circle outlines and a gentle to-and-fro turn were all tried and
+dropped: each competed with the models for attention. Drawing only on demand also exposed a
+trap: three.js sets its clear colour inside `render()`, so a manual clear before the first render
+filled the whole canvas with opaque black until the colour was set to transparent up front.
+
+The lines measure the avatars the same way, once per resize, by their offsets summed up through
+every offset parent to the section, so a transformed ancestor on the way cannot leave them short.
+
+## A map behind it all
+
+![The dotted contour map behind the market avatars, brightened here so it shows in print](/img/homepage/contour-backdrop.webp)
+
+Below the hero, the city and the market stand on a faint topographic map: contours of a slowly
+drifting noise field, drawn in dots to match the lines to the market, and kept close to the page
+colour so it reads as texture rather than content. It is a single shader on a canvas the size of
+the screen that sticks behind the content as it scrolls past, and shifts the map by how far the
+content has moved, so a long page costs no more than one screen.
+
+Two details made it work. Each dot cell asks whether a contour passes through it in screen pixels,
+not in height, so contours stay one dot wide on steep and flat ground alike; a height threshold
+drew thin rows on slopes and broad clumps on the flats. And a shader material receives its colours
+in linear space and must convert them back for the screen, or the whole map comes out darker than
+the colours it was given.
+
+On a phone held upright the city is too small to read its districts, so a small phone icon above
+it tips over to suggest landscape. It sits outside the city's own frame: inside, it would push the
+canvas down and misplace the screen display, which is positioned as a share of that frame.

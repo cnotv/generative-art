@@ -59,6 +59,7 @@ export type MotionKind =
   | 'pulse'
   | 'stretch'
   | 'arc'
+  | 'route'
 
 /** One moving part, with the motion it plays and the pose it moves from. */
 export interface CityMover {
@@ -73,4 +74,56 @@ export interface CityMover {
   baseRotation: THREE.Euler
   baseScale: THREE.Vector3
   fadeMaterials: THREE.Material[]
+  /** The course a `route` part sails, in the model's ground plane; empty for every other kind. */
+  route: RouteSegment[]
+}
+
+/** One straight leg of a course, in Blender's ground plane, and how far along the course it starts. */
+export interface RouteSegment {
+  startX: number
+  startY: number
+  endX: number
+  endY: number
+  offset: number
+  length: number
+}
+
+/** Where a part sailing a course is, in Blender's ground plane, and the way it is heading. */
+export interface RouteSpot {
+  x: number
+  y: number
+  heading: number
+}
+
+/** One market sector's avatar: its model and the camera that frames it. */
+export interface SectorAvatar {
+  object: THREE.Object3D
+  camera: THREE.OrthographicCamera
+}
+
+/** The market avatars' shared renderer and scene, one avatar per sector in page order. */
+export interface AvatarStage {
+  renderer: THREE.WebGLRenderer
+  scene: THREE.Scene
+  avatars: (SectorAvatar | null)[]
+}
+
+/** A rectangle in WebGL viewport terms: pixels from the canvas's bottom-left corner. */
+export interface ViewportRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** A point in the market section's own pixel space. */
+export interface TracePoint {
+  x: number
+  y: number
+}
+
+/** One arrow from the city to a sector, as an SVG path and the point it arrives at. */
+export interface SectorTrace {
+  path: string
+  end: TracePoint
 }

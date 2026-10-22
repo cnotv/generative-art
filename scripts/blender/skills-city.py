@@ -22,137 +22,32 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 
 
-def hex_rgba(value):
-    value = value.lstrip("#")
-    srgb = [int(value[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in srgb]
-    return (*linear, 1.0)
-
-
-MATERIALS = {}
-
-
-def mat(name, color, roughness=0.85):
-    if name in MATERIALS:
-        return MATERIALS[name]
-    material = bpy.data.materials.new(name)
-    material.use_nodes = True
-    bsdf = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-    bsdf.inputs["Base Color"].default_value = hex_rgba(color)
-    bsdf.inputs["Roughness"].default_value = roughness
-    material.diffuse_color = hex_rgba(color)
-    MATERIALS[name] = material
-    return material
-
-
-WALL = ("wall", "#c9d3e6")
-WALL_DARK = ("wall-dark", "#9aaac6")
-ROOF = ("roof", "#5d6f92")
-GLASS = ("glass", "#e9f0ff")
-TRUNK = ("trunk", "#8a7a6a")
-LEAF = ("leaf", "#a8d8a8")
-LEAF_DARK = ("leaf-dark", "#7fb89a")
-LAWN = ("lawn", "#46655f")
-WATER = ("water", "#8fc0f0")
-SMOKE = ("smoke", "#dfe6f2")
-SIGNAL = ("signal", "#7fe0a8")
-
-
-def finish(obj, material, parent):
-    obj.data.materials.append(mat(*material))
-    obj.parent = parent
-    bpy.ops.object.shade_flat()
-    return obj
-
-
-def box(name, size, loc, material, parent, rot_z=0.0):
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(loc[0], loc[1], loc[2] + size[2] / 2))
-    obj = bpy.context.active_object
-    obj.name = name
-    obj.scale = size
-    obj.rotation_euler[2] = rot_z
-    bpy.ops.object.transform_apply(scale=True, rotation=False, location=False)
-    return finish(obj, material, parent)
-
-
-def cylinder(name, radius, depth, loc, material, parent, vertices=12, rot=(0, 0, 0)):
-    bpy.ops.mesh.primitive_cylinder_add(vertices=vertices, radius=radius, depth=depth, location=loc, rotation=rot)
-    obj = bpy.context.active_object
-    obj.name = name
-    return finish(obj, material, parent)
-
-
-def cone(name, radius, depth, loc, material, parent, vertices=12, rot=(0, 0, 0)):
-    bpy.ops.mesh.primitive_cone_add(vertices=vertices, radius1=radius, depth=depth, location=loc, rotation=rot)
-    obj = bpy.context.active_object
-    obj.name = name
-    return finish(obj, material, parent)
-
-
-def ball(name, radius, loc, material, parent, squash=1.0):
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=radius, location=loc)
-    obj = bpy.context.active_object
-    obj.name = name
-    obj.scale = (1, 1, squash)
-    bpy.ops.object.transform_apply(scale=True, rotation=False, location=False)
-    return finish(obj, material, parent)
-
-
-def torus(name, major, minor, loc, material, parent):
-    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor, major_segments=14,
-                                     minor_segments=4, location=loc)
-    obj = bpy.context.active_object
-    obj.name = name
-    return finish(obj, material, parent)
-
-
-def mesh_object(name, verts, faces, loc, material, parent):
-    mesh = bpy.data.meshes.new(name)
-    mesh.from_pydata(verts, [], faces)
-    mesh.update()
-    obj = bpy.data.objects.new(name, mesh)
-    scene.collection.objects.link(obj)
-    obj.location = loc
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.mesh.normals_make_consistent(inside=False)
-    bpy.ops.object.mode_set(mode="OBJECT")
-    return finish(obj, material, parent)
-
-
-def prism(name, width, height, length, loc, material, parent, along_x=True):
-    """A triangular roof with its base at loc z and its ridge along x (or y)."""
-    half_length, half_width = length / 2, width / 2
-    if along_x:
-        verts = [(-half_length, -half_width, 0), (-half_length, half_width, 0), (-half_length, 0, height),
-                 (half_length, -half_width, 0), (half_length, half_width, 0), (half_length, 0, height)]
-    else:
-        verts = [(-half_width, -half_length, 0), (half_width, -half_length, 0), (0, -half_length, height),
-                 (-half_width, half_length, 0), (half_width, half_length, 0), (0, half_length, height)]
-    faces = [(0, 2, 1), (3, 4, 5), (0, 3, 5, 2), (1, 2, 5, 4), (0, 1, 4, 3)]
-    return mesh_object(name, verts, faces, loc, material, parent)
-
-
-def empty(name, loc, parent, rot=(0, 0, 0)):
-    obj = bpy.data.objects.new(name, None)
-    scene.collection.objects.link(obj)
-    obj.parent = parent
-    obj.location = loc
-    obj.rotation_euler = rot
-    return obj
-
-
-def anim(obj, kind, axis="y", speed=1.0, amount=0.0, phase=0.0, lift=0.0):
-    obj["anim"] = kind
-    obj["axis"] = axis
-    obj["speed"] = speed
-    obj["amount"] = amount
-    obj["phase"] = phase
-    obj["lift"] = lift
-    return obj
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from primitives import (
+    hex_rgba,
+    mat,
+    finish,
+    box,
+    cylinder,
+    cone,
+    ball,
+    torus,
+    mesh_object,
+    prism,
+    empty,
+    anim,
+    WALL,
+    WALL_DARK,
+    ROOF,
+    GLASS,
+    TRUNK,
+    LEAF,
+    LEAF_DARK,
+    LAWN,
+    WATER,
+    SMOKE,
+    SIGNAL,
+)
 
 
 def tree(name, loc, parent, scale=1.0, leaf=LEAF):
@@ -469,6 +364,14 @@ COAST = -10.0
 SEA_WEST = 15.2
 SEA_EAST = 14.0
 SEA_DEPTH = 12.2
+BOAT_COURSE_RIGHT = 13.9
+BOAT_COURSE_DEPTH = 11.35
+BOAT_COURSE_START = 192
+BOAT_COURSE_END = 258
+BOAT_BERTH = 1.5
+BOAT_COURSE_STEP = 6
+BOAT_ROUTE_SPEED = 1 / 18
+DOCK_LENGTH = 1.6
 ROAD = ("road", "#262f40")
 WATER_DEEP = ("water-deep", "#3b5f8f")
 AREA_TINT = 0.18
@@ -795,12 +698,35 @@ for index, key in enumerate(SLOTS):
 for index, depth in enumerate((-2.2, -0.6, 1.0)):
     x, y = from_screen(COAST - 0.9, depth)
     box(f"pier-{index}", (1.9, 0.4, 0.1), (x, y, -0.12), WALL_DARK, ground, rot_z=SCREEN_ANGLE)
+
+# The boat sails from the harbour round the south-west of the island to a dock at its southern
+# tip, where the page's traces to the markets begin, and back. Its course is an ellipse between
+# the shore and the open sea; the page sails it along the points stored on it, bow first, so the
+# boat's own forward is its local x.
+# The dock stands at the middle of the view, where the page's traces start: the page frames
+# the whole model, whose widest part is the sea, so that middle is halfway across the sea.
+sea_span = [to_screen(x, y)[0] for x, y in water]
+dock_right = (min(sea_span) + max(sea_span)) / 2
 boat_x, boat_y = from_screen(COAST - 2.4, -1.4)
-boat = empty("harbour-boat", (boat_x, boat_y, -0.1), city)
-box("harbour-boat-hull", (1.8, 0.65, 0.28), (0, 0, 0), ("k8s-accent", "#e8a8b8"), boat, rot_z=SCREEN_ANGLE)
-box("harbour-boat-cabin", (0.6, 0.48, 0.3), (0.3 * SCREEN_RIGHT[0], 0.3 * SCREEN_RIGHT[1], 0.28), WALL, boat,
-    rot_z=SCREEN_ANGLE)
-anim(boat, "bob", axis="y", speed=1.4, amount=0.05)
+course = [(boat_x, boat_y)] + [
+    from_screen(math.cos(math.radians(angle)) * BOAT_COURSE_RIGHT,
+                math.sin(math.radians(angle)) * BOAT_COURSE_DEPTH)
+    for angle in range(BOAT_COURSE_START, BOAT_COURSE_END + 1, BOAT_COURSE_STEP)
+] + [from_screen(dock_right - BOAT_BERTH, -BOAT_COURSE_DEPTH)]
+stranded = [point for point in course if inside(point, island) or not inside(point, water)]
+if stranded:
+    print(f"WARNING boat course leaves the water at {stranded}")
+boat = empty("harbour-boat", (boat_x, boat_y, -0.1), city, rot=(0, 0, SCREEN_ANGLE))
+anim(boat, "route", speed=BOAT_ROUTE_SPEED)
+boat["route"] = [coordinate for point in course for coordinate in point]
+rocker = empty("harbour-boat-rocker", (0, 0, 0), boat)
+box("harbour-boat-hull", (1.8, 0.65, 0.28), (0, 0, 0), ("k8s-accent", "#e8a8b8"), rocker)
+box("harbour-boat-cabin", (0.6, 0.48, 0.3), (-0.3, 0, 0.28), WALL, rocker)
+anim(rocker, "bob", axis="y", speed=1.4, amount=0.05)
+
+# The dock at the island's southern tip, where the boat ties up.
+dock_x, dock_y = from_screen(dock_right, -BOAT_COURSE_DEPTH + DOCK_LENGTH / 2 - 0.3)
+box("market-dock", (0.4, DOCK_LENGTH, 0.1), (dock_x, dock_y, -0.12), WALL_DARK, ground, rot_z=SCREEN_ANGLE)
 
 # A big blank screen planted on the land behind the city. The page lays its LED display over
 # it, so the text stays sharp: the marker carries the screen's centre and size, and hangs off

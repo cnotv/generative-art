@@ -53,6 +53,8 @@ export const ROOM_COLLIDER_DEPTH = 1
 
 export const SLEEP_AMBIENT_INTENSITY = 0.06
 export const SLEEP_DIRECTIONAL_INTENSITY = 0
+/** The key light once awake, as tuned in the Lights panel: in front, to the right and low. */
+export const DIRECTIONAL_LIGHT_POSITION = [5, 3, 5] as const
 export const SPOT_INTENSITY = 500
 /** Where the spotlight hangs relative to what it lights: off to the side, low, a little forward. */
 export const SPOT_SIDE = 11
@@ -65,8 +67,8 @@ export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'
 export const OWNER_SUMMARY = '15+ years building, from startup to enterprise.'
 export const OWNER_PROFILES = [
-  { label: 'LinkedIn', url: 'https://www.linkedin.com/in/leogiuseppe/' },
-  { label: 'GitHub', url: 'https://github.com/cnotv' }
+  { label: 'LinkedIn', icon: 'linkedin', url: 'https://www.linkedin.com/in/leogiuseppe/' },
+  { label: 'GitHub', icon: 'github', url: 'https://github.com/cnotv' }
 ]
 export const SPOT_COLOR = 0xc9d8ff
 
@@ -114,15 +116,36 @@ export const SKILL_AREAS = [
   }
 ]
 
-/** Sectors whose organisations use the products, each with its lucide icon. */
+/** Sectors whose organisations use the products, each with its avatar in the avatars model. */
 export const PRODUCT_SECTORS = [
-  { icon: 'bank', title: 'Banks' },
-  { icon: 'telco', title: 'Telco' },
-  { icon: 'publisher', title: 'Publishers' },
-  { icon: 'governance', title: 'Governance' },
-  { icon: 'defense', title: 'Defense' },
-  { icon: 'public', title: 'Public institutions' }
+  { avatar: 'bank', title: 'Banks' },
+  { avatar: 'telco', title: 'Telco' },
+  { avatar: 'publisher', title: 'Publishers' },
+  { avatar: 'governance', title: 'Governance' },
+  { avatar: 'defense', title: 'Defense' },
+  { avatar: 'public', title: 'Public institutions' }
 ]
+
+export const MARKET_AVATARS_MODEL = 'market-avatars.glb'
+/** How far past its bounding sphere each avatar's camera frames it. */
+export const AVATAR_FRAME_PADDING = 1.05
+
+/** How far above the market section the traces to the sectors start: the island's southern tip. */
+export const SECTOR_TRACE_ORIGIN_RISE = 104
+/** How far short of a sector's avatar its arrow stops, in pixels. */
+export const SECTOR_ARROW_GAP = 6
+
+/** The contour map behind the city and market: page colour, line and glow, all muted blues. */
+export const BACKDROP_BASE_COLOR = 0x141a24
+export const BACKDROP_LINE_COLOR = 0x26314a
+export const BACKDROP_GLOW_COLOR = 0x171e2c
+/** How many page pixels one unit of the noise field spans, and how many contour levels it has. */
+export const BACKDROP_SCALE = 520
+export const BACKDROP_LEVELS = 16
+/** The backdrop's dot grid, in page pixels: the gap between dot centres and a dot's radius. */
+export const BACKDROP_DOT_SPACING = 8
+export const BACKDROP_DOT_RADIUS = 1
+export const BACKDROP_MAX_PIXEL_RATIO = 1.5
 
 export const SKILLS_CITY_MODEL = 'skills-city.glb'
 /** Direction the isometric camera looks at the city from, matching the Blender preview. */

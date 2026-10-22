@@ -19,7 +19,14 @@ import {
   DISTRICT_LIFT_EASE,
   DISTRICT_LIFT_SETTLED
 } from './config'
-import type { SkillsCityStage, CityMover, MotionKind, CanvasRect } from './types'
+import type {
+  SkillsCityStage,
+  CityMover,
+  MotionKind,
+  CanvasRect,
+  RouteSegment,
+  RouteSpot
+} from './types'
 
 const DISTRICT_PREFIX = 'district-'
 const SCREEN_NAME = 'title-screen'
@@ -32,8 +39,12 @@ const MOTION_KINDS: MotionKind[] = [
   'grow',
   'pulse',
   'stretch',
-  'arc'
+  'arc',
+  'route'
 ]
+/** Shares of a route's cycle: sailing out, then waiting at the far end before sailing back. */
+const ROUTE_LEG = 0.4
+const ROUTE_RETURN = 0.5
 /** How far below its spout a water drop lands, as a share of how high it rises. */
 const ARC_FALL = 1.6
 const AXES = ['x', 'y', 'z'] as const
@@ -46,6 +57,62 @@ const isMotionKind = (value: unknown): value is MotionKind =>
 const isAxis = (value: unknown): value is CityMover['axis'] => AXES.some((axis) => axis === value)
 
 const readNumber = (value: unknown): number => (typeof value === 'number' ? value : 0)
+
+const isNumberList = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'number')
+
+/**
+ * Turns a flat list of ground-plane coordinates into the legs of a course.
+ * @param coordinates x and y of each point in turn, as Blender stores them.
+ * @returns The legs, each with how far along the course it starts.
+ */
+export const toRouteSegments = (coordinates: number[]): RouteSegment[] => {
+  const points = Array.from({ length: Math.floor(coordinates.length / 2) }, (_, index) => [
+    coordinates[index * 2],
+    coordinates[index * 2 + 1]
+  ])
+  const legs = points.slice(1).map(([endX, endY], index) => {
+    const [startX, startY] = points[index]
+    return { startX, startY, endX, endY, length: Math.hypot(endX - startX, endY - startY) }
+  })
+  return legs.map((leg, index) => ({
+    ...leg,
+    offset: legs.slice(0, index).reduce((total, { length }) => total + length, 0)
+  }))
+}
+
+/**
+ * Where a part is along its course and which way the leg it is on points.
+ * @param segments The course's legs.
+ * @param progress How far along the course, from 0 at its start to 1 at its end.
+ * @returns The point and heading in the ground plane.
+ */
+export const getRouteSpot = (segments: RouteSegment[], progress: number): RouteSpot => {
+  const last = segments[segments.length - 1]
+  const distance = progress * (last.offset + last.length)
+  const leg = segments.findLast(({ offset }) => offset <= distance) ?? segments[0]
+  const along = leg.length > 0 ? Math.min(1, (distance - leg.offset) / leg.length) : 0
+  return {
+    x: leg.startX + (leg.endX - leg.startX) * along,
+    y: leg.startY + (leg.endY - leg.startY) * along,
+    heading: Math.atan2(leg.endY - leg.startY, leg.endX - leg.startX)
+  }
+}
+
+const easeInOut = (share: number): number => share * share * (3 - 2 * share)
+
+/**
+ * How far along its course a part is at a point in its cycle: it sails out, waits at the far end,
+ * sails back and waits at home.
+ * @param cycle The share of the cycle gone, from 0 to 1.
+ * @returns The progress along the course, from 0 to 1.
+ */
+export const getRouteProgress = (cycle: number): number => {
+  if (cycle < ROUTE_LEG) return easeInOut(cycle / ROUTE_LEG)
+  if (cycle < ROUTE_RETURN) return 1
+  if (cycle < ROUTE_RETURN + ROUTE_LEG) return 1 - easeInOut((cycle - ROUTE_RETURN) / ROUTE_LEG)
+  return 0
+}
 
 // A fading part gets its own transparent copy of each material, so fading it leaves every
 // other object that shares the material untouched.
@@ -66,8 +133,9 @@ const takeFadeMaterials = (object: THREE.Object3D): THREE.Material[] => {
 const collectMovers = (model: THREE.Object3D): CityMover[] => {
   const movers: CityMover[] = []
   model.traverse((object) => {
-    const { anim, axis, speed, amount, phase, lift } = object.userData
+    const { anim, axis, speed, amount, phase, lift, route } = object.userData
     if (!isMotionKind(anim)) return
+    if (anim === 'route' && !(isNumberList(route) && route.length >= 4)) return
     movers.push({
       object,
       kind: anim,
@@ -79,7 +147,8 @@ const collectMovers = (model: THREE.Object3D): CityMover[] => {
       basePosition: object.position.clone(),
       baseRotation: object.rotation.clone(),
       baseScale: object.scale.clone(),
-      fadeMaterials: anim === 'puff' ? takeFadeMaterials(object) : []
+      fadeMaterials: anim === 'puff' ? takeFadeMaterials(object) : [],
+      route: anim === 'route' && isNumberList(route) ? toRouteSegments(route) : []
     })
   })
   return movers
@@ -88,7 +157,12 @@ const collectMovers = (model: THREE.Object3D): CityMover[] => {
 const isDistrict = (object: THREE.Object3D | null): boolean =>
   object?.name.startsWith(DISTRICT_PREFIX) ?? false
 
-const createCityLights = (scene: THREE.Scene, bounds: THREE.Box3): void => {
+/**
+ * Lights a scene like the hero room: a soft sky and ground fill and one key light from the side.
+ * @param scene The scene to light.
+ * @param bounds What the key light aims at.
+ */
+export const createCityLights = (scene: THREE.Scene, bounds: THREE.Box3): void => {
   scene.add(new THREE.HemisphereLight(CITY_SKY_COLOR, CITY_GROUND_COLOR, CITY_AMBIENT_INTENSITY))
   const key = new THREE.DirectionalLight(CITY_KEY_COLOR, CITY_KEY_INTENSITY)
   key.position.set(...CITY_KEY_POSITION)
@@ -319,6 +393,7 @@ export const getMotionValue = (
   if (kind === 'slide') return fraction(seconds * speed + phase) * amount
   if (kind === 'puff' || kind === 'arc') return fraction(seconds * speed + phase)
   if (kind === 'grow') return Math.max(MIN_SCALE, fraction(seconds * speed + phase))
+  if (kind === 'route') return getRouteProgress(fraction(seconds * speed + phase))
   return 1 + wave * amount
 }
 
@@ -333,6 +408,15 @@ const applyMotion = (mover: CityMover, seconds: number): void => {
   if (kind === 'arc') {
     object.position[axis] = basePosition[axis] + value * amount
     object.position.y = basePosition.y + (4 * value * (1 - value) - ARC_FALL * value) * mover.lift
+  }
+  // Blender's ground plane is three.js's x and negative z, and a turn about its up axis is the
+  // same turn about three.js's y. On the way back the boat sails the course bow first again.
+  if (kind === 'route') {
+    const spot = getRouteSpot(mover.route, value)
+    const isReturning = fraction(seconds * mover.speed + mover.phase) >= ROUTE_RETURN
+    object.position.x = spot.x
+    object.position.z = -spot.y
+    object.rotation.y = spot.heading + (isReturning ? Math.PI : 0)
   }
   if (kind === 'puff') {
     object.position.y = basePosition.y + value * amount

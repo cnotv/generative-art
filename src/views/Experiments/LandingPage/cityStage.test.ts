@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { fitCityCamera, updateDistrictLift, getMotionValue, getScreenRect } from './cityStage'
+import {
+  fitCityCamera,
+  updateDistrictLift,
+  getMotionValue,
+  getScreenRect,
+  getRouteProgress,
+  getRouteSpot,
+  toRouteSegments
+} from './cityStage'
 import { DISTRICT_LIFT } from './config'
 import type { SkillsCityStage } from './types'
 
@@ -116,5 +124,36 @@ describe('getScreenRect', () => {
     expect(rect.top).toBeCloseTo(0.25)
     expect(rect.width).toBeCloseTo(0.5)
     expect(rect.height).toBeCloseTo(0.25)
+  })
+})
+
+describe('getRouteProgress', () => {
+  it.each([
+    [0, 0],
+    [0.2, 0.5],
+    [0.45, 1],
+    [0.7, 0.5],
+    [0.95, 0]
+  ])('at %s of the cycle the part is %s of the way along', (cycle, progress) => {
+    // Act
+    const result = getRouteProgress(cycle)
+
+    // Assert
+    expect(result).toBeCloseTo(progress)
+  })
+})
+
+describe('getRouteSpot', () => {
+  it('finds the point by distance along the course, heading along its leg', () => {
+    // Arrange
+    const segments = toRouteSegments([0, 0, 4, 0, 4, 4])
+
+    // Act
+    const spot = getRouteSpot(segments, 0.75)
+
+    // Assert
+    expect(spot.x).toBeCloseTo(4)
+    expect(spot.y).toBeCloseTo(2)
+    expect(spot.heading).toBeCloseTo(Math.PI / 2)
   })
 })

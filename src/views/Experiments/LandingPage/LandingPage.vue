@@ -12,15 +12,9 @@ import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
-import {
-  Landmark,
-  RadioTower,
-  Newspaper,
-  Scale,
-  Shield,
-  Building2,
-  ArrowUpRight
-} from 'lucide-vue-next'
+import MarketSectors from './MarketSectors.vue'
+import ContourBackdrop from './ContourBackdrop.vue'
+import { Github, Linkedin, Smartphone } from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { getLogoIntroPose, getSleepPose } from './logoIntro'
@@ -39,6 +33,7 @@ import {
   WALL_GAP,
   SLEEP_AMBIENT_INTENSITY,
   SLEEP_DIRECTIONAL_INTENSITY,
+  DIRECTIONAL_LIGHT_POSITION,
   ROOM_WALL_COLOR,
   ROOM_ROUGHNESS,
   SLEEP_YAW,
@@ -49,8 +44,7 @@ import {
   OWNER_NAME,
   OWNER_PROFESSION,
   OWNER_SUMMARY,
-  OWNER_PROFILES,
-  PRODUCT_SECTORS
+  OWNER_PROFILES
 } from './config'
 import type { LogoJumpPath, LogoRest } from './types'
 import { registerCameraProperties } from '@/utils/cameraProperties'
@@ -61,16 +55,9 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const PROFILE_ICONS: Record<string, Component> = { linkedin: Linkedin, github: Github }
 const skills = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
-const ICONS: Record<string, Component> = {
-  bank: Landmark,
-  telco: RadioTower,
-  publisher: Newspaper,
-  governance: Scale,
-  defense: Shield,
-  public: Building2
-}
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -98,7 +85,6 @@ const FRUSTUM_HEIGHT = 20
 const WHITE = 0xffffff
 const AMBIENT_INTENSITY = 0.8
 const DIR_LIGHT_INTENSITY = 1.2
-const DIR_LIGHT_POS = 5
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
 const LETTER_SPACING = 0.3
@@ -168,7 +154,7 @@ const createLights = (scene: THREE.Scene) => {
 
   const dirLight = new THREE.DirectionalLight(WHITE, DIR_LIGHT_INTENSITY)
   dirLight.name = 'directional-light'
-  dirLight.position.set(DIR_LIGHT_POS * 2, DIR_LIGHT_POS / 2, DIR_LIGHT_POS)
+  dirLight.position.set(...DIRECTIONAL_LIGHT_POSITION)
   dirLight.castShadow = true
   scene.add(dirLight)
 
@@ -862,38 +848,43 @@ onUnmounted(() => {
         </svg>
       </a>
     </header>
-    <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
-      <!-- The display on the city's sign shows these; they stay in the page for screen readers and search. -->
-      <h2 id="skills-title" class="sr-only">What I work on</h2>
-      <p class="sr-only">{{ OWNER_SUMMARY }}</p>
-      <SkillsCity />
-    </section>
-    <section class="landing-page__section" aria-labelledby="sectors-title">
-      <h2 id="sectors-title" class="landing-page__heading">Market knowledge</h2>
-      <ul class="landing-page__sectors">
-        <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
+    <div class="landing-page__content">
+      <ContourBackdrop />
+      <section
+        id="skills"
+        ref="skills"
+        class="landing-page__section"
+        aria-labelledby="skills-title"
+      >
+        <!-- The display on the city's sign shows these; they stay in the page for screen readers and search. -->
+        <h2 id="skills-title" class="sr-only">What I work on</h2>
+        <p class="sr-only">{{ OWNER_SUMMARY }}</p>
+        <p class="landing-page__turn">
+          <Smartphone class="landing-page__turn-icon" aria-hidden="true" />
+          Turn your phone to explore the city
+        </p>
+        <SkillsCity />
+      </section>
+      <MarketSectors class="landing-page__section" />
+      <footer class="landing-page__footer">
+        <a
+          v-for="profile in OWNER_PROFILES"
+          :key="profile.label"
+          class="landing-page__profile"
+          :href="profile.url"
+          :aria-label="profile.label"
+          :title="profile.label"
+          target="_blank"
+          rel="me noopener"
+        >
           <component
-            :is="ICONS[sector.icon]"
-            class="landing-page__sector-icon"
+            :is="PROFILE_ICONS[profile.icon]"
+            class="landing-page__profile-icon"
             aria-hidden="true"
           />
-          <span class="landing-page__sector-title">{{ sector.title }}</span>
-        </li>
-      </ul>
-    </section>
-    <footer class="landing-page__footer">
-      <a
-        v-for="profile in OWNER_PROFILES"
-        :key="profile.label"
-        class="landing-page__profile"
-        :href="profile.url"
-        target="_blank"
-        rel="me noopener"
-      >
-        {{ profile.label }}
-        <ArrowUpRight class="landing-page__profile-icon" aria-hidden="true" />
-      </a>
-    </footer>
+        </a>
+      </footer>
+    </div>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   </main>
 </template>
@@ -906,11 +897,6 @@ onUnmounted(() => {
   overscroll-behavior: contain;
   background-color: var(--color-canvas-overlay-surface);
   font-family: var(--font-mono);
-}
-
-/* Scrolling down only opens up once the logo has woken up and the hero is shown. */
-.landing-page:not(.landing-page--awake) {
-  overflow: hidden;
 }
 
 .landing-page__hero {
@@ -948,6 +934,8 @@ onUnmounted(() => {
   margin: 0;
   white-space: nowrap;
   pointer-events: none;
+  font-family: var(--font-sign);
+  font-weight: bold;
   text-shadow: var(--shadow-text-canvas-overlay);
   text-transform: uppercase;
 }
@@ -1002,15 +990,40 @@ onUnmounted(() => {
   padding: var(--spacing-16) var(--spacing-6);
 }
 
-.landing-page__heading {
-  margin: 0 0 var(--spacing-8);
-  color: var(--color-canvas-overlay-accent);
-  font-size: var(--font-size-xl);
-  font-weight: normal;
-  letter-spacing: 0.12em;
+/* Positioned so it paints over the contour map behind the content. */
+.landing-page__turn {
+  display: none;
+  position: relative;
 }
 
+/* Held upright, a phone shows the city too small to read its districts, so it suggests landscape. */
+@media (orientation: portrait) and (width <= 640px) {
+  .landing-page__turn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 0 var(--spacing-4);
+    gap: var(--spacing-2);
+    color: var(--color-canvas-overlay-muted);
+    font-size: var(--font-size-2xs);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+}
+
+.landing-page__turn-icon {
+  width: var(--spacing-6);
+  height: var(--spacing-6);
+}
+
+/* Everything under the hero, over the contour map that sticks behind it. */
+.landing-page__content {
+  position: relative;
+}
+
+/* Positioned so it paints over the sticky map, like the sections above it. */
 .landing-page__footer {
+  position: relative;
   display: flex;
   justify-content: center;
   padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
@@ -1019,13 +1032,8 @@ onUnmounted(() => {
 
 .landing-page__profile {
   display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-1);
+  padding: var(--spacing-2);
   color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.2em;
-  text-decoration: none;
-  text-transform: uppercase;
 }
 
 .landing-page__profile:hover,
@@ -1034,52 +1042,9 @@ onUnmounted(() => {
 }
 
 .landing-page__profile-icon {
-  width: var(--spacing-4);
-  height: var(--spacing-4);
-}
-
-.landing-page__sectors {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--spacing-4);
-}
-
-.landing-page__sector-icon {
-  color: var(--color-canvas-overlay-accent);
-  stroke-width: 1.25;
-}
-
-.landing-page__sectors {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-@media (width <= 640px) {
-  .landing-page__sectors {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.landing-page__sector {
-  display: grid;
-  justify-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-8) var(--spacing-4);
-  border-top: var(--spacing-px) solid var(--color-canvas-overlay-border);
-  text-align: center;
-}
-
-.landing-page__sector-icon {
-  width: var(--spacing-12);
-  height: var(--spacing-12);
-}
-
-.landing-page__sector-title {
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+  width: var(--spacing-6);
+  height: var(--spacing-6);
+  stroke-width: 1.5;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1087,25 +1052,22 @@ onUnmounted(() => {
     animation: landing-page-bob 2s ease-in-out infinite;
   }
 
-  @supports (animation-timeline: view()) {
-    .landing-page__sector {
-      animation: landing-page-reveal linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 70%;
-    }
+  .landing-page__turn-icon {
+    animation: landing-page-turn 2.4s ease-in-out infinite;
+  }
+}
+
+/* The phone tips over to landscape, holds, and stands back up. */
+@keyframes landing-page-turn {
+  30%,
+  70% {
+    transform: rotate(-90deg);
   }
 }
 
 @keyframes landing-page-bob {
   50% {
     transform: translateY(var(--spacing-1-5));
-  }
-}
-
-@keyframes landing-page-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(var(--spacing-8));
   }
 }
 </style>

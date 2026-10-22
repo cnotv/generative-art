@@ -145,6 +145,7 @@
   --spacing-10: 2.5rem; // 40px
   --spacing-12: 3rem; // 48px
   --spacing-16: 4rem; // 64px
+  --spacing-20: 5rem; // 80px
 
   // Border radius scale
   --radius-sm: 0.125rem; // 2px
@@ -157,6 +158,9 @@
   // Typography — font families
   --font-sans: inter, system-ui, avenir, helvetica, arial, sans-serif;
   --font-mono: 'Monaco', 'Courier New', monospace;
+
+  // The bold face of the skills city's signs, so the homepage hero matches them.
+  --font-sign: 'DIN Alternate', arial, sans-serif;
 
   // Typography — font sizes
   --font-size-2xs: 0.5625rem; // 9px
