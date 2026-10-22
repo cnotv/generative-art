@@ -72,8 +72,8 @@ export const RIM_LIGHT_POWER = 3
 
 /**
  * Every finish tried for the hero, picked from the Config panel or with ?look= in the address.
- * The original lighting, the first pass with a rim, navy cardstock with an embossed logo, and a
- * light letterpress card with the logo in ink.
+ * The original lighting, the first pass with a rim, navy cardstock with an embossed logo, a light
+ * letterpress card with the logo in ink, and polished chrome mirroring the skills city.
  */
 export const HERO_LOOKS: Record<string, HeroLook> = {
   original: {
@@ -82,6 +82,7 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     floorColor: 0x2a3547,
     logoColor: 0x1d2738,
     logoRoughness: 0.9,
+    logoMetalness: 0,
     paper: false,
     embossStrength: 0,
     rimStrength: 0,
@@ -97,7 +98,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 0.8
     },
     shadowRadius: 1,
-    ink: false
+    ink: false,
+    reflection: 0
   },
   rim: {
     label: 'Rim light',
@@ -105,6 +107,7 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     floorColor: 0x2a3547,
     logoColor: 0x27334c,
     logoRoughness: 0.7,
+    logoMetalness: 0,
     paper: false,
     embossStrength: 0,
     rimStrength: 0.22,
@@ -120,7 +123,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 0.75
     },
     shadowRadius: 6,
-    ink: false
+    ink: false,
+    reflection: 0
   },
   cardstock: {
     label: 'Navy cardstock',
@@ -128,6 +132,7 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     floorColor: 0x2a3547,
     logoColor: 0x243049,
     logoRoughness: 0.95,
+    logoMetalness: 0,
     paper: true,
     embossStrength: 0.9,
     rimStrength: 0,
@@ -143,7 +148,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 1
     },
     shadowRadius: 10,
-    ink: false
+    ink: false,
+    reflection: 0
   },
   letterpress: {
     label: 'Letterpress',
@@ -151,6 +157,7 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     floorColor: 0xeee5d4,
     logoColor: 0x26324d,
     logoRoughness: 0.9,
+    logoMetalness: 0,
     paper: true,
     embossStrength: 0.5,
     rimStrength: 0,
@@ -166,10 +173,47 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 1
     },
     shadowRadius: 10,
-    ink: true
+    ink: true,
+    reflection: 0
+  },
+  chrome: {
+    label: 'Chrome',
+    wallColor: 0x10151f,
+    floorColor: 0x1a2030,
+    logoColor: 0xdfe4ec,
+    logoRoughness: 0.12,
+    logoMetalness: 1,
+    paper: false,
+    embossStrength: 0,
+    rimStrength: 0.1,
+    ambientIntensity: 0.6,
+    key: { color: 0xffffff, intensity: 0.8, position: [-4, 6, 10] },
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 380,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 1
+    },
+    shadowRadius: 8,
+    ink: false,
+    reflection: 0.9
   }
 }
 export const DEFAULT_HERO_LOOK = 'cardstock'
+/** A short loop of the skills city, played forward then back, that the chrome look mirrors. */
+export const REFLECTION_VIDEO = 'hero/skills-city-reflection.mp4'
+/**
+ * How the mirror finish lays the video across the logo: the scene units the footage spans, and how
+ * far a face's tilt shifts what it reflects, so bevels and sides show a different part of it.
+ */
+export const REFLECTION_SPAN = 14
+export const REFLECTION_TILT = 0.25
+/** The reflection sways slowly side to side: how far, as a share of the footage, and how fast. */
+export const REFLECTION_SWAY = 0.08
+export const REFLECTION_SWAY_SPEED = 0.25
 
 export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'

@@ -172,6 +172,7 @@ export interface HeroLook {
   floorColor: number
   logoColor: number
   logoRoughness: number
+  logoMetalness: number
   /** Whether the room and logo are cardstock, with grain, fibres and tooth. */
   paper: boolean
   embossStrength: number
@@ -183,6 +184,8 @@ export interface HeroLook {
   shadowRadius: number
   /** Dark text for a light page, instead of light text for a dark one. */
   ink: boolean
+  /** How strongly the logo mirrors the looping video of the skills city; 0 for no reflection. */
+  reflection: number
 }
 
 /** Everything in the hero a look changes: the lights, the room and the logo. */
@@ -197,4 +200,8 @@ export interface HeroLookParts {
   logoPaper: THREE.Texture
   emboss: THREE.IUniform<number>
   rim: THREE.IUniform<number>
+  /** How strongly the logo mirrors the video, and the video itself once the mirror finish is on. */
+  reflection: THREE.IUniform<number>
+  reflectionMap: THREE.IUniform<THREE.Texture | null>
+  reflectionShift: THREE.IUniform<number>
 }

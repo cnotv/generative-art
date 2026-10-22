@@ -9,6 +9,12 @@ describe('HERO_LOOKS', () => {
     // Assert
     expect(HERO_LOOKS[DEFAULT_HERO_LOOK]).toBeDefined()
     expect(new Set(labels).size).toBe(labels.length)
-    expect(Object.keys(HERO_LOOKS)).toEqual(['original', 'rim', 'cardstock', 'letterpress'])
+    expect(Object.keys(HERO_LOOKS)).toEqual([
+      'original',
+      'rim',
+      'cardstock',
+      'letterpress',
+      'chrome'
+    ])
   })
 })

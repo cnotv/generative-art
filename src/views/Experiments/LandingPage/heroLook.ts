@@ -4,19 +4,43 @@ import type { ElementPropertiesConfig } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { useSceneViewStore } from '@/stores/sceneView'
 import { aimSpot, setPaper } from './introScene'
-import { SLEEP_AMBIENT_INTENSITY, SLEEP_DIRECTIONAL_INTENSITY } from './config'
+import {
+  SLEEP_AMBIENT_INTENSITY,
+  SLEEP_DIRECTIONAL_INTENSITY,
+  REFLECTION_VIDEO,
+  REFLECTION_SWAY,
+  REFLECTION_SWAY_SPEED
+} from './config'
 import type { HeroLook, HeroLookParts } from './types'
+
+interface VideoReflection {
+  video: HTMLVideoElement
+  texture: THREE.VideoTexture
+}
+
+// The looping, muted video the mirror finish reflects. It plays only while that finish is on.
+const createVideoReflection = (): VideoReflection => {
+  const video = document.createElement('video')
+  video.src = `${import.meta.env.BASE_URL}${REFLECTION_VIDEO}`
+  video.muted = true
+  video.loop = true
+  video.playsInline = true
+  const texture = new THREE.VideoTexture(video)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return { video, texture }
+}
 
 /**
  * Drives the hero's finish: puts a look on every light and surface, and brings the lights
  * up from the sleeping room to that look's levels.
  * @param parts Everything a look changes.
  * @param getLook The look currently chosen.
- * @returns `apply` to switch to a look live, and `setLightLevels` for the intro, from 0 asleep to
- *   1 awake.
+ * @returns `apply` to switch to a look live, `setLightLevels` for the intro, from 0 asleep to 1
+ *   awake, `update` for each frame and `dispose`.
  */
 export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) => {
   let lightProgress = 0
+  let reflection: VideoReflection | null = null
 
   const setLightLevels = (progress: number): void => {
     lightProgress = progress
@@ -42,6 +66,15 @@ export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) =>
 
     parts.logoMaterial.color.set(look.logoColor)
     parts.logoMaterial.roughness = look.logoRoughness
+    parts.logoMaterial.metalness = look.logoMetalness
+    if (look.reflection > 0) {
+      reflection = reflection ?? createVideoReflection()
+      reflection.video.play().catch(() => undefined)
+      parts.reflectionMap.value = reflection.texture
+    } else {
+      reflection?.video.pause()
+    }
+    parts.reflection.value = look.reflection
     setPaper(parts.logoMaterial, look.paper ? parts.logoPaper : null)
     parts.emboss.value = look.embossStrength
 
@@ -59,7 +92,18 @@ export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) =>
     setLightLevels(lightProgress)
   }
 
-  return { apply, setLightLevels }
+  // Called every frame: the reflection sways slowly, as if the logo caught a moving view.
+  const update = (seconds: number): void => {
+    parts.reflectionShift.value = Math.sin(seconds * REFLECTION_SWAY_SPEED) * REFLECTION_SWAY
+  }
+
+  const dispose = (): void => {
+    reflection?.video.pause()
+    reflection?.video.removeAttribute('src')
+    reflection?.texture.dispose()
+  }
+
+  return { apply, setLightLevels, update, dispose }
 }
 
 const materialSchema = {
@@ -95,17 +139,20 @@ const createLogoConfig = (parts: HeroLookParts, title: string): ElementPropertie
       ...materialSchema,
       emboss: { min: 0, max: 2, step: 0.05, label: 'Emboss' },
       rim: { min: 0, max: 1, step: 0.01, label: 'Rim glow' },
+      reflection: { min: 0, max: 3, step: 0.05, label: 'Reflection' },
       paper: { boolean: true, label: 'Paper' }
     },
     getValue: (path) => {
       if (path === 'emboss') return parts.emboss.value
       if (path === 'rim') return parts.rim.value
+      if (path === 'reflection') return parts.reflection.value
       if (path === 'paper') return parts.logoMaterial.map !== null
       return material.getValue(path)
     },
     updateValue: (path, value) => {
       if (path === 'emboss') parts.emboss.value = value as number
       else if (path === 'rim') parts.rim.value = value as number
+      else if (path === 'reflection') parts.reflection.value = value as number
       else if (path === 'paper') setPaper(parts.logoMaterial, value ? parts.logoPaper : null)
       else material.updateValue(path, value)
     }

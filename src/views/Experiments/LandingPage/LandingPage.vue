@@ -703,7 +703,10 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     logoMaterial: contentMaterial,
     logoPaper: grainTexture,
     emboss: shading.emboss,
-    rim: shading.rim
+    rim: shading.rim,
+    reflection: shading.reflection,
+    reflectionMap: shading.reflectionMap,
+    reflectionShift: shading.reflectionShift
   }
   const heroLook = createHeroLook(lookParts, () => look.value)
   heroLook.apply(look.value)
@@ -788,6 +791,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     accumulator -= steps * PHYSICS_STEP
 
     animateTimeline(timelineManager, frame)
+    heroLook.update(clock.elapsedTime)
 
     if (clock.elapsedTime >= AUTO_WAKE_DELAY) wakeUp()
     if (introStage.value !== 'awake') {
@@ -822,6 +826,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     contentMaterial.dispose()
     stopLookWatch()
     stopLookPick()
+    heroLook.dispose()
     room.materials.forEach((material) => material.dispose())
     room.paper.dispose()
     room.meshes.forEach((mesh) => mesh.geometry.dispose())

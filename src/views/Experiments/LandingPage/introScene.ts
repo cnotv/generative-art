@@ -16,7 +16,9 @@ import {
   PAPER_BUMP_SCALE,
   EMBOSS_LIGHT_DIRECTION,
   RIM_LIGHT_COLOR,
-  RIM_LIGHT_POWER
+  RIM_LIGHT_POWER,
+  REFLECTION_SPAN,
+  REFLECTION_TILT
 } from './config'
 import type { LogoIntroPose, Room, LogoRest, SpotPlacement } from './types'
 
@@ -249,6 +251,10 @@ export const createPaperTexture = (): THREE.CanvasTexture => {
 export interface CardShading {
   emboss: THREE.IUniform<number>
   rim: THREE.IUniform<number>
+  reflection: THREE.IUniform<number>
+  reflectionMap: THREE.IUniform<THREE.Texture | null>
+  /** How far the reflection has swayed sideways, as a share of the footage. */
+  reflectionShift: THREE.IUniform<number>
 }
 
 /**
@@ -260,16 +266,25 @@ export interface CardShading {
  * @returns The two strengths, to set from the chosen look and the panel.
  */
 export const addCardShading = (material: THREE.MeshStandardMaterial): CardShading => {
-  const shading: CardShading = { emboss: { value: 0 }, rim: { value: 0 } }
+  const shading: CardShading = {
+    emboss: { value: 0 },
+    rim: { value: 0 },
+    reflection: { value: 0 },
+    reflectionMap: { value: null },
+    reflectionShift: { value: 0 }
+  }
   const [lightX, lightY] = EMBOSS_LIGHT_DIRECTION
   material.onBeforeCompile = (shader) => {
     shader.uniforms.embossStrength = shading.emboss
     shader.uniforms.rimStrength = shading.rim
     shader.uniforms.rimColor = { value: new THREE.Color(RIM_LIGHT_COLOR) }
+    shader.uniforms.reflectionStrength = shading.reflection
+    shader.uniforms.reflectionMap = shading.reflectionMap
+    shader.uniforms.reflectionShift = shading.reflectionShift
     shader.fragmentShader = shader.fragmentShader
       .replace(
         'void main() {',
-        'uniform float embossStrength;\nuniform float rimStrength;\nuniform vec3 rimColor;\nvoid main() {'
+        'uniform float embossStrength;\nuniform float rimStrength;\nuniform vec3 rimColor;\nuniform float reflectionStrength;\nuniform sampler2D reflectionMap;\nuniform float reflectionShift;\nvoid main() {'
       )
       .replace(
         '#include <normal_fragment_begin>',
@@ -283,7 +298,12 @@ export const addCardShading = (material: THREE.MeshStandardMaterial): CardShadin
         `#include <emissivemap_fragment>
         // The camera looks along view space z, so a normal's z says how squarely a face meets it.
         float sideOn = 1.0 - abs(normal.z);
-        totalEmissiveRadiance += rimColor * pow(sideOn, ${RIM_LIGHT_POWER.toFixed(1)}) * rimStrength;`
+        totalEmissiveRadiance += rimColor * pow(sideOn, ${RIM_LIGHT_POWER.toFixed(1)}) * rimStrength;
+        // A mirror finish: the face shows the footage at its own place in view, mirrored left to
+        // right, and shifted by its tilt so bevels and sides catch a different part of it.
+        vec2 mirrorUv = vec2(0.5, 0.5) + vec2(vViewPosition.x, -vViewPosition.y) / ${REFLECTION_SPAN.toFixed(1)}
+          + normal.xy * ${REFLECTION_TILT.toFixed(2)} + vec2(reflectionShift, 0.0);
+        totalEmissiveRadiance += texture2D(reflectionMap, mirrorUv).rgb * reflectionStrength;`
       )
   }
   return shading

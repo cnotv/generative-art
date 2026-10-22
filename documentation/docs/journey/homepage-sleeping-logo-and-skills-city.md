@@ -154,8 +154,8 @@ pixel of the screen.
 ### Every attempt kept as a preset
 
 Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
-lighting, the first pass with a rim, navy cardstock, and a light letterpress card with the logo in
-navy ink. A glossy take and a layered cut-paper look were tried too and dropped.
+lighting, the first pass with a rim, navy cardstock, a light letterpress card with the logo in navy
+ink, and polished chrome mirroring the skills city. A glossy take and a layered cut-paper look were tried too and dropped.
 The Config panel switches between them live, and an address such as `?look=letterpress` opens one
 directly. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
 and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
@@ -163,13 +163,30 @@ rather than a fixed answer. The Lights section recognises its lights by name, so
 named as the scene's spot light to join the ambient and key lights there instead of getting a row of
 its own.
 
-![The four hero presets: original, rim light, navy cardstock and letterpress](/img/homepage/hero-looks.webp)
+![The five hero presets: original, rim light, navy cardstock, letterpress and chrome](/img/homepage/hero-looks.webp)
 
 A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
 colours and lights change in place, and the paper texture is put on or taken off. The
 emboss and rim are values the logo's material reads every frame, so they change without rebuilding
 anything. On the light letterpress card the name and profession switch to navy ink, since light
 text on cream would vanish.
+
+### A chrome logo that mirrors the city
+
+![The chrome logo mirroring the skills city](/img/homepage/hero-chrome.webp)
+
+The chrome preset reflects a short loop of the skills city, recorded from the page below and played
+forward then backward so it loops without a jump. The obvious route, the video as a reflection map
+the material lights itself with, failed twice. First the logo stayed black: three.js only prepares
+a reflection map from an image whose height is above zero, and a video element's height is its HTML
+attribute, zero until set, not the size of the footage. Then it reflected a single flat colour:
+under an orthographic camera every point of a flat face looks in exactly the same direction, so a
+mirror face shows one spot of the map, not a picture.
+
+What works is closer to a real mirror in front of the scene: each face shows the footage at its own
+place in the view, mirrored left to right, shifted by the face's tilt so the bevels and sides catch
+other parts of it. The city barely moves, so the reflection also sways slowly sideways, as if the
+logo caught a moving view. The video only plays while the chrome preset is on.
 
 ## The city of skills
 
