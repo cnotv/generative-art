@@ -182,7 +182,7 @@ as a list.
 
 ## Arrows to the market
 
-![Dotted arrows fanning out from the dock at the island's tip to six small sector avatars](/img/homepage/sector-traces.webp)
+![Dotted arrows fanning out from the dock at the island's tip to six small 3D sector avatars](/img/homepage/sector-traces.webp)
 
 The sectors the products serve have no heading of their own: a boat sails from the harbour round
 the island to a dock at its southern tip, and dotted arrows fan out from that dock to six small
@@ -203,7 +203,13 @@ canvas, whatever its size, which is where the arrows start. The boat's course is
 model as a list of points, like the other motion tags, so the page sails it without knowing it
 is a boat.
 
-The avatars are measured by their offsets, not their bounding boxes, because they slide in as they
-scroll into view and a box measured mid-slide would leave every arrow short. That slide has a
-second effect: a transformed element becomes the offset parent of what is inside it, so an
-avatar's offset is relative to its own sector, and the offsets have to be summed up to the section.
+Each avatar is a small 3D model built by its own Blender script, in the city's palette: a bank,
+a telecom mast, a stack of publications, the scales of governance, a shield and a town hall. Six
+canvases would mean six WebGL contexts, and browsers cap how many a page may hold, so one canvas
+covers the whole section and each model is drawn only into the square over its circle, with its
+own camera, before the next. The circles are measured every frame for that, so the models stay on
+them whatever moves the layout. The canvas comes after the list in the page, so it paints over the
+circles' backgrounds rather than under them.
+
+The arrows, by contrast, measure the avatars once per resize, by their offsets summed up through
+every offset parent to the section, so a transformed ancestor on the way cannot leave them short.

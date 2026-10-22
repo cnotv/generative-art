@@ -95,6 +95,28 @@ export interface RouteSpot {
   heading: number
 }
 
+/** One market sector's avatar: its model and the camera that frames it. */
+export interface SectorAvatar {
+  object: THREE.Object3D
+  camera: THREE.OrthographicCamera
+  baseYaw: number
+}
+
+/** The market avatars' shared renderer and scene, one avatar per sector in page order. */
+export interface AvatarStage {
+  renderer: THREE.WebGLRenderer
+  scene: THREE.Scene
+  avatars: (SectorAvatar | null)[]
+}
+
+/** A rectangle in WebGL viewport terms: pixels from the canvas's bottom-left corner. */
+export interface ViewportRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 /** A point in the market section's own pixel space. */
 export interface TracePoint {
   x: number

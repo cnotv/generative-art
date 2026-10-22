@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { ref, onMounted, onUnmounted } from 'vue'
-import type { Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
@@ -12,16 +11,8 @@ import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
-import SectorTraces from './SectorTraces.vue'
-import {
-  Landmark,
-  RadioTower,
-  Newspaper,
-  Scale,
-  Shield,
-  Building2,
-  ArrowUpRight
-} from 'lucide-vue-next'
+import MarketSectors from './MarketSectors.vue'
+import { ArrowUpRight } from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { getLogoIntroPose, getSleepPose } from './logoIntro'
@@ -50,8 +41,7 @@ import {
   OWNER_NAME,
   OWNER_PROFESSION,
   OWNER_SUMMARY,
-  OWNER_PROFILES,
-  PRODUCT_SECTORS
+  OWNER_PROFILES
 } from './config'
 import type { LogoJumpPath, LogoRest } from './types'
 import { registerCameraProperties } from '@/utils/cameraProperties'
@@ -63,16 +53,7 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const skills = ref<HTMLElement | null>(null)
-const sectorList = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
-const ICONS: Record<string, Component> = {
-  bank: Landmark,
-  telco: RadioTower,
-  publisher: Newspaper,
-  governance: Scale,
-  defense: Shield,
-  public: Building2
-}
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -870,26 +851,7 @@ onUnmounted(() => {
       <p class="sr-only">{{ OWNER_SUMMARY }}</p>
       <SkillsCity />
     </section>
-    <section
-      class="landing-page__section landing-page__section--sectors"
-      aria-labelledby="sectors-title"
-    >
-      <SectorTraces :list="sectorList" />
-      <!-- The traces from the city carry the section; its name stays for screen readers. -->
-      <h2 id="sectors-title" class="sr-only">Market knowledge</h2>
-      <ul ref="sectorList" class="landing-page__sectors">
-        <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
-          <span class="landing-page__sector-avatar">
-            <component
-              :is="ICONS[sector.icon]"
-              class="landing-page__sector-icon"
-              aria-hidden="true"
-            />
-          </span>
-          <span class="landing-page__sector-title">{{ sector.title }}</span>
-        </li>
-      </ul>
-    </section>
+    <MarketSectors class="landing-page__section" />
     <footer class="landing-page__footer">
       <a
         v-for="profile in OWNER_PROFILES"
@@ -1011,10 +973,6 @@ onUnmounted(() => {
   padding: var(--spacing-16) var(--spacing-6);
 }
 
-.landing-page__section--sectors {
-  position: relative;
-}
-
 .landing-page__footer {
   display: flex;
   justify-content: center;
@@ -1043,113 +1001,15 @@ onUnmounted(() => {
   height: var(--spacing-4);
 }
 
-.landing-page__sectors {
-  position: relative;
-  display: grid;
-  margin: 0;
-  padding: 0;
-  grid-template-columns: repeat(6, 1fr);
-  list-style: none;
-  gap: var(--spacing-4);
-}
-
-/* On a phone the six sit in two staggered rows, so the arrows to the second row pass between
-   the avatars of the first instead of through them. */
-@media (width <= 640px) {
-  .landing-page__sectors {
-    grid-template-columns: repeat(7, 1fr);
-    row-gap: var(--spacing-8);
-  }
-
-  .landing-page__sector {
-    grid-column-end: span 2;
-  }
-
-  .landing-page__sector:nth-child(1) {
-    grid-column-start: 1;
-  }
-
-  .landing-page__sector:nth-child(2) {
-    grid-column-start: 3;
-  }
-
-  .landing-page__sector:nth-child(3) {
-    grid-column-start: 5;
-  }
-
-  .landing-page__sector:nth-child(4) {
-    grid-column-start: 2;
-  }
-
-  .landing-page__sector:nth-child(5) {
-    grid-column-start: 4;
-  }
-
-  .landing-page__sector:nth-child(6) {
-    grid-column-start: 6;
-  }
-
-  .landing-page__sector:nth-child(n + 4) {
-    grid-row: 2;
-  }
-}
-
-.landing-page__sector {
-  display: grid;
-  justify-items: center;
-  align-content: start;
-  gap: var(--spacing-2);
-  text-align: center;
-}
-
-.landing-page__sector-avatar {
-  display: grid;
-  width: var(--spacing-16);
-  height: var(--spacing-16);
-  place-items: center;
-  border: var(--spacing-px) solid var(--color-canvas-overlay-muted);
-  border-radius: var(--radius-full);
-  background-color: var(--color-canvas-overlay-surface);
-}
-
-.landing-page__sector-icon {
-  width: var(--spacing-8);
-  height: var(--spacing-8);
-  color: var(--color-canvas-overlay-accent);
-  stroke-width: 1.25;
-}
-
-.landing-page__sector-title {
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-2xs);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .landing-page__scroll-icon {
     animation: landing-page-bob 2s ease-in-out infinite;
-  }
-
-  @supports (animation-timeline: view()) {
-    .landing-page__sector {
-      animation: landing-page-reveal linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 70%;
-    }
   }
 }
 
 @keyframes landing-page-bob {
   50% {
     transform: translateY(var(--spacing-1-5));
-  }
-}
-
-@keyframes landing-page-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(var(--spacing-8));
   }
 }
 </style>

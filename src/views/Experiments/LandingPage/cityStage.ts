@@ -157,7 +157,12 @@ const collectMovers = (model: THREE.Object3D): CityMover[] => {
 const isDistrict = (object: THREE.Object3D | null): boolean =>
   object?.name.startsWith(DISTRICT_PREFIX) ?? false
 
-const createCityLights = (scene: THREE.Scene, bounds: THREE.Box3): void => {
+/**
+ * Lights a scene like the hero room: a soft sky and ground fill and one key light from the side.
+ * @param scene The scene to light.
+ * @param bounds What the key light aims at.
+ */
+export const createCityLights = (scene: THREE.Scene, bounds: THREE.Box3): void => {
   scene.add(new THREE.HemisphereLight(CITY_SKY_COLOR, CITY_GROUND_COLOR, CITY_AMBIENT_INTENSITY))
   const key = new THREE.DirectionalLight(CITY_KEY_COLOR, CITY_KEY_INTENSITY)
   key.position.set(...CITY_KEY_POSITION)

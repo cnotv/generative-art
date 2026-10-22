@@ -10,7 +10,8 @@ reload: nothing in the page code needs to change unless a new kind of motion is 
 
 ![The skills city as the script's preview render shows it](/img/skills-city/blender-preview.webp)
 
-> **Source files:** `scripts/blender/skills-city.py`, `src/views/Experiments/LandingPage/cityStage.ts`,
+> **Source files:** `scripts/blender/skills-city.py`, `scripts/blender/market-avatars.py`,
+> `scripts/blender/primitives.py`, `src/views/Experiments/LandingPage/avatarStage.ts`, `src/views/Experiments/LandingPage/cityStage.ts`,
 > `src/views/Experiments/LandingPage/SkillsCity.vue`, `src/views/Experiments/LandingPage/config.ts`
 
 ## Running it
@@ -24,6 +25,21 @@ blender -b --factory-startup --python scripts/blender/skills-city.py -- public/s
 
 It writes the model and a preview render, and prints the mesh, triangle and moving part counts.
 Then check the budgets with `pnpm check:assets` and look at the homepage.
+
+## The market avatars
+
+The six small models under the city, one per market sector, come from a second script,
+`scripts/blender/market-avatars.py`, which writes `public/market-avatars.glb`. Both scripts share
+their primitives and palette through `scripts/blender/primitives.py`.
+
+```sh
+blender -b --factory-startup --python scripts/blender/market-avatars.py -- public/market-avatars.glb /tmp/market-avatars.png
+```
+
+![The six market avatars as the script's preview render shows them](/img/skills-city/market-avatars.webp)
+
+Each avatar is one object named `avatar-<key>`, with its origin at the middle of its base so the
+page can turn it in place; `<key>` matches the `avatar` field of `PRODUCT_SECTORS` in `config.ts`.
 
 ## How the city is laid out
 
