@@ -73,20 +73,13 @@ export const OWNER_PROFILES = [
   { label: 'GitHub', icon: 'github', url: 'https://github.com/cnotv' }
 ]
 export const SPOT_COLOR = 0xc9d8ff
-/** Where to read how this page was built: its journey, its guides and the toolkit behind it. */
+/** Where to read how this page was built: its journey, the tutorials and the toolkit behind it. */
 export const BUILD_NOTES = [
   {
     label: 'The journey',
     url: 'https://cnotv.github.io/generative-art/docs/docs/journey/homepage-sleeping-logo-and-skills-city'
   },
-  {
-    label: 'Several canvases on one page',
-    url: 'https://cnotv.github.io/generative-art/docs/docs/guides/several-canvases-on-one-page'
-  },
-  {
-    label: 'Rebuilding the city',
-    url: 'https://cnotv.github.io/generative-art/docs/docs/guides/rebuilding-the-skills-city'
-  },
+  { label: 'Tutorials', url: 'https://cnotv.github.io/generative-art/docs/docs/category/guides' },
   {
     label: 'Toolkit docs',
     url: 'https://cnotv.github.io/generative-art/docs/docs/packages/threejs'

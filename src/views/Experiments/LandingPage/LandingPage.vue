@@ -886,8 +886,7 @@ onUnmounted(() => {
             />
           </a>
         </nav>
-        <nav class="landing-page__notes" aria-labelledby="build-notes-title">
-          <p id="build-notes-title" class="landing-page__notes-title">How this page was built</p>
+        <nav class="landing-page__notes" aria-label="How this page was built">
           <ul class="landing-page__notes-list">
             <li v-for="note in BUILD_NOTES" :key="note.url">
               <a class="landing-page__note" :href="note.url" target="_blank" rel="noopener">
@@ -1050,14 +1049,6 @@ onUnmounted(() => {
 
 .landing-page__notes {
   text-align: center;
-}
-
-.landing-page__notes-title {
-  margin: 0 0 var(--spacing-2);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-2xs);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
 }
 
 .landing-page__notes-list {
