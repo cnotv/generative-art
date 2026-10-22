@@ -86,7 +86,9 @@ describe('getMotionValue', () => {
     ['grow', 0.5, 0.5],
     ['bob', Math.PI / 2, 2],
     ['swing', 0, 0],
-    ['pulse', Math.PI / 2, 3]
+    ['pulse', Math.PI / 2, 3],
+    ['stretch', Math.PI / 2, 3],
+    ['arc', 0.75, 0.75]
   ] as const)('%s at %s seconds is %s', (kind, seconds, expected) => {
     expect(getMotionValue({ ...base, kind }, seconds)).toBeCloseTo(expected)
   })

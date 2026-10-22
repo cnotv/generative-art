@@ -39,7 +39,16 @@ export interface SkillsCityStage {
 }
 
 /** How a moving part of the city moves, as tagged on its node in Blender. */
-export type MotionKind = 'spin' | 'swing' | 'bob' | 'slide' | 'puff' | 'grow' | 'pulse'
+export type MotionKind =
+  | 'spin'
+  | 'swing'
+  | 'bob'
+  | 'slide'
+  | 'puff'
+  | 'grow'
+  | 'pulse'
+  | 'stretch'
+  | 'arc'
 
 /** One moving part, with the motion it plays and the pose it moves from. */
 export interface CityMover {
@@ -49,9 +58,11 @@ export interface CityMover {
   speed: number
   amount: number
   phase: number
+  lift: number
   basePosition: THREE.Vector3
   baseRotation: THREE.Euler
   baseScale: THREE.Vector3
+  fadeMaterials: THREE.Material[]
 }
 
 /** A district's top centre on the canvas, in pixels. */

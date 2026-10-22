@@ -23,7 +23,19 @@ import {
 import type { SkillsCityStage, DistrictAnchor, CityMover, MotionKind } from './types'
 
 const DISTRICT_PREFIX = 'district-'
-const MOTION_KINDS: MotionKind[] = ['spin', 'swing', 'bob', 'slide', 'puff', 'grow', 'pulse']
+const MOTION_KINDS: MotionKind[] = [
+  'spin',
+  'swing',
+  'bob',
+  'slide',
+  'puff',
+  'grow',
+  'pulse',
+  'stretch',
+  'arc'
+]
+/** How far below its spout a water drop lands, as a share of how high it rises. */
+const ARC_FALL = 1.6
 const AXES = ['x', 'y', 'z'] as const
 const PUFF_SHRINK = 0.6
 const MIN_SCALE = 0.001
@@ -35,11 +47,26 @@ const isAxis = (value: unknown): value is CityMover['axis'] => AXES.some((axis) 
 
 const readNumber = (value: unknown): number => (typeof value === 'number' ? value : 0)
 
+// A fading part gets its own transparent copy of each material, so fading it leaves every
+// other object that shares the material untouched.
+const takeFadeMaterials = (object: THREE.Object3D): THREE.Material[] => {
+  const materials: THREE.Material[] = []
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh || Array.isArray(mesh.material)) return
+    const material = mesh.material.clone()
+    material.transparent = true
+    mesh.material = material
+    materials.push(material)
+  })
+  return materials
+}
+
 // The motion tags come from the model file's extras, so each one is checked rather than trusted.
 const collectMovers = (model: THREE.Object3D): CityMover[] => {
   const movers: CityMover[] = []
   model.traverse((object) => {
-    const { anim, axis, speed, amount, phase } = object.userData
+    const { anim, axis, speed, amount, phase, lift } = object.userData
     if (!isMotionKind(anim)) return
     movers.push({
       object,
@@ -48,9 +75,11 @@ const collectMovers = (model: THREE.Object3D): CityMover[] => {
       speed: readNumber(speed),
       amount: readNumber(amount),
       phase: readNumber(phase),
+      lift: readNumber(lift),
       basePosition: object.position.clone(),
       baseRotation: object.rotation.clone(),
-      baseScale: object.scale.clone()
+      baseScale: object.scale.clone(),
+      fadeMaterials: anim === 'puff' ? takeFadeMaterials(object) : []
     })
   })
   return movers
@@ -107,7 +136,9 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
   districts.forEach((district) => {
     district.userData.restY = district.position.y
     const bounds = new THREE.Box3().setFromObject(district)
-    district.userData.anchor = bounds.getCenter(new THREE.Vector3()).setY(bounds.max.y)
+    // The centre of the district's ground, not its highest point: a tall tower would otherwise
+    // lift its label over the neighbouring districts.
+    district.userData.anchor = bounds.getCenter(new THREE.Vector3()).setY(bounds.min.y)
   })
   const outline = collectOutline(model)
   const movers = collectMovers(model)
@@ -276,7 +307,7 @@ export const getMotionValue = (
   if (kind === 'spin') return seconds * speed
   if (kind === 'swing' || kind === 'bob') return wave * amount
   if (kind === 'slide') return fraction(seconds * speed + phase) * amount
-  if (kind === 'puff') return fraction(seconds * speed + phase)
+  if (kind === 'puff' || kind === 'arc') return fraction(seconds * speed + phase)
   if (kind === 'grow') return Math.max(MIN_SCALE, fraction(seconds * speed + phase))
   return 1 + wave * amount
 }
@@ -288,9 +319,15 @@ const applyMotion = (mover: CityMover, seconds: number): void => {
   if (kind === 'bob' || kind === 'slide') object.position[axis] = basePosition[axis] + value
   if (kind === 'grow') object.scale[axis] = baseScale[axis] * value
   if (kind === 'pulse') object.scale.copy(baseScale).multiplyScalar(value)
+  if (kind === 'stretch') object.scale[axis] = baseScale[axis] * value
+  if (kind === 'arc') {
+    object.position[axis] = basePosition[axis] + value * amount
+    object.position.y = basePosition.y + (4 * value * (1 - value) - ARC_FALL * value) * mover.lift
+  }
   if (kind === 'puff') {
     object.position.y = basePosition.y + value * amount
     object.scale.copy(baseScale).multiplyScalar(1 - value * PUFF_SHRINK)
+    mover.fadeMaterials.forEach((material) => (material.opacity = 1 - value))
   }
 }
 

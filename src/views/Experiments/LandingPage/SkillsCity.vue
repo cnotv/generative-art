@@ -68,6 +68,8 @@ const onPointerMove = (event: PointerEvent): void => {
 onMounted(async () => {
   if (!canvas.value) return
   stage = await createCityStage(canvas.value)
+  // The component can unmount while the model loads, taking the canvas with it.
+  if (!canvas.value) return
   resizeObserver = new ResizeObserver(resizeStage)
   resizeObserver.observe(canvas.value)
   visibilityObserver = new IntersectionObserver(([entry]) => {
@@ -144,7 +146,7 @@ onUnmounted(() => {
   list-style: none;
 }
 
-/* Pinned to the top of its district, sitting just above it. */
+/* Pinned to the centre of its district's ground, sitting just above it. */
 .skills-city__label {
   position: absolute;
   transform: translate(-50%, calc(-100% - var(--spacing-2)));
@@ -181,6 +183,18 @@ onUnmounted(() => {
   color: var(--color-canvas-overlay-muted);
   font-size: var(--font-size-2xs);
   line-height: 1.5;
+}
+
+/* Below wide screens the districts sit too close for every description at once: labels show
+   their title and only the hovered one opens its description. */
+@media (width < 1100px) {
+  .skills-city__label:not(.skills-city__label--active) .skills-city__label-line {
+    display: none;
+  }
+
+  .skills-city__label--active {
+    z-index: 1;
+  }
 }
 
 /* On a phone the districts are too close for the descriptions; the titles carry the labels. */
