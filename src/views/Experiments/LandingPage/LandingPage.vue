@@ -12,7 +12,7 @@ import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
 import MarketSectors from './MarketSectors.vue'
-import { ArrowUpRight } from 'lucide-vue-next'
+import { ArrowUpRight, Smartphone } from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { getLogoIntroPose, getSleepPose } from './logoIntro'
@@ -31,6 +31,7 @@ import {
   WALL_GAP,
   SLEEP_AMBIENT_INTENSITY,
   SLEEP_DIRECTIONAL_INTENSITY,
+  DIRECTIONAL_LIGHT_POSITION,
   ROOM_WALL_COLOR,
   ROOM_ROUGHNESS,
   SLEEP_YAW,
@@ -52,8 +53,6 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
-const skills = ref<HTMLElement | null>(null)
-const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -81,7 +80,6 @@ const FRUSTUM_HEIGHT = 20
 const WHITE = 0xffffff
 const AMBIENT_INTENSITY = 0.8
 const DIR_LIGHT_INTENSITY = 1.2
-const DIR_LIGHT_POS = 5
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
 const LETTER_SPACING = 0.3
@@ -151,7 +149,7 @@ const createLights = (scene: THREE.Scene) => {
 
   const dirLight = new THREE.DirectionalLight(WHITE, DIR_LIGHT_INTENSITY)
   dirLight.name = 'directional-light'
-  dirLight.position.set(DIR_LIGHT_POS * 2, DIR_LIGHT_POS / 2, DIR_LIGHT_POS)
+  dirLight.position.set(...DIRECTIONAL_LIGHT_POSITION)
   dirLight.castShadow = true
   scene.add(dirLight)
 
@@ -834,18 +832,12 @@ onUnmounted(() => {
       <canvas ref="canvas" class="landing-page__canvas" />
       <h1 class="landing-page__name">{{ OWNER_NAME }}</h1>
       <p class="landing-page__profession">{{ OWNER_PROFESSION }}</p>
-      <a
-        class="landing-page__scroll"
-        href="#skills"
-        aria-label="Scroll to skills"
-        @click.prevent="scrollToSkills"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="landing-page__scroll-icon">
-          <path d="M6 9l6 6 6-6" />
-        </svg>
-      </a>
+      <p class="landing-page__turn">
+        <Smartphone class="landing-page__turn-icon" aria-hidden="true" />
+        Turn your phone for the best view
+      </p>
     </header>
-    <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
+    <section id="skills" class="landing-page__section" aria-labelledby="skills-title">
       <!-- The display on the city's sign shows these; they stay in the page for screen readers and search. -->
       <h2 id="skills-title" class="sr-only">What I work on</h2>
       <p class="sr-only">{{ OWNER_SUMMARY }}</p>
@@ -879,11 +871,6 @@ onUnmounted(() => {
   font-family: var(--font-mono);
 }
 
-/* Scrolling down only opens up once the logo has woken up and the hero is shown. */
-.landing-page:not(.landing-page--awake) {
-  overflow: hidden;
-}
-
 .landing-page__hero {
   position: relative;
   height: 100dvh;
@@ -899,15 +886,13 @@ onUnmounted(() => {
 }
 
 .landing-page__name,
-.landing-page__profession,
-.landing-page__scroll {
+.landing-page__profession {
   opacity: 0;
   transition: opacity var(--transition-game-phase) ease-out;
 }
 
 .landing-page--awake .landing-page__name,
-.landing-page--awake .landing-page__profession,
-.landing-page--awake .landing-page__scroll {
+.landing-page--awake .landing-page__profession {
   opacity: 1;
 }
 
@@ -919,6 +904,8 @@ onUnmounted(() => {
   margin: 0;
   white-space: nowrap;
   pointer-events: none;
+  font-family: var(--font-sign);
+  font-weight: bold;
   text-shadow: var(--shadow-text-canvas-overlay);
   text-transform: uppercase;
 }
@@ -937,33 +924,34 @@ onUnmounted(() => {
   letter-spacing: 0.35em;
 }
 
-.landing-page__scroll {
-  position: absolute;
-  bottom: var(--spacing-6);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: var(--spacing-2);
-  color: var(--color-canvas-overlay-muted);
+.landing-page__turn {
+  display: none;
 }
 
-.landing-page:not(.landing-page--awake) .landing-page__scroll {
-  pointer-events: none;
+/* A phone held upright crops the room to a sliver, so it suggests turning to landscape. */
+@media (orientation: portrait) and (width <= 640px) {
+  .landing-page__turn {
+    display: flex;
+    position: absolute;
+    top: var(--spacing-16);
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+    margin: 0;
+    gap: var(--spacing-2);
+    color: var(--color-canvas-overlay-muted);
+    font-size: var(--font-size-2xs);
+    letter-spacing: 0.15em;
+    white-space: nowrap;
+    text-shadow: var(--shadow-text-canvas-overlay);
+    text-transform: uppercase;
+    pointer-events: none;
+  }
 }
 
-.landing-page__scroll:hover,
-.landing-page__scroll:focus-visible {
-  color: var(--color-canvas-overlay-accent);
-}
-
-.landing-page__scroll-icon {
-  display: block;
-  width: var(--spacing-8);
-  height: var(--spacing-8);
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.landing-page__turn-icon {
+  width: var(--spacing-6);
+  height: var(--spacing-6);
 }
 
 .landing-page__section {
@@ -1002,14 +990,16 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .landing-page__scroll-icon {
-    animation: landing-page-bob 2s ease-in-out infinite;
+  .landing-page__turn-icon {
+    animation: landing-page-turn 2.4s ease-in-out infinite;
   }
 }
 
-@keyframes landing-page-bob {
-  50% {
-    transform: translateY(var(--spacing-1-5));
+/* The phone tips over to landscape, holds, and stands back up. */
+@keyframes landing-page-turn {
+  30%,
+  70% {
+    transform: rotate(-90deg);
   }
 }
 </style>

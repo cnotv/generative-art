@@ -53,6 +53,8 @@ export const ROOM_COLLIDER_DEPTH = 1
 
 export const SLEEP_AMBIENT_INTENSITY = 0.06
 export const SLEEP_DIRECTIONAL_INTENSITY = 0
+/** The key light once awake, as tuned in the Lights panel: in front, to the right and low. */
+export const DIRECTIONAL_LIGHT_POSITION = [5, 3, 5] as const
 export const SPOT_INTENSITY = 500
 /** Where the spotlight hangs relative to what it lights: off to the side, low, a little forward. */
 export const SPOT_SIDE = 11
