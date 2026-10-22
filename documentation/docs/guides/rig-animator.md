@@ -115,7 +115,8 @@ exist, so two poses are already a movement.
   preview, skeleton overlay, Capture/Cancel)
 - `src/views/Tools/RigAnimator/useRigHandPose.ts`: the hand pose picker's readiness check and
   applying a preset to whichever hand the selected bone belongs to
-- `src/views/Tools/RigAnimator/config.ts`: the scene setup and every tunable, as values only
+- `src/views/Tools/RigAnimator/config.ts` (+ `exampleModels.test.ts`): the scene setup, the
+  bundled example models the Model control offers, and every tunable, as values only
 - `packages/rig/src/pose.ts`, `humanoidRig.ts`, `rig.ts`, `ik.ts`, `handPose.ts`: the
   framework-agnostic logic. See the [rig package's docs](/docs/packages/rig) for the
   pose-capture, clip-building, auto-rig, IK and hand pose API.
@@ -123,11 +124,16 @@ exist, so two poses are already a movement.
 ## Uploading a model
 
 The view opens with a default character already loaded, so there is something to pose before
-uploading anything. **Upload Model**, docked on the canvas itself rather than in the rig
-panel, replaces it with any FBX, GLB or GLTF. If it already carries a skeleton (a Mixamo export,
-a rigged glTF character), the bone list appears immediately. The camera re-frames to whatever
-scale the model happens to use, since a Mixamo FBX is roughly a hundred times the scale of a
-typical glTF asset and a fixed camera position would put one of them somewhere behind a shoe.
+uploading anything. The Config panel opens with a **Model** control, one button per bundled
+example: `character2` with the Mixamo skeleton its download carries, and `character2, own rig`,
+the same mesh skinned to a humanoid armature fitted in Blender from the mesh's own geometry
+([how it was fitted](/docs/journey/fitting-a-rig-in-blender)). The model that loads on arrival
+is the one the control starts on. **Upload Model**, docked on the canvas itself rather than in
+the rig panel, replaces the loaded model with any FBX, GLB or GLTF. If it already carries a
+skeleton (a Mixamo export, a rigged glTF character), the bone list appears immediately. The
+camera re-frames to whatever scale the model happens to use, since a Mixamo FBX is roughly a
+hundred times the scale of a typical glTF asset and a fixed camera position would put one of
+them somewhere behind a shoe.
 
 The model stands on a ground disc placed level with its lowest point as loaded, the soles of its
 feet in the rest pose, and sized to the model for the same reason. The scene's key light keeps its
