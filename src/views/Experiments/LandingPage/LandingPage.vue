@@ -23,6 +23,7 @@ import {
   createRoom,
   aimSpot,
   createCornerSpot,
+  addRimLight,
   createLogoEyelids,
   setEyelidsOpen,
   applyLogoPose
@@ -35,10 +36,11 @@ import {
   SLEEP_AMBIENT_INTENSITY,
   SLEEP_DIRECTIONAL_INTENSITY,
   DIRECTIONAL_LIGHT_POSITION,
+  RIM_LIGHT_INTENSITY,
+  SHADOW_RADIUS,
+  LOGO_COLOR,
+  LOGO_ROUGHNESS,
   HERO_SCROLL_DIMMING,
-  SPOT_INTENSITY,
-  ROOM_WALL_COLOR,
-  ROOM_ROUGHNESS,
   SLEEP_YAW,
   INTRO_SEEN_KEY,
   AUTO_WAKE_DELAY,
@@ -92,7 +94,7 @@ const FRUSTUM_HEIGHT = 20
 const FRUSTUM_MIN_WIDTH = 14
 const WHITE = 0xffffff
 const AMBIENT_INTENSITY = 0.8
-const DIR_LIGHT_INTENSITY = 1.2
+const DIR_LIGHT_INTENSITY = 0.9
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
 const LETTER_SPACING = 0.3
@@ -171,7 +173,12 @@ const createResizeHandler =
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-const createLights = (scene: THREE.Scene) => {
+interface HeroLights {
+  ambientLight: THREE.AmbientLight
+  dirLight: THREE.DirectionalLight
+}
+
+const createLights = (scene: THREE.Scene): HeroLights => {
   const ambientLight = new THREE.AmbientLight(WHITE, AMBIENT_INTENSITY)
   ambientLight.name = 'ambient-light'
   scene.add(ambientLight)
@@ -180,6 +187,7 @@ const createLights = (scene: THREE.Scene) => {
   dirLight.name = 'directional-light'
   dirLight.position.set(...DIRECTIONAL_LIGHT_POSITION)
   dirLight.castShadow = true
+  dirLight.shadow.radius = SHADOW_RADIUS
   scene.add(dirLight)
 
   return { ambientLight, dirLight }
@@ -448,7 +456,8 @@ interface IntroDirectorOptions {
   logo: Logo
   letters: Letter[]
   path: LogoJumpPath
-  lights: { ambientLight: THREE.AmbientLight; dirLight: THREE.DirectionalLight }
+  lights: HeroLights
+  rim: THREE.IUniform<number>
   spot: THREE.SpotLight
   onAwake: () => void
 }
@@ -464,12 +473,14 @@ const createIntroDirector = ({
   letters,
   path,
   lights,
+  rim,
   spot,
   onAwake
 }: IntroDirectorOptions) => {
   const spotTarget = new THREE.Vector3()
   const startFeet = new THREE.Vector3(...path.start)
-  const endFeet = new THREE.Vector3(...path.end)
+  // Awake, the spot lights the floor under the letters, so its pool is centred beneath them.
+  const endPool = new THREE.Vector3(path.end[0], path.start[1], path.end[2])
 
   return (sinceWake: number | null): boolean => {
     const pose = sinceWake === null ? getSleepPose(path) : getLogoIntroPose(sinceWake, path)
@@ -478,7 +489,7 @@ const createIntroDirector = ({
     const hasLanded = sinceWake !== null && sinceWake >= LANDING_TIME
     letters.forEach(({ mesh }) => (mesh.visible = hasLanded))
 
-    aimSpot(spot, spotTarget.lerpVectors(startFeet, endFeet, pose.lightProgress))
+    aimSpot(spot, spotTarget.lerpVectors(startFeet, endPool, pose.lightProgress))
     lights.ambientLight.intensity = THREE.MathUtils.lerp(
       SLEEP_AMBIENT_INTENSITY,
       AMBIENT_INTENSITY,
@@ -489,6 +500,7 @@ const createIntroDirector = ({
       DIR_LIGHT_INTENSITY,
       pose.lightProgress
     )
+    rim.value = RIM_LIGHT_INTENSITY * pose.lightProgress
 
     if (pose.done) onAwake()
     return pose.done
@@ -721,18 +733,20 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
 
   renderer.setClearColor(BACKGROUND_COLOR, 1)
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  // Plain PCF honours each light's shadow radius, which the soft variant ignores.
+  renderer.shadowMap.type = THREE.PCFShadowMap
   scene.background = null
 
   const camera = createOrthographicCamera()
   const { ambientLight, dirLight } = createLights(scene)
   const grainTexture = createGrainTexture()
   const contentMaterial = new THREE.MeshStandardMaterial({
-    color: ROOM_WALL_COLOR,
-    roughness: ROOM_ROUGHNESS,
+    color: LOGO_COLOR,
+    roughness: LOGO_ROUGHNESS,
     map: grainTexture,
     roughnessMap: grainTexture
   })
+  const rim = addRimLight(contentMaterial)
 
   const bodies: PhysicsBodies = new Map()
   const logo = await loadLogo(scene, world, contentMaterial)
@@ -790,6 +804,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     letters,
     path,
     lights: { ambientLight, dirLight },
+    rim,
     spot,
     onAwake: () => {
       introStage.value = 'awake'
@@ -818,19 +833,15 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     if (clock.elapsedTime >= AUTO_WAKE_DELAY) wakeUp()
     if (introStage.value !== 'awake') {
       updateIntro(wokenAt === null ? null : clock.elapsedTime - wokenAt)
-    } else {
-      ambientLight.intensity = AMBIENT_INTENSITY
-      dirLight.intensity = DIR_LIGHT_INTENSITY
     }
     // Scrolling away dims the room and then closes a cover of the next section's colour over it.
+    // The dimming is a filter on the canvas, not on the lights, so the Lights panel keeps control.
     const fade = getHeroScrollFade(
       page.value?.scrollTop ?? 0,
       hero.value?.clientHeight ?? 0,
       HERO_SCROLL_DIMMING
     )
-    ambientLight.intensity *= fade.light
-    dirLight.intensity *= fade.light
-    spot.intensity = SPOT_INTENSITY * fade.light
+    canvasElement.style.filter = fade.light < 1 ? `brightness(${fade.light})` : ''
     if (heroCover.value) heroCover.value.style.opacity = String(fade.cover)
 
     bodies.forEach(({ body }, mesh) => {

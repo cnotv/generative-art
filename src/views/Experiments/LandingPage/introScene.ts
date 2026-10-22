@@ -12,6 +12,9 @@ import {
   ROOM_SIZE,
   ROOM_ROUGHNESS,
   SPOT_INTENSITY,
+  SHADOW_RADIUS,
+  RIM_LIGHT_COLOR,
+  RIM_LIGHT_POWER,
   SPOT_SIDE,
   SPOT_HEIGHT,
   SPOT_FORWARD,
@@ -60,13 +63,14 @@ export const createCornerSpot = (scene: THREE.Scene, target: THREE.Vector3): THR
   const spot = new THREE.SpotLight(SPOT_COLOR, SPOT_INTENSITY, 0, SPOT_ANGLE, SPOT_PENUMBRA)
   spot.name = 'corner-spot'
   spot.castShadow = true
+  spot.shadow.radius = SHADOW_RADIUS
   scene.add(spot, spot.target)
   aimSpot(spot, target)
   return spot
 }
 
 /**
- * Moves the spotlight so it rakes across a point from the side.
+ * Moves the spotlight so it lights a point from above, in front and a little to the side.
  * @param spot The spotlight from createCornerSpot.
  * @param target The point to light.
  */
@@ -166,4 +170,29 @@ export const applyLogoPose = (model: THREE.Object3D, pose: LogoIntroPose, rest: 
   model.quaternion.setFromAxisAngle(tiltAxis, pose.tilt).multiply(scratchYaw)
   scratchOffset.copy(rest.feetOffset).applyQuaternion(model.quaternion)
   model.position.set(...pose.feet).add(scratchOffset)
+}
+
+/**
+ * Gives a material a rim light of its own: faces that turn away from the camera glow faintly in a
+ * cool colour, outlining the object. A real light from behind would also light the floor and the
+ * wall; this touches only the objects that use the material.
+ * @param material The logo and letters' material.
+ * @returns The rim's strength, to dim and raise with the room's lights.
+ */
+export const addRimLight = (material: THREE.MeshStandardMaterial): THREE.IUniform<number> => {
+  const strength: THREE.IUniform<number> = { value: 0 }
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.rimStrength = strength
+    shader.uniforms.rimColor = { value: new THREE.Color(RIM_LIGHT_COLOR) }
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', 'uniform float rimStrength;\nuniform vec3 rimColor;\nvoid main() {')
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        // In view space the camera looks along z, so a normal's z says how squarely a face meets it.
+        float sideOn = 1.0 - abs(normal.z);
+        totalEmissiveRadiance += rimColor * pow(sideOn, ${RIM_LIGHT_POWER.toFixed(1)}) * rimStrength;`
+      )
+  }
+  return strength
 }

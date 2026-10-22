@@ -67,6 +67,75 @@ knocked about. Three things went wrong before that handover was clean:
 | Clicked letters sank into the floor        | the old invisible walls rotated their meshes but not their colliders, so a floor collider cut through them |
 | Letters bounced off the new floor collider | each letter's collider sat on its baseline, half below the glyph; the glyph geometry is now centred on it  |
 
+## Studying and correcting the light
+
+![The hero before and after the lighting pass](/img/homepage/hero-lighting-before-after.webp)
+
+The first lighting looked moody but made the logo the fourth thing the eye found, after the name,
+a pool of light on empty floor and the logo's own shadow. Fixing it was less about taste than about
+a repeatable way of looking, and that method is worth more than the final numbers.
+
+### Look at values, not colours
+
+Turn a screenshot to greyscale and stretch its contrast. Colour flatters a dark scene; values show
+what the eye actually reads first. Then rank the brightest and darkest shapes. In a hero the name
+should come first and the logo second; anything brighter or darker than the logo that is not the
+logo is stealing attention.
+
+![The same two frames in greyscale: before, the shadow is the strongest shape; after, the logo is](/img/homepage/hero-lighting-values.webp)
+
+In the before frame the largest dark shape is the shadow, and the brightest patch near the logo is
+floor. In the after frame the logo's outline is the strongest edge on screen after the text.
+
+### Find which light does what
+
+Every visible effect comes from one light, and guessing which is how time gets lost. Switch them
+off one at a time and watch what changes. The Lights panel in the app's debug view does this for
+the ambient and key lights; the spot, the rim and the logo's material are set in the view's
+`config.ts`. During this pass the floor turned bright blue and the spotlight looked guilty; turning
+lights off one by one showed it was the new rim light, which lit every upward surface, floor
+included.
+
+| Light    | What it does here                                   | What to adjust                                                     |
+| -------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| Ambient  | lifts everything evenly, flattening shape           | keep low in a dark scene                                           |
+| Key      | gives form and casts the main shadow                | height sets shadow length, angle sets which surfaces it favours    |
+| Spot     | makes the pool of light that frames the subject     | aim, cone width and edge softness                                  |
+| Rim      | separates the subject's outline from the background | strength and how tightly it hugs edges                             |
+| Material | how much light the subject returns                  | a shade lighter than the background, a little gloss to catch edges |
+
+### Read a shadow as a position
+
+A shadow's length tells you the light's height, and its direction tells you where the light is.
+The long shadow across the wall came from a key light only 3 units high; raising it and bringing it
+round to the front put the shadow close behind the logo, where it gives depth without competing.
+A shadow's edge says how soft it is: here plain PCF shadows with a blur radius, because the
+"soft" variant ignores the radius entirely.
+
+### Correct one thing, then compare
+
+Change a single value, capture the same frame again and put it beside the previous one. Three of
+this pass's changes made something else worse, and only the side-by-side caught it: a higher key
+brightened the whole floor, a wider spot cone did the same, and the rim light did it worst of all.
+
+```mermaid
+flowchart LR
+  A[Capture the frame] --> B[Greyscale: rank the values]
+  B --> C[Switch lights off one by one]
+  C --> D[Change one value]
+  D --> E[Capture again, side by side]
+  E -->|worse elsewhere| C
+  E -->|subject reads second, after the name| F[Keep it]
+```
+
+### When a light cannot be contained
+
+A directional light reaches every surface facing it; there is no way to point it at the logo
+alone. When an effect must touch only one object, as the rim had to, it belongs in that object's
+material instead: here the logo's faces glow faintly where they turn side-on to the camera, which
+outlines it without lighting the room. The rim also follows the intro and the scroll fade, coming
+up with the lights and dimming with them.
+
 ## The city of skills
 
 ![The skills city with the AI district hovered: the district lifts and the screen behind the city types its description](/img/homepage/skills-city.webp)

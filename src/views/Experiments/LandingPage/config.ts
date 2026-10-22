@@ -57,15 +57,25 @@ export const SLEEP_AMBIENT_INTENSITY = 0.06
 export const SLEEP_DIRECTIONAL_INTENSITY = 0
 /** How much of the hero's light is gone once the page has scrolled past it. */
 export const HERO_SCROLL_DIMMING = 0.85
-/** The key light once awake, as tuned in the Lights panel: in front, to the right and low. */
-export const DIRECTIONAL_LIGHT_POSITION = [5, 3, 5] as const
+/** The key light once awake: mostly from the front and a little above, so its shadow falls on the wall close behind the logo instead of across the floor. */
+export const DIRECTIONAL_LIGHT_POSITION = [3, 5, 10] as const
+/** A cool glow on the logo's faces that turn away from the camera, outlining it against the wall. */
+export const RIM_LIGHT_COLOR = 0x9fb8ff
+export const RIM_LIGHT_INTENSITY = 0.22
+/** How tightly the glow hugs the edges: higher keeps it to the faces most side-on to the camera. */
+export const RIM_LIGHT_POWER = 3
+/** How far shadows blur at their edges, in shadow map texels. */
+export const SHADOW_RADIUS = 6
+/** The logo and its letters: a shade lighter than the wall and a little glossier, so they read. */
+export const LOGO_COLOR = 0x27334c
+export const LOGO_ROUGHNESS = 0.7
 export const SPOT_INTENSITY = 500
-/** Where the spotlight hangs relative to what it lights: off to the side, low, a little forward. */
-export const SPOT_SIDE = 11
-export const SPOT_HEIGHT = 4
-export const SPOT_FORWARD = 4
-export const SPOT_ANGLE = 0.6
-export const SPOT_PENUMBRA = 0.8
+/** Where the spotlight hangs relative to what it lights: high, in front and a little to the side. */
+export const SPOT_SIDE = 5
+export const SPOT_HEIGHT = 10
+export const SPOT_FORWARD = 7
+export const SPOT_ANGLE = 0.36
+export const SPOT_PENUMBRA = 0.75
 
 export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'
