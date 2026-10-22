@@ -28,6 +28,9 @@ const createVideoReflection = (): VideoReflection => {
   video.playsInline = true
   const texture = new THREE.VideoTexture(video)
   texture.colorSpace = THREE.SRGBColorSpace
+  // Mipmaps are the shrunken copies of each frame that the reflection blur reads from.
+  texture.generateMipmaps = true
+  texture.minFilter = THREE.LinearMipmapLinearFilter
   return { video, texture }
 }
 
@@ -175,7 +178,7 @@ const logoSchema = {
   emboss: { min: 0, max: 2, step: 0.05, label: 'Emboss' },
   rim: { min: 0, max: 1, step: 0.01, label: 'Rim glow' },
   reflection: { min: 0, max: 3, step: 0.05, label: 'Reflection' },
-  reflectionBlur: { min: 0, max: 0.08, step: 0.002, label: 'Reflection blur' },
+  reflectionBlur: { min: 0, max: 1, step: 0.01, label: 'Reflection blur' },
   paper: { boolean: true, label: 'Paper' }
 }
 

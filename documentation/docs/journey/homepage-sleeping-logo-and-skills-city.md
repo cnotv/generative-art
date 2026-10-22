@@ -155,7 +155,8 @@ pixel of the screen.
 
 Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
 lighting, the first pass with a rim, navy cardstock, a light letterpress card with the logo in navy
-ink, and polished chrome mirroring the skills city. A glossy take and a layered cut-paper look were tried too and dropped.
+ink, and two chromes reflecting the skills city: a dark satin one tuned by hand in the panel, with a
+faint blurred reflection, and a polished one that mirrors it clearly. A glossy take and a layered cut-paper look were tried too and dropped.
 The Config panel switches between them live, and an address such as `?look=letterpress` opens one
 directly. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
 and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
@@ -168,7 +169,7 @@ control only when the value it reads is reactive, and a three.js material is not
 now reads a reactive copy of its values, updated on each edit and rebuilt on each preset switch.
 The logo and the letters share one material, so they share one set of controls too.
 
-![The five hero presets: original, rim light, navy cardstock, letterpress and chrome](/img/homepage/hero-looks.webp)
+![The six hero presets: original, rim light, navy cardstock, letterpress, chrome and polished chrome](/img/homepage/hero-looks.webp)
 
 A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
 colours and lights change in place, and the paper texture is put on or taken off. The
@@ -178,7 +179,7 @@ text on cream would vanish.
 
 ### A chrome logo that mirrors the city
 
-![The chrome logo mirroring the skills city](/img/homepage/hero-chrome.webp)
+![The polished chrome logo mirroring the skills city](/img/homepage/hero-chrome.webp)
 
 The chrome preset reflects a short loop of the skills city, recorded from the page below and played
 forward then backward so it loops without a jump. The obvious route, the video as a reflection map
@@ -192,8 +193,10 @@ What works is closer to a real mirror in front of the scene: each face shows the
 place in the view, mirrored left to right, shifted by the face's tilt so the bevels and sides catch
 other parts of it. The city barely moves, so the reflection also sways slowly sideways, as if the
 logo caught a moving view. The video only plays while the chrome preset is on. A blur setting
-turns the mirror into brushed metal: the material averages a dozen samples of the footage along a
-spiral, spread as wide as the blur asks.
+turns the mirror into satin metal. Averaging a dozen samples along a spiral was tried first and
+looked grainy rather than blurred; the blur now reads a smaller copy of each frame from the video's
+mipmaps, the shrunken copies the GPU keeps of a texture, and smooths it with four close samples, so
+it softens evenly at any strength.
 
 ## The city of skills
 

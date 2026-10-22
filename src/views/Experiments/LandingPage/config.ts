@@ -73,7 +73,8 @@ export const RIM_LIGHT_POWER = 3
 /**
  * Every finish tried for the hero, picked from the Config panel or with ?look= in the address.
  * The original lighting, the first pass with a rim, navy cardstock with an embossed logo, a light
- * letterpress card with the logo in ink, and polished chrome mirroring the skills city.
+ * letterpress card with the logo in ink, dark satin chrome with a faint, blurred reflection of the
+ * skills city, and polished chrome mirroring it clearly.
  */
 export const HERO_LOOKS: Record<string, HeroLook> = {
   original: {
@@ -184,6 +185,32 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     label: 'Chrome',
     wallColor: 0x10151f,
     floorColor: 0x1a2030,
+    logoColor: 0x252b3d,
+    logoRoughness: 0.55,
+    logoMetalness: 1,
+    paper: false,
+    embossStrength: 0,
+    rimStrength: 0,
+    ambientIntensity: 0.6,
+    key: { color: 0xffffff, intensity: 0.8, position: [-4, 6, 10] },
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 380,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 1
+    },
+    shadowRadius: 8,
+    ink: false,
+    reflection: 0.02,
+    reflectionBlur: 0.5
+  },
+  polishedChrome: {
+    label: 'Polished chrome',
+    wallColor: 0x10151f,
+    floorColor: 0x1a2030,
     logoColor: 0xdfe4ec,
     logoRoughness: 0.12,
     logoMetalness: 1,
@@ -204,7 +231,7 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     shadowRadius: 8,
     ink: false,
     reflection: 0.9,
-    reflectionBlur: 0.006
+    reflectionBlur: 0.1
   }
 }
 export const DEFAULT_HERO_LOOK = 'cardstock'
@@ -216,8 +243,8 @@ export const REFLECTION_VIDEO = 'hero/skills-city-reflection.mp4'
  */
 export const REFLECTION_SPAN = 14
 export const REFLECTION_TILT = 0.25
-/** How many samples of the footage a blurred reflection averages. */
-export const REFLECTION_BLUR_TAPS = 12
+/** How many halvings of the footage's resolution the strongest reflection blur reaches. */
+export const REFLECTION_BLUR_LEVELS = 6
 /** The reflection sways slowly side to side: how far, as a share of the footage, and how fast. */
 export const REFLECTION_SWAY = 0.08
 export const REFLECTION_SWAY_SPEED = 0.25

@@ -19,7 +19,7 @@ import {
   RIM_LIGHT_POWER,
   REFLECTION_SPAN,
   REFLECTION_TILT,
-  REFLECTION_BLUR_TAPS
+  REFLECTION_BLUR_LEVELS
 } from './config'
 import type { LogoIntroPose, Room, LogoRest, SpotPlacement } from './types'
 
@@ -256,7 +256,7 @@ export interface CardShading {
   reflectionMap: THREE.IUniform<THREE.Texture | null>
   /** How far the reflection has swayed sideways, as a share of the footage. */
   reflectionShift: THREE.IUniform<number>
-  /** How far the reflection is blurred, as a share of the footage. */
+  /** How blurred the reflection is, from 0 for a sharp mirror to 1 for the softest. */
   reflectionBlur: THREE.IUniform<number>
 }
 
@@ -308,14 +308,15 @@ export const addCardShading = (material: THREE.MeshStandardMaterial): CardShadin
         // right, and shifted by its tilt so bevels and sides catch a different part of it.
         vec2 mirrorUv = vec2(0.5, 0.5) + vec2(vViewPosition.x, -vViewPosition.y) / ${REFLECTION_SPAN.toFixed(1)}
           + normal.xy * ${REFLECTION_TILT.toFixed(2)} + vec2(reflectionShift, 0.0);
-        // Blurred by averaging taps along a golden-angle spiral, spread as far as the blur asks.
-        vec3 reflected = vec3(0.0);
-        for (int tap = 0; tap < ${REFLECTION_BLUR_TAPS}; tap++) {
-          float spiral = float(tap) * 2.39996;
-          float reach = sqrt(float(tap) / ${REFLECTION_BLUR_TAPS}.0) * reflectionBlur;
-          reflected += texture2D(reflectionMap, mirrorUv + vec2(cos(spiral), sin(spiral)) * reach).rgb;
-        }
-        totalEmissiveRadiance += reflected / ${REFLECTION_BLUR_TAPS}.0 * reflectionStrength;`
+        // Blurred by reading a smaller copy of the frame from its mipmaps, smoothed with four taps
+        // half a texel of that copy apart, so it softens evenly instead of turning blocky.
+        float blurLevel = reflectionBlur * ${REFLECTION_BLUR_LEVELS.toFixed(1)};
+        vec2 spread = exp2(blurLevel) * 0.5 / vec2(textureSize(reflectionMap, 0));
+        vec3 reflected = textureLod(reflectionMap, mirrorUv + vec2(spread.x, spread.y), blurLevel).rgb
+          + textureLod(reflectionMap, mirrorUv + vec2(-spread.x, spread.y), blurLevel).rgb
+          + textureLod(reflectionMap, mirrorUv + vec2(spread.x, -spread.y), blurLevel).rgb
+          + textureLod(reflectionMap, mirrorUv + vec2(-spread.x, -spread.y), blurLevel).rgb;
+        totalEmissiveRadiance += reflected * 0.25 * reflectionStrength;`
       )
   }
   return shading
