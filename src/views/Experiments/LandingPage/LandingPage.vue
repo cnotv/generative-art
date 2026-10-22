@@ -44,7 +44,8 @@ import {
   OWNER_NAME,
   OWNER_PROFESSION,
   OWNER_SUMMARY,
-  OWNER_PROFILES
+  OWNER_PROFILES,
+  BUILD_NOTES
 } from './config'
 import type { LogoJumpPath, LogoRest } from './types'
 import { registerCameraProperties } from '@/utils/cameraProperties'
@@ -867,22 +868,34 @@ onUnmounted(() => {
       </section>
       <MarketSectors class="landing-page__section" />
       <footer class="landing-page__footer">
-        <a
-          v-for="profile in OWNER_PROFILES"
-          :key="profile.label"
-          class="landing-page__profile"
-          :href="profile.url"
-          :aria-label="profile.label"
-          :title="profile.label"
-          target="_blank"
-          rel="me noopener"
-        >
-          <component
-            :is="PROFILE_ICONS[profile.icon]"
-            class="landing-page__profile-icon"
-            aria-hidden="true"
-          />
-        </a>
+        <nav class="landing-page__profiles" aria-label="Profiles">
+          <a
+            v-for="profile in OWNER_PROFILES"
+            :key="profile.label"
+            class="landing-page__profile"
+            :href="profile.url"
+            :aria-label="profile.label"
+            :title="profile.label"
+            target="_blank"
+            rel="me noopener"
+          >
+            <component
+              :is="PROFILE_ICONS[profile.icon]"
+              class="landing-page__profile-icon"
+              aria-hidden="true"
+            />
+          </a>
+        </nav>
+        <nav class="landing-page__notes" aria-labelledby="build-notes-title">
+          <p id="build-notes-title" class="landing-page__notes-title">How this page was built</p>
+          <ul class="landing-page__notes-list">
+            <li v-for="note in BUILD_NOTES" :key="note.url">
+              <a class="landing-page__note" :href="note.url" target="_blank" rel="noopener">
+                {{ note.label }}
+              </a>
+            </li>
+          </ul>
+        </nav>
       </footer>
     </div>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
@@ -1024,10 +1037,48 @@ onUnmounted(() => {
 /* Positioned so it paints over the sticky map, like the sections above it. */
 .landing-page__footer {
   position: relative;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  justify-items: center;
   padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
+  gap: var(--spacing-6);
+}
+
+.landing-page__profiles {
+  display: flex;
   gap: var(--spacing-8);
+}
+
+.landing-page__notes {
+  text-align: center;
+}
+
+.landing-page__notes-title {
+  margin: 0 0 var(--spacing-2);
+  color: var(--color-canvas-overlay-muted);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.landing-page__notes-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: var(--spacing-2) var(--spacing-6);
+}
+
+.landing-page__note {
+  color: var(--color-canvas-overlay-accent);
+  font-size: var(--font-size-xs);
+  text-decoration: none;
+}
+
+.landing-page__note:hover,
+.landing-page__note:focus-visible {
+  text-decoration: underline;
 }
 
 .landing-page__profile {
