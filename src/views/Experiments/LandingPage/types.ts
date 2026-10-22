@@ -101,29 +101,7 @@ export interface TracePoint {
   y: number
 }
 
-/** A sector's cell in the market section's pixel space, and where its icon begins. */
-export interface TraceCell {
-  left: number
-  top: number
-  width: number
-  iconTop: number
-}
-
-/** How the traces from the city to the sectors are spaced, in pixels. */
-export interface TraceSpacing {
-  /** How far below the section's top the highest trace turns towards its lane. */
-  busTop: number
-  /** The distance between neighbouring traces where they run side by side. */
-  busStep: number
-  /** How far left of its cell a column's lane runs: half the gap between columns. */
-  laneGap: number
-  laneStep: number
-  /** How far above a cell's top rule the trace runs along it, so the rule does not cover it. */
-  runAbove: number
-  cornerRadius: number
-}
-
-/** One trace from the city to a sector, as an SVG path and the point it arrives at. */
+/** One arrow from the city to a sector, as an SVG path and the point it arrives at. */
 export interface SectorTrace {
   path: string
   end: TracePoint

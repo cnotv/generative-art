@@ -879,11 +879,13 @@ onUnmounted(() => {
       <h2 id="sectors-title" class="sr-only">Market knowledge</h2>
       <ul ref="sectorList" class="landing-page__sectors">
         <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
-          <component
-            :is="ICONS[sector.icon]"
-            class="landing-page__sector-icon"
-            aria-hidden="true"
-          />
+          <span class="landing-page__sector-avatar">
+            <component
+              :is="ICONS[sector.icon]"
+              class="landing-page__sector-icon"
+              aria-hidden="true"
+            />
+          </span>
           <span class="landing-page__sector-title">{{ sector.title }}</span>
         </li>
       </ul>
@@ -1043,46 +1045,84 @@ onUnmounted(() => {
 
 .landing-page__sectors {
   position: relative;
+  display: grid;
   margin: 0;
   padding: 0;
+  grid-template-columns: repeat(6, 1fr);
   list-style: none;
-  display: grid;
   gap: var(--spacing-4);
 }
 
-.landing-page__sector-icon {
-  color: var(--color-canvas-overlay-accent);
-  stroke-width: 1.25;
-}
-
-.landing-page__sectors {
-  grid-template-columns: repeat(3, 1fr);
-}
-
+/* On a phone the six sit in two staggered rows, so the arrows to the second row pass between
+   the avatars of the first instead of through them. */
 @media (width <= 640px) {
   .landing-page__sectors {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: var(--spacing-8);
+  }
+
+  .landing-page__sector {
+    grid-column-end: span 2;
+  }
+
+  .landing-page__sector:nth-child(1) {
+    grid-column-start: 1;
+  }
+
+  .landing-page__sector:nth-child(2) {
+    grid-column-start: 3;
+  }
+
+  .landing-page__sector:nth-child(3) {
+    grid-column-start: 5;
+  }
+
+  .landing-page__sector:nth-child(4) {
+    grid-column-start: 2;
+  }
+
+  .landing-page__sector:nth-child(5) {
+    grid-column-start: 4;
+  }
+
+  .landing-page__sector:nth-child(6) {
+    grid-column-start: 6;
+  }
+
+  .landing-page__sector:nth-child(n + 4) {
+    grid-row: 2;
   }
 }
 
 .landing-page__sector {
   display: grid;
   justify-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-8) var(--spacing-4);
-  border-top: var(--spacing-px) solid var(--color-canvas-overlay-border);
+  align-content: start;
+  gap: var(--spacing-2);
   text-align: center;
 }
 
+.landing-page__sector-avatar {
+  display: grid;
+  width: var(--spacing-16);
+  height: var(--spacing-16);
+  place-items: center;
+  border: var(--spacing-px) solid var(--color-canvas-overlay-muted);
+  border-radius: var(--radius-full);
+  background-color: var(--color-canvas-overlay-surface);
+}
+
 .landing-page__sector-icon {
-  width: var(--spacing-12);
-  height: var(--spacing-12);
+  width: var(--spacing-8);
+  height: var(--spacing-8);
+  color: var(--color-canvas-overlay-accent);
+  stroke-width: 1.25;
 }
 
 .landing-page__sector-title {
   color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.2em;
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 

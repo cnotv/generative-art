@@ -126,16 +126,8 @@ export const PRODUCT_SECTORS = [
 
 /** How far above the market section the traces to the sectors start: the island's southern tip. */
 export const SECTOR_TRACE_ORIGIN_RISE = 104
-/** Pixel spacing of the traces from the city to the sectors. */
-export const SECTOR_TRACE_SPACING = {
-  busTop: 12,
-  busStep: 6,
-  laneStep: 5,
-  runAbove: 5,
-  cornerRadius: 10
-}
-/** Seconds between one trace's pulse leaving the city and the next one's. */
-export const SECTOR_TRACE_STAGGER = 0.4
+/** How far short of a sector's avatar its arrow stops, in pixels. */
+export const SECTOR_ARROW_GAP = 6
 
 export const SKILLS_CITY_MODEL = 'skills-city.glb'
 /** Direction the isometric camera looks at the city from, matching the Blender preview. */

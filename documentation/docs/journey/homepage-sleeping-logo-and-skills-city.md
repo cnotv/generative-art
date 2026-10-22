@@ -180,29 +180,30 @@ its animation starts over. With nothing hovered it shows the section heading; wi
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.
 
-## Traces to the market
+## Arrows to the market
 
-![Circuit traces running from the island's tip down to each of the six market sectors](/img/homepage/sector-traces.webp)
+![Dotted arrows fanning out from the dock at the island's tip to six small sector avatars](/img/homepage/sector-traces.webp)
 
-The sectors the products serve hang off the city like components on a circuit board, with no
-heading of their own: a boat sails from the harbour round the island to a dock at its
-southern tip, one trace per sector leaves that dock, and a pulse runs down each in turn to an
-arrowhead at the sector's icon. The traces are an SVG drawn behind the section, from where the sector cells actually are,
-and redrawn whenever the list changes size, so they follow the grid from three columns to two.
+The sectors the products serve have no heading of their own: a boat sails from the harbour round
+the island to a dock at its southern tip, and dotted arrows fan out from that dock to six small
+avatars, one per sector, with the dots marching towards them. The arrows are an SVG drawn behind
+the section from where the avatars actually are, and redrawn whenever the list changes size.
 
-The routing is what keeps them readable. Every column's traces share a lane in the gap to its
-left, never crossing a sector's content; a deeper cell's trace runs on the outer side of its lane,
-and the trace heading furthest out turns off the trunk highest. Under those two rules no two traces
-cross, whatever the grid's shape.
+The first version was a circuit board: orthogonal traces routed down lanes between a grid of
+cells, with rules about which trace turns off highest so none would cross. It read as wiring
+rather than as an outcome reaching a market. Small avatars in a row make the fan-out the whole
+picture, and a curve that leaves straight down and arrives straight down needs no routing at all.
+On a phone the six sit in two staggered rows, the second shifted by half an avatar, so each arrow
+to the second row drops through a gap in the first instead of across an avatar.
 
-The dock and the traces live in different worlds, one in the 3D model and one in the page, and
+The dock and the arrows live in different worlds, one in the 3D model and one in the page, and
 nothing measures one against the other. They meet because the camera frames the whole model and
 its widest part is the sea: a point halfway across the sea always lands in the middle of the
-canvas, whatever its size, which is where the traces start. The boat's course is stored on the
+canvas, whatever its size, which is where the arrows start. The boat's course is stored on the
 model as a list of points, like the other motion tags, so the page sails it without knowing it
 is a boat.
 
-Two details are easy to get wrong. The cells are measured by their offsets, not their bounding
-boxes, because they slide in as they scroll into view and a box measured mid-slide would leave
-every trace short. And each pulse is a single dash on a path declared one unit long, so every
-pulse takes the same time to arrive whatever its trace's length.
+The avatars are measured by their offsets, not their bounding boxes, because they slide in as they
+scroll into view and a box measured mid-slide would leave every arrow short. That slide has a
+second effect: a transformed element becomes the offset parent of what is inside it, so an
+avatar's offset is relative to its own sector, and the offsets have to be summed up to the section.
