@@ -74,6 +74,13 @@ export const OWNER_PROFILES = [
 ]
 export const SPOT_COLOR = 0xc9d8ff
 
+/** Each employer's LinkedIn page, linked from the drawers. */
+export const COMPANY_PAGES: Record<string, string> = {
+  SUSE: 'https://www.linkedin.com/company/suse/',
+  Retresco: 'https://www.linkedin.com/company/retresco/',
+  'firma.de': 'https://www.linkedin.com/company/firma-de/'
+}
+
 /**
  * Areas of work, each with its district in the skills city model, and what its drawer tells a
  * recruiter: the tools and practices, and highlights from real roles, results first.
@@ -99,27 +106,28 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'SUSE',
         period: 'since 2022',
-        text: 'Builds the Rancher dashboard, the open source interface for cloud orchestration.'
-      },
-      {
-        company: 'SUSE',
-        period: 'since 2022',
-        text: 'Planned and led a one-year migration from Vue 2 to Vue 3 across several repositories, with a script that migrates internal and external plugins.'
+        points: [
+          'Builds the Rancher dashboard, the open source interface for cloud orchestration.',
+          'Planned and led a one-year migration from Vue 2 to Vue 3 across several repositories, with a script that migrates internal and external plugins.'
+        ]
       },
       {
         company: 'Retresco',
         period: '2018 to 2022',
-        text: 'Built several stateful single-page apps from the ground up, used by top nationwide publishers and enterprises.'
+        points: [
+          'Built several stateful single-page apps from the ground up, used by top nationwide publishers and enterprises.'
+        ]
       },
       {
         company: 'firma.de',
         period: '2017 to 2018',
-        text: 'Built the UI framework, the KSS style guide and the WordPress theme.'
+        points: ['Built the UI framework, the KSS style guide and the WordPress theme.']
       }
     ],
     quote: {
       text: 'His work has always been the highest standard when it comes to documentation, testing and architectural decisions.',
-      author: 'Ling Vu'
+      author: 'Ling Vu',
+      url: 'https://www.linkedin.com/in/leogiuseppe/details/recommendations/'
     }
   },
   {
@@ -131,22 +139,18 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'SUSE',
         period: 'since 2022',
-        text: 'Cut the end-to-end test pipeline from 2 hours to 5 minutes, 95% faster, by running it in parallel.'
-      },
-      {
-        company: 'SUSE',
-        period: 'since 2022',
-        text: 'Set up GitHub Actions for unit and end-to-end tests, linting, coverage, documentation and the style guide.'
-      },
-      {
-        company: 'Retresco',
-        period: '2018 to 2022',
-        text: 'Published internal libraries to private Nexus repositories through GitLab CI.'
+        points: [
+          'Cut the end-to-end test pipeline from 2 hours to 5 minutes, 95% faster, by running it in parallel.',
+          'Set up GitHub Actions for unit and end-to-end tests, linting, coverage, documentation and the style guide.'
+        ]
       },
       {
         company: 'Retresco',
         period: '2018 to 2022',
-        text: 'Migrated the end-to-end test suite from Protractor to Cypress.'
+        points: [
+          'Published internal libraries to private Nexus repositories through GitLab CI.',
+          'Migrated the end-to-end test suite from Protractor to Cypress.'
+        ]
       }
     ]
   },
@@ -159,7 +163,9 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'SUSE',
         period: 'since 2022',
-        text: 'Introduced agentic GitHub workflows that automate work on issues and pull requests.'
+        points: [
+          'Introduced agentic GitHub workflows that automate work on issues and pull requests.'
+        ]
       }
     ]
   },
@@ -172,12 +178,12 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'Retresco',
         period: '2018 to 2022',
-        text: 'Planned the UX decisions of new projects, alongside their architecture.'
+        points: ['Planned the UX decisions of new projects, alongside their architecture.']
       },
       {
         company: 'firma.de',
         period: '2017 to 2018',
-        text: 'Created the style guide and UI framework of a legal e-commerce platform.'
+        points: ['Created the style guide and UI framework of a legal e-commerce platform.']
       }
     ]
   },
@@ -190,12 +196,10 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'SUSE',
         period: 'since 2022',
-        text: 'Works with Kubernetes daily, bringing features and support for newer Kubernetes versions to the Rancher dashboard.'
-      },
-      {
-        company: 'SUSE',
-        period: 'since 2022',
-        text: 'Coordinated releases across several teams of the Rancher ecosystem.'
+        points: [
+          'Works with Kubernetes daily, bringing features and support for newer Kubernetes versions to the Rancher dashboard.',
+          'Coordinated releases across several teams of the Rancher ecosystem.'
+        ]
       }
     ]
   },
@@ -208,12 +212,10 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'Retresco',
         period: '2018 to 2022',
-        text: 'Built from the ground up several apps for natural language processing and generation, used by top nationwide publishers and enterprises.'
-      },
-      {
-        company: 'Retresco',
-        period: '2018 to 2022',
-        text: 'Delivered what enterprise clients such as banks required: Keycloak user roles, JWT authentication, Sentry monitoring and Internet Explorer 11 support.'
+        points: [
+          'Built from the ground up several apps for natural language processing and generation, used by top nationwide publishers and enterprises.',
+          'Delivered what enterprise clients such as banks required: Keycloak user roles, JWT authentication, Sentry monitoring and Internet Explorer 11 support.'
+        ]
       }
     ]
   },
@@ -226,17 +228,17 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'SUSE',
         period: 'since 2022',
-        text: 'Mentors a team of 15 developers through code reviews, guidelines and bi-weekly sessions.'
+        points: [
+          'Mentors a team of 15 developers through code reviews, guidelines and bi-weekly sessions.'
+        ]
       },
       {
         company: 'Retresco',
         period: '2018 to 2022',
-        text: 'Mentored frontend and full stack developers across 4 teams and the frontend guild.'
-      },
-      {
-        company: 'Retresco',
-        period: '2018 to 2022',
-        text: 'Defined the code guidelines and the interview process for frontend positions.'
+        points: [
+          'Mentored frontend and full stack developers across 4 teams and the frontend guild.',
+          'Defined the code guidelines and the interview process for frontend positions.'
+        ]
       }
     ]
   },
@@ -249,17 +251,17 @@ export const SKILL_AREAS: SkillArea[] = [
       {
         company: 'SUSE',
         period: 'since 2022',
-        text: 'Planned the move of several repositories and their plugins from Vue 2 to Vue 3, delivered over one year.'
+        points: [
+          'Planned the move of several repositories and their plugins from Vue 2 to Vue 3, delivered over one year.'
+        ]
       },
       {
         company: 'Retresco',
         period: '2018 to 2022',
-        text: 'Planned the architecture of new projects.'
-      },
-      {
-        company: 'Retresco',
-        period: '2018 to 2022',
-        text: 'Created project templates, distributed through a private Nexus repository and generated from the command line.'
+        points: [
+          'Planned the architecture of new projects.',
+          'Created project templates, distributed through a private Nexus repository and generated from the command line.'
+        ]
       }
     ]
   }

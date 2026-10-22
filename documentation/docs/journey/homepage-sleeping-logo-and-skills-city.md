@@ -186,11 +186,13 @@ as a list.
 
 ## A drawer for recruiters
 
-![The CI automation drawer open beside the city, with its tools and highlights](/img/homepage/skill-drawer.webp)
+![The frontend development drawer open beside the city, with its tools and highlights](/img/homepage/skill-drawer.webp)
 
 Clicking a district opens a drawer that presents the skill to someone hiring: the tools and
-practices as a short row of tags, then highlights from real roles, each with the company and the
-years, written results first so the number or the outcome comes before the method. Every line is
+practices as a short row of tags, then highlights from real roles, grouped under each company and its years, with the
+company linked to its LinkedIn page, written results first so the number or the outcome comes
+before the method. A recommendation, where there is one, closes the drawer as a pull quote linked
+to its source. Every line is
 taken from the owner's own experience; a district with little to say says little rather than being
 padded. The district stays lifted while its drawer is open, so it is clear what the drawer is about.
 

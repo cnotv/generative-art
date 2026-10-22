@@ -8,8 +8,9 @@ import {
   DialogDescription,
   DialogClose
 } from 'radix-vue'
-import { X } from 'lucide-vue-next'
+import { X, ArrowUpRight } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
+import { COMPANY_PAGES } from './config'
 import type { SkillArea } from './types'
 
 const props = defineProps<{
@@ -57,11 +58,28 @@ const onOpenChange = (isOpen: boolean): void => {
             <ol class="skill-drawer__highlights">
               <li
                 v-for="highlight in props.area.highlights"
-                :key="highlight.text"
+                :key="highlight.company"
                 class="skill-drawer__highlight"
               >
-                <p class="skill-drawer__where">{{ highlight.company }}, {{ highlight.period }}</p>
-                <p class="skill-drawer__text">{{ highlight.text }}</p>
+                <p class="skill-drawer__where">
+                  <a
+                    v-if="COMPANY_PAGES[highlight.company]"
+                    class="skill-drawer__link"
+                    :href="COMPANY_PAGES[highlight.company]"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    {{ highlight.company }}
+                    <ArrowUpRight class="skill-drawer__link-icon" aria-hidden="true" />
+                  </a>
+                  <template v-else>{{ highlight.company }}</template>
+                  <span>, {{ highlight.period }}</span>
+                </p>
+                <ul class="skill-drawer__points">
+                  <li v-for="point in highlight.points" :key="point" class="skill-drawer__text">
+                    {{ point }}
+                  </li>
+                </ul>
               </li>
             </ol>
           </section>
@@ -70,6 +88,15 @@ const onOpenChange = (isOpen: boolean): void => {
             <blockquote class="skill-drawer__quote-text">{{ props.area.quote.text }}</blockquote>
             <figcaption class="skill-drawer__quote-author">
               {{ props.area.quote.author }}
+              <a
+                class="skill-drawer__link"
+                :href="props.area.quote.url"
+                target="_blank"
+                rel="noopener"
+              >
+                Recommendations on LinkedIn
+                <ArrowUpRight class="skill-drawer__link-icon" aria-hidden="true" />
+              </a>
             </figcaption>
           </figure>
         </template>
@@ -174,9 +201,34 @@ const onOpenChange = (isOpen: boolean): void => {
   border-left: var(--spacing-0-5) solid var(--color-canvas-overlay-border);
 }
 
-.skill-drawer__where,
-.skill-drawer__text {
+.skill-drawer__where {
   margin: 0;
+}
+
+.skill-drawer__points {
+  display: grid;
+  margin: var(--spacing-2) 0 0;
+  padding: 0;
+  list-style: none;
+  gap: var(--spacing-2);
+}
+
+.skill-drawer__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-0-5);
+  color: var(--color-canvas-overlay-accent);
+  text-decoration: none;
+}
+
+.skill-drawer__link:hover,
+.skill-drawer__link:focus-visible {
+  text-decoration: underline;
+}
+
+.skill-drawer__link-icon {
+  width: var(--spacing-3);
+  height: var(--spacing-3);
 }
 
 .skill-drawer__where {
@@ -187,29 +239,50 @@ const onOpenChange = (isOpen: boolean): void => {
 }
 
 .skill-drawer__text {
-  margin-top: var(--spacing-1);
   font-size: var(--font-size-base);
   line-height: 1.6;
 }
 
+/* A pull quote: a large opening mark, the words in italics, then who said it and where. */
 .skill-drawer__quote {
-  margin: var(--spacing-8) 0 0;
-  padding: var(--spacing-4);
-  border-radius: var(--radius-md);
+  position: relative;
+  margin: var(--spacing-10) 0 0;
+  padding: var(--spacing-6) var(--spacing-4) var(--spacing-4) var(--spacing-6);
+  border-left: var(--spacing-1) solid var(--color-lcd-text);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   background-color: var(--color-lcd-surface);
+}
+
+.skill-drawer__quote::before {
+  position: absolute;
+  top: calc(var(--spacing-6) * -1);
+  left: var(--spacing-3);
+  color: var(--color-lcd-text);
+  font-family: var(--font-sign);
+  font-size: var(--font-size-quote-mark);
+  line-height: 1;
+  content: '\201C';
 }
 
 .skill-drawer__quote-text {
   margin: 0;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-md);
   font-style: italic;
   line-height: 1.6;
 }
 
 .skill-drawer__quote-author {
-  margin-top: var(--spacing-2);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-xs);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-top: var(--spacing-3);
+  gap: var(--spacing-2);
+  color: var(--color-canvas-overlay-foreground);
+  font-family: var(--font-sign);
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -128,11 +128,11 @@ export interface SectorTrace {
   end: TracePoint
 }
 
-/** One achievement in a skill's drawer, with where and when it happened. */
+/** One role's achievements in a skill's drawer, with where and when they happened. */
 export interface SkillHighlight {
   company: string
   period: string
-  text: string
+  points: string[]
 }
 
 /** An area of work: its district in the skills city and what its drawer shows a recruiter. */
@@ -142,5 +142,5 @@ export interface SkillArea {
   line: string
   tools: string[]
   highlights: SkillHighlight[]
-  quote?: { text: string; author: string }
+  quote?: { text: string; author: string; url: string }
 }
