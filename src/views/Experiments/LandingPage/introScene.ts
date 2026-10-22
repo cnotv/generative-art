@@ -7,39 +7,37 @@ import {
   EYELID_MIN_SCALE,
   EYELID_OVERLAP,
   EYE_PROBE_STEPS,
-  ROOM_WALL_COLOR,
-  ROOM_FLOOR_COLOR,
   ROOM_SIZE,
   ROOM_ROUGHNESS,
-  SPOT_INTENSITY,
-  SHADOW_RADIUS,
   PAPER_TEXTURE_SIZE,
   PAPER_WORLD_DENSITY,
   PAPER_TONE_RANGE,
   PAPER_FIBRE_COUNT,
   PAPER_BUMP_SCALE,
-  EMBOSS_STRENGTH,
   EMBOSS_LIGHT_DIRECTION,
-  SPOT_SIDE,
-  SPOT_HEIGHT,
-  SPOT_FORWARD,
-  SPOT_ANGLE,
-  SPOT_PENUMBRA,
-  SPOT_COLOR
+  RIM_LIGHT_COLOR,
+  RIM_LIGHT_POWER
 } from './config'
-import type { LogoIntroPose, Room, LogoRest } from './types'
+import type { LogoIntroPose, Room, LogoRest, PaperLayer, SpotPlacement } from './types'
 
-const createRoomSurface = (
-  color: number,
-  paper: THREE.Texture
-): [THREE.Mesh, THREE.MeshStandardMaterial] => {
-  const material = new THREE.MeshStandardMaterial({
-    color,
-    roughness: ROOM_ROUGHNESS,
-    map: paper,
-    bumpMap: paper,
-    bumpScale: PAPER_BUMP_SCALE
-  })
+/**
+ * Gives a material the cardstock's grain, fibres and tooth, or takes them away.
+ * @param material The material to dress.
+ * @param paper The paper texture, or null for a plain surface.
+ */
+export const setPaper = (
+  material: THREE.MeshStandardMaterial,
+  paper: THREE.Texture | null
+): void => {
+  material.map = paper
+  material.bumpMap = paper
+  material.bumpScale = PAPER_BUMP_SCALE
+  material.needsUpdate = true
+}
+
+const createRoomSurface = (paper: THREE.Texture): [THREE.Mesh, THREE.MeshStandardMaterial] => {
+  const material = new THREE.MeshStandardMaterial({ roughness: ROOM_ROUGHNESS })
+  setPaper(material, paper)
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), material)
   mesh.receiveShadow = true
   return [mesh, material]
@@ -52,7 +50,7 @@ const createRoomSurface = (
  * @param floorY Height of the floor.
  * @param wallZ Depth of the back wall.
  * @param paper The cardstock texture, repeated here at the same scale as on the logo.
- * @returns The room meshes and their materials.
+ * @returns The room meshes and their materials, coloured later by the chosen look.
  */
 export const createRoom = (
   scene: THREE.Scene,
@@ -62,11 +60,11 @@ export const createRoom = (
 ): Room => {
   const roomPaper = paper.clone()
   roomPaper.repeat.setScalar(ROOM_SIZE * PAPER_WORLD_DENSITY)
-  const [wall, wallMaterial] = createRoomSurface(ROOM_WALL_COLOR, roomPaper)
+  const [wall, wallMaterial] = createRoomSurface(roomPaper)
   wall.name = 'room-wall'
   wall.position.set(0, floorY + ROOM_SIZE / 2, wallZ)
 
-  const [floor, floorMaterial] = createRoomSurface(ROOM_FLOOR_COLOR, roomPaper)
+  const [floor, floorMaterial] = createRoomSurface(roomPaper)
   floor.name = 'room-floor'
   floor.rotation.x = -Math.PI / 2
   floor.position.set(0, floorY, wallZ + ROOM_SIZE / 2)
@@ -76,28 +74,34 @@ export const createRoom = (
 }
 
 /**
- * Adds a soft spotlight aimed at the corner where the logo sleeps.
+ * Adds the spotlight that lights the logo, its colour, strength and beam set later by the look.
  * @param scene The scene to add it to.
- * @param target Where the logo's feet rest.
  * @returns The spotlight.
  */
-export const createCornerSpot = (scene: THREE.Scene, target: THREE.Vector3): THREE.SpotLight => {
-  const spot = new THREE.SpotLight(SPOT_COLOR, SPOT_INTENSITY, 0, SPOT_ANGLE, SPOT_PENUMBRA)
+export const createCornerSpot = (scene: THREE.Scene): THREE.SpotLight => {
+  const spot = new THREE.SpotLight()
   spot.name = 'corner-spot'
   spot.castShadow = true
-  spot.shadow.radius = SHADOW_RADIUS
   scene.add(spot, spot.target)
-  aimSpot(spot, target)
   return spot
 }
 
 /**
- * Moves the spotlight so it lights a point from above, in front and a little to the side.
+ * Moves the spotlight to its place relative to a point, and aims it there.
  * @param spot The spotlight from createCornerSpot.
  * @param target The point to light.
+ * @param placement Where the light hangs relative to that point.
  */
-export const aimSpot = (spot: THREE.SpotLight, target: THREE.Vector3): void => {
-  spot.position.set(target.x + SPOT_SIDE, target.y + SPOT_HEIGHT, target.z + SPOT_FORWARD)
+export const aimSpot = (
+  spot: THREE.SpotLight,
+  target: THREE.Vector3,
+  placement: SpotPlacement
+): void => {
+  spot.position.set(
+    target.x + placement.side,
+    target.y + placement.height,
+    target.z + placement.forward
+  )
   spot.target.position.copy(target)
 }
 
@@ -240,21 +244,85 @@ export const createPaperTexture = (): THREE.CanvasTexture => {
   return texture
 }
 
+/** How strongly a material is embossed and how bright its rim glows, both changeable live. */
+export interface CardShading {
+  emboss: THREE.IUniform<number>
+  rim: THREE.IUniform<number>
+}
+
 /**
- * Makes a material look pressed into card: faces whose edges turn towards the light come out a
- * little lighter and those turned away a little darker, like an emboss under a desk lamp. It
- * changes only the material's own colour, so the room around it is untouched.
+ * Gives a material two effects of its own, so they touch only the logo and letters. The emboss
+ * makes faces whose edges lean towards the light a little lighter and the rest a little darker,
+ * like a card pressed under a desk lamp. The rim makes faces turned side-on to the camera glow
+ * faintly, outlining the shape; a real light from behind would light the floor and the wall too.
  * @param material The logo and letters' material.
+ * @returns The two strengths, to set from the chosen look and the panel.
  */
-export const addEmbossShading = (material: THREE.MeshStandardMaterial): void => {
+export const addCardShading = (material: THREE.MeshStandardMaterial): CardShading => {
+  const shading: CardShading = { emboss: { value: 0 }, rim: { value: 0 } }
   const [lightX, lightY] = EMBOSS_LIGHT_DIRECTION
   material.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <normal_fragment_begin>',
-      `#include <normal_fragment_begin>
-      // In view space x and y run along the screen, so a face's normal says which way it leans.
-      float towardsLight = dot(normal.xy, normalize(vec2(${lightX.toFixed(2)}, ${lightY.toFixed(2)})));
-      diffuseColor.rgb *= clamp(1.0 + ${EMBOSS_STRENGTH.toFixed(2)} * towardsLight, 0.0, 2.0);`
-    )
+    shader.uniforms.embossStrength = shading.emboss
+    shader.uniforms.rimStrength = shading.rim
+    shader.uniforms.rimColor = { value: new THREE.Color(RIM_LIGHT_COLOR) }
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        'void main() {',
+        'uniform float embossStrength;\nuniform float rimStrength;\nuniform vec3 rimColor;\nvoid main() {'
+      )
+      .replace(
+        '#include <normal_fragment_begin>',
+        `#include <normal_fragment_begin>
+        // In view space x and y run along the screen, so a face's normal says which way it leans.
+        float towardsLight = dot(normal.xy, normalize(vec2(${lightX.toFixed(2)}, ${lightY.toFixed(2)})));
+        diffuseColor.rgb *= clamp(1.0 + embossStrength * towardsLight, 0.0, 2.0);`
+      )
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        // The camera looks along view space z, so a normal's z says how squarely a face meets it.
+        float sideOn = 1.0 - abs(normal.z);
+        totalEmissiveRadiance += rimColor * pow(sideOn, ${RIM_LIGHT_POWER.toFixed(1)}) * rimStrength;`
+      )
   }
+  return shading
+}
+
+const layerPosition = new THREE.Vector3()
+
+/**
+ * Stacks sheets of coloured card behind a cut-out, each a copy of its shape set a little behind and
+ * below, so the edges of the sheets show like layered paper craft. The sheets hang off the mesh, so
+ * they move, turn and hide with it.
+ * @param mesh A logo part or a letter, already placed and scaled.
+ * @param layers The sheets, front to back.
+ * @param paper The card texture, shared with the front.
+ * @param roughness How matte the sheets are.
+ * @returns The sheets, to remove and dispose when the look changes.
+ */
+export const addPaperLayers = (
+  mesh: THREE.Mesh,
+  layers: readonly PaperLayer[],
+  paper: THREE.Texture,
+  roughness: number
+): THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>[] => {
+  mesh.updateWorldMatrix(true, false)
+  const origin = mesh.getWorldPosition(new THREE.Vector3())
+  return layers.map(({ color, offset }) => {
+    const material = new THREE.MeshStandardMaterial({
+      color,
+      roughness,
+      map: paper,
+      bumpMap: paper,
+      bumpScale: PAPER_BUMP_SCALE
+    })
+    const sheet = new THREE.Mesh(mesh.geometry, material)
+    sheet.castShadow = true
+    sheet.receiveShadow = true
+    sheet.position.copy(
+      mesh.worldToLocal(layerPosition.copy(origin).add(new THREE.Vector3(...offset)))
+    )
+    mesh.add(sheet)
+    return sheet
+  })
 }

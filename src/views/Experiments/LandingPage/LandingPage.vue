@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as THREE from 'three'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -23,7 +23,7 @@ import {
   createRoom,
   aimSpot,
   createCornerSpot,
-  addEmbossShading,
+  addCardShading,
   createPaperTexture,
   createLogoEyelids,
   setEyelidsOpen,
@@ -34,14 +34,9 @@ import {
   LOGO_ON_LETTERS_GAP,
   CORNER_MARGIN,
   WALL_GAP,
-  SLEEP_AMBIENT_INTENSITY,
-  SLEEP_DIRECTIONAL_INTENSITY,
-  DIRECTIONAL_LIGHT_POSITION,
-  SHADOW_RADIUS,
   PAPER_WORLD_DENSITY,
-  PAPER_BUMP_SCALE,
-  LOGO_COLOR,
-  LOGO_ROUGHNESS,
+  HERO_LOOKS,
+  DEFAULT_HERO_LOOK,
   HERO_SCROLL_DIMMING,
   SLEEP_YAW,
   INTRO_SEEN_KEY,
@@ -54,11 +49,11 @@ import {
   OWNER_PROFILES,
   BUILD_NOTES
 } from './config'
-import type { LogoJumpPath, LogoRest } from './types'
+import type { LogoJumpPath, LogoRest, HeroLook, HeroLookParts } from './types'
+import { createHeroLook, registerLookElements, refreshLookElements } from './heroLook'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { cameraSchema } from '@/views/Tools/SceneEditor/config'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
-import type { ElementPropertiesConfig } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
@@ -70,6 +65,10 @@ const PROFILE_ICONS: Record<string, Component> = { linkedin: Linkedin, github: G
 const skills = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
 const route = useRoute()
+// The finish is picked in the Config panel, or with ?look= in the address to share one.
+const requestedLook = typeof route.query.look === 'string' ? route.query.look : ''
+const lookName = ref(requestedLook in HERO_LOOKS ? requestedLook : DEFAULT_HERO_LOOK)
+const look = computed(() => HERO_LOOKS[lookName.value] ?? HERO_LOOKS[DEFAULT_HERO_LOOK])
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
 const loadingDetail = ref<string | undefined>(undefined)
@@ -95,8 +94,6 @@ const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
 const FRUSTUM_MIN_WIDTH = 14
 const WHITE = 0xffffff
-const AMBIENT_INTENSITY = 0.95
-const DIR_LIGHT_INTENSITY = 0.9
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
 const LETTER_SPACING = 0.3
@@ -174,21 +171,24 @@ const createResizeHandler =
 interface HeroLights {
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
+  backLight: THREE.DirectionalLight
 }
 
+// Colours, strengths and positions come from the chosen look once the scene is built.
 const createLights = (scene: THREE.Scene): HeroLights => {
-  const ambientLight = new THREE.AmbientLight(WHITE, AMBIENT_INTENSITY)
+  const ambientLight = new THREE.AmbientLight(WHITE, 0)
   ambientLight.name = 'ambient-light'
-  scene.add(ambientLight)
 
-  const dirLight = new THREE.DirectionalLight(WHITE, DIR_LIGHT_INTENSITY)
+  const dirLight = new THREE.DirectionalLight(WHITE, 0)
   dirLight.name = 'directional-light'
-  dirLight.position.set(...DIRECTIONAL_LIGHT_POSITION)
   dirLight.castShadow = true
-  dirLight.shadow.radius = SHADOW_RADIUS
-  scene.add(dirLight)
 
-  return { ambientLight, dirLight }
+  const backLight = new THREE.DirectionalLight(WHITE, 0)
+  backLight.name = 'back-light'
+  backLight.castShadow = true
+
+  scene.add(ambientLight, dirLight, backLight)
+  return { ambientLight, dirLight, backLight }
 }
 
 type PhysicsWorld = Parameters<typeof getPhysic>[0]
@@ -429,8 +429,9 @@ interface IntroDirectorOptions {
   logo: Logo
   letters: Letter[]
   path: LogoJumpPath
-  lights: HeroLights
   spot: THREE.SpotLight
+  getLook: () => HeroLook
+  setLightLevels: (progress: number) => void
   onAwake: () => void
 }
 
@@ -444,8 +445,9 @@ const createIntroDirector = ({
   logo,
   letters,
   path,
-  lights,
   spot,
+  getLook,
+  setLightLevels,
   onAwake
 }: IntroDirectorOptions) => {
   const spotTarget = new THREE.Vector3()
@@ -460,17 +462,8 @@ const createIntroDirector = ({
     const hasLanded = sinceWake !== null && sinceWake >= LANDING_TIME
     letters.forEach(({ mesh }) => (mesh.visible = hasLanded))
 
-    aimSpot(spot, spotTarget.lerpVectors(startFeet, endPool, pose.lightProgress))
-    lights.ambientLight.intensity = THREE.MathUtils.lerp(
-      SLEEP_AMBIENT_INTENSITY,
-      AMBIENT_INTENSITY,
-      pose.lightProgress
-    )
-    lights.dirLight.intensity = THREE.MathUtils.lerp(
-      SLEEP_DIRECTIONAL_INTENSITY,
-      DIR_LIGHT_INTENSITY,
-      pose.lightProgress
-    )
+    aimSpot(spot, spotTarget.lerpVectors(startFeet, endPool, pose.lightProgress), getLook().spot)
+    setLightLevels(pose.lightProgress)
 
     if (pose.done) onAwake()
     return pose.done
@@ -529,8 +522,14 @@ const handOverToPhysics = (logo: Logo, letters: Letter[], bodies: PhysicsBodies)
 }
 
 type PhysicsConfig = { impulse: number; torque: number }
+type HeroConfig = PhysicsConfig & { look: string }
 
-const physicsConfigSchema = {
+const heroConfigSchema = {
+  look: {
+    label: 'Hero look',
+    component: 'ButtonSelector',
+    options: Object.entries(HERO_LOOKS).map(([value, { label }]) => ({ value, label }))
+  },
   impulse: { label: 'Movement Speed', min: 0, max: 500, step: 1 },
   torque: { label: 'Rotation Speed', min: 0, max: 100, step: 0.5 }
 }
@@ -587,39 +586,9 @@ interface RegisterPanelsOptions {
   orbit: OrbitControls
   ambientLight: THREE.AmbientLight
   dirLight: THREE.DirectionalLight
-  contentMaterial: THREE.MeshStandardMaterial
 }
 
-const createContentConfig = (
-  contentMaterial: THREE.MeshStandardMaterial,
-  title: string
-): ElementPropertiesConfig => ({
-  title,
-  schema: {
-    color: { color: true, label: 'Color' },
-    metalness: { min: 0, max: 1, step: 0.01, label: 'Metalness' },
-    roughness: { min: 0, max: 1, step: 0.01, label: 'Roughness' }
-  },
-  getValue: (path) => {
-    if (path === 'color') return contentMaterial.color.getHex()
-    if (path === 'metalness') return contentMaterial.metalness
-    if (path === 'roughness') return contentMaterial.roughness
-    return undefined
-  },
-  updateValue: (path, value) => {
-    if (path === 'color') contentMaterial.color.set(value as number)
-    if (path === 'metalness') contentMaterial.metalness = value as number
-    if (path === 'roughness') contentMaterial.roughness = value as number
-  }
-})
-
-const registerPanels = ({
-  camera,
-  orbit,
-  ambientLight,
-  dirLight,
-  contentMaterial
-}: RegisterPanelsOptions): void => {
+const registerPanels = ({ camera, orbit, ambientLight, dirLight }: RegisterPanelsOptions): void => {
   const orthoCameraSchema = {
     position: cameraSchema.position,
     orbitTarget: cameraSchema.orbitTarget,
@@ -639,14 +608,6 @@ const registerPanels = ({
   })
   const debugStore = useDebugSceneStore()
   debugStore.registerSceneElements(camera as unknown as THREE.Camera, [ambientLight, dirLight])
-  debugStore.addSceneElement(
-    { name: 'logo', type: 'Group', hidden: false },
-    createContentConfig(contentMaterial, 'Logo')
-  )
-  debugStore.addSceneElement(
-    { name: 'cnotv-text', type: 'Group', hidden: false },
-    createContentConfig(contentMaterial, 'CNOTV Text')
-  )
 }
 
 const createResetTimeline = (bodies: PhysicsBodies) => {
@@ -708,27 +669,48 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   scene.background = null
 
   const camera = createOrthographicCamera()
-  const { ambientLight, dirLight } = createLights(scene)
+  const { ambientLight, dirLight, backLight } = createLights(scene)
   const grainTexture = createPaperTexture()
-  const contentMaterial = new THREE.MeshStandardMaterial({
-    color: LOGO_COLOR,
-    roughness: LOGO_ROUGHNESS,
-    map: grainTexture,
-    bumpMap: grainTexture,
-    bumpScale: PAPER_BUMP_SCALE
-  })
-  addEmbossShading(contentMaterial)
+  const contentMaterial = new THREE.MeshStandardMaterial()
+  const shading = addCardShading(contentMaterial)
 
   const bodies: PhysicsBodies = new Map()
   const logo = await loadLogo(scene, world, contentMaterial)
   const font = await new FontLoader().loadAsync(helvetikerBoldUrl)
   const letters = loadText(scene, world, contentMaterial, font)
+  const logoParts: THREE.Mesh[] = []
+  logo.model.traverse((child) => {
+    if (child instanceof THREE.Mesh && !logo.eyelids.includes(child)) logoParts.push(child)
+  })
   const path = getJumpPath(logo, letters, camera.right)
   parkLogoBody(logo, path)
 
   const room = createRoom(scene, path.start[1], ROOM_WALL_Z, grainTexture)
   createRoomColliders(world, path.start[1])
-  const spot = createCornerSpot(scene, new THREE.Vector3(...path.start))
+  const spot = createCornerSpot(scene)
+  spot.target.position.set(...path.start)
+
+  const [wallMaterial, floorMaterial] = room.materials
+  const lookParts: HeroLookParts = {
+    ambientLight,
+    keyLight: dirLight,
+    backLight,
+    spot,
+    wallMaterial,
+    floorMaterial,
+    roomPaper: room.paper,
+    logoMaterial: contentMaterial,
+    logoPaper: grainTexture,
+    emboss: shading.emboss,
+    rim: shading.rim,
+    sheetHosts: [...logoParts, ...letters.map(({ mesh }) => mesh)]
+  }
+  const heroLook = createHeroLook(lookParts, () => look.value)
+  heroLook.apply(look.value)
+  const stopLookWatch = watch(look, (next) => {
+    heroLook.apply(next)
+    refreshLookElements(lookParts)
+  })
 
   const orbit = new OrbitControls(camera, renderer.domElement)
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
@@ -738,22 +720,28 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   // the hero from scrolling the page on a phone; vertical drags go back to the page.
   renderer.domElement.style.touchAction = 'pan-y'
 
-  const physicsConfig = createReactiveConfig<PhysicsConfig>({
+  const heroConfig = createReactiveConfig<HeroConfig>({
+    look: lookName.value,
     impulse: DEFAULT_IMPULSE,
     torque: DEFAULT_TORQUE
   })
   registerViewConfig(
     route.name as string,
-    physicsConfig as ReturnType<typeof createReactiveConfig>,
-    physicsConfigSchema
+    heroConfig as ReturnType<typeof createReactiveConfig>,
+    heroConfigSchema
   )
-  registerPanels({ camera, orbit, ambientLight, dirLight, contentMaterial })
+  const stopLookPick = watch(
+    () => heroConfig.value.look,
+    (name) => (lookName.value = name)
+  )
+  registerPanels({ camera, orbit, ambientLight, dirLight })
+  registerLookElements(lookParts)
 
   const timelineManager = createResetTimeline(bodies)
 
   const onResize = createResizeHandler(camera, renderer)
   const clock = new THREE.Clock()
-  const onPhysicsPointerDown = createClickHandler(camera, bodies, physicsConfig)
+  const onPhysicsPointerDown = createClickHandler(camera, bodies, heroConfig)
   let wokenAt: number | null = null
   const wakeUp = (): void => {
     if (introStage.value !== 'asleep') return
@@ -774,8 +762,9 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     logo,
     letters,
     path,
-    lights: { ambientLight, dirLight },
     spot,
+    getLook: () => look.value,
+    setLightLevels: heroLook.setLightLevels,
     onAwake: () => {
       introStage.value = 'awake'
       rememberIntroSeen()
@@ -831,6 +820,9 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     canvasElement.removeEventListener('pointerdown', onPointerDown)
     grainTexture.dispose()
     contentMaterial.dispose()
+    stopLookWatch()
+    stopLookPick()
+    heroLook.dispose()
     room.materials.forEach((material) => material.dispose())
     room.paper.dispose()
     room.meshes.forEach((mesh) => mesh.geometry.dispose())
@@ -854,7 +846,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main ref="page" class="landing-page" :class="{ 'landing-page--awake': introStage === 'awake' }">
+  <main
+    ref="page"
+    class="landing-page"
+    :class="{ 'landing-page--awake': introStage === 'awake', 'landing-page--ink': look.ink }"
+  >
     <header ref="hero" class="landing-page__hero">
       <canvas ref="canvas" class="landing-page__canvas" />
       <h1 class="landing-page__name">{{ OWNER_NAME }}</h1>
@@ -972,6 +968,14 @@ onUnmounted(() => {
   font-weight: bold;
   text-shadow: var(--shadow-text-canvas-overlay);
   text-transform: uppercase;
+}
+
+/* On a light paper finish the hero's words are printed in ink rather than lit. */
+.landing-page--ink .landing-page__name,
+.landing-page--ink .landing-page__profession,
+.landing-page--ink .landing-page__scroll {
+  color: var(--color-hero-ink);
+  text-shadow: none;
 }
 
 .landing-page__name {

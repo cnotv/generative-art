@@ -1,4 +1,4 @@
-import type { SkillArea } from './types'
+import type { SkillArea, HeroLook } from './types'
 
 /** Seconds each phase of the wake up and jump lasts, in order. */
 export const INTRO_TIMING = {
@@ -47,8 +47,6 @@ export const SVG_EYES = [
   { x: 240.5, y: 225.5, radius: 20 }
 ]
 
-export const ROOM_WALL_COLOR = 0x1d2738
-export const ROOM_FLOOR_COLOR = 0x2a3547
 export const ROOM_SIZE = 80
 export const ROOM_ROUGHNESS = 0.9
 export const ROOM_COLLIDER_DEPTH = 1
@@ -57,31 +55,189 @@ export const SLEEP_AMBIENT_INTENSITY = 0.06
 export const SLEEP_DIRECTIONAL_INTENSITY = 0
 /** How much of the hero's light is gone once the page has scrolled past it. */
 export const HERO_SCROLL_DIMMING = 0.85
-/** The key light once awake: from the front, above and to the left, the side the emboss lights. */
-export const DIRECTIONAL_LIGHT_POSITION = [-4, 6, 10] as const
-/** How far shadows blur at their edges, in shadow map texels: wide, for soft paper light. */
-export const SHADOW_RADIUS = 10
-/** The logo and its letters: the same navy card as the wall, a shade lighter, and matte. */
-export const LOGO_COLOR = 0x243049
-export const LOGO_ROUGHNESS = 0.95
 /**
  * Navy cardstock: the paper's texture, how many times it repeats per scene unit, how strongly its
- * fibres raise the surface, and the emboss that lights edges facing the light and shades the rest.
+ * fibres raise the surface, and the side the emboss lights.
  */
 export const PAPER_TEXTURE_SIZE = 256
 export const PAPER_WORLD_DENSITY = 0.25
 export const PAPER_TONE_RANGE = [196, 255] as const
 export const PAPER_FIBRE_COUNT = 420
 export const PAPER_BUMP_SCALE = 0.8
-export const EMBOSS_STRENGTH = 0.9
 export const EMBOSS_LIGHT_DIRECTION = [-0.6, 0.8] as const
-export const SPOT_INTENSITY = 380
-/** Where the spotlight hangs relative to what it lights: high, in front and a little to the side. */
-export const SPOT_SIDE = 5
-export const SPOT_HEIGHT = 10
-export const SPOT_FORWARD = 7
-export const SPOT_ANGLE = 0.36
-export const SPOT_PENUMBRA = 1
+
+/** The rim: a cool glow on faces turned side-on to the camera, and how tightly it hugs the edges. */
+export const RIM_LIGHT_COLOR = 0x9fb8ff
+export const RIM_LIGHT_POWER = 3
+
+/**
+ * Every finish tried for the hero, picked from the Config panel or with ?look= in the address.
+ * The original lighting, the first pass with a rim, a glossy take with light from behind, navy
+ * cardstock with an embossed logo, a light letterpress card with the logo in ink, and layered cut
+ * paper.
+ */
+export const HERO_LOOKS: Record<string, HeroLook> = {
+  original: {
+    label: 'Original',
+    wallColor: 0x1d2738,
+    floorColor: 0x2a3547,
+    logoColor: 0x1d2738,
+    logoRoughness: 0.9,
+    logoMetalness: 0,
+    paper: false,
+    embossStrength: 0,
+    rimStrength: 0,
+    ambientIntensity: 0.8,
+    key: { color: 0xffffff, intensity: 1.2, position: [5, 3, 5] },
+    back: null,
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 500,
+      side: 11,
+      height: 4,
+      forward: 4,
+      angle: 0.6,
+      penumbra: 0.8
+    },
+    shadowRadius: 1,
+    layers: [],
+    ink: false
+  },
+  rim: {
+    label: 'Rim light',
+    wallColor: 0x1d2738,
+    floorColor: 0x2a3547,
+    logoColor: 0x27334c,
+    logoRoughness: 0.7,
+    logoMetalness: 0,
+    paper: false,
+    embossStrength: 0,
+    rimStrength: 0.22,
+    ambientIntensity: 0.8,
+    key: { color: 0xffffff, intensity: 0.9, position: [3, 5, 10] },
+    back: null,
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 500,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 0.75
+    },
+    shadowRadius: 6,
+    layers: [],
+    ink: false
+  },
+  glossy: {
+    label: 'Glossy',
+    wallColor: 0x0d121c,
+    floorColor: 0x1c2030,
+    logoColor: 0x1e2840,
+    logoRoughness: 0.35,
+    logoMetalness: 0.25,
+    paper: false,
+    embossStrength: 0,
+    rimStrength: 0.35,
+    ambientIntensity: 0.55,
+    key: { color: 0xffffff, intensity: 0.7, position: [3, 5, 10] },
+    back: { color: 0xc9d8ff, intensity: 1.4, position: [-2, 7, -9] },
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 420,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 0.75
+    },
+    shadowRadius: 8,
+    layers: [],
+    ink: false
+  },
+  cardstock: {
+    label: 'Navy cardstock',
+    wallColor: 0x1d2738,
+    floorColor: 0x2a3547,
+    logoColor: 0x243049,
+    logoRoughness: 0.95,
+    logoMetalness: 0,
+    paper: true,
+    embossStrength: 0.9,
+    rimStrength: 0,
+    ambientIntensity: 0.95,
+    key: { color: 0xffffff, intensity: 0.9, position: [-4, 6, 10] },
+    back: null,
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 380,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 1
+    },
+    shadowRadius: 10,
+    layers: [],
+    ink: false
+  },
+  letterpress: {
+    label: 'Letterpress',
+    wallColor: 0xf6f0e4,
+    floorColor: 0xeee5d4,
+    logoColor: 0x26324d,
+    logoRoughness: 0.9,
+    logoMetalness: 0,
+    paper: true,
+    embossStrength: 0.5,
+    rimStrength: 0,
+    ambientIntensity: 1.25,
+    key: { color: 0xfff0dc, intensity: 1.4, position: [-4, 6, 10] },
+    back: null,
+    spot: {
+      color: 0xfff4e6,
+      intensity: 260,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 1
+    },
+    shadowRadius: 10,
+    layers: [],
+    ink: true
+  },
+  papercraft: {
+    label: 'Paper craft',
+    wallColor: 0x1d2738,
+    floorColor: 0x2a3547,
+    logoColor: 0xf2e8d5,
+    logoRoughness: 0.95,
+    logoMetalness: 0,
+    paper: true,
+    embossStrength: 0.4,
+    rimStrength: 0,
+    ambientIntensity: 0.95,
+    key: { color: 0xffffff, intensity: 0.9, position: [-4, 6, 10] },
+    back: null,
+    spot: {
+      color: 0xc9d8ff,
+      intensity: 380,
+      side: 5,
+      height: 10,
+      forward: 7,
+      angle: 0.36,
+      penumbra: 1
+    },
+    shadowRadius: 10,
+    layers: [
+      { color: 0x8fa8e8, offset: [0.12, -0.12, -0.3] },
+      { color: 0xe8a8b8, offset: [0.24, -0.24, -0.6] }
+    ],
+    ink: false
+  }
+}
+export const DEFAULT_HERO_LOOK = 'cardstock'
 
 export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'
@@ -90,7 +246,6 @@ export const OWNER_PROFILES = [
   { label: 'LinkedIn', icon: 'linkedin', url: 'https://www.linkedin.com/in/leogiuseppe/' },
   { label: 'GitHub', icon: 'github', url: 'https://github.com/cnotv' }
 ]
-export const SPOT_COLOR = 0xc9d8ff
 /** Where to read how this page was built: its journey, the tutorials and the toolkit behind it. */
 export const BUILD_NOTES = [
   {

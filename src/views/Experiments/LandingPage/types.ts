@@ -146,3 +146,70 @@ export interface SkillArea {
   highlights: SkillHighlight[]
   quote?: { text: string; author: string; url: string }
 }
+
+/** One sheet behind a paper cut-out: its colour and how far it sits behind and below the front. */
+export interface PaperLayer {
+  color: number
+  /** World units to the right, up and towards the camera; negative z is behind. */
+  offset: readonly [number, number, number]
+}
+
+/** Where a spotlight hangs relative to what it lights, and the shape of its beam. */
+export interface SpotPlacement {
+  color: number
+  intensity: number
+  side: number
+  height: number
+  forward: number
+  angle: number
+  penumbra: number
+}
+
+/** A directional light: its colour, strength and where it shines from. */
+export interface KeyLight {
+  color: number
+  intensity: number
+  position: readonly [number, number, number]
+}
+
+/** A finish for the hero room: its colours, its lights and how the logo is made. */
+export interface HeroLook {
+  label: string
+  wallColor: number
+  floorColor: number
+  logoColor: number
+  logoRoughness: number
+  logoMetalness: number
+  /** Whether the room and logo are cardstock, with grain, fibres and tooth. */
+  paper: boolean
+  embossStrength: number
+  rimStrength: number
+  ambientIntensity: number
+  key: KeyLight
+  /** A light from behind that throws soft shadows forward onto the floor; null for none. */
+  back: KeyLight | null
+  spot: SpotPlacement
+  /** How far shadows blur at their edges, in shadow map texels. */
+  shadowRadius: number
+  /** Sheets stacked behind the logo and letters, for a cut-paper look; empty for a single card. */
+  layers: readonly PaperLayer[]
+  /** Dark text for a light page, instead of light text for a dark one. */
+  ink: boolean
+}
+
+/** Everything in the hero a look changes: the lights, the room, the logo and its sheets. */
+export interface HeroLookParts {
+  ambientLight: THREE.AmbientLight
+  keyLight: THREE.DirectionalLight
+  backLight: THREE.DirectionalLight
+  spot: THREE.SpotLight
+  wallMaterial: THREE.MeshStandardMaterial
+  floorMaterial: THREE.MeshStandardMaterial
+  roomPaper: THREE.Texture
+  logoMaterial: THREE.MeshStandardMaterial
+  logoPaper: THREE.Texture
+  emboss: THREE.IUniform<number>
+  rim: THREE.IUniform<number>
+  /** The logo parts and letters that carry paper sheets behind them. */
+  sheetHosts: THREE.Mesh[]
+}
