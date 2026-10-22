@@ -27,17 +27,20 @@ Then check the budgets with `pnpm check:assets` and look at the homepage.
 
 ## How the city is laid out
 
-| Part              | Where it is defined                    | Notes                                                                                                    |
-| ----------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| District contents | one `build_<district>` function each   | plain primitives in the shared palette, laid out around the district centre                              |
-| Positions         | `SLOTS`                                | in screen space (right, depth), so each district keeps a clear spot for its label                        |
-| Streets           | `street_area`                          | every point of the island goes to its nearest site, shrunk by half a street, so streets fill the gaps    |
-| Containment       | `keep_inside`                          | shrinks a district's buildings until every vertex sits inside its own area; a warning means it never fit |
-| Filler blocks     | `FILLERS` and `FILLER_OF`              | houses, warehouses and tanks: part of the city, but not hoverable and without a label                    |
-| Harbour           | the pier and boat block after the loop | on the straight western coast, next to the bay                                                           |
+| Part              | Where it is defined                    | Notes                                                                                                      |
+| ----------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| District contents | one `build_<district>` function each   | plain primitives in the shared palette, laid out around the district centre                                |
+| Positions         | `SLOTS`                                | in screen space (right, depth), so each district gets its own clear spot on screen                         |
+| Districts         | `cell`, `inset`                        | each district takes the part of the city limit nearest its site: a road ring, then a raised tile inside it |
+| Land              | `ground-island`, `city_limit`          | one continuous piece around the districts; the filler blocks stand on it without streets of their own      |
+| Names             | `GROUND_LABELS`, `ground_label`        | each district's name lies on its ground along the front edge, on the first line wide enough for it         |
+| Containment       | `keep_inside`                          | shrinks a group until every vertex sits inside its area and behind its name; a warning means it never fit  |
+| Filler blocks     | `FILLERS` and `FILLER_OF`              | houses, warehouses and tanks: part of the land, not hoverable                                              |
+| Harbour           | the pier and boat block after the loop | on the straight western coast, next to the bay                                                             |
 
-Keep tall districts at the back of the view and give every district a slot of its own: labels
-hang below the front edge of their district and must not overlap at desktop or phone width.
+Keep tall districts at the back of the view, and keep tall buildings away from a district's back
+edge, where they would hide the name of the district behind it. Hovering a district on the page
+shows its title and description on the LCD display in the corner of the city.
 
 ## Names and motion the page relies on
 

@@ -111,7 +111,17 @@
   --color-canvas-overlay-accent: hsl(218deg 60% 80%);
   --color-canvas-overlay-muted: hsl(218deg 30% 62%);
   --color-canvas-overlay-surface: hsl(218deg 30% 11%);
-  --color-canvas-overlay-scrim: hsl(218deg 30% 11% / 72%);
+  --color-lcd-bezel: hsl(218deg 25% 16%);
+  --color-lcd-border: hsl(218deg 25% 28%);
+  --color-lcd-surface: hsl(195deg 40% 9%);
+  --color-lcd-text: hsl(190deg 85% 78%);
+  --color-lcd-dim: hsl(190deg 35% 45%);
+  --shadow-lcd-glow: 0 0 6px hsl(190deg 90% 65% / 55%);
+  --lcd-scanlines: repeating-linear-gradient(
+    to bottom,
+    transparent 0 2px,
+    hsl(195deg 60% 3% / 35%) 2px 3px
+  );
   --color-canvas-overlay-border: hsl(218deg 30% 30% / 60%);
 
   // Panel item colors

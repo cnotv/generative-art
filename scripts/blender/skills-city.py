@@ -207,53 +207,92 @@ def build_ci(root, accent):
     for x in (-1.6, 1.6):
         box(f"ci-belt-leg-{x}", (0.1, 0.4, 0.3), (x, -1.15, 0), ROOF, root)
     box("ci-belt", (3.4, 0.5, 0.12), (0, -1.15, 0.3), ROOF, root)
+    # The belt runs into the open back of a truck, which swallows every package it carries.
+    box("ci-truck-body", (0.95, 0.66, 0.66), (2.2, -1.15, 0.12), WALL, root)
+    box("ci-truck-cab", (0.4, 0.62, 0.45), (2.88, -1.15, 0.12), accent_mat, root)
+    box("ci-truck-windscreen", (0.03, 0.5, 0.18), (3.09, -1.15, 0.36), GLASS, root)
+    for x in (1.95, 2.75):
+        cylinder(f"ci-truck-wheel-{x}", 0.12, 0.7, (x, -1.15, 0.12), ROOF, root, vertices=8, rot=(math.pi / 2, 0, 0))
     for index in range(5):
         package = empty(f"ci-package-{index}", (-1.6, -1.15, 0.42), root)
         box(f"ci-package-box-{index}", (0.3, 0.3, 0.28), (0, 0, 0), accent_mat, package)
-        anim(package, "slide", axis="x", speed=0.18, amount=3.2, phase=index / 5)
+        anim(package, "slide", axis="x", speed=0.16, amount=3.8, phase=index / 5)
     cylinder("ci-signal-post", 0.04, 0.9, (1.85, -0.6, 0.45), ROOF, root, vertices=6)
     signal = empty("ci-signal", (1.85, -0.6, 0.98), root)
     ball("ci-signal-light", 0.12, (0, 0, 0), SIGNAL, signal)
     anim(signal, "pulse", speed=3.0, amount=0.25)
 
 
+def robot(root, x, y, accent_mat, prefix):
+    """A friendly robot that looks around and waves."""
+    for side in (-0.13, 0.13):
+        box(f"{prefix}-leg-{side}", (0.13, 0.15, 0.4), (x + side, y, 0), ROOF, root)
+    box(f"{prefix}-body", (0.6, 0.4, 0.55), (x, y, 0.4), WALL, root)
+    box(f"{prefix}-chest", (0.32, 0.02, 0.2), (x, y - 0.21, 0.58), accent_mat, root)
+    head = empty(f"{prefix}-head", (x, y, 0.95), root)
+    box(f"{prefix}-head-box", (0.42, 0.36, 0.32), (0, 0, 0), WALL, head)
+    for side in (-0.1, 0.1):
+        box(f"{prefix}-eye-{side}", (0.08, 0.02, 0.08), (side, -0.19, 0.14), SIGNAL, head)
+    cylinder(f"{prefix}-antenna", 0.02, 0.18, (0, 0, 0.41), ROOF, head, vertices=5)
+    ball(f"{prefix}-antenna-tip", 0.05, (0, 0, 0.52), accent_mat, head)
+    anim(head, "swing", axis="y", speed=1.3, amount=0.6)
+    box(f"{prefix}-arm-right", (0.12, 0.12, 0.45), (x + 0.37, y, 0.45), ROOF, root)
+    shoulder = empty(f"{prefix}-shoulder", (x - 0.37, y, 0.9), root)
+    box(f"{prefix}-arm-left", (0.12, 0.12, 0.45), (0, 0, 0), ROOF, shoulder)
+    box(f"{prefix}-hand", (0.16, 0.16, 0.12), (0, 0, 0.45), accent_mat, shoulder)
+    anim(shoulder, "swing", axis="z", speed=4.0, amount=0.5)
+
+
+def robot_arm(root, x, y, accent_mat, prefix, phase):
+    """An industrial arm: the base turns, the forearm dips and lifts, the gripper follows."""
+    cylinder(f"{prefix}-base", 0.2, 0.18, (x, y, 0.09), ROOF, root, vertices=10)
+    turret = empty(f"{prefix}-turret", (x, y, 0.18), root)
+    anim(turret, "swing", axis="y", speed=1.2, amount=0.9, phase=phase)
+    box(f"{prefix}-upper", (0.12, 0.12, 0.7), (0, 0, 0), accent_mat, turret)
+    elbow = empty(f"{prefix}-elbow", (0, 0, 0.7), turret)
+    anim(elbow, "swing", axis="z", speed=1.2, amount=0.5, phase=phase + 0.25)
+    box(f"{prefix}-forearm", (0.55, 0.1, 0.1), (0.27, 0, -0.05), WALL, elbow)
+    box(f"{prefix}-gripper", (0.1, 0.18, 0.16), (0.58, 0, -0.14), ROOF, elbow)
+
+
 def build_ai(root, accent):
     accent_mat = ("ai-accent", accent)
-    cylinder("ai-tower", 0.7, 2.6, (0.7, 0.8, 1.3), WALL, root, vertices=14)
+    # A robot factory: the hall with roof lights, two arms at a work table and a cart shuttling parts.
+    box("ai-hall", (2.8, 1.3, 1.1), (0, 1.0, 0), WALL_DARK, root)
+    for index in range(3):
+        box(f"ai-skylight-{index}", (0.5, 0.9, 0.12), (-0.9 + index * 0.9, 1.0, 1.1), GLASS, root)
+    box("ai-hall-door", (0.9, 0.04, 0.7), (0.6, 0.33, 0), ROOF, root)
+    box("ai-table", (1.9, 0.5, 0.35), (-0.3, -0.8, 0), WALL, root)
+    for index, x in enumerate((-0.95, -0.4, 0.15)):
+        box(f"ai-part-{index}", (0.22, 0.22, 0.18), (x, -0.8, 0.35), accent_mat, root)
+    robot_arm(root, -0.9, -0.2, accent_mat, "ai-arm-left", 0.0)
+    robot_arm(root, 0.4, -0.2, accent_mat, "ai-arm-right", 0.5)
+    robot(root, 1.5, -0.7, accent_mat, "ai-robot")
+    cart = empty("ai-cart", (-0.3, -1.55, 0), root)
+    box("ai-cart-base", (0.5, 0.35, 0.14), (0, 0, 0.04), ROOF, cart)
+    box("ai-cart-load", (0.3, 0.25, 0.2), (0, 0, 0.18), accent_mat, cart)
+    anim(cart, "bob", axis="x", speed=0.9, amount=0.8)
+
+
+def build_mentoring(root, accent):
+    accent_mat = ("mentoring-accent", accent)
+    cylinder("mentoring-tower", 0.7, 2.6, (0.7, 0.8, 1.3), WALL, root, vertices=14)
     for index, z in enumerate((0.65, 1.3, 1.95)):
-        cylinder(f"ai-ring-{index}", 0.73, 0.12, (0.7, 0.8, z), accent_mat, root, vertices=14)
-    ball("ai-dome", 0.7, (0.7, 0.8, 2.6), GLASS, root, squash=0.6)
-    cylinder("ai-antenna", 0.04, 0.8, (0.7, 0.8, 3.3), ROOF, root, vertices=6)
-    tip = empty("ai-antenna-tip", (0.7, 0.8, 3.72), root)
-    ball("ai-antenna-light", 0.1, (0, 0, 0), accent_mat, tip)
+        cylinder(f"mentoring-ring-{index}", 0.73, 0.12, (0.7, 0.8, z), accent_mat, root, vertices=14)
+    ball("mentoring-dome", 0.7, (0.7, 0.8, 2.6), GLASS, root, squash=0.6)
+    cylinder("mentoring-antenna", 0.04, 0.8, (0.7, 0.8, 3.3), ROOF, root, vertices=6)
+    tip = empty("mentoring-antenna-tip", (0.7, 0.8, 3.72), root)
+    ball("mentoring-antenna-light", 0.1, (0, 0, 0), accent_mat, tip)
     anim(tip, "pulse", speed=4.0, amount=0.45)
-    orbit = empty("ai-orbit", (0.7, 0.8, 1.7), root)
-    box("ai-orbit-packet", (0.2, 0.2, 0.2), (1.05, 0, -0.1), GLASS, orbit)
-    box("ai-orbit-packet-2", (0.16, 0.16, 0.16), (-1.05, 0, -0.08), accent_mat, orbit)
+    orbit = empty("mentoring-orbit", (0.7, 0.8, 1.7), root)
+    box("mentoring-orbit-packet", (0.2, 0.2, 0.2), (1.05, 0, -0.1), GLASS, orbit)
+    box("mentoring-orbit-packet-2", (0.16, 0.16, 0.16), (-1.05, 0, -0.08), accent_mat, orbit)
     anim(orbit, "spin", axis="y", speed=1.1)
-    # A friendly robot: it looks around and waves.
-    rx, ry = -0.9, -0.7
-    for side in (-0.13, 0.13):
-        box(f"ai-robot-leg-{side}", (0.13, 0.15, 0.4), (rx + side, ry, 0), ROOF, root)
-    box("ai-robot-body", (0.6, 0.4, 0.55), (rx, ry, 0.4), WALL, root)
-    box("ai-robot-chest", (0.32, 0.02, 0.2), (rx, ry - 0.21, 0.58), accent_mat, root)
-    head = empty("ai-robot-head", (rx, ry, 0.95), root)
-    box("ai-robot-head-box", (0.42, 0.36, 0.32), (0, 0, 0), WALL, head)
-    for side in (-0.1, 0.1):
-        box(f"ai-robot-eye-{side}", (0.08, 0.02, 0.08), (side, -0.19, 0.14), SIGNAL, head)
-    cylinder("ai-robot-antenna", 0.02, 0.18, (0, 0, 0.41), ROOF, head, vertices=5)
-    ball("ai-robot-antenna-tip", 0.05, (0, 0, 0.52), accent_mat, head)
-    anim(head, "swing", axis="y", speed=1.3, amount=0.6)
-    box("ai-robot-arm-right", (0.12, 0.12, 0.45), (rx + 0.37, ry, 0.45), ROOF, root)
-    shoulder = empty("ai-robot-shoulder", (rx - 0.37, ry, 0.9), root)
-    box("ai-robot-arm-left", (0.12, 0.12, 0.45), (0, 0, 0), ROOF, shoulder)
-    box("ai-robot-hand", (0.16, 0.16, 0.12), (0, 0, 0.45), accent_mat, shoulder)
-    anim(shoulder, "swing", axis="z", speed=4.0, amount=0.5)
     for index in range(2):
         y = -1.4 + index * 0.45
-        box(f"ai-rack-{index}", (0.45, 0.35, 0.75), (1.4, y, 0), ROOF, root)
-        light = empty(f"ai-rack-light-{index}", (1.4, y - 0.18, 0.55), root)
-        box(f"ai-rack-led-{index}", (0.3, 0.02, 0.05), (0, 0, 0), SIGNAL, light)
+        box(f"mentoring-rack-{index}", (0.45, 0.35, 0.75), (1.4, y, 0), ROOF, root)
+        light = empty(f"mentoring-rack-light-{index}", (1.4, y - 0.18, 0.55), root)
+        box(f"mentoring-rack-led-{index}", (0.3, 0.02, 0.05), (0, 0, 0), SIGNAL, light)
         anim(light, "pulse", speed=5.0 + index, amount=0.4, phase=index * 0.3)
 
 
@@ -325,64 +364,31 @@ PAPER = ("paper", "#f4f6fb")
 
 def build_nlg(root, accent):
     accent_mat = ("nlg-accent", accent)
-    box("nlg-steps", (2.8, 1.9, 0.2), (-0.2, 0.6, 0), WALL_DARK, root)
-    box("nlg-hall", (2.4, 1.4, 1.1), (-0.2, 0.8, 0.2), WALL, root)
+    box("nlg-steps", (2.8, 1.9, 0.2), (-0.2, -0.4, 0), WALL_DARK, root)
+    box("nlg-hall", (2.4, 1.4, 1.1), (-0.2, -0.2, 0.2), WALL, root)
     for index in range(5):
-        cylinder(f"nlg-column-{index}", 0.08, 1.1, (-1.15 + index * 0.48, -0.1, 0.75), WALL, root, vertices=8)
-    box("nlg-entablature", (2.6, 0.45, 0.15), (-0.2, 0.0, 1.3), WALL, root)
-    prism("nlg-pediment", 1.85, 0.5, 2.6, (-0.2, 0.65, 1.45), accent_mat, root, along_x=True)
+        cylinder(f"nlg-column-{index}", 0.08, 1.1, (-1.15 + index * 0.48, -1.1, 0.75), WALL, root, vertices=8)
+    box("nlg-entablature", (2.6, 0.45, 0.15), (-0.2, -1.0, 1.3), WALL, root)
+    prism("nlg-pediment", 1.85, 0.5, 2.6, (-0.2, -0.35, 1.45), accent_mat, root, along_x=True)
     for index in range(5):
-        box(f"nlg-book-{index}", (0.7 - index * 0.05, 0.5, 0.15), (1.3, -1.2, index * 0.16),
+        box(f"nlg-book-{index}", (0.7 - index * 0.05, 0.5, 0.15), (1.3, 1.2, index * 0.16),
             [accent_mat, ROOF, WALL_DARK][index % 3], root, rot_z=(index % 3 - 1) * 0.18)
-    box("nlg-lectern", (0.45, 0.4, 0.6), (-1.2, -1.2, 0), WALL_DARK, root)
-    box("nlg-book-open", (0.55, 0.38, 0.04), (-1.2, -1.2, 0.6), PAPER, root)
-    # Pages lifting off the lectern and the book stack, turning as they rise and fading away.
-    for index, (x, y, z) in enumerate([(-1.2, -1.2, 0.7), (-1.0, -1.1, 0.7), (1.3, -1.2, 0.85),
-                                       (1.1, -1.0, 0.85), (-0.2, -0.6, 0.3)]):
+    box("nlg-lectern", (0.45, 0.4, 0.6), (-1.2, 1.2, 0), WALL_DARK, root)
+    box("nlg-book-open", (0.55, 0.38, 0.04), (-1.2, 1.2, 0.6), PAPER, root)
+    # Behind the library, pages lift off the lectern and the book stack, turning as they rise and
+    # fading away; the library stands at the front so its roof hides no district behind it.
+    for index, (x, y, z) in enumerate([(-1.2, 1.2, 0.7), (-1.0, 1.3, 0.7), (1.3, 1.2, 0.85),
+                                       (1.1, 1.4, 0.85), (0.1, 1.0, 0.3)]):
         page = empty(f"nlg-paper-{index}", (x, y, z), root)
         sheet = empty(f"nlg-paper-sheet-{index}", (0, 0, 0), page)
         box(f"nlg-paper-box-{index}", (0.22, 0.3, 0.01), (0, 0, 0), PAPER, sheet)
         anim(page, "puff", axis="y", speed=0.28, amount=1.5, phase=index / 5)
         anim(sheet, "spin", axis="y", speed=1.4 + index * 0.2)
-    cylinder("nlg-globe-stand", 0.06, 0.6, (1.4, 0.4, 0.3), ROOF, root, vertices=6)
-    globe = empty("nlg-globe", (1.4, 0.4, 0.85), root)
+    cylinder("nlg-globe-stand", 0.06, 0.6, (1.55, -0.5, 0.3), ROOF, root, vertices=6)
+    globe = empty("nlg-globe", (1.55, -0.5, 0.85), root)
     ball("nlg-globe-ball", 0.28, (0, 0, 0), ("nlg-globe-blue", "#9fc9e8"), globe)
     torus("nlg-globe-ring", 0.34, 0.025, (0, 0, 0), accent_mat, globe)
     anim(globe, "spin", axis="y", speed=0.9)
-
-
-def build_mentoring(root, accent):
-    accent_mat = ("mentoring-accent", accent)
-    box("mentoring-school", (2.6, 1.3, 1.0), (-0.3, 0.9, 0), WALL, root)
-    prism("mentoring-roof", 1.5, 0.6, 2.8, (-0.3, 0.9, 1.0), accent_mat, root, along_x=True)
-    box("mentoring-door", (0.4, 0.05, 0.6), (-0.3, 0.22, 0), ROOF, root)
-    for index, x in enumerate((-1.2, -0.75, 0.15, 0.6)):
-        box(f"mentoring-window-{index}", (0.3, 0.04, 0.3), (x, 0.23, 0.45), GLASS, root)
-    box("mentoring-bell-tower", (0.45, 0.45, 0.8), (-0.3, 0.9, 1.35), WALL, root)
-    cone("mentoring-bell-roof", 0.38, 0.45, (-0.3, 0.9, 2.38), ROOF, root, vertices=4, rot=(0, 0, math.pi / 4))
-    cylinder("mentoring-clock", 0.15, 0.03, (-0.3, 0.66, 1.75), PAPER, root, vertices=12, rot=(math.pi / 2, 0, 0))
-    bell = empty("mentoring-bell", (-0.3, 0.68, 2.12), root)
-    cone("mentoring-bell-body", 0.12, 0.2, (0, 0, -0.12), ("mentoring-bell-gold", "#f2d49b"), bell, vertices=8)
-    anim(bell, "swing", axis="x", speed=2.4, amount=0.5)
-    # A yellow school bus waiting at the kerb.
-    bus = ("mentoring-bus", "#f2d49b")
-    box("mentoring-bus-body", (1.3, 0.5, 0.45), (1.1, -1.3, 0.08), bus, root)
-    box("mentoring-bus-windows", (1.1, 0.02, 0.14), (1.15, -1.56, 0.33), GLASS, root)
-    for x in (0.7, 1.5):
-        cylinder(f"mentoring-bus-wheel-{x}", 0.1, 0.52, (x, -1.3, 0.1), ROOF, root, vertices=8,
-                 rot=(math.pi / 2, 0, 0))
-    # A playground: a slide and a swing set with a swing in motion.
-    box("mentoring-slide-ladder", (0.25, 0.25, 0.6), (-1.6, -0.9, 0), WALL_DARK, root)
-    slide = box("mentoring-slide", (0.25, 0.85, 0.04), (-1.6, -1.3, 0.28), accent_mat, root)
-    slide.rotation_euler[0] = -0.6
-    for x in (-0.95, -0.25):
-        box(f"mentoring-swing-post-{x}", (0.06, 0.06, 0.75), (x, -1.15, 0), ROOF, root)
-    box("mentoring-swing-bar", (0.8, 0.06, 0.06), (-0.6, -1.15, 0.75), ROOF, root)
-    swing = empty("mentoring-swing", (-0.6, -1.15, 0.75), root)
-    for x in (-0.12, 0.12):
-        cylinder(f"mentoring-swing-rope-{x}", 0.01, 0.5, (x, 0, -0.25), ROOF, swing, vertices=4)
-    box("mentoring-swing-seat", (0.3, 0.14, 0.04), (0, 0, -0.52), accent_mat, swing)
-    anim(swing, "swing", axis="x", speed=2.2, amount=0.55)
 
 
 def build_architecture(root, accent):
@@ -418,8 +424,20 @@ DISTRICTS = [
     ("architecture", "#8fa8e8", build_architecture),
 ]
 
-AREA_HEIGHT = 0.04
-STREET_HALF_WIDTH = 0.32
+AREA_HEIGHT = 0.05
+ROAD_HEIGHT = 0.02
+STREET_WIDTH = 0.34
+CITY_SCALE = 0.84
+TEXT_BAND = 0.7
+TEXT_SIZE = 0.34
+TEXT_MAX_WIDTH = 0.82
+TEXT_MIN_ROOM = 2.6
+LAND = ("land", "#2f3a4f")
+GROUND_TEXT = ("ground-text", "#c9d8ff")
+GROUND_LABELS = {
+    "frontend": "Frontend", "ci": "CI automation", "ai": "AI automations", "ux": "UX",
+    "k8s": "Kubernetes", "nlg": "NLG and NLU", "mentoring": "Mentoring", "architecture": "Architecture",
+}
 SLAB_HEIGHT = 0.35
 SPREAD = 1.1
 FIT_MARGIN = 0.92
@@ -430,8 +448,8 @@ WATER_DEEP = ("water-deep", "#3b5f8f")
 AREA_TINT = 0.18
 
 # The camera looks from the front right, so screen right and screen depth are the ground axes
-# turned by its azimuth. Areas are planned in that screen frame, in staggered rows, so each
-# district gets its own clear spot on screen for the label right above it.
+# turned by its azimuth. Districts are planned in that screen frame, in staggered rows, so each
+# one gets its own clear spot on screen and its name reads left to right along its front edge.
 SCREEN_RIGHT = (0.819, 0.573)
 SCREEN_DEPTH = (-0.573, 0.819)
 SCREEN_ANGLE = math.atan2(SCREEN_RIGHT[1], SCREEN_RIGHT[0])
@@ -445,6 +463,10 @@ def blend(base, accent, share):
 
 def from_screen(right, depth):
     return (right * SCREEN_RIGHT[0] + depth * SCREEN_DEPTH[0], right * SCREEN_RIGHT[1] + depth * SCREEN_DEPTH[1])
+
+
+def to_screen(x, y):
+    return (x * SCREEN_RIGHT[0] + y * SCREEN_RIGHT[1], x * SCREEN_DEPTH[0] + y * SCREEN_DEPTH[1])
 
 
 def build_houses(root, accent):
@@ -511,7 +533,14 @@ def slab(name, outline, top, bottom, material, parent):
     return mesh_object(name, verts, faces, (0, 0, 0), material, parent)
 
 
-slab("ground-island", island, 0, -SLAB_HEIGHT, ROAD, ground)
+slab("ground-island", island, 0, -SLAB_HEIGHT, LAND, ground)
+# The districts keep to the middle of the island; the land around them, and the houses,
+# warehouses and tanks on it, are one continuous piece with no streets of their own.
+city_limit = []
+for index in range(island_sides):
+    angle = index / island_sides * math.tau
+    right, depth = math.cos(angle) * 12.6 * CITY_SCALE, math.sin(angle) * 10.6 * CITY_SCALE
+    city_limit.append(from_screen(max(right, COAST), depth))
 # A bay along the coast: the quay side is straight, the open side curves like a shoreline.
 water_rng = random.Random(5)
 shore = [(COAST - 3.6 * math.cos(t) * (0.9 + 0.2 * water_rng.random()), 9.2 * math.sin(t))
@@ -536,19 +565,84 @@ def clip(polygon, normal, offset):
     return result
 
 
-def street_area(key, sites):
-    """The island area closer to this site than to any other, shrunk by half a street on every side
-    it shares with a neighbour, so the streets appear between the areas and nothing is left bare."""
+def cell(key, sites, boundary):
+    """The part of the boundary closer to this site than to any other, around the site."""
     cx, cy = sites[key]
-    area = list(island)
+    area = list(boundary)
     for other, (ox, oy) in sites.items():
         if other == key:
             continue
         length = math.dist((cx, cy), (ox, oy))
         normal = ((ox - cx) / length, (oy - cy) / length)
         middle = ((cx + ox) / 2, (cy + oy) / 2)
-        area = clip(area, normal, middle[0] * normal[0] + middle[1] * normal[1] - STREET_HALF_WIDTH)
+        area = clip(area, normal, middle[0] * normal[0] + middle[1] * normal[1])
     return [(x - cx, y - cy) for x, y in area]
+
+
+def inset(polygon, distance):
+    """Moves every edge of a convex polygon inwards by a distance."""
+    orientation = 1 if sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(polygon, polygon[1:] + polygon[:1])) > 0 else -1
+    result = list(polygon)
+    for (x1, y1), (x2, y2) in zip(polygon, polygon[1:] + polygon[:1]):
+        length = math.dist((x1, y1), (x2, y2))
+        if length < 1e-6:
+            continue
+        outward = (orientation * (y2 - y1) / length, -orientation * (x2 - x1) / length)
+        result = clip(result, outward, x1 * outward[0] + y1 * outward[1] - distance)
+    return result
+
+
+def chord(screen, depth):
+    """Where a line across the screen at a given depth enters and leaves the polygon."""
+    crossings = []
+    for (r1, d1), (r2, d2) in zip(screen, screen[1:] + screen[:1]):
+        if (d1 - depth) * (d2 - depth) < 0:
+            crossings.append(r1 + (depth - d1) * (r2 - r1) / (d2 - d1))
+    return (min(crossings), max(crossings)) if len(crossings) >= 2 else (0.0, 0.0)
+
+
+def text_line(polygon):
+    """The depth for the district's name: the first line behind the front edge wide enough for it."""
+    screen = [to_screen(x, y) for x, y in polygon]
+    front = min(depth for _, depth in screen)
+    depth = front + TEXT_SIZE
+    while depth < front + TEXT_BAND * 2:
+        left, right = chord(screen, depth)
+        if right - left > TEXT_MIN_ROOM:
+            return depth, left, right
+        depth += 0.08
+    left, right = chord(screen, depth)
+    return depth, left, right
+
+
+def without_front_band(polygon, depth):
+    """The polygon minus everything in front of the line behind the name, kept clear for it."""
+    return clip(polygon, (-SCREEN_DEPTH[0], -SCREEN_DEPTH[1]), -(depth + TEXT_SIZE * 0.9))
+
+
+def ground_label(name, text, polygon, parent):
+    """The district's name lying on its ground, along the front edge and reading left to right."""
+    depth, left, right = text_line(polygon)
+    bpy.ops.object.text_add(location=(0, 0, 0))
+    label = bpy.context.active_object
+    label.data.body = text
+    label.data.size = TEXT_SIZE
+    label.data.align_x = "CENTER"
+    label.data.align_y = "CENTER"
+    label.data.resolution_u = 1
+    label.data.extrude = 0.0
+    bpy.ops.object.convert(target="MESH")
+    label = bpy.context.active_object
+    label.name = name
+    widest = (right - left) * TEXT_MAX_WIDTH
+    if label.dimensions.x > widest:
+        label.scale = (widest / label.dimensions.x,) * 3
+        bpy.ops.object.transform_apply(scale=True, rotation=False, location=False)
+    x, y = from_screen((left + right) / 2, depth)
+    label.location = (x, y, AREA_HEIGHT + 0.006)
+    label.rotation_euler[2] = SCREEN_ANGLE
+    finish(label, GROUND_TEXT, parent)
+    return depth
 
 
 def inside(point, polygon):
@@ -598,20 +692,27 @@ for index, key in enumerate(SLOTS):
     scene.collection.objects.link(area)
     area.parent = city
     area.location = (*sites[key], 0)
-    outline = street_area(key, sites)
-    tint = LAWN if key == "ux" else (f"{key}-area", blend("#34405a", accents[key], AREA_TINT))
-    slab(f"{key}-area", outline, AREA_HEIGHT, 0.0, tint, area)
-    # Street lamps on the corners of every area.
-    for corner_index, (x, y) in enumerate(outline[::2]):
-        lamp_x, lamp_y = x * 0.94, y * 0.94
-        cylinder(f"{key}-lamp-{corner_index}", 0.03, 0.75, (lamp_x, lamp_y, 0.4), ROOF, area, vertices=5)
-        box(f"{key}-lamp-head-{corner_index}", (0.12, 0.12, 0.06), (lamp_x, lamp_y, 0.78), GLASS, area)
-    buildings = empty(f"{key}-buildings", (0, 0, AREA_HEIGHT), area)
+    buildings = empty(f"{key}-buildings", (0, 0, AREA_HEIGHT if is_district else 0), area)
     builders[key](buildings, accents[key])
     for child in buildings.children:
         child.location.x *= SPREAD
         child.location.y *= SPREAD
-    keep_inside(buildings, outline)
+    if not is_district:
+        keep_inside(buildings, cell(key, sites, island))
+        continue
+    # A district is a raised tile with a ring of road around it; neighbouring rings meet into
+    # the streets between districts, and the land beyond the outer ring stays one piece.
+    road = cell(key, sites, city_limit)
+    tile = inset(road, STREET_WIDTH)
+    slab(f"{key}-road", road, ROAD_HEIGHT, 0.0, ROAD, area)
+    tint = LAWN if key == "ux" else (f"{key}-area", blend("#34405a", accents[key], AREA_TINT))
+    slab(f"{key}-area", tile, AREA_HEIGHT, 0.0, tint, area)
+    for corner_index, (x, y) in enumerate(tile[::2]):
+        lamp_x, lamp_y = x * 0.95, y * 0.95
+        cylinder(f"{key}-lamp-{corner_index}", 0.03, 0.75, (lamp_x, lamp_y, 0.4), ROOF, area, vertices=5)
+        box(f"{key}-lamp-head-{corner_index}", (0.12, 0.12, 0.06), (lamp_x, lamp_y, 0.78), GLASS, area)
+    name_depth = ground_label(f"{key}-name", GROUND_LABELS[key], tile, area)
+    keep_inside(buildings, without_front_band(tile, name_depth))
 
 # The harbour: piers from the quay out into the water and a boat rocking beside them.
 for index, depth in enumerate((-2.2, -0.6, 1.0)):

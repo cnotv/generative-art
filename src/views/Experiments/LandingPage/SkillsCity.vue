@@ -1,24 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { assetsRelease } from '@webgamekit/threejs'
-import { SKILL_AREAS, SKILLS_CITY_MODEL, LABEL_MAX_HALF_WIDTH, LABEL_EDGE_SHARE } from './config'
+import { SKILL_AREAS, SKILLS_CITY_MODEL } from './config'
 import {
   createCityStage,
   fitCityCamera,
   pickDistrict,
   updateDistrictLift,
-  updateCityMotion,
-  projectDistrictAnchors
+  updateCityMotion
 } from './cityStage'
-import type { SkillsCityStage, DistrictAnchor } from './types'
+import type { SkillsCityStage } from './types'
 
 const MILLISECONDS_PER_SECOND = 1000
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const hovered = ref<string | null>(null)
-const anchors = ref<DistrictAnchor[]>([])
-
-const findArea = (district: string) => SKILL_AREAS.find((area) => area.district === district)
+const hoveredArea = computed(() => SKILL_AREAS.find(({ district }) => district === hovered.value))
 
 let stage: SkillsCityStage | null = null
 let frameId = 0
@@ -46,12 +43,6 @@ const resizeStage = (): void => {
   const { clientWidth, clientHeight } = canvas.value
   stage.renderer.setSize(clientWidth, clientHeight, false)
   fitCityCamera(stage.camera, stage.outline, clientWidth / clientHeight)
-  // Keep every label's centre far enough from the edges for the whole label to stay inside.
-  const edge = Math.min(LABEL_MAX_HALF_WIDTH, clientWidth * LABEL_EDGE_SHARE)
-  anchors.value = projectDistrictAnchors(stage, clientWidth, clientHeight).map((anchor) => ({
-    ...anchor,
-    x: Math.min(Math.max(anchor.x, edge), clientWidth - edge)
-  }))
   requestRender()
 }
 
@@ -102,22 +93,18 @@ onUnmounted(() => {
       @pointerdown="onPointerMove"
       @pointerleave="setHovered(null)"
     />
-    <ul class="skills-city__labels">
-      <li
-        v-for="anchor in anchors"
-        :key="anchor.district"
-        class="skills-city__label"
-        :class="{ 'skills-city__label--active': anchor.district === hovered }"
-        :style="{ left: `${anchor.x}px`, top: `${anchor.y}px` }"
-        @pointerenter="setHovered(anchor.district)"
-        @pointerleave="setHovered(null)"
-      >
-        <p class="skills-city__label-title">
-          <span class="skills-city__label-full">{{ findArea(anchor.district)?.title }}</span>
-          <span class="skills-city__label-short">{{ findArea(anchor.district)?.short }}</span>
-        </p>
-        <p class="skills-city__label-line">{{ findArea(anchor.district)?.line }}</p>
-      </li>
+    <div class="skills-city__lcd" aria-hidden="true">
+      <!-- Keyed on the district so the typing effect replays for every new one. -->
+      <div :key="hovered ?? 'idle'" class="skills-city__lcd-screen">
+        <template v-if="hoveredArea">
+          <p class="skills-city__lcd-title">{{ hoveredArea.title }}</p>
+          <p class="skills-city__lcd-line">{{ hoveredArea.line }}</p>
+        </template>
+        <p v-else class="skills-city__lcd-idle">Hover a district</p>
+      </div>
+    </div>
+    <ul class="sr-only">
+      <li v-for="area in SKILL_AREAS" :key="area.title">{{ area.title }}: {{ area.line }}</li>
     </ul>
   </div>
 </template>
@@ -140,80 +127,93 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.skills-city__labels {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Centred on the street along the front edge of its district, so the district stays in view. */
-.skills-city__label {
+/* An LCD panel in the corner of the city: dark glass, scan lines and glowing text. */
+.skills-city__lcd {
   position: absolute;
-  transform: translate(-50%, -50%);
-  width: max-content;
-  max-width: min(11rem, 26vw);
-  padding: var(--spacing-1) var(--spacing-2);
-  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-  background-color: var(--color-canvas-overlay-scrim);
+  top: var(--spacing-2);
+  left: 0;
+  width: min(20rem, 100%);
+  padding: var(--spacing-1-5);
+  border: var(--spacing-px) solid var(--color-lcd-border);
+  border-radius: var(--spacing-1);
+  background-color: var(--color-lcd-bezel);
+  pointer-events: none;
+}
+
+.skills-city__lcd-screen {
+  min-height: var(--spacing-16);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--spacing-0-5);
+  background-color: var(--color-lcd-surface);
+  background-image: var(--lcd-scanlines);
   font-family: var(--font-mono);
-  text-align: center;
+  text-transform: uppercase;
+  text-shadow: var(--shadow-lcd-glow);
 }
 
-.skills-city__label--active {
-  border-color: var(--color-canvas-overlay-muted);
-  background-color: var(--color-canvas-overlay-surface);
-}
-
-.skills-city__label-title,
-.skills-city__label-line {
+.skills-city__lcd-title,
+.skills-city__lcd-line,
+.skills-city__lcd-idle {
   margin: 0;
 }
 
-.skills-city__label-short {
-  display: none;
-}
-
-.skills-city__label-title {
-  color: var(--color-canvas-overlay-accent);
+.skills-city__lcd-title {
+  color: var(--color-lcd-text);
   font-size: var(--font-size-sm);
+  letter-spacing: 0.12em;
 }
 
-.skills-city__label-line {
-  margin-top: var(--spacing-0-5);
-  color: var(--color-canvas-overlay-muted);
+.skills-city__lcd-line {
+  margin-top: var(--spacing-1);
+  color: var(--color-lcd-text);
   font-size: var(--font-size-2xs);
-  line-height: 1.5;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
 }
 
-/* Below wide screens the districts sit too close for every description at once: labels show
-   their title and only the hovered one opens its description. */
-@media (width < 1100px) {
-  .skills-city__label:not(.skills-city__label--active) .skills-city__label-line {
-    display: none;
+.skills-city__lcd-idle {
+  color: var(--color-lcd-dim);
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.2em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skills-city__lcd-title,
+  .skills-city__lcd-line {
+    animation: skills-city-type 0.7s steps(28) both;
   }
 
-  .skills-city__label--active {
-    z-index: 1;
+  .skills-city__lcd-line {
+    animation-delay: 0.25s;
+  }
+
+  .skills-city__lcd-idle {
+    animation: skills-city-blink 1.2s steps(2) infinite;
   }
 }
 
-/* On a phone the districts are too close for the descriptions; the titles carry the labels. */
+@keyframes skills-city-type {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes skills-city-blink {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* On a phone the city is too small to cover, so the display sits under it instead. */
 @media (width <= 640px) {
-  .skills-city__label {
-    padding: var(--spacing-1) var(--spacing-1-5);
-  }
-
-  .skills-city__label-title {
-    font-size: var(--font-size-2xs);
-  }
-
-  .skills-city__label-line,
-  .skills-city__label-full {
-    display: none;
-  }
-
-  .skills-city__label-short {
-    display: inline;
+  .skills-city__lcd {
+    position: static;
+    width: auto;
+    margin-top: var(--spacing-2);
   }
 }
 </style>

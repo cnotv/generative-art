@@ -75,49 +75,41 @@ export const SKILL_AREAS = [
   {
     district: 'district-frontend',
     title: 'Frontend development',
-    short: 'Frontend',
     line: 'Interfaces, design systems and real-time 3D in the browser.'
   },
   {
     district: 'district-ci',
     title: 'CI automation',
-    short: 'CI',
     line: 'Pipelines that test, build and ship every change.'
   },
   {
     district: 'district-ai',
     title: 'AI automations',
-    short: 'AI',
     line: 'Agents and workflows that take over the repetitive work.'
   },
   {
     district: 'district-ux',
     title: 'UX',
-    short: 'UX',
     line: 'Flows shaped around how people actually use them.'
   },
   {
     district: 'district-k8s',
     title: 'Kubernetes',
-    short: 'Kubernetes',
     line: 'Running and scaling services on K8S clusters.'
   },
   {
     district: 'district-nlg',
     title: 'NLG and NLU',
-    short: 'NLG and NLU',
     line: 'Language understanding and generation on self-hosted and trained models.'
   },
   {
     district: 'district-mentoring',
     title: 'Mentoring',
-    short: 'Mentoring',
     line: 'Growing developers and teams through reviews, guidelines and regular sessions.'
   },
   {
     district: 'district-architecture',
-    title: 'Architecture and modern robust tools',
-    short: 'Architecture',
+    title: 'Architecture',
     line: 'Planning architecture and paying down tech debt across projects and teams.'
   }
 ]
@@ -138,8 +130,6 @@ export const CITY_VIEW_DIRECTION = [14, 18, 20] as const
 export const CITY_CAMERA_DISTANCE = 60
 export const CITY_CAMERA_NEAR = 0.1
 export const CITY_FRAME_PADDING = 1.04
-/** Share of the city's height added below it, for the labels under the front districts. */
-export const CITY_LABEL_FOOTROOM = 0.12
 export const CITY_SKY_COLOR = 0xc9d8ff
 export const CITY_GROUND_COLOR = 0x1d2738
 export const CITY_AMBIENT_INTENSITY = 2.2
@@ -152,6 +142,3 @@ export const DISTRICT_LIFT = 0.6
 export const DISTRICT_LIFT_EASE = 0.2
 export const DISTRICT_LIFT_SETTLED = 0.002
 export const CITY_MAX_PIXEL_RATIO = 2
-/** Half the widest a district label gets (11rem), and the share of the canvas it is capped to. */
-export const LABEL_MAX_HALF_WIDTH = 88
-export const LABEL_EDGE_SHARE = 0.13

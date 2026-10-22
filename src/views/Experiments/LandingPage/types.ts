@@ -64,10 +64,3 @@ export interface CityMover {
   baseScale: THREE.Vector3
   fadeMaterials: THREE.Material[]
 }
-
-/** A district's top centre on the canvas, in pixels. */
-export interface DistrictAnchor {
-  district: string
-  x: number
-  y: number
-}

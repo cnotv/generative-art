@@ -6,7 +6,6 @@ import {
   CITY_CAMERA_DISTANCE,
   CITY_CAMERA_NEAR,
   CITY_FRAME_PADDING,
-  CITY_LABEL_FOOTROOM,
   CITY_SKY_COLOR,
   CITY_GROUND_COLOR,
   CITY_AMBIENT_INTENSITY,
@@ -20,7 +19,7 @@ import {
   DISTRICT_LIFT_EASE,
   DISTRICT_LIFT_SETTLED
 } from './config'
-import type { SkillsCityStage, DistrictAnchor, CityMover, MotionKind } from './types'
+import type { SkillsCityStage, CityMover, MotionKind } from './types'
 
 const DISTRICT_PREFIX = 'district-'
 const MOTION_KINDS: MotionKind[] = [
@@ -135,7 +134,6 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
   })
   districts.forEach((district) => {
     district.userData.restY = district.position.y
-    district.userData.footprint = collectFootprint(district)
   })
   const outline = collectOutline(model)
   const movers = collectMovers(model)
@@ -157,16 +155,6 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
   camera.lookAt(center)
 
   return { renderer, scene, camera, outline, districts, movers }
-}
-
-const GROUND_TOLERANCE = 0.02
-
-// The district's vertices that touch the ground: the outline of its area, which is what the
-// label hangs under, unlike a bounding box whose corners lie out in the street.
-const collectFootprint = (district: THREE.Object3D): THREE.Vector3[] => {
-  const points = collectOutline(district)
-  const ground = Math.min(...points.map(({ y }) => y))
-  return points.filter(({ y }) => y <= ground + GROUND_TOLERANCE)
 }
 
 // Every vertex in world space: framing the box corners instead leaves the empty air above the
@@ -206,14 +194,12 @@ export const fitCityCamera = (
   })
   const xs = projected.map(([x]) => x)
   const ys = projected.map(([, y]) => y)
-  // Room under the city for the labels that hang below the districts at the front.
-  const footroom = (Math.max(...ys) - Math.min(...ys)) * CITY_LABEL_FOOTROOM
   const width = (Math.max(...xs) - Math.min(...xs)) * CITY_FRAME_PADDING
-  const height = (Math.max(...ys) - Math.min(...ys)) * CITY_FRAME_PADDING + footroom
+  const height = (Math.max(...ys) - Math.min(...ys)) * CITY_FRAME_PADDING
   const [frameWidth, frameHeight] =
     width / height > aspect ? [width, width / aspect] : [height * aspect, height]
   const centerX = (Math.max(...xs) + Math.min(...xs)) / 2
-  const centerY = (Math.max(...ys) + Math.min(...ys)) / 2 - footroom / 2
+  const centerY = (Math.max(...ys) + Math.min(...ys)) / 2
   Object.assign(camera, {
     left: centerX - frameWidth / 2,
     right: centerX + frameWidth / 2,
@@ -273,34 +259,6 @@ export const updateDistrictLift = (stage: SkillsCityStage, hovered: string | nul
       return district.position.y !== target
     })
     .some(Boolean)
-
-const anchorPoint = new THREE.Vector3()
-
-/**
- * Where each district's front edge sits on the canvas: the label hangs just below it, so the
- * district itself stays in full view.
- * @param stage The city stage.
- * @param width Canvas width in pixels.
- * @param height Canvas height in pixels.
- * @returns Each district's name, its footprint's horizontal centre and lowest point, in pixels.
- */
-export const projectDistrictAnchors = (
-  stage: SkillsCityStage,
-  width: number,
-  height: number
-): DistrictAnchor[] =>
-  stage.districts.map((district) => {
-    const projected = (district.userData.footprint as THREE.Vector3[]).map((point) => {
-      anchorPoint.copy(point).project(stage.camera)
-      return [((anchorPoint.x + 1) / 2) * width, ((1 - anchorPoint.y) / 2) * height]
-    })
-    const xs = projected.map(([x]) => x)
-    return {
-      district: district.name,
-      x: (Math.min(...xs) + Math.max(...xs)) / 2,
-      y: Math.max(...projected.map(([, y]) => y))
-    }
-  })
 
 const fraction = (value: number): number => value - Math.floor(value)
 
