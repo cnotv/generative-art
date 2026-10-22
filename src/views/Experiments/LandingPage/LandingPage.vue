@@ -875,9 +875,8 @@ onUnmounted(() => {
       aria-labelledby="sectors-title"
     >
       <SectorTraces :list="sectorList" />
-      <h2 id="sectors-title" class="landing-page__heading landing-page__heading--plated">
-        Market knowledge
-      </h2>
+      <!-- The traces from the city carry the section; its name stays for screen readers. -->
+      <h2 id="sectors-title" class="sr-only">Market knowledge</h2>
       <ul ref="sectorList" class="landing-page__sectors">
         <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
           <component
@@ -1012,22 +1011,6 @@ onUnmounted(() => {
 
 .landing-page__section--sectors {
   position: relative;
-}
-
-/* The traces to the sectors run behind the heading, which sits on a plate of the page colour. */
-.landing-page__heading--plated {
-  position: relative;
-  width: fit-content;
-  box-shadow: 0 0 0 var(--spacing-1) var(--color-canvas-overlay-surface);
-  background-color: var(--color-canvas-overlay-surface);
-}
-
-.landing-page__heading {
-  margin: 0 0 var(--spacing-8);
-  color: var(--color-canvas-overlay-accent);
-  font-size: var(--font-size-xl);
-  font-weight: normal;
-  letter-spacing: 0.12em;
 }
 
 .landing-page__footer {
