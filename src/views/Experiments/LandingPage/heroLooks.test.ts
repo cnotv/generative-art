@@ -14,8 +14,7 @@ describe('HERO_LOOKS', () => {
       'rim',
       'glossy',
       'cardstock',
-      'letterpress',
-      'papercraft'
+      'letterpress'
     ])
   })
 })

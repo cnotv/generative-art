@@ -18,7 +18,7 @@ import {
   RIM_LIGHT_COLOR,
   RIM_LIGHT_POWER
 } from './config'
-import type { LogoIntroPose, Room, LogoRest, PaperLayer, SpotPlacement } from './types'
+import type { LogoIntroPose, Room, LogoRest, SpotPlacement } from './types'
 
 /**
  * Gives a material the cardstock's grain, fibres and tooth, or takes them away.
@@ -286,43 +286,4 @@ export const addCardShading = (material: THREE.MeshStandardMaterial): CardShadin
       )
   }
   return shading
-}
-
-const layerPosition = new THREE.Vector3()
-
-/**
- * Stacks sheets of coloured card behind a cut-out, each a copy of its shape set a little behind and
- * below, so the edges of the sheets show like layered paper craft. The sheets hang off the mesh, so
- * they move, turn and hide with it.
- * @param mesh A logo part or a letter, already placed and scaled.
- * @param layers The sheets, front to back.
- * @param paper The card texture, shared with the front.
- * @param roughness How matte the sheets are.
- * @returns The sheets, to remove and dispose when the look changes.
- */
-export const addPaperLayers = (
-  mesh: THREE.Mesh,
-  layers: readonly PaperLayer[],
-  paper: THREE.Texture,
-  roughness: number
-): THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>[] => {
-  mesh.updateWorldMatrix(true, false)
-  const origin = mesh.getWorldPosition(new THREE.Vector3())
-  return layers.map(({ color, offset }) => {
-    const material = new THREE.MeshStandardMaterial({
-      color,
-      roughness,
-      map: paper,
-      bumpMap: paper,
-      bumpScale: PAPER_BUMP_SCALE
-    })
-    const sheet = new THREE.Mesh(mesh.geometry, material)
-    sheet.castShadow = true
-    sheet.receiveShadow = true
-    sheet.position.copy(
-      mesh.worldToLocal(layerPosition.copy(origin).add(new THREE.Vector3(...offset)))
-    )
-    mesh.add(sheet)
-    return sheet
-  })
 }

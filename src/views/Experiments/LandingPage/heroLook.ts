@@ -3,14 +3,14 @@ import { useElementPropertiesStore } from '@/stores/elementProperties'
 import type { ElementPropertiesConfig } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerLightProperties } from '@/utils/lightProperties'
-import { aimSpot, addPaperLayers, setPaper } from './introScene'
+import { aimSpot, setPaper } from './introScene'
 import { SLEEP_AMBIENT_INTENSITY, SLEEP_DIRECTIONAL_INTENSITY } from './config'
 import type { HeroLook, HeroLookParts } from './types'
 
 const OFF_POSITION = [0, 1, 0] as const
 
 /**
- * Drives the hero's finish: puts a look on every light, surface and sheet, and brings the lights
+ * Drives the hero's finish: puts a look on every light and surface, and brings the lights
  * up from the sleeping room to that look's levels.
  * @param parts Everything a look changes.
  * @param getLook The look currently chosen.
@@ -19,7 +19,6 @@ const OFF_POSITION = [0, 1, 0] as const
  */
 export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) => {
   let lightProgress = 0
-  let sheets: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>[] = []
 
   const setLightLevels = (progress: number): void => {
     lightProgress = progress
@@ -64,19 +63,10 @@ export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) =>
     parts.spot.shadow.radius = look.shadowRadius
     aimSpot(parts.spot, parts.spot.target.position.clone(), look.spot)
 
-    sheets.forEach((sheet) => {
-      sheet.removeFromParent()
-      sheet.material.dispose()
-    })
-    sheets = parts.sheetHosts.flatMap((host) =>
-      addPaperLayers(host, look.layers, parts.logoPaper, look.logoRoughness)
-    )
     setLightLevels(lightProgress)
   }
 
-  const dispose = (): void => sheets.forEach((sheet) => sheet.material.dispose())
-
-  return { apply, setLightLevels, dispose }
+  return { apply, setLightLevels }
 }
 
 const materialSchema = {

@@ -73,8 +73,7 @@ export const RIM_LIGHT_POWER = 3
 /**
  * Every finish tried for the hero, picked from the Config panel or with ?look= in the address.
  * The original lighting, the first pass with a rim, a glossy take with light from behind, navy
- * cardstock with an embossed logo, a light letterpress card with the logo in ink, and layered cut
- * paper.
+ * cardstock with an embossed logo, and a light letterpress card with the logo in ink.
  */
 export const HERO_LOOKS: Record<string, HeroLook> = {
   original: {
@@ -100,7 +99,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 0.8
     },
     shadowRadius: 1,
-    layers: [],
     ink: false
   },
   rim: {
@@ -126,7 +124,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 0.75
     },
     shadowRadius: 6,
-    layers: [],
     ink: false
   },
   glossy: {
@@ -152,7 +149,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 0.75
     },
     shadowRadius: 8,
-    layers: [],
     ink: false
   },
   cardstock: {
@@ -178,7 +174,6 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 1
     },
     shadowRadius: 10,
-    layers: [],
     ink: false
   },
   letterpress: {
@@ -204,37 +199,7 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
       penumbra: 1
     },
     shadowRadius: 10,
-    layers: [],
     ink: true
-  },
-  papercraft: {
-    label: 'Paper craft',
-    wallColor: 0x1d2738,
-    floorColor: 0x2a3547,
-    logoColor: 0xf2e8d5,
-    logoRoughness: 0.95,
-    logoMetalness: 0,
-    paper: true,
-    embossStrength: 0.4,
-    rimStrength: 0,
-    ambientIntensity: 0.95,
-    key: { color: 0xffffff, intensity: 0.9, position: [-4, 6, 10] },
-    back: null,
-    spot: {
-      color: 0xc9d8ff,
-      intensity: 380,
-      side: 5,
-      height: 10,
-      forward: 7,
-      angle: 0.36,
-      penumbra: 1
-    },
-    shadowRadius: 10,
-    layers: [
-      { color: 0x8fa8e8, offset: [0.12, -0.12, -0.3] },
-      { color: 0xe8a8b8, offset: [0.24, -0.24, -0.6] }
-    ],
-    ink: false
   }
 }
 export const DEFAULT_HERO_LOOK = 'cardstock'

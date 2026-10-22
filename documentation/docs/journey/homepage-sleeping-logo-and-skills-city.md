@@ -155,17 +155,17 @@ pixel of the screen.
 
 Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
 lighting, the first pass with a rim, a glossy take with a light from behind throwing soft shadows
-forward, navy cardstock, a light letterpress card with the logo in navy ink, and layered cut paper.
+forward, navy cardstock, and a light letterpress card with the logo in navy ink. A layered cut-paper
+look was tried too and dropped.
 The Config panel switches between them live, and an address such as `?look=letterpress` opens one
 directly. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
 and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
 rather than a fixed answer.
 
-![The six hero presets: original, rim light, glossy, navy cardstock, letterpress and paper craft](/img/homepage/hero-looks.webp)
+![The five hero presets: original, rim light, glossy, navy cardstock and letterpress](/img/homepage/hero-looks.webp)
 
 A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
-colours and lights change in place, the paper texture is put on or taken off, and paper craft's
-coloured sheets are copies of each shape hung behind it, removed and rebuilt on every switch. The
+colours and lights change in place, and the paper texture is put on or taken off. The
 emboss and rim are values the logo's material reads every frame, so they change without rebuilding
 anything. On the light letterpress card the name and profession switch to navy ink, since light
 text on cream would vanish.

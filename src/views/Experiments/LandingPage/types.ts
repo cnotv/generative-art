@@ -147,13 +147,6 @@ export interface SkillArea {
   quote?: { text: string; author: string; url: string }
 }
 
-/** One sheet behind a paper cut-out: its colour and how far it sits behind and below the front. */
-export interface PaperLayer {
-  color: number
-  /** World units to the right, up and towards the camera; negative z is behind. */
-  offset: readonly [number, number, number]
-}
-
 /** Where a spotlight hangs relative to what it lights, and the shape of its beam. */
 export interface SpotPlacement {
   color: number
@@ -191,13 +184,11 @@ export interface HeroLook {
   spot: SpotPlacement
   /** How far shadows blur at their edges, in shadow map texels. */
   shadowRadius: number
-  /** Sheets stacked behind the logo and letters, for a cut-paper look; empty for a single card. */
-  layers: readonly PaperLayer[]
   /** Dark text for a light page, instead of light text for a dark one. */
   ink: boolean
 }
 
-/** Everything in the hero a look changes: the lights, the room, the logo and its sheets. */
+/** Everything in the hero a look changes: the lights, the room and the logo. */
 export interface HeroLookParts {
   ambientLight: THREE.AmbientLight
   keyLight: THREE.DirectionalLight
@@ -210,6 +201,4 @@ export interface HeroLookParts {
   logoPaper: THREE.Texture
   emboss: THREE.IUniform<number>
   rim: THREE.IUniform<number>
-  /** The logo parts and letters that carry paper sheets behind them. */
-  sheetHosts: THREE.Mesh[]
 }

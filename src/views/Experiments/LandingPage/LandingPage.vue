@@ -678,10 +678,6 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const logo = await loadLogo(scene, world, contentMaterial)
   const font = await new FontLoader().loadAsync(helvetikerBoldUrl)
   const letters = loadText(scene, world, contentMaterial, font)
-  const logoParts: THREE.Mesh[] = []
-  logo.model.traverse((child) => {
-    if (child instanceof THREE.Mesh && !logo.eyelids.includes(child)) logoParts.push(child)
-  })
   const path = getJumpPath(logo, letters, camera.right)
   parkLogoBody(logo, path)
 
@@ -702,8 +698,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     logoMaterial: contentMaterial,
     logoPaper: grainTexture,
     emboss: shading.emboss,
-    rim: shading.rim,
-    sheetHosts: [...logoParts, ...letters.map(({ mesh }) => mesh)]
+    rim: shading.rim
   }
   const heroLook = createHeroLook(lookParts, () => look.value)
   heroLook.apply(look.value)
@@ -822,7 +817,6 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     contentMaterial.dispose()
     stopLookWatch()
     stopLookPick()
-    heroLook.dispose()
     room.materials.forEach((material) => material.dispose())
     room.paper.dispose()
     room.meshes.forEach((mesh) => mesh.geometry.dispose())
