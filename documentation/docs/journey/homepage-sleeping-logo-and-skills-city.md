@@ -184,6 +184,23 @@ its animation starts over. With nothing hovered it shows the section heading; wi
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.
 
+## A drawer for recruiters
+
+![The CI automation drawer open beside the city, with its tools and highlights](/img/homepage/skill-drawer.webp)
+
+Clicking a district opens a drawer that presents the skill to someone hiring: the tools and
+practices as a short row of tags, then highlights from real roles, each with the company and the
+years, written results first so the number or the outcome comes before the method. Every line is
+taken from the owner's own experience; a district with little to say says little rather than being
+padded. The district stays lifted while its drawer is open, so it is clear what the drawer is about.
+
+The UI kit's sheet was the obvious candidate and the wrong one: it hosts the side panels, renders
+into their containers and deliberately ignores Escape and clicks outside. The drawer instead uses
+the same dialog primitives directly, so it is modal, keeps focus inside, closes on Escape, the
+overlay or its close button, and hands focus back afterwards. The districts live on a canvas,
+which a keyboard cannot reach, so the page also lists them as buttons that stay hidden until one
+receives focus and then appear as a row under the city.
+
 ## Lines to the market
 
 ![Dotted lines fanning out from the dock at the island's tip to six small 3D sector avatars](/img/homepage/sector-traces.webp)

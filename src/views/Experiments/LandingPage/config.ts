@@ -1,3 +1,5 @@
+import type { SkillArea } from './types'
+
 /** Seconds each phase of the wake up and jump lasts, in order. */
 export const INTRO_TIMING = {
   wake: 0.9,
@@ -72,47 +74,194 @@ export const OWNER_PROFILES = [
 ]
 export const SPOT_COLOR = 0xc9d8ff
 
-/** Areas of work, each with its district in the skills city model. */
-export const SKILL_AREAS = [
+/**
+ * Areas of work, each with its district in the skills city model, and what its drawer tells a
+ * recruiter: the tools and practices, and highlights from real roles, results first.
+ */
+export const SKILL_AREAS: SkillArea[] = [
   {
     district: 'district-frontend',
     title: 'Frontend development',
-    line: 'Interfaces, design systems and real-time 3D in the browser.'
+    line: 'Interfaces, design systems and real-time 3D in the browser.',
+    tools: [
+      'Vue 3',
+      'Vue 2',
+      'TypeScript',
+      'Three.js',
+      'Pinia',
+      'Vite',
+      'Vitest',
+      'Cypress',
+      'KSS',
+      'WordPress'
+    ],
+    highlights: [
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Builds the Rancher dashboard, the open source interface for cloud orchestration.'
+      },
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Planned and led a one-year migration from Vue 2 to Vue 3 across several repositories, with a script that migrates internal and external plugins.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Built several stateful single-page apps from the ground up, used by top nationwide publishers and enterprises.'
+      },
+      {
+        company: 'firma.de',
+        period: '2017 to 2018',
+        text: 'Built the UI framework, the KSS style guide and the WordPress theme.'
+      }
+    ],
+    quote: {
+      text: 'His work has always been the highest standard when it comes to documentation, testing and architectural decisions.',
+      author: 'Ling Vu'
+    }
   },
   {
     district: 'district-ci',
     title: 'CI automation',
-    line: 'Pipelines that test, build and ship every change.'
+    line: 'Pipelines that test, build and ship every change.',
+    tools: ['GitHub Actions', 'GitLab CI', 'Nexus', 'Cypress', 'Protractor'],
+    highlights: [
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Cut the end-to-end test pipeline from 2 hours to 5 minutes, 95% faster, by running it in parallel.'
+      },
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Set up GitHub Actions for unit and end-to-end tests, linting, coverage, documentation and the style guide.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Published internal libraries to private Nexus repositories through GitLab CI.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Migrated the end-to-end test suite from Protractor to Cypress.'
+      }
+    ]
   },
   {
     district: 'district-ai',
     title: 'AI automations',
-    line: 'Agents and workflows that take over the repetitive work.'
+    line: 'Agents and workflows that take over the repetitive work.',
+    tools: ['GitHub Actions', 'AI coding agents'],
+    highlights: [
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Introduced agentic GitHub workflows that automate work on issues and pull requests.'
+      }
+    ]
   },
   {
     district: 'district-ux',
     title: 'UX',
-    line: 'Flows shaped around how people actually use them.'
+    line: 'Flows shaped around how people actually use them.',
+    tools: ['Style guides', 'UI frameworks', 'KSS'],
+    highlights: [
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Planned the UX decisions of new projects, alongside their architecture.'
+      },
+      {
+        company: 'firma.de',
+        period: '2017 to 2018',
+        text: 'Created the style guide and UI framework of a legal e-commerce platform.'
+      }
+    ]
   },
   {
     district: 'district-k8s',
     title: 'Kubernetes',
-    line: 'Running and scaling services on K8S clusters.'
+    line: 'Running and scaling services on K8S clusters.',
+    tools: ['Kubernetes', 'Rancher'],
+    highlights: [
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Works with Kubernetes daily, bringing features and support for newer Kubernetes versions to the Rancher dashboard.'
+      },
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Coordinated releases across several teams of the Rancher ecosystem.'
+      }
+    ]
   },
   {
     district: 'district-nlg',
     title: 'NLG and NLU',
-    line: 'Language understanding and generation on self-hosted and trained models.'
+    line: 'Language understanding and generation on self-hosted and trained models.',
+    tools: ['Keycloak', 'JWT', 'Sentry'],
+    highlights: [
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Built from the ground up several apps for natural language processing and generation, used by top nationwide publishers and enterprises.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Delivered what enterprise clients such as banks required: Keycloak user roles, JWT authentication, Sentry monitoring and Internet Explorer 11 support.'
+      }
+    ]
   },
   {
     district: 'district-mentoring',
     title: 'Mentoring',
-    line: 'Growing developers and teams through reviews, guidelines and regular sessions.'
+    line: 'Growing developers and teams through reviews, guidelines and regular sessions.',
+    tools: ['Code reviews', 'Coding guidelines', 'Regular sessions', 'Technical interviews'],
+    highlights: [
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Mentors a team of 15 developers through code reviews, guidelines and bi-weekly sessions.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Mentored frontend and full stack developers across 4 teams and the frontend guild.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Defined the code guidelines and the interview process for frontend positions.'
+      }
+    ]
   },
   {
     district: 'district-architecture',
     title: 'Architecture',
-    line: 'Planning architecture and paying down tech debt across projects and teams.'
+    line: 'Planning architecture and paying down tech debt across projects and teams.',
+    tools: ['Migration planning', 'Project templates', 'Nexus'],
+    highlights: [
+      {
+        company: 'SUSE',
+        period: 'since 2022',
+        text: 'Planned the move of several repositories and their plugins from Vue 2 to Vue 3, delivered over one year.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Planned the architecture of new projects.'
+      },
+      {
+        company: 'Retresco',
+        period: '2018 to 2022',
+        text: 'Created project templates, distributed through a private Nexus repository and generated from the command line.'
+      }
+    ]
   }
 ]
 

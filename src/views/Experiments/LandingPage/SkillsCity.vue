@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { assetsRelease } from '@webgamekit/threejs'
+import { Button } from '@/components/ui/button'
+import SkillDrawer from './SkillDrawer.vue'
 import { SKILL_AREAS, SKILLS_CITY_MODEL, OWNER_SUMMARY } from './config'
 import {
   createCityStage,
@@ -18,6 +20,10 @@ const PERCENT = 100
 const canvas = ref<HTMLCanvasElement | null>(null)
 const hovered = ref<string | null>(null)
 const hoveredArea = computed(() => SKILL_AREAS.find(({ district }) => district === hovered.value))
+const opened = ref<string | null>(null)
+const openedArea = computed(
+  () => SKILL_AREAS.find(({ district }) => district === opened.value) ?? null
+)
 const screenRect = ref<CanvasRect | null>(null)
 const screenStyle = computed(() =>
   screenRect.value
@@ -39,7 +45,8 @@ const startedAt = performance.now()
 const renderFrame = (): void => {
   if (!stage) return
   updateCityMotion(stage, (performance.now() - startedAt) / MILLISECONDS_PER_SECOND)
-  const isLifting = updateDistrictLift(stage, hovered.value)
+  // The district whose drawer is open stays lifted while the pointer is away on the drawer.
+  const isLifting = updateDistrictLift(stage, hovered.value ?? opened.value)
   stage.renderer.render(stage.scene, stage.camera)
   frameId = isOnScreen || isLifting ? requestAnimationFrame(renderFrame) : 0
 }
@@ -66,6 +73,12 @@ const setHovered = (district: string | null): void => {
 const onPointerMove = (event: PointerEvent): void => {
   if (stage) setHovered(pickDistrict(stage, event.clientX, event.clientY))
 }
+
+const onClick = (event: MouseEvent): void => {
+  if (stage) opened.value = pickDistrict(stage, event.clientX, event.clientY)
+}
+
+watch(opened, requestRender)
 
 onMounted(async () => {
   if (!canvas.value) return
@@ -103,6 +116,7 @@ onUnmounted(() => {
       @pointermove="onPointerMove"
       @pointerdown="onPointerMove"
       @pointerleave="setHovered(null)"
+      @click="onClick"
     />
     <!-- Laid over the blank screen on the sign behind the city, so its text stays sharp. -->
     <div v-if="screenStyle" class="skills-city__lcd" :style="screenStyle" aria-hidden="true">
@@ -123,9 +137,14 @@ onUnmounted(() => {
         </template>
       </div>
     </div>
-    <ul class="sr-only">
-      <li v-for="area in SKILL_AREAS" :key="area.title">{{ area.title }}: {{ area.line }}</li>
+    <!-- The districts as buttons for keyboards and screen readers: hidden until one has focus,
+         then shown as a row under the city. -->
+    <ul class="skills-city__explore" aria-label="Areas of work">
+      <li v-for="area in SKILL_AREAS" :key="area.district">
+        <Button variant="link" size="sm" @click="opened = area.district">{{ area.title }}</Button>
+      </li>
     </ul>
+    <SkillDrawer :area="openedArea" @close="opened = null" />
   </div>
 </template>
 
@@ -141,6 +160,31 @@ onUnmounted(() => {
   width: 100%;
   height: clamp(14rem, 60vw, 38rem);
   touch-action: pan-y;
+}
+
+.skills-city__explore {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  list-style: none;
+  white-space: nowrap;
+}
+
+.skills-city__explore:focus-within {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  margin: var(--spacing-2) 0 0;
+  overflow: visible;
+  clip-path: none;
+  gap: var(--spacing-2);
 }
 
 .skills-city__canvas--pointing {

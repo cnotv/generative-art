@@ -127,3 +127,20 @@ export interface SectorTrace {
   path: string
   end: TracePoint
 }
+
+/** One achievement in a skill's drawer, with where and when it happened. */
+export interface SkillHighlight {
+  company: string
+  period: string
+  text: string
+}
+
+/** An area of work: its district in the skills city and what its drawer shows a recruiter. */
+export interface SkillArea {
+  district: string
+  title: string
+  line: string
+  tools: string[]
+  highlights: SkillHighlight[]
+  quote?: { text: string; author: string }
+}
