@@ -436,6 +436,8 @@ TEXT_MIN_ROOM = 3.6
 LAND = ("land", "#2f3a4f")
 SIGN_TEXT = ("sign-text", "#f4f6fb")
 SIGN_BOARD = ("sign-board", "#1b2238")
+SIGN_METAL = ("sign-metal", "#9aaac6")
+SIGN_FRAME = 0.06
 SIGN_TEXT_SIZE = 0.66
 SIGN_PADDING = 0.18
 SIGN_POST_HEIGHT = 0.75
@@ -454,6 +456,9 @@ SPREAD = 1.1
 FIT_MARGIN = 0.92
 MIN_FIT_SCALE = 0.5
 COAST = -10.0
+SEA_WEST = 15.2
+SEA_EAST = 14.0
+SEA_DEPTH = 12.2
 ROAD = ("road", "#262f40")
 WATER_DEEP = ("water-deep", "#3b5f8f")
 AREA_TINT = 0.18
@@ -552,11 +557,15 @@ for index in range(island_sides):
     angle = index / island_sides * math.tau
     right, depth = math.cos(angle) * 12.6 * CITY_SCALE, math.sin(angle) * 10.6 * CITY_SCALE
     city_limit.append(from_screen(max(right, COAST), depth))
-# A bay along the coast: the quay side is straight, the open side curves like a shoreline.
+# The sea all around the island, wider on the west where it opens into the harbour bay, so the
+# harbour sits on a real coastline instead of a pool beside the land.
 water_rng = random.Random(5)
-shore = [(COAST - 3.6 * math.cos(t) * (0.9 + 0.2 * water_rng.random()), 9.2 * math.sin(t))
-         for t in (i / 12 * math.pi - math.pi / 2 for i in range(13))]
-water = [from_screen(right, depth) for right, depth in [(COAST + 0.3, 9.2), *reversed(shore), (COAST + 0.3, -9.2)]]
+water = []
+for index in range(36):
+    angle = index / 36 * math.tau
+    wobble = 0.96 + 0.06 * water_rng.random()
+    reach = SEA_WEST if math.cos(angle) < 0 else SEA_EAST
+    water.append(from_screen(math.cos(angle) * reach * wobble, math.sin(angle) * SEA_DEPTH * wobble))
 slab("ground-water", water, -0.14, -SLAB_HEIGHT, WATER_DEEP, ground)
 
 
@@ -664,10 +673,16 @@ def district_sign(name, text, polygon, parent):
     x, y = from_screen((left + right) / 2, depth)
     # Upright and turned to face the camera: the board's front looks along minus screen depth.
     sign = empty(f"{name}-sign", (x, y, AREA_HEIGHT), parent, rot=(0, 0, SCREEN_ANGLE))
+    bottom = SIGN_POST_HEIGHT - height / 2
+    top = SIGN_POST_HEIGHT + height / 2
+    # A metal frame: the legs run up the board's sides to its top, with rails along its top
+    # and bottom edges, so the board is held by the frame rather than floating on two sticks.
     for side in (-1, 1):
-        box(f"{name}-sign-post-{side}", (0.06, 0.06, SIGN_POST_HEIGHT + height / 2),
-            (side * (width / 2 - 0.12), 0.02, 0), ROOF, sign)
-    box(f"{name}-sign-board", (width, 0.06, height), (0, 0, SIGN_POST_HEIGHT - height / 2), SIGN_BOARD, sign)
+        box(f"{name}-sign-leg-{side}", (SIGN_FRAME, SIGN_FRAME, top + SIGN_FRAME),
+            (side * (width / 2 + SIGN_FRAME / 2), 0, 0), SIGN_METAL, sign)
+    for edge, z in (("top", top), ("bottom", bottom - SIGN_FRAME)):
+        box(f"{name}-sign-rail-{edge}", (width + SIGN_FRAME * 2, SIGN_FRAME, SIGN_FRAME), (0, 0, z), SIGN_METAL, sign)
+    box(f"{name}-sign-board", (width, 0.05, height), (0, 0, bottom), SIGN_BOARD, sign)
     label.parent = sign
     label.location = (0, -0.04, SIGN_POST_HEIGHT)
     label.rotation_euler = (math.pi / 2, 0, 0)
