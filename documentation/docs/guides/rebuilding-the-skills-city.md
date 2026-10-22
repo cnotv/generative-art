@@ -37,7 +37,7 @@ Then check the budgets with `pnpm check:assets` and look at the homepage.
 | Harbour           | the pier and boat block after the loop | on the straight western coast, next to the bay                                                           |
 
 Keep tall districts at the back of the view and give every district a slot of its own: labels
-pin to the centre of their district's ground and must not overlap at desktop or phone width.
+hang below the front edge of their district and must not overlap at desktop or phone width.
 
 ## Names and motion the page relies on
 

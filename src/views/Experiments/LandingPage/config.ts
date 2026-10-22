@@ -138,8 +138,8 @@ export const CITY_VIEW_DIRECTION = [14, 18, 20] as const
 export const CITY_CAMERA_DISTANCE = 60
 export const CITY_CAMERA_NEAR = 0.1
 export const CITY_FRAME_PADDING = 1.04
-/** Share of the city's height added above it, for the labels over the back districts. */
-export const CITY_LABEL_HEADROOM = 0.06
+/** Share of the city's height added below it, for the labels under the front districts. */
+export const CITY_LABEL_FOOTROOM = 0.12
 export const CITY_SKY_COLOR = 0xc9d8ff
 export const CITY_GROUND_COLOR = 0x1d2738
 export const CITY_AMBIENT_INTENSITY = 2.2

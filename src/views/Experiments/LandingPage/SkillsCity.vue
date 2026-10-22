@@ -146,10 +146,10 @@ onUnmounted(() => {
   list-style: none;
 }
 
-/* Pinned to the centre of its district's ground, sitting just above it. */
+/* Centred on the street along the front edge of its district, so the district stays in view. */
 .skills-city__label {
   position: absolute;
-  transform: translate(-50%, calc(-100% - var(--spacing-2)));
+  transform: translate(-50%, -50%);
   width: max-content;
   max-width: min(11rem, 26vw);
   padding: var(--spacing-1) var(--spacing-2);

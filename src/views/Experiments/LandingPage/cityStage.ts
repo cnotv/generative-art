@@ -6,7 +6,7 @@ import {
   CITY_CAMERA_DISTANCE,
   CITY_CAMERA_NEAR,
   CITY_FRAME_PADDING,
-  CITY_LABEL_HEADROOM,
+  CITY_LABEL_FOOTROOM,
   CITY_SKY_COLOR,
   CITY_GROUND_COLOR,
   CITY_AMBIENT_INTENSITY,
@@ -135,10 +135,7 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
   })
   districts.forEach((district) => {
     district.userData.restY = district.position.y
-    const bounds = new THREE.Box3().setFromObject(district)
-    // The centre of the district's ground, not its highest point: a tall tower would otherwise
-    // lift its label over the neighbouring districts.
-    district.userData.anchor = bounds.getCenter(new THREE.Vector3()).setY(bounds.min.y)
+    district.userData.footprint = collectFootprint(district)
   })
   const outline = collectOutline(model)
   const movers = collectMovers(model)
@@ -160,6 +157,16 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
   camera.lookAt(center)
 
   return { renderer, scene, camera, outline, districts, movers }
+}
+
+const GROUND_TOLERANCE = 0.02
+
+// The district's vertices that touch the ground: the outline of its area, which is what the
+// label hangs under, unlike a bounding box whose corners lie out in the street.
+const collectFootprint = (district: THREE.Object3D): THREE.Vector3[] => {
+  const points = collectOutline(district)
+  const ground = Math.min(...points.map(({ y }) => y))
+  return points.filter(({ y }) => y <= ground + GROUND_TOLERANCE)
 }
 
 // Every vertex in world space: framing the box corners instead leaves the empty air above the
@@ -199,14 +206,14 @@ export const fitCityCamera = (
   })
   const xs = projected.map(([x]) => x)
   const ys = projected.map(([, y]) => y)
-  // Room above the city for the labels that sit over the districts at the back.
-  const headroom = (Math.max(...ys) - Math.min(...ys)) * CITY_LABEL_HEADROOM
+  // Room under the city for the labels that hang below the districts at the front.
+  const footroom = (Math.max(...ys) - Math.min(...ys)) * CITY_LABEL_FOOTROOM
   const width = (Math.max(...xs) - Math.min(...xs)) * CITY_FRAME_PADDING
-  const height = (Math.max(...ys) - Math.min(...ys)) * CITY_FRAME_PADDING + headroom
+  const height = (Math.max(...ys) - Math.min(...ys)) * CITY_FRAME_PADDING + footroom
   const [frameWidth, frameHeight] =
     width / height > aspect ? [width, width / aspect] : [height * aspect, height]
   const centerX = (Math.max(...xs) + Math.min(...xs)) / 2
-  const centerY = (Math.max(...ys) + Math.min(...ys)) / 2 + headroom / 2
+  const centerY = (Math.max(...ys) + Math.min(...ys)) / 2 - footroom / 2
   Object.assign(camera, {
     left: centerX - frameWidth / 2,
     right: centerX + frameWidth / 2,
@@ -270,11 +277,12 @@ export const updateDistrictLift = (stage: SkillsCityStage, hovered: string | nul
 const anchorPoint = new THREE.Vector3()
 
 /**
- * Where each district's top sits on the canvas, for pinning its label to it.
+ * Where each district's front edge sits on the canvas: the label hangs just below it, so the
+ * district itself stays in full view.
  * @param stage The city stage.
  * @param width Canvas width in pixels.
  * @param height Canvas height in pixels.
- * @returns Each district's name and its top centre in canvas pixels.
+ * @returns Each district's name, its footprint's horizontal centre and lowest point, in pixels.
  */
 export const projectDistrictAnchors = (
   stage: SkillsCityStage,
@@ -282,11 +290,15 @@ export const projectDistrictAnchors = (
   height: number
 ): DistrictAnchor[] =>
   stage.districts.map((district) => {
-    anchorPoint.copy(district.userData.anchor).project(stage.camera)
+    const projected = (district.userData.footprint as THREE.Vector3[]).map((point) => {
+      anchorPoint.copy(point).project(stage.camera)
+      return [((anchorPoint.x + 1) / 2) * width, ((1 - anchorPoint.y) / 2) * height]
+    })
+    const xs = projected.map(([x]) => x)
     return {
       district: district.name,
-      x: ((anchorPoint.x + 1) / 2) * width,
-      y: ((1 - anchorPoint.y) / 2) * height
+      x: (Math.min(...xs) + Math.max(...xs)) / 2,
+      y: Math.max(...projected.map(([, y]) => y))
     }
   })
 
