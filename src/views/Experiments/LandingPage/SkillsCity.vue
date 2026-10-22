@@ -1,21 +1,31 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { assetsRelease } from '@webgamekit/threejs'
-import { SKILL_AREAS, SKILLS_CITY_MODEL } from './config'
+import { SKILL_AREAS, SKILLS_CITY_MODEL, OWNER_SUMMARY } from './config'
 import {
   createCityStage,
   fitCityCamera,
+  getScreenRect,
   pickDistrict,
   updateDistrictLift,
   updateCityMotion
 } from './cityStage'
-import type { SkillsCityStage } from './types'
+import type { SkillsCityStage, CanvasRect } from './types'
 
 const MILLISECONDS_PER_SECOND = 1000
+const PERCENT = 100
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const hovered = ref<string | null>(null)
 const hoveredArea = computed(() => SKILL_AREAS.find(({ district }) => district === hovered.value))
+const screenRect = ref<CanvasRect | null>(null)
+const screenStyle = computed(() =>
+  screenRect.value
+    ? Object.fromEntries(
+        Object.entries(screenRect.value).map(([edge, fraction]) => [edge, `${fraction * PERCENT}%`])
+      )
+    : undefined
+)
 
 let stage: SkillsCityStage | null = null
 let frameId = 0
@@ -43,6 +53,7 @@ const resizeStage = (): void => {
   const { clientWidth, clientHeight } = canvas.value
   stage.renderer.setSize(clientWidth, clientHeight, false)
   fitCityCamera(stage.camera, stage.outline, clientWidth / clientHeight)
+  screenRect.value = stage.screen ? getScreenRect(stage.camera, stage.screen) : null
   requestRender()
 }
 
@@ -93,14 +104,19 @@ onUnmounted(() => {
       @pointerdown="onPointerMove"
       @pointerleave="setHovered(null)"
     />
-    <div class="skills-city__lcd" aria-hidden="true">
+    <!-- Laid over the blank screen on the sign behind the city, so its text stays sharp. -->
+    <div v-if="screenStyle" class="skills-city__lcd" :style="screenStyle" aria-hidden="true">
       <!-- Keyed on the district so the typing effect replays for every new one. -->
       <div :key="hovered ?? 'idle'" class="skills-city__lcd-screen">
         <template v-if="hoveredArea">
           <p class="skills-city__lcd-title">{{ hoveredArea.title }}</p>
           <p class="skills-city__lcd-line">{{ hoveredArea.line }}</p>
         </template>
-        <p v-else class="skills-city__lcd-idle">Hover a district</p>
+        <template v-else>
+          <p class="skills-city__lcd-title">What I work on</p>
+          <p class="skills-city__lcd-line">{{ OWNER_SUMMARY }}</p>
+          <p class="skills-city__lcd-idle">Hover a district</p>
+        </template>
       </div>
     </div>
     <ul class="sr-only">
@@ -127,26 +143,23 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-/* An LCD panel in the corner of the city: dark glass, scan lines and glowing text. */
+/* An LED display on the sign's screen: the sign's own metal frame is its bezel. */
 .skills-city__lcd {
   position: absolute;
-  top: var(--spacing-2);
-  left: 0;
-  width: min(20rem, 100%);
-  padding: var(--spacing-1-5);
-  border: var(--spacing-px) solid var(--color-lcd-border);
-  border-radius: var(--spacing-1);
-  background-color: var(--color-lcd-bezel);
+  container-type: size;
   pointer-events: none;
 }
 
 .skills-city__lcd-screen {
-  min-height: var(--spacing-16);
-  padding: var(--spacing-2) var(--spacing-3);
-  border-radius: var(--spacing-0-5);
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 var(--spacing-4);
   background-color: var(--color-lcd-surface);
   background-image: var(--lcd-scanlines);
   font-family: var(--font-mono);
+  text-align: center;
   text-transform: uppercase;
   text-shadow: var(--shadow-lcd-glow);
 }
@@ -159,21 +172,22 @@ onUnmounted(() => {
 
 .skills-city__lcd-title {
   color: var(--color-lcd-text);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-lcd-title);
   letter-spacing: 0.12em;
 }
 
 .skills-city__lcd-line {
   margin-top: var(--spacing-1);
   color: var(--color-lcd-text);
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-lcd-line);
   letter-spacing: 0.08em;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .skills-city__lcd-idle {
+  margin-top: var(--spacing-2);
   color: var(--color-lcd-dim);
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-lcd-line);
   letter-spacing: 0.2em;
 }
 
@@ -208,12 +222,15 @@ onUnmounted(() => {
   }
 }
 
-/* On a phone the city is too small to cover, so the display sits under it instead. */
-@media (width <= 640px) {
-  .skills-city__lcd {
-    position: static;
-    width: auto;
-    margin-top: var(--spacing-2);
+/* On a phone the screen is too small for a sentence, so it shows just the name, larger. */
+@container (width < 20rem) {
+  .skills-city__lcd-line,
+  .skills-city__lcd-idle {
+    display: none;
+  }
+
+  .skills-city__lcd-title {
+    font-size: var(--font-size-lcd-title-compact);
   }
 }
 </style>

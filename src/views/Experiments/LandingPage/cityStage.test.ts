@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { fitCityCamera, updateDistrictLift, getMotionValue } from './cityStage'
+import { fitCityCamera, updateDistrictLift, getMotionValue, getScreenRect } from './cityStage'
 import { DISTRICT_LIFT } from './config'
 import type { SkillsCityStage } from './types'
 
@@ -17,7 +17,8 @@ const createStage = (districts: THREE.Object3D[]): SkillsCityStage => ({
   camera: new THREE.OrthographicCamera(),
   outline: [],
   districts,
-  movers: []
+  movers: [],
+  screen: null
 })
 
 const settle = (stage: SkillsCityStage, hovered: string | null): number =>
@@ -95,5 +96,25 @@ describe('getMotionValue', () => {
 
   it('loops a slide back to its start', () => {
     expect(getMotionValue({ ...base, kind: 'slide' }, 1)).toBeCloseTo(0)
+  })
+})
+
+describe('getScreenRect', () => {
+  it('covers the screen with an upright rectangle in canvas fractions', () => {
+    // Arrange
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 20)
+    camera.position.set(0, 0, 10)
+    const screen = new THREE.Object3D()
+    screen.position.set(0.5, 0.25, 0)
+    Object.assign(screen.userData, { width: 1, height: 0.5 })
+
+    // Act
+    const rect = getScreenRect(camera, screen)
+
+    // Assert
+    expect(rect.left).toBeCloseTo(0.5)
+    expect(rect.top).toBeCloseTo(0.25)
+    expect(rect.width).toBeCloseTo(0.5)
+    expect(rect.height).toBeCloseTo(0.25)
   })
 })

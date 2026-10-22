@@ -863,7 +863,7 @@ onUnmounted(() => {
       </a>
     </header>
     <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
-      <!-- The city's title sign shows these; they stay in the page for screen readers and search. -->
+      <!-- The display on the city's sign shows these; they stay in the page for screen readers and search. -->
       <h2 id="skills-title" class="sr-only">What I work on</h2>
       <p class="sr-only">{{ OWNER_SUMMARY }}</p>
       <SkillsCity />

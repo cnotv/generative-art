@@ -4,7 +4,7 @@ sidebar_position: 130
 
 # The Homepage: a Sleeping Logo and a City of Skills
 
-How the homepage intro, the isometric skills city under it and the LCD panel that describes each
+How the homepage intro, the isometric skills city under it and the LED display that describes each
 district came to be, and the turns that did not work on the way. Rebuilding the city from its
 source is a separate guide: [Rebuilding the Skills City](../guides/rebuilding-the-skills-city.md).
 
@@ -61,7 +61,7 @@ knocked about. Three things went wrong before that handover was clean:
 
 ## The city of skills
 
-![The skills city with the AI district hovered: the district lifts and the LCD panel types its description](/img/homepage/skills-city.webp)
+![The skills city with the AI district hovered: the district lifts and the screen behind the city types its description](/img/homepage/skills-city.webp)
 
 ### Built in Blender, from a script
 
@@ -144,25 +144,36 @@ flowchart TD
   C -->|too far from the buildings| D[Labels floating over each district]
   D -->|they hid the districts| E[Labels on the street in front]
   E -->|still covering neighbours| F[Names written on the ground]
-  F -->|unreadable at page size| G[Bold names on framed signboards, details on the LCD]
+  F -->|unreadable at page size| G[Bold names on framed signboards, details on a display]
 ```
 
 In a dense city, any flat label laid over the scene covers something. A name that is part of the
 world reads best: a sign planted at the front of each district, standing up and facing the camera,
 held in a metal frame so it does not look like it floats. Everything longer than a name moved to
-the LCD panel, which only speaks when asked.
+the LED display, which only speaks when asked.
 
-## The LCD panel
+## The LED display
 
-![The LCD panel describing the hovered district](/img/homepage/lcd-panel.webp)
+![The LED display on the sign behind the city, describing the hovered district](/img/homepage/lcd-panel.webp)
 
-The panel is plain HTML and CSS over the corner of the city, not part of the 3D scene, so its text
-stays crisp at any size and needs no texture work. Its look comes from four layers: a bezel, a dark
-screen, a repeating gradient of thin dark lines for the scan lines, and a soft glow on the text.
+The display began as a panel in the corner of the canvas, then moved onto a big framed screen
+standing behind the city, which also carries the section's heading while nothing is hovered. The
+screen is in the model; the text is not. Blender builds a blank board and marks its centre and size
+on an empty node, and the page projects the board's four corners through the camera and lays an
+HTML element exactly over them. Because the board faces the camera azimuth and the camera is
+orthographic, those corners always land on an upright rectangle, so no perspective transform is
+needed and the text stays sharp at any size with no texture work. The rectangle is recomputed only
+when the canvas is resized, since nothing moves the sign.
+
+Its text is sized in container units of that rectangle, so it scales with the city. On a phone the
+screen is too small for a sentence and shows only the name; the full descriptions stay in the page
+as a list for screen readers. The look comes from three layers: a dark surface, a repeating gradient
+of thin dark lines for the scan lines, and a soft glow on the text. The sign's metal frame is the
+bezel.
 
 The typing effect is a clip that uncovers the text in a fixed number of steps, from left to right,
 with the description starting a moment after the title. Replaying it for every new district needs
 one detail: the screen's content is keyed on the hovered district, so it is rebuilt each time and
-its animation starts over. With nothing hovered it blinks a prompt; with reduced motion requested
+its animation starts over. With nothing hovered it shows the heading and blinks a prompt; with reduced motion requested
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.

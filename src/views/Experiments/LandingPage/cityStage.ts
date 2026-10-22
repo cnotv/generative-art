@@ -19,9 +19,10 @@ import {
   DISTRICT_LIFT_EASE,
   DISTRICT_LIFT_SETTLED
 } from './config'
-import type { SkillsCityStage, CityMover, MotionKind } from './types'
+import type { SkillsCityStage, CityMover, MotionKind, CanvasRect } from './types'
 
 const DISTRICT_PREFIX = 'district-'
+const SCREEN_NAME = 'title-screen'
 const MOTION_KINDS: MotionKind[] = [
   'spin',
   'swing',
@@ -107,7 +108,8 @@ const createCityLights = (scene: THREE.Scene, bounds: THREE.Box3): void => {
  * Loads the skills city model into a scene of its own, lit like the hero room and seen from an
  * isometric orthographic camera.
  * @param canvas The canvas the city renders into.
- * @returns The renderer, scene, camera, the city's outline points and its district objects.
+ * @returns The renderer, scene, camera, the city's outline points, its districts, moving parts
+ *   and sign screen.
  */
 export const createCityStage = async (canvas: HTMLCanvasElement): Promise<SkillsCityStage> => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
@@ -137,6 +139,7 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
   })
   const outline = collectOutline(model)
   const movers = collectMovers(model)
+  const screen = model.getObjectByName(SCREEN_NAME) ?? null
 
   const camera = new THREE.OrthographicCamera(
     -1,
@@ -154,7 +157,7 @@ export const createCityStage = async (canvas: HTMLCanvasElement): Promise<Skills
     .add(center)
   camera.lookAt(center)
 
-  return { renderer, scene, camera, outline, districts, movers }
+  return { renderer, scene, camera, outline, districts, movers, screen }
 }
 
 // Every vertex in world space: framing the box corners instead leaves the empty air above the
@@ -207,6 +210,43 @@ export const fitCityCamera = (
     bottom: centerY - frameHeight / 2
   })
   camera.updateProjectionMatrix()
+}
+
+const SCREEN_CORNERS = [
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1]
+] as const
+const corner = new THREE.Vector3()
+
+/**
+ * Where the sign's screen sits on the canvas. The screen faces the camera, so its four corners
+ * project to an upright rectangle that an HTML element can cover exactly.
+ * @param camera The city's camera, already fitted.
+ * @param screen The screen marker, carrying its width and height from Blender.
+ * @returns The screen's rectangle as fractions of the canvas.
+ */
+export const getScreenRect = (camera: THREE.Camera, screen: THREE.Object3D): CanvasRect => {
+  const width = readNumber(screen.userData.width)
+  const height = readNumber(screen.userData.height)
+  camera.updateMatrixWorld(true)
+  screen.updateMatrixWorld(true)
+  const points = SCREEN_CORNERS.map(([side, edge]) => {
+    corner
+      .set((side * width) / 2, (edge * height) / 2, 0)
+      .applyMatrix4(screen.matrixWorld)
+      .project(camera)
+    return [(corner.x + 1) / 2, (1 - corner.y) / 2]
+  })
+  const xs = points.map(([x]) => x)
+  const ys = points.map(([, y]) => y)
+  return {
+    left: Math.min(...xs),
+    top: Math.min(...ys),
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys)
+  }
 }
 
 const raycaster = new THREE.Raycaster()

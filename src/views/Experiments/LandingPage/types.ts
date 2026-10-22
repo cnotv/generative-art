@@ -36,6 +36,16 @@ export interface SkillsCityStage {
   outline: THREE.Vector3[]
   districts: THREE.Object3D[]
   movers: CityMover[]
+  /** The blank screen on the sign behind the city, which the page's LED display covers. */
+  screen: THREE.Object3D | null
+}
+
+/** Where a part of the city sits on the canvas, as fractions of the canvas's width and height. */
+export interface CanvasRect {
+  left: number
+  top: number
+  width: number
+  height: number
 }
 
 /** How a moving part of the city moves, as tagged on its node in Blender. */

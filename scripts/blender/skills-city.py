@@ -439,18 +439,15 @@ SIGN_TEXT = ("sign-text", "#f4f6fb")
 SIGN_BOARD = ("sign-board", "#1b2238")
 SIGN_METAL = ("sign-metal", "#9aaac6")
 SIGN_FRAME = 0.06
-TITLE_TEXT = "What I work on"
 TREE_GRID = 0.45
 TREE_SPACING = 0.68
 TREE_SHORE = 0.96
 TREE_DENSITY = 0.85
 TREE_CLEAR_HEIGHT = 0.1
-TITLE_SUMMARY = "15+ years building, from startup to enterprise."
-TITLE_SIZE = 1.05
-TITLE_SUMMARY_SIZE = 0.56
 TITLE_SIGN_DEPTH = 9.75
-TITLE_POST_HEIGHT = 1.9
-TITLE_WIDTH = 13.0
+TITLE_SCREEN_WIDTH = 14.0
+TITLE_SCREEN_HEIGHT = 4.4
+TITLE_POST_HEIGHT = 3.05
 SIGN_TEXT_SIZE = 0.66
 SIGN_PADDING = 0.18
 SIGN_POST_HEIGHT = 0.75
@@ -682,15 +679,10 @@ def sign_text(name, text, size, widest):
     return label
 
 
-def signboard(name, lines, x, y, parent, post_height, widest):
-    """A signboard in a metal frame, standing up and facing the camera, with one or more lines
-    of text: the legs run up the board's sides to its top and rails close its top and bottom
-    edges, so the board is held by the frame rather than floating on two sticks."""
-    labels = [sign_text(f"{name}-text-{index}", text, size, widest - SIGN_PADDING * 2)
-              for index, (text, size) in enumerate(lines)]
-    gap = SIGN_PADDING * 0.5
-    width = max(label.dimensions.x for label in labels) + SIGN_PADDING * 2
-    height = sum(label.dimensions.y for label in labels) + gap * (len(labels) - 1) + SIGN_PADDING * 1.4
+def sign_frame(name, width, height, x, y, parent, post_height):
+    """A blank board in a metal frame, standing up and facing the camera: the legs run up the
+    board's sides to its top and rails close its top and bottom edges, so the board is held by
+    the frame rather than floating on two sticks."""
     sign = empty(f"{name}-sign", (x, y, AREA_HEIGHT), parent, rot=(0, 0, SCREEN_ANGLE))
     bottom, top = post_height - height / 2, post_height + height / 2
     for side in (-1, 1):
@@ -699,7 +691,18 @@ def signboard(name, lines, x, y, parent, post_height, widest):
     for edge, z in (("top", top), ("bottom", bottom - SIGN_FRAME)):
         box(f"{name}-sign-rail-{edge}", (width + SIGN_FRAME * 2, SIGN_FRAME, SIGN_FRAME), (0, 0, z), SIGN_METAL, sign)
     box(f"{name}-sign-board", (width, 0.05, height), (0, 0, bottom), SIGN_BOARD, sign)
-    line_top = top - SIGN_PADDING * 0.7
+    return sign
+
+
+def signboard(name, lines, x, y, parent, post_height, widest):
+    """A framed signboard with one or more lines of text."""
+    labels = [sign_text(f"{name}-text-{index}", text, size, widest - SIGN_PADDING * 2)
+              for index, (text, size) in enumerate(lines)]
+    gap = SIGN_PADDING * 0.5
+    width = max(label.dimensions.x for label in labels) + SIGN_PADDING * 2
+    height = sum(label.dimensions.y for label in labels) + gap * (len(labels) - 1) + SIGN_PADDING * 1.4
+    sign = sign_frame(name, width, height, x, y, parent, post_height)
+    line_top = post_height + height / 2 - SIGN_PADDING * 0.7
     for label in labels:
         label.parent = sign
         label.location = (0, -0.04, line_top - label.dimensions.y / 2)
@@ -799,10 +802,14 @@ box("harbour-boat-cabin", (0.6, 0.48, 0.3), (0.3 * SCREEN_RIGHT[0], 0.3 * SCREEN
     rot_z=SCREEN_ANGLE)
 anim(boat, "bob", axis="y", speed=1.4, amount=0.05)
 
-# The section's heading and summary on a big sign planted on the land behind the city.
+# A big blank screen planted on the land behind the city. The page lays its LED display over
+# it, so the text stays sharp: the marker carries the screen's centre and size, and hangs off
+# the city rather than the ground, whose empties are dropped when the ground is joined.
 title_x, title_y = from_screen(0.0, TITLE_SIGN_DEPTH)
-signboard("title", [(TITLE_TEXT, TITLE_SIZE), (TITLE_SUMMARY, TITLE_SUMMARY_SIZE)], title_x, title_y, ground,
-          TITLE_POST_HEIGHT, TITLE_WIDTH)
+sign_frame("title", TITLE_SCREEN_WIDTH, TITLE_SCREEN_HEIGHT, title_x, title_y, ground, TITLE_POST_HEIGHT)
+screen = empty("title-screen", (title_x, title_y, AREA_HEIGHT + TITLE_POST_HEIGHT), city, rot=(0, 0, SCREEN_ANGLE))
+screen["width"] = TITLE_SCREEN_WIDTH
+screen["height"] = TITLE_SCREEN_HEIGHT
 
 
 def pine(name, loc, parent, scale):
