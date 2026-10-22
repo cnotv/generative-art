@@ -12,6 +12,7 @@ import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
+import { getHeroFrustum, getHeroScrollFade } from './heroFrame'
 import MarketSectors from './MarketSectors.vue'
 import ContourBackdrop from './ContourBackdrop.vue'
 import { Github, Linkedin, Smartphone } from 'lucide-vue-next'
@@ -34,6 +35,8 @@ import {
   SLEEP_AMBIENT_INTENSITY,
   SLEEP_DIRECTIONAL_INTENSITY,
   DIRECTIONAL_LIGHT_POSITION,
+  HERO_SCROLL_DIMMING,
+  SPOT_INTENSITY,
   ROOM_WALL_COLOR,
   ROOM_ROUGHNESS,
   SLEEP_YAW,
@@ -44,7 +47,8 @@ import {
   OWNER_NAME,
   OWNER_PROFESSION,
   OWNER_SUMMARY,
-  OWNER_PROFILES
+  OWNER_PROFILES,
+  BUILD_NOTES
 } from './config'
 import type { LogoJumpPath, LogoRest } from './types'
 import { registerCameraProperties } from '@/utils/cameraProperties'
@@ -55,6 +59,9 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const page = ref<HTMLElement | null>(null)
+const hero = ref<HTMLElement | null>(null)
+const heroCover = ref<HTMLElement | null>(null)
 const PROFILE_ICONS: Record<string, Component> = { linkedin: Linkedin, github: Github }
 const skills = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
@@ -82,6 +89,7 @@ const ORBIT_TARGET_Z = -0.08
 const CAMERA_NEAR = 0.1
 const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
+const FRUSTUM_MIN_WIDTH = 14
 const WHITE = 0xffffff
 const AMBIENT_INTENSITY = 0.8
 const DIR_LIGHT_INTENSITY = 1.2
@@ -128,10 +136,19 @@ const rememberIntroSeen = (): void => {
 const introStage = ref<IntroStage>('asleep')
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
-  const aspect = window.innerWidth / window.innerHeight
-  const halfH = FRUSTUM_HEIGHT / 2
-  const halfW = halfH * aspect
-  const camera = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, CAMERA_NEAR, CAMERA_FAR)
+  const { halfWidth, halfHeight } = getHeroFrustum(
+    window.innerWidth / window.innerHeight,
+    FRUSTUM_HEIGHT,
+    FRUSTUM_MIN_WIDTH
+  )
+  const camera = new THREE.OrthographicCamera(
+    -halfWidth,
+    halfWidth,
+    halfHeight,
+    -halfHeight,
+    CAMERA_NEAR,
+    CAMERA_FAR
+  )
   camera.position.set(CAMERA_X, CAMERA_Y, CAMERA_Z)
   camera.lookAt(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
   return camera
@@ -139,10 +156,17 @@ const createOrthographicCamera = (): THREE.OrthographicCamera => {
 
 const createResizeHandler =
   (camera: THREE.OrthographicCamera, renderer: THREE.WebGLRenderer) => (): void => {
-    const halfH = FRUSTUM_HEIGHT / 2
-    const newHalfW = halfH * (window.innerWidth / window.innerHeight)
-    camera.left = -newHalfW
-    camera.right = newHalfW
+    const { halfWidth, halfHeight } = getHeroFrustum(
+      window.innerWidth / window.innerHeight,
+      FRUSTUM_HEIGHT,
+      FRUSTUM_MIN_WIDTH
+    )
+    Object.assign(camera, {
+      left: -halfWidth,
+      right: halfWidth,
+      top: halfHeight,
+      bottom: -halfHeight
+    })
     camera.updateProjectionMatrix()
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
@@ -725,6 +749,9 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
   orbit.update()
   orbit.enabled = false
+  // OrbitControls claims every touch on its canvas even while disabled, which stops a finger on
+  // the hero from scrolling the page on a phone; vertical drags go back to the page.
+  renderer.domElement.style.touchAction = 'pan-y'
 
   const physicsConfig = createReactiveConfig<PhysicsConfig>({
     impulse: DEFAULT_IMPULSE,
@@ -791,7 +818,20 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     if (clock.elapsedTime >= AUTO_WAKE_DELAY) wakeUp()
     if (introStage.value !== 'awake') {
       updateIntro(wokenAt === null ? null : clock.elapsedTime - wokenAt)
+    } else {
+      ambientLight.intensity = AMBIENT_INTENSITY
+      dirLight.intensity = DIR_LIGHT_INTENSITY
     }
+    // Scrolling away dims the room and then closes a cover of the next section's colour over it.
+    const fade = getHeroScrollFade(
+      page.value?.scrollTop ?? 0,
+      hero.value?.clientHeight ?? 0,
+      HERO_SCROLL_DIMMING
+    )
+    ambientLight.intensity *= fade.light
+    dirLight.intensity *= fade.light
+    spot.intensity = SPOT_INTENSITY * fade.light
+    if (heroCover.value) heroCover.value.style.opacity = String(fade.cover)
 
     bodies.forEach(({ body }, mesh) => {
       const pos = body.translation()
@@ -832,8 +872,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="landing-page" :class="{ 'landing-page--awake': introStage === 'awake' }">
-    <header class="landing-page__hero">
+  <main ref="page" class="landing-page" :class="{ 'landing-page--awake': introStage === 'awake' }">
+    <header ref="hero" class="landing-page__hero">
       <canvas ref="canvas" class="landing-page__canvas" />
       <h1 class="landing-page__name">{{ OWNER_NAME }}</h1>
       <p class="landing-page__profession">{{ OWNER_PROFESSION }}</p>
@@ -847,6 +887,7 @@ onUnmounted(() => {
           <path d="M6 9l6 6 6-6" />
         </svg>
       </a>
+      <div ref="heroCover" class="landing-page__hero-cover" aria-hidden="true" />
     </header>
     <div class="landing-page__content">
       <ContourBackdrop />
@@ -867,22 +908,33 @@ onUnmounted(() => {
       </section>
       <MarketSectors class="landing-page__section" />
       <footer class="landing-page__footer">
-        <a
-          v-for="profile in OWNER_PROFILES"
-          :key="profile.label"
-          class="landing-page__profile"
-          :href="profile.url"
-          :aria-label="profile.label"
-          :title="profile.label"
-          target="_blank"
-          rel="me noopener"
-        >
-          <component
-            :is="PROFILE_ICONS[profile.icon]"
-            class="landing-page__profile-icon"
-            aria-hidden="true"
-          />
-        </a>
+        <nav class="landing-page__profiles" aria-label="Profiles">
+          <a
+            v-for="profile in OWNER_PROFILES"
+            :key="profile.label"
+            class="landing-page__profile"
+            :href="profile.url"
+            :aria-label="profile.label"
+            :title="profile.label"
+            target="_blank"
+            rel="me noopener"
+          >
+            <component
+              :is="PROFILE_ICONS[profile.icon]"
+              class="landing-page__profile-icon"
+              aria-hidden="true"
+            />
+          </a>
+        </nav>
+        <nav class="landing-page__notes" aria-label="How this page was built">
+          <ul class="landing-page__notes-list">
+            <li v-for="note in BUILD_NOTES" :key="note.url">
+              <a class="landing-page__note" :href="note.url" target="_blank" rel="noopener">
+                {{ note.label }}
+              </a>
+            </li>
+          </ul>
+        </nav>
       </footer>
     </div>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
@@ -1017,6 +1069,14 @@ onUnmounted(() => {
 }
 
 /* Everything under the hero, over the contour map that sticks behind it. */
+.landing-page__hero-cover {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-color: var(--color-canvas-overlay-surface);
+  pointer-events: none;
+}
+
 .landing-page__content {
   position: relative;
 }
@@ -1024,10 +1084,40 @@ onUnmounted(() => {
 /* Positioned so it paints over the sticky map, like the sections above it. */
 .landing-page__footer {
   position: relative;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  justify-items: center;
   padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
+  gap: var(--spacing-6);
+}
+
+.landing-page__profiles {
+  display: flex;
   gap: var(--spacing-8);
+}
+
+.landing-page__notes {
+  text-align: center;
+}
+
+.landing-page__notes-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: var(--spacing-2) var(--spacing-6);
+}
+
+.landing-page__note {
+  color: var(--color-canvas-overlay-accent);
+  font-size: var(--font-size-xs);
+  text-decoration: none;
+}
+
+.landing-page__note:hover,
+.landing-page__note:focus-visible {
+  text-decoration: underline;
 }
 
 .landing-page__profile {

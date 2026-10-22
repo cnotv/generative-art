@@ -32,7 +32,11 @@ comes from a short list of phases, each describing only its own slice of the mot
 | Lights       | 0.9 to 2.8           | the room brightens throughout, ending in the awake look         |
 
 The intro never holds the page: scrolling works from the first frame, and the arrow at the
-bottom is a shortcut rather than the way out. The name and profession use the bold face of
+bottom is a shortcut rather than the way out. On a phone that also meant giving touches on
+the hero back to the page, since the disabled orbit controls still claimed them, and widening the
+hero's view on an upright screen, where a fixed height cut the logo off at both sides. Scrolling away dims the room's lights first, then closes a
+cover in the next section's colour over the hero, so the hero dissolves into the page below rather
+than ending at a hard edge. The name and profession use the bold face of
 the city's signs, tying the hero to the section below.
 
 Treating the intro as a pure function paid off three times. It is testable without a renderer.
@@ -183,6 +187,25 @@ one detail: the screen's content is keyed on the hovered district, so it is rebu
 its animation starts over. With nothing hovered it shows the section heading; with reduced motion requested
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.
+
+## A drawer for recruiters
+
+![The frontend development drawer open beside the city, with its tools and highlights](/img/homepage/skill-drawer.webp)
+
+Clicking a district opens a drawer that presents the skill to someone hiring: the tools and
+practices as a short row of tags, then highlights from real roles, grouped under each company and its years, with the
+company linked to its LinkedIn page, written results first so the number or the outcome comes
+before the method. A recommendation, where there is one, closes the drawer as a pull quote linked
+to its source. Every line is
+taken from the owner's own experience; a district with little to say says little rather than being
+padded. The district stays lifted while its drawer is open, so it is clear what the drawer is about.
+
+The UI kit's sheet was the obvious candidate and the wrong one: it hosts the side panels, renders
+into their containers and deliberately ignores Escape and clicks outside. The drawer instead uses
+the same dialog primitives directly, so it is modal, keeps focus inside, closes on Escape, the
+overlay or its close button, and hands focus back afterwards. The districts live on a canvas,
+which a keyboard cannot reach, so the page also lists them as buttons that stay hidden until one
+receives focus and then appear as a row under the city.
 
 ## Lines to the market
 

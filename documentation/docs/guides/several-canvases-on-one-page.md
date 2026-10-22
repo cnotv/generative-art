@@ -93,6 +93,7 @@ screen.
 | The avatar canvas turns solid black                        | three.js sets its clear colour only inside `render()`, so a manual clear before the first render clears to opaque black                   |
 | The shader colours come out darker than the colours given  | a `ShaderMaterial` receives colours in linear space and has to convert its output back for the screen                                     |
 | The screen display drifts off its sign                     | the display is placed as a share of the city's frame, so anything added inside that frame moves it; extra content goes outside it         |
+| A finger on the hero cannot scroll the page on a phone     | OrbitControls sets `touch-action: none` on its canvas even while disabled; the hero hands vertical drags back to the page                 |
 
 The reasoning behind each piece, and the attempts that did not work, are in
 [the homepage journey](../journey/homepage-sleeping-logo-and-skills-city.md).
