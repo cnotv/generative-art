@@ -12,6 +12,7 @@ import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
+import { getHeroFrustum } from './heroFrame'
 import MarketSectors from './MarketSectors.vue'
 import ContourBackdrop from './ContourBackdrop.vue'
 import { Github, Linkedin, Smartphone } from 'lucide-vue-next'
@@ -83,6 +84,7 @@ const ORBIT_TARGET_Z = -0.08
 const CAMERA_NEAR = 0.1
 const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
+const FRUSTUM_MIN_WIDTH = 14
 const WHITE = 0xffffff
 const AMBIENT_INTENSITY = 0.8
 const DIR_LIGHT_INTENSITY = 1.2
@@ -129,10 +131,19 @@ const rememberIntroSeen = (): void => {
 const introStage = ref<IntroStage>('asleep')
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
-  const aspect = window.innerWidth / window.innerHeight
-  const halfH = FRUSTUM_HEIGHT / 2
-  const halfW = halfH * aspect
-  const camera = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, CAMERA_NEAR, CAMERA_FAR)
+  const { halfWidth, halfHeight } = getHeroFrustum(
+    window.innerWidth / window.innerHeight,
+    FRUSTUM_HEIGHT,
+    FRUSTUM_MIN_WIDTH
+  )
+  const camera = new THREE.OrthographicCamera(
+    -halfWidth,
+    halfWidth,
+    halfHeight,
+    -halfHeight,
+    CAMERA_NEAR,
+    CAMERA_FAR
+  )
   camera.position.set(CAMERA_X, CAMERA_Y, CAMERA_Z)
   camera.lookAt(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
   return camera
@@ -140,10 +151,17 @@ const createOrthographicCamera = (): THREE.OrthographicCamera => {
 
 const createResizeHandler =
   (camera: THREE.OrthographicCamera, renderer: THREE.WebGLRenderer) => (): void => {
-    const halfH = FRUSTUM_HEIGHT / 2
-    const newHalfW = halfH * (window.innerWidth / window.innerHeight)
-    camera.left = -newHalfW
-    camera.right = newHalfW
+    const { halfWidth, halfHeight } = getHeroFrustum(
+      window.innerWidth / window.innerHeight,
+      FRUSTUM_HEIGHT,
+      FRUSTUM_MIN_WIDTH
+    )
+    Object.assign(camera, {
+      left: -halfWidth,
+      right: halfWidth,
+      top: halfHeight,
+      bottom: -halfHeight
+    })
     camera.updateProjectionMatrix()
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
@@ -726,6 +744,9 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
   orbit.update()
   orbit.enabled = false
+  // OrbitControls claims every touch on its canvas even while disabled, which stops a finger on
+  // the hero from scrolling the page on a phone; vertical drags go back to the page.
+  renderer.domElement.style.touchAction = 'pan-y'
 
   const physicsConfig = createReactiveConfig<PhysicsConfig>({
     impulse: DEFAULT_IMPULSE,

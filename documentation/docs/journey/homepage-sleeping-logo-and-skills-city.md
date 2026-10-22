@@ -32,7 +32,9 @@ comes from a short list of phases, each describing only its own slice of the mot
 | Lights       | 0.9 to 2.8           | the room brightens throughout, ending in the awake look         |
 
 The intro never holds the page: scrolling works from the first frame, and the arrow at the
-bottom is a shortcut rather than the way out. The name and profession use the bold face of
+bottom is a shortcut rather than the way out. On a phone that also meant giving touches on
+the hero back to the page, since the disabled orbit controls still claimed them, and widening the
+hero's view on an upright screen, where a fixed height cut the logo off at both sides. The name and profession use the bold face of
 the city's signs, tying the hero to the section below.
 
 Treating the intro as a pure function paid off three times. It is testable without a renderer.
