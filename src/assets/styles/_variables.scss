@@ -123,6 +123,9 @@
   --color-canvas-overlay-border: hsl(218deg 30% 30% / 60%);
   --color-canvas-overlay-scrim: hsl(218deg 40% 4% / 60%);
 
+  // Text printed on the hero's light letterpress paper, which stays light in either theme.
+  --color-hero-ink: hsl(222deg 34% 22%);
+
   // Panel item colors
   --panel-item-bg: hsl(0deg 0% 98%);
   --panel-item-bg-hover: hsl(0deg 0% 94%);

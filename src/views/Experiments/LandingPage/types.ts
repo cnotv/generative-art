@@ -21,6 +21,8 @@ export interface LogoIntroPose {
 export interface Room {
   meshes: THREE.Mesh[]
   materials: THREE.MeshStandardMaterial[]
+  /** The room's own repeat of the paper texture, to dispose with the room. */
+  paper: THREE.Texture
 }
 
 /** The offset from the logo's feet to its origin, at rest. */
@@ -143,4 +145,60 @@ export interface SkillArea {
   tools: string[]
   highlights: SkillHighlight[]
   quote?: { text: string; author: string; url: string }
+}
+
+/** Where a spotlight hangs relative to what it lights, and the shape of its beam. */
+export interface SpotPlacement {
+  color: number
+  intensity: number
+  side: number
+  height: number
+  forward: number
+  angle: number
+  penumbra: number
+}
+
+/** A directional light: its colour, strength and where it shines from. */
+export interface KeyLight {
+  color: number
+  intensity: number
+  position: readonly [number, number, number]
+}
+
+/** A finish for the hero room: its colours, its lights and how the logo is made. */
+export interface HeroLook {
+  label: string
+  wallColor: number
+  floorColor: number
+  logoColor: number
+  logoRoughness: number
+  logoMetalness: number
+  /** Whether the room and logo are cardstock, with grain, fibres and tooth. */
+  paper: boolean
+  embossStrength: number
+  rimStrength: number
+  ambientIntensity: number
+  key: KeyLight
+  /** A light from behind that throws soft shadows forward onto the floor; null for none. */
+  back: KeyLight | null
+  spot: SpotPlacement
+  /** How far shadows blur at their edges, in shadow map texels. */
+  shadowRadius: number
+  /** Dark text for a light page, instead of light text for a dark one. */
+  ink: boolean
+}
+
+/** Everything in the hero a look changes: the lights, the room and the logo. */
+export interface HeroLookParts {
+  ambientLight: THREE.AmbientLight
+  keyLight: THREE.DirectionalLight
+  backLight: THREE.DirectionalLight
+  spot: THREE.SpotLight
+  wallMaterial: THREE.MeshStandardMaterial
+  floorMaterial: THREE.MeshStandardMaterial
+  roomPaper: THREE.Texture
+  logoMaterial: THREE.MeshStandardMaterial
+  logoPaper: THREE.Texture
+  emboss: THREE.IUniform<number>
+  rim: THREE.IUniform<number>
 }

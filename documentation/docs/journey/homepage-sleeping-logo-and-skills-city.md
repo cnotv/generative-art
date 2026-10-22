@@ -67,6 +67,109 @@ knocked about. Three things went wrong before that handover was clean:
 | Clicked letters sank into the floor        | the old invisible walls rotated their meshes but not their colliders, so a floor collider cut through them |
 | Letters bounced off the new floor collider | each letter's collider sat on its baseline, half below the glyph; the glyph geometry is now centred on it  |
 
+## Studying and correcting the light
+
+![The hero before and after the lighting pass](/img/homepage/hero-lighting-before-after.webp)
+
+The first lighting looked moody but made the logo the fourth thing the eye found, after the name,
+a pool of light on empty floor and the logo's own shadow. Fixing it was less about taste than about
+a repeatable way of looking, and that method is worth more than the final numbers.
+
+### Look at values, not colours
+
+Turn a screenshot to greyscale and stretch its contrast. Colour flatters a dark scene; values show
+what the eye actually reads first. Then rank the brightest and darkest shapes. In a hero the name
+should come first and the logo second; anything brighter or darker than the logo that is not the
+logo is stealing attention.
+
+![The same two frames in greyscale: before, the shadow is the strongest shape; after, the logo is](/img/homepage/hero-lighting-values.webp)
+
+In the before frame the largest dark shape is the shadow, and the brightest patch near the logo is
+floor. In the after frame the logo is the clearest shape after the text, and its shadow is a soft
+patch behind it.
+
+### Find which light does what
+
+Every visible effect comes from one light, and guessing which is how time gets lost. Switch them
+off one at a time and watch what changes. The Lights panel in the app's debug view does this for
+the ambient and key lights; the spot, the emboss and the paper are set in the view's
+`config.ts`. During this pass the floor turned bright blue and the spotlight looked guilty; turning
+lights off one by one showed it was the new rim light, which lit every upward surface, floor
+included.
+
+| Light    | What it does here                                                  | What to adjust                                                     |
+| -------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Ambient  | lifts everything evenly, flattening shape                          | keep low in a dark scene                                           |
+| Key      | gives form and casts the main shadow                               | height sets shadow length, angle sets which surfaces it favours    |
+| Spot     | makes the pool of light that frames the subject                    | aim, cone width and edge softness                                  |
+| Emboss   | separates the subject's edges from the background, in its material | strength and the side it lights                                    |
+| Material | how much light the subject returns                                 | a shade lighter than the background, a little gloss to catch edges |
+
+### Read a shadow as a position
+
+A shadow's length tells you the light's height, and its direction tells you where the light is.
+The long shadow across the wall came from a key light only 3 units high; raising it and bringing it
+round to the front put the shadow close behind the logo, where it gives depth without competing.
+A shadow's edge says how soft it is: here plain PCF shadows with a blur radius, because the
+"soft" variant ignores the radius entirely.
+
+### Correct one thing, then compare
+
+Change a single value, capture the same frame again and put it beside the previous one. Three of
+this pass's changes made something else worse, and only the side-by-side caught it: a higher key
+brightened the whole floor, a wider spot cone did the same, and the rim light did it worst of all.
+
+```mermaid
+flowchart LR
+  A[Capture the frame] --> B[Greyscale: rank the values]
+  B --> C[Switch lights off one by one]
+  C --> D[Change one value]
+  D --> E[Capture again, side by side]
+  E -->|worse elsewhere| C
+  E -->|subject reads second, after the name| F[Keep it]
+```
+
+### When a light cannot be contained
+
+A directional light reaches every surface facing it; there is no way to point it at the logo
+alone. The first fix for the logo's outline was a rim light from behind, and it lit the whole floor
+blue. When an effect must touch only one object, it belongs in that object's material instead.
+
+### From lighting to a material: navy cardstock
+
+The final look stopped treating the logo as a lit object and made the whole scene one material: navy
+cardstock. Wall, floor, logo and letters share a paper texture with a fine grain and short pressed
+fibres, used both for colour and for bump, so light catches the paper's tooth. The logo is the same
+card a shade lighter and fully matte, and it reads through an emboss in its own material: faces whose
+edges lean towards the light come out lighter and those leaning away darker, like a pressed card
+under a desk lamp. The light around it is soft: a wider shadow blur, a gentler spot, a little more
+ambient, and the key from the upper left, the side the emboss lights.
+
+![The cardstock up close: grain and fibres on the logo, letters and wall](/img/homepage/hero-cardstock-detail.webp)
+
+A paper texture has one trap of its own: scale. Repeated densely, its fibres shrink below a pixel
+and average out to flat colour; the texture only reads when one of its texels lands on roughly one
+pixel of the screen.
+
+### Every attempt kept as a preset
+
+Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
+lighting, the first pass with a rim, a glossy take with a light from behind throwing soft shadows
+forward, navy cardstock, and a light letterpress card with the logo in navy ink. A layered cut-paper
+look was tried too and dropped.
+The Config panel switches between them live, and an address such as `?look=letterpress` opens one
+directly. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
+and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
+rather than a fixed answer.
+
+![The five hero presets: original, rim light, glossy, navy cardstock and letterpress](/img/homepage/hero-looks.webp)
+
+A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
+colours and lights change in place, and the paper texture is put on or taken off. The
+emboss and rim are values the logo's material reads every frame, so they change without rebuilding
+anything. On the light letterpress card the name and profession switch to navy ink, since light
+text on cream would vanish.
+
 ## The city of skills
 
 ![The skills city with the AI district hovered: the district lifts and the screen behind the city types its description](/img/homepage/skills-city.webp)
