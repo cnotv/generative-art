@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { ref, onMounted, onUnmounted } from 'vue'
+import type { Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
@@ -12,7 +13,7 @@ import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
 import MarketSectors from './MarketSectors.vue'
-import { ArrowUpRight, Smartphone } from 'lucide-vue-next'
+import { Github, Linkedin, Smartphone } from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
 import { getLogoIntroPose, getSleepPose } from './logoIntro'
@@ -53,6 +54,7 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const PROFILE_ICONS: Record<string, Component> = { linkedin: Linkedin, github: Github }
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -850,11 +852,16 @@ onUnmounted(() => {
         :key="profile.label"
         class="landing-page__profile"
         :href="profile.url"
+        :aria-label="profile.label"
+        :title="profile.label"
         target="_blank"
         rel="me noopener"
       >
-        {{ profile.label }}
-        <ArrowUpRight class="landing-page__profile-icon" aria-hidden="true" />
+        <component
+          :is="PROFILE_ICONS[profile.icon]"
+          class="landing-page__profile-icon"
+          aria-hidden="true"
+        />
       </a>
     </footer>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
@@ -970,13 +977,8 @@ onUnmounted(() => {
 
 .landing-page__profile {
   display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-1);
+  padding: var(--spacing-2);
   color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.2em;
-  text-decoration: none;
-  text-transform: uppercase;
 }
 
 .landing-page__profile:hover,
@@ -985,8 +987,9 @@ onUnmounted(() => {
 }
 
 .landing-page__profile-icon {
-  width: var(--spacing-4);
-  height: var(--spacing-4);
+  width: var(--spacing-6);
+  height: var(--spacing-6);
+  stroke-width: 1.5;
 }
 
 @media (prefers-reduced-motion: no-preference) {

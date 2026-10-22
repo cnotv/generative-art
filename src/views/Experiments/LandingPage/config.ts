@@ -67,8 +67,8 @@ export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'
 export const OWNER_SUMMARY = '15+ years building, from startup to enterprise.'
 export const OWNER_PROFILES = [
-  { label: 'LinkedIn', url: 'https://www.linkedin.com/in/leogiuseppe/' },
-  { label: 'GitHub', url: 'https://github.com/cnotv' }
+  { label: 'LinkedIn', icon: 'linkedin', url: 'https://www.linkedin.com/in/leogiuseppe/' },
+  { label: 'GitHub', icon: 'github', url: 'https://github.com/cnotv' }
 ]
 export const SPOT_COLOR = 0xc9d8ff
 
