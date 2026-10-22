@@ -8,6 +8,7 @@ Run from the repository root (see documentation/docs/guides/rebuilding-the-skill
     blender -b --factory-startup --python scripts/blender/skills-city.py -- public/skills-city.glb /tmp/skills-city.png
 """
 import math
+import os
 import random
 import sys
 
@@ -429,11 +430,21 @@ ROAD_HEIGHT = 0.02
 STREET_WIDTH = 0.34
 CITY_SCALE = 0.84
 TEXT_BAND = 0.7
-TEXT_SIZE = 0.34
-TEXT_MAX_WIDTH = 0.82
-TEXT_MIN_ROOM = 2.6
+SIGN_CLEARANCE = 0.45
+TEXT_MAX_WIDTH = 0.92
+TEXT_MIN_ROOM = 3.6
 LAND = ("land", "#2f3a4f")
-GROUND_TEXT = ("ground-text", "#c9d8ff")
+SIGN_TEXT = ("sign-text", "#f4f6fb")
+SIGN_BOARD = ("sign-board", "#1b2238")
+SIGN_TEXT_SIZE = 0.66
+SIGN_PADDING = 0.18
+SIGN_POST_HEIGHT = 0.75
+SIGN_FONTS = [
+    "/System/Library/Fonts/Supplemental/DIN Alternate Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "C:/Windows/Fonts/arialbd.ttf",
+]
 GROUND_LABELS = {
     "frontend": "Frontend", "ci": "CI automation", "ai": "AI automations", "ux": "UX",
     "k8s": "Kubernetes", "nlg": "NLG and NLU", "mentoring": "Mentoring", "architecture": "Architecture",
@@ -605,7 +616,7 @@ def text_line(polygon):
     """The depth for the district's name: the first line behind the front edge wide enough for it."""
     screen = [to_screen(x, y) for x, y in polygon]
     front = min(depth for _, depth in screen)
-    depth = front + TEXT_SIZE
+    depth = front + SIGN_TEXT_SIZE
     while depth < front + TEXT_BAND * 2:
         left, right = chord(screen, depth)
         if right - left > TEXT_MIN_ROOM:
@@ -617,31 +628,50 @@ def text_line(polygon):
 
 def without_front_band(polygon, depth):
     """The polygon minus everything in front of the line behind the name, kept clear for it."""
-    return clip(polygon, (-SCREEN_DEPTH[0], -SCREEN_DEPTH[1]), -(depth + TEXT_SIZE * 0.9))
+    return clip(polygon, (-SCREEN_DEPTH[0], -SCREEN_DEPTH[1]), -(depth + SIGN_CLEARANCE))
 
 
-def ground_label(name, text, polygon, parent):
-    """The district's name lying on its ground, along the front edge and reading left to right."""
+def sign_font():
+    """A bold font for the signs: the first one this machine has, else Blender's own."""
+    for path in SIGN_FONTS:
+        if os.path.exists(path):
+            return bpy.data.fonts.load(path, check_existing=True)
+    return None
+
+
+def district_sign(name, text, polygon, parent):
+    """The district's name on a signboard planted on its front edge, standing up and facing the
+    camera so it reads like a street sign."""
     depth, left, right = text_line(polygon)
     bpy.ops.object.text_add(location=(0, 0, 0))
     label = bpy.context.active_object
+    font = sign_font()
+    if font:
+        label.data.font = font
     label.data.body = text
-    label.data.size = TEXT_SIZE
+    label.data.size = SIGN_TEXT_SIZE
     label.data.align_x = "CENTER"
     label.data.align_y = "CENTER"
     label.data.resolution_u = 1
-    label.data.extrude = 0.0
     bpy.ops.object.convert(target="MESH")
     label = bpy.context.active_object
-    label.name = name
-    widest = (right - left) * TEXT_MAX_WIDTH
+    label.name = f"{name}-text"
+    widest = (right - left) * TEXT_MAX_WIDTH - SIGN_PADDING * 2
     if label.dimensions.x > widest:
         label.scale = (widest / label.dimensions.x,) * 3
         bpy.ops.object.transform_apply(scale=True, rotation=False, location=False)
+    width, height = label.dimensions.x + SIGN_PADDING * 2, label.dimensions.y + SIGN_PADDING * 1.4
     x, y = from_screen((left + right) / 2, depth)
-    label.location = (x, y, AREA_HEIGHT + 0.006)
-    label.rotation_euler[2] = SCREEN_ANGLE
-    finish(label, GROUND_TEXT, parent)
+    # Upright and turned to face the camera: the board's front looks along minus screen depth.
+    sign = empty(f"{name}-sign", (x, y, AREA_HEIGHT), parent, rot=(0, 0, SCREEN_ANGLE))
+    for side in (-1, 1):
+        box(f"{name}-sign-post-{side}", (0.06, 0.06, SIGN_POST_HEIGHT + height / 2),
+            (side * (width / 2 - 0.12), 0.02, 0), ROOF, sign)
+    box(f"{name}-sign-board", (width, 0.06, height), (0, 0, SIGN_POST_HEIGHT - height / 2), SIGN_BOARD, sign)
+    label.parent = sign
+    label.location = (0, -0.04, SIGN_POST_HEIGHT)
+    label.rotation_euler = (math.pi / 2, 0, 0)
+    finish(label, SIGN_TEXT, sign)
     return depth
 
 
@@ -711,7 +741,7 @@ for index, key in enumerate(SLOTS):
         lamp_x, lamp_y = x * 0.95, y * 0.95
         cylinder(f"{key}-lamp-{corner_index}", 0.03, 0.75, (lamp_x, lamp_y, 0.4), ROOF, area, vertices=5)
         box(f"{key}-lamp-head-{corner_index}", (0.12, 0.12, 0.06), (lamp_x, lamp_y, 0.78), GLASS, area)
-    name_depth = ground_label(f"{key}-name", GROUND_LABELS[key], tile, area)
+    name_depth = district_sign(f"{key}-name", GROUND_LABELS[key], tile, area)
     keep_inside(buildings, without_front_band(tile, name_depth))
 
 # The harbour: piers from the quay out into the water and a boat rocking beside them.

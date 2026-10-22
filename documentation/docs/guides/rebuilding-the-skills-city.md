@@ -33,13 +33,13 @@ Then check the budgets with `pnpm check:assets` and look at the homepage.
 | Positions         | `SLOTS`                                | in screen space (right, depth), so each district gets its own clear spot on screen                         |
 | Districts         | `cell`, `inset`                        | each district takes the part of the city limit nearest its site: a road ring, then a raised tile inside it |
 | Land              | `ground-island`, `city_limit`          | one continuous piece around the districts; the filler blocks stand on it without streets of their own      |
-| Names             | `GROUND_LABELS`, `ground_label`        | each district's name lies on its ground along the front edge, on the first line wide enough for it         |
+| Names             | `GROUND_LABELS`, `district_sign`       | each district's name on a bold signboard at its front edge, where the tile is wide enough for it           |
 | Containment       | `keep_inside`                          | shrinks a group until every vertex sits inside its area and behind its name; a warning means it never fit  |
 | Filler blocks     | `FILLERS` and `FILLER_OF`              | houses, warehouses and tanks: part of the land, not hoverable                                              |
 | Harbour           | the pier and boat block after the loop | on the straight western coast, next to the bay                                                             |
 
 Keep tall districts at the back of the view, and keep tall buildings away from a district's back
-edge, where they would hide the name of the district behind it. Hovering a district on the page
+edge, where they would hide the sign of the district behind it. Hovering a district on the page
 shows its title and description on the LCD display in the corner of the city.
 
 ## Names and motion the page relies on
