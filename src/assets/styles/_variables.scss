@@ -111,6 +111,15 @@
   --color-canvas-overlay-accent: hsl(218deg 60% 80%);
   --color-canvas-overlay-muted: hsl(218deg 30% 62%);
   --color-canvas-overlay-surface: hsl(218deg 30% 11%);
+  --color-lcd-surface: hsl(195deg 40% 9%);
+  --color-lcd-text: hsl(190deg 85% 78%);
+  --color-lcd-dim: hsl(190deg 35% 45%);
+  --shadow-lcd-glow: 0 0 6px hsl(190deg 90% 65% / 55%);
+  --lcd-scanlines: repeating-linear-gradient(
+    to bottom,
+    transparent 0 2px,
+    hsl(195deg 60% 3% / 35%) 2px 3px
+  );
   --color-canvas-overlay-border: hsl(218deg 30% 30% / 60%);
 
   // Panel item colors
@@ -151,6 +160,11 @@
 
   // Typography — font sizes
   --font-size-2xs: 0.5625rem; // 9px
+  // The LED display on the skills city sign scales with the screen it covers.
+  --font-size-lcd-title: min(22cqh, 6cqw);
+  --font-size-lcd-line: min(12cqh, 2.8cqw);
+  --font-size-lcd-description: min(15cqh, 3.8cqw);
+  --font-size-lcd-title-compact: min(36cqh, 7cqw);
   --font-size-xs: 0.6875rem; // 11px
   --font-size-sm: 0.75rem; // 12px
   --font-size-base: 0.875rem; // 14px

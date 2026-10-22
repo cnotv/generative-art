@@ -11,15 +11,8 @@ import helvetikerBoldUrl from 'three/examples/fonts/helvetiker_bold.typeface.jso
 import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import SkillsCity from './SkillsCity.vue'
 import {
-  CodeXml,
-  Workflow,
-  Bot,
-  Pointer,
-  Container,
-  Languages,
-  GraduationCap,
-  Layers,
   Landmark,
   RadioTower,
   Newspaper,
@@ -49,14 +42,14 @@ import {
   ROOM_WALL_COLOR,
   ROOM_ROUGHNESS,
   SLEEP_YAW,
+  INTRO_SEEN_KEY,
   AUTO_WAKE_DELAY,
   ROOM_SIZE,
   ROOM_COLLIDER_DEPTH,
   OWNER_NAME,
   OWNER_PROFESSION,
   OWNER_SUMMARY,
-  OWNER_PROFILE_URL,
-  SKILL_AREAS,
+  OWNER_PROFILES,
   PRODUCT_SECTORS
 } from './config'
 import type { LogoJumpPath, LogoRest } from './types'
@@ -71,14 +64,6 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 const skills = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
 const ICONS: Record<string, Component> = {
-  code: CodeXml,
-  pipeline: Workflow,
-  agent: Bot,
-  pointer: Pointer,
-  cluster: Container,
-  language: Languages,
-  mentor: GraduationCap,
-  architecture: Layers,
   bank: Landmark,
   telco: RadioTower,
   publisher: Newspaper,
@@ -137,6 +122,23 @@ const GRAIN_MIN = 90
 const GRAIN_MAX = 255
 
 type IntroStage = 'asleep' | 'jumping' | 'awake'
+
+// Session storage can be blocked or throw in private windows; the intro then simply plays again.
+const hasSeenIntro = (): boolean => {
+  try {
+    return sessionStorage.getItem(INTRO_SEEN_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+const rememberIntroSeen = (): void => {
+  try {
+    sessionStorage.setItem(INTRO_SEEN_KEY, 'true')
+  } catch {
+    // Nothing to do: the next visit plays the intro again.
+  }
+}
 const introStage = ref<IntroStage>('asleep')
 
 const createOrthographicCamera = (): THREE.OrthographicCamera => {
@@ -760,6 +762,12 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     introStage.value = 'jumping'
     wokenAt = clock.elapsedTime
   }
+  // A visitor who already watched the intro in this session lands straight on the awake page:
+  // waking up infinitely long ago resolves the whole intro on the first frame.
+  if (hasSeenIntro()) {
+    introStage.value = 'jumping'
+    wokenAt = -Infinity
+  }
   const onPointerDown = (event: PointerEvent): void => {
     if (introStage.value === 'awake') return onPhysicsPointerDown(event)
     if (isPointerOnObject(event, camera, logo.model)) wakeUp()
@@ -772,6 +780,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     spot,
     onAwake: () => {
       introStage.value = 'awake'
+      rememberIntroSeen()
       handOverToPhysics(logo, letters, bodies)
     }
   })
@@ -854,15 +863,10 @@ onUnmounted(() => {
       </a>
     </header>
     <section id="skills" ref="skills" class="landing-page__section" aria-labelledby="skills-title">
-      <h2 id="skills-title" class="landing-page__heading">What I work on</h2>
-      <p class="landing-page__lead">{{ OWNER_SUMMARY }}</p>
-      <ul class="landing-page__skills">
-        <li v-for="area in SKILL_AREAS" :key="area.title" class="landing-page__skill">
-          <component :is="ICONS[area.icon]" class="landing-page__skill-icon" aria-hidden="true" />
-          <h3 class="landing-page__skill-title">{{ area.title }}</h3>
-          <p class="landing-page__skill-line">{{ area.line }}</p>
-        </li>
-      </ul>
+      <!-- The display on the city's sign shows these; they stay in the page for screen readers and search. -->
+      <h2 id="skills-title" class="sr-only">What I work on</h2>
+      <p class="sr-only">{{ OWNER_SUMMARY }}</p>
+      <SkillsCity />
     </section>
     <section class="landing-page__section" aria-labelledby="sectors-title">
       <h2 id="sectors-title" class="landing-page__heading">Market knowledge</h2>
@@ -878,8 +882,15 @@ onUnmounted(() => {
       </ul>
     </section>
     <footer class="landing-page__footer">
-      <a class="landing-page__profile" :href="OWNER_PROFILE_URL" target="_blank" rel="me noopener">
-        LinkedIn
+      <a
+        v-for="profile in OWNER_PROFILES"
+        :key="profile.label"
+        class="landing-page__profile"
+        :href="profile.url"
+        target="_blank"
+        rel="me noopener"
+      >
+        {{ profile.label }}
         <ArrowUpRight class="landing-page__profile-icon" aria-hidden="true" />
       </a>
     </footer>
@@ -999,17 +1010,11 @@ onUnmounted(() => {
   letter-spacing: 0.12em;
 }
 
-.landing-page__lead {
-  margin: calc(-1 * var(--spacing-4)) 0 var(--spacing-8);
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.08em;
-}
-
 .landing-page__footer {
   display: flex;
   justify-content: center;
   padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
+  gap: var(--spacing-8);
 }
 
 .landing-page__profile {
@@ -1033,7 +1038,6 @@ onUnmounted(() => {
   height: var(--spacing-4);
 }
 
-.landing-page__skills,
 .landing-page__sectors {
   margin: 0;
   padding: 0;
@@ -1042,41 +1046,9 @@ onUnmounted(() => {
   gap: var(--spacing-4);
 }
 
-.landing-page__skills {
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-}
-
-.landing-page__skill {
-  display: grid;
-  align-content: start;
-  gap: var(--spacing-3);
-  padding: var(--spacing-6);
-  border: var(--spacing-px) solid var(--color-canvas-overlay-border);
-}
-
-.landing-page__skill-icon,
 .landing-page__sector-icon {
   color: var(--color-canvas-overlay-accent);
   stroke-width: 1.25;
-}
-
-.landing-page__skill-icon {
-  width: var(--spacing-8);
-  height: var(--spacing-8);
-}
-
-.landing-page__skill-title {
-  margin: 0;
-  color: var(--color-canvas-overlay-accent);
-  font-size: var(--font-size-md);
-  font-weight: normal;
-}
-
-.landing-page__skill-line {
-  margin: 0;
-  color: var(--color-canvas-overlay-muted);
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
 }
 
 .landing-page__sectors {
@@ -1116,7 +1088,6 @@ onUnmounted(() => {
   }
 
   @supports (animation-timeline: view()) {
-    .landing-page__skill,
     .landing-page__sector {
       animation: landing-page-reveal linear both;
       animation-timeline: view();
