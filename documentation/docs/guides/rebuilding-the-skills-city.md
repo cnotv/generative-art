@@ -36,7 +36,7 @@ Then check the budgets with `pnpm check:assets` and look at the homepage.
 | Names             | `GROUND_LABELS`, `district_sign`         | each district's name on a bold signboard at its front edge, where the tile is wide enough for it           |
 | Containment       | `keep_inside`                            | shrinks a group until every vertex sits inside its area and behind its name; a warning means it never fit  |
 | Filler blocks     | `FILLERS` and `FILLER_OF`                | houses, warehouses and tanks: part of the land, not hoverable                                              |
-| Harbour           | the pier and boat block after the loop   | on the straight western coast, next to the bay                                                             |
+| Harbour           | the pier and boat block after the loop   | on the straight western coast; the boat sails from it to the dock at the southern tip                      |
 | LED screen        | `sign_frame` and the `title-screen` node | a blank framed screen behind the city; the node's `width` and `height` extras tell the page where it is    |
 
 Keep tall districts at the back of the view, and keep tall buildings away from a district's back
@@ -48,11 +48,14 @@ shows its title and description on the LED display laid over that screen.
 - A district is a node named `district-<key>`, where `<key>` matches a `district` entry in
   `SKILL_AREAS` in `config.ts`. Filler blocks are named `block-<key>` and are ignored by hover.
 - A moving part is a node with glTF extras: `anim` (one of `spin`, `swing`, `bob`, `slide`, `puff`,
-  `grow`, `pulse`, `stretch`, `arc`), `axis` in three.js terms, `speed`, `amount`, `phase` and, for
-  `arc`, `lift`. Set them with the script's `anim()` helper on an empty that parents the moving
+  `grow`, `pulse`, `stretch`, `arc`, `route`), `axis` in three.js terms, `speed`, `amount`, `phase` and, for
+  `arc`, `lift`; a `route` part also carries `route`, its course as x and y pairs in Blender's ground
+  plane, sailed out and back. Set them with the script's `anim()` helper on an empty that parents the moving
   meshes. `cityStage.ts` checks each tag before playing it, and a `puff` part fades out as it rises.
 - The screen behind the city is an empty node named `title-screen`, at the screen's centre, with
   `width` and `height` extras. It hangs off the city rather than the ground, because the ground's
   empties are dropped when it is joined. Without it the page shows no display.
+- The dock sits at the middle of the view, halfway across the sea, because that is where the
+  page's traces to the market sectors start.
 - Still meshes are joined per district to keep draw calls low; moving parts stay separate children
   of their district, so they lift with it on hover.

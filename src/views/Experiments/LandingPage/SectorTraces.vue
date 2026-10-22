@@ -53,16 +53,29 @@ onUnmounted(() => resizeObserver?.disconnect())
 
 <template>
   <svg class="sector-traces" aria-hidden="true">
+    <defs>
+      <marker
+        id="sector-traces-arrow"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="9"
+        markerHeight="9"
+        markerUnits="userSpaceOnUse"
+        orient="auto"
+      >
+        <path class="sector-traces__arrow" d="M 0 0 L 10 5 L 0 10 Z" />
+      </marker>
+    </defs>
     <circle class="sector-traces__node" :cx="origin.x" :cy="origin.y" r="4" />
     <g v-for="(trace, index) in traces" :key="index">
-      <path class="sector-traces__line" :d="trace.path" />
+      <path class="sector-traces__line" :d="trace.path" marker-end="url(#sector-traces-arrow)" />
       <path
         class="sector-traces__pulse"
         :d="trace.path"
         pathLength="1"
         :style="{ animationDelay: `${index * SECTOR_TRACE_STAGGER}s` }"
       />
-      <circle class="sector-traces__node" :cx="trace.end.x" :cy="trace.end.y" r="3" />
     </g>
   </svg>
 </template>
@@ -99,7 +112,8 @@ onUnmounted(() => resizeObserver?.disconnect())
   filter: drop-shadow(var(--shadow-lcd-glow));
 }
 
-.sector-traces__node {
+.sector-traces__node,
+.sector-traces__arrow {
   fill: var(--color-lcd-dim);
 }
 

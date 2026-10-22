@@ -469,6 +469,14 @@ COAST = -10.0
 SEA_WEST = 15.2
 SEA_EAST = 14.0
 SEA_DEPTH = 12.2
+BOAT_COURSE_RIGHT = 13.9
+BOAT_COURSE_DEPTH = 11.35
+BOAT_COURSE_START = 192
+BOAT_COURSE_END = 258
+BOAT_BERTH = 1.5
+BOAT_COURSE_STEP = 6
+BOAT_ROUTE_SPEED = 1 / 18
+DOCK_LENGTH = 1.6
 ROAD = ("road", "#262f40")
 WATER_DEEP = ("water-deep", "#3b5f8f")
 AREA_TINT = 0.18
@@ -795,12 +803,35 @@ for index, key in enumerate(SLOTS):
 for index, depth in enumerate((-2.2, -0.6, 1.0)):
     x, y = from_screen(COAST - 0.9, depth)
     box(f"pier-{index}", (1.9, 0.4, 0.1), (x, y, -0.12), WALL_DARK, ground, rot_z=SCREEN_ANGLE)
+
+# The boat sails from the harbour round the south-west of the island to a dock at its southern
+# tip, where the page's traces to the markets begin, and back. Its course is an ellipse between
+# the shore and the open sea; the page sails it along the points stored on it, bow first, so the
+# boat's own forward is its local x.
+# The dock stands at the middle of the view, where the page's traces start: the page frames
+# the whole model, whose widest part is the sea, so that middle is halfway across the sea.
+sea_span = [to_screen(x, y)[0] for x, y in water]
+dock_right = (min(sea_span) + max(sea_span)) / 2
 boat_x, boat_y = from_screen(COAST - 2.4, -1.4)
-boat = empty("harbour-boat", (boat_x, boat_y, -0.1), city)
-box("harbour-boat-hull", (1.8, 0.65, 0.28), (0, 0, 0), ("k8s-accent", "#e8a8b8"), boat, rot_z=SCREEN_ANGLE)
-box("harbour-boat-cabin", (0.6, 0.48, 0.3), (0.3 * SCREEN_RIGHT[0], 0.3 * SCREEN_RIGHT[1], 0.28), WALL, boat,
-    rot_z=SCREEN_ANGLE)
-anim(boat, "bob", axis="y", speed=1.4, amount=0.05)
+course = [(boat_x, boat_y)] + [
+    from_screen(math.cos(math.radians(angle)) * BOAT_COURSE_RIGHT,
+                math.sin(math.radians(angle)) * BOAT_COURSE_DEPTH)
+    for angle in range(BOAT_COURSE_START, BOAT_COURSE_END + 1, BOAT_COURSE_STEP)
+] + [from_screen(dock_right - BOAT_BERTH, -BOAT_COURSE_DEPTH)]
+stranded = [point for point in course if inside(point, island) or not inside(point, water)]
+if stranded:
+    print(f"WARNING boat course leaves the water at {stranded}")
+boat = empty("harbour-boat", (boat_x, boat_y, -0.1), city, rot=(0, 0, SCREEN_ANGLE))
+anim(boat, "route", speed=BOAT_ROUTE_SPEED)
+boat["route"] = [coordinate for point in course for coordinate in point]
+rocker = empty("harbour-boat-rocker", (0, 0, 0), boat)
+box("harbour-boat-hull", (1.8, 0.65, 0.28), (0, 0, 0), ("k8s-accent", "#e8a8b8"), rocker)
+box("harbour-boat-cabin", (0.6, 0.48, 0.3), (-0.3, 0, 0.28), WALL, rocker)
+anim(rocker, "bob", axis="y", speed=1.4, amount=0.05)
+
+# The dock at the island's southern tip, where the boat ties up.
+dock_x, dock_y = from_screen(dock_right, -BOAT_COURSE_DEPTH + DOCK_LENGTH / 2 - 0.3)
+box("market-dock", (0.4, DOCK_LENGTH, 0.1), (dock_x, dock_y, -0.12), WALL_DARK, ground, rot_z=SCREEN_ANGLE)
 
 # A big blank screen planted on the land behind the city. The page lays its LED display over
 # it, so the text stays sharp: the marker carries the screen's centre and size, and hangs off

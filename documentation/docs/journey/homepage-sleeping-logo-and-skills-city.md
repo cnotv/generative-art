@@ -117,6 +117,7 @@ knowing which building it belongs to. Adding motion to the city is a change to t
 | `stretch` | the bar chart on the same display                         |
 | `pulse`   | signal lights and the antenna tip                         |
 | `arc`     | fountain water leaving the bowl and falling into the pool |
+| `route`   | the boat sailing between the harbour and the dock         |
 
 Still meshes are joined per district to keep draw calls low; moving parts stay separate children of
 their district so they lift with it on hover. A fading part gets its own copy of its material, or
@@ -184,14 +185,22 @@ as a list.
 ![Circuit traces running from the island's tip down to each of the six market sectors](/img/homepage/sector-traces.webp)
 
 The sectors the products serve hang off the city like components on a circuit board, with no
-heading of their own: one trace per sector leaves the island's tip, and a pulse runs down each in
-turn. The traces are an SVG drawn behind the section, from where the sector cells actually are,
+heading of their own: a boat sails from the harbour round the island to a dock at its
+southern tip, one trace per sector leaves that dock, and a pulse runs down each in turn to an
+arrowhead at the sector's icon. The traces are an SVG drawn behind the section, from where the sector cells actually are,
 and redrawn whenever the list changes size, so they follow the grid from three columns to two.
 
 The routing is what keeps them readable. Every column's traces share a lane in the gap to its
 left, never crossing a sector's content; a deeper cell's trace runs on the outer side of its lane,
 and the trace heading furthest out turns off the trunk highest. Under those two rules no two traces
 cross, whatever the grid's shape.
+
+The dock and the traces live in different worlds, one in the 3D model and one in the page, and
+nothing measures one against the other. They meet because the camera frames the whole model and
+its widest part is the sea: a point halfway across the sea always lands in the middle of the
+canvas, whatever its size, which is where the traces start. The boat's course is stored on the
+model as a list of points, like the other motion tags, so the page sails it without knowing it
+is a boat.
 
 Two details are easy to get wrong. The cells are measured by their offsets, not their bounding
 boxes, because they slide in as they scroll into view and a box measured mid-slide would leave

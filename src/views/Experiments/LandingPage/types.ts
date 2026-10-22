@@ -59,6 +59,7 @@ export type MotionKind =
   | 'pulse'
   | 'stretch'
   | 'arc'
+  | 'route'
 
 /** One moving part, with the motion it plays and the pose it moves from. */
 export interface CityMover {
@@ -73,6 +74,25 @@ export interface CityMover {
   baseRotation: THREE.Euler
   baseScale: THREE.Vector3
   fadeMaterials: THREE.Material[]
+  /** The course a `route` part sails, in the model's ground plane; empty for every other kind. */
+  route: RouteSegment[]
+}
+
+/** One straight leg of a course, in Blender's ground plane, and how far along the course it starts. */
+export interface RouteSegment {
+  startX: number
+  startY: number
+  endX: number
+  endY: number
+  offset: number
+  length: number
+}
+
+/** Where a part sailing a course is, in Blender's ground plane, and the way it is heading. */
+export interface RouteSpot {
+  x: number
+  y: number
+  heading: number
 }
 
 /** A point in the market section's own pixel space. */
