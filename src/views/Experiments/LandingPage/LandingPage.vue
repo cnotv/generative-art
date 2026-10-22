@@ -725,12 +725,10 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     reflectionShift: shading.reflectionShift,
     reflectionBlur: shading.reflectionBlur
   }
-  const heroLook = createHeroLook(lookParts, () => look.value)
-  heroLook.apply(look.value)
-  const stopLookWatch = watch(look, (next) => {
-    heroLook.apply(next)
-    refreshLookElements(lookParts)
-  })
+  const heroLook = createHeroLook(lookParts, look.value)
+  const stopLookWatch = watch(look, (next) =>
+    heroLook.transitionTo(next, () => refreshLookElements(lookParts))
+  )
 
   const orbit = new OrbitControls(camera, renderer.domElement)
   orbit.target.set(ORBIT_TARGET_X, ORBIT_TARGET_Y, ORBIT_TARGET_Z)
@@ -971,7 +969,10 @@ onUnmounted(() => {
 .landing-page__profession,
 .landing-page__scroll {
   opacity: 0;
-  transition: opacity var(--transition-game-phase) ease-out;
+  transition:
+    opacity var(--transition-game-phase) ease-out,
+    color var(--transition-hero-look) ease-in-out,
+    text-shadow var(--transition-hero-look) ease-in-out;
 }
 
 .landing-page--awake .landing-page__name,

@@ -235,6 +235,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
   }
 }
 export const DEFAULT_HERO_LOOK = 'cardstock'
+/** Seconds a switch from one look to the next takes to blend. */
+export const HERO_LOOK_TRANSITION_SECONDS = 1.5
 /**
  * How far the logo or a letter must be from its place, in scene units, or turned from it, in
  * radians, for its return to count as coming back from a knock.

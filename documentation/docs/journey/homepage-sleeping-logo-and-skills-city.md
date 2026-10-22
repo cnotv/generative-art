@@ -173,11 +173,17 @@ The logo and the letters share one material, so they share one set of controls t
 
 ![The six hero presets: original, rim light, navy cardstock, letterpress, chrome and polished chrome](/img/homepage/hero-looks.webp)
 
-A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
-colours and lights change in place, and the paper texture is put on or taken off. The
-emboss and rim are values the logo's material reads every frame, so they change without rebuilding
-anything. On the light letterpress card the name and profession switch to navy ink, since light
-text on cream would vanish.
+A preset is plain data, one entry per look, and a switch blends from the look on screen to the next
+over a second and a half instead of snapping. Every number, colour and light position is mixed
+between the two each frame, with an ease in and out, and the result applied to the scene as it
+stands: colours and lights change in place, and the emboss, rim and reflection are values the logo's
+material reads every frame, so nothing is rebuilt. Two things cannot be mixed: the paper texture is
+either on or off, and so is the navy ink the name and profession switch to on the light letterpress
+card, since light text on cream would vanish. Both change at the halfway point, where the two looks
+are closest, and the text eases its colour over the same second and a half in CSS. A switch that
+arrives mid blend starts from wherever the blend had reached, so nothing jumps.
+
+![Cardstock blending into letterpress: four frames across the second and a half](/img/homepage/hero-look-blend.webp)
 
 ### A chrome logo that mirrors the city
 
