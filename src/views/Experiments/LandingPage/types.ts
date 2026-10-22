@@ -21,6 +21,8 @@ export interface LogoIntroPose {
 export interface Room {
   meshes: THREE.Mesh[]
   materials: THREE.MeshStandardMaterial[]
+  /** The room's own repeat of the paper texture, to dispose with the room. */
+  paper: THREE.Texture
 }
 
 /** The offset from the logo's feet to its origin, at rest. */

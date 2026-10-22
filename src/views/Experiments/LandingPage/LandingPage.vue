@@ -23,7 +23,8 @@ import {
   createRoom,
   aimSpot,
   createCornerSpot,
-  addRimLight,
+  addEmbossShading,
+  createPaperTexture,
   createLogoEyelids,
   setEyelidsOpen,
   applyLogoPose
@@ -36,8 +37,9 @@ import {
   SLEEP_AMBIENT_INTENSITY,
   SLEEP_DIRECTIONAL_INTENSITY,
   DIRECTIONAL_LIGHT_POSITION,
-  RIM_LIGHT_INTENSITY,
   SHADOW_RADIUS,
+  PAPER_WORLD_DENSITY,
+  PAPER_BUMP_SCALE,
   LOGO_COLOR,
   LOGO_ROUGHNESS,
   HERO_SCROLL_DIMMING,
@@ -93,7 +95,7 @@ const CAMERA_FAR = 200
 const FRUSTUM_HEIGHT = 20
 const FRUSTUM_MIN_WIDTH = 14
 const WHITE = 0xffffff
-const AMBIENT_INTENSITY = 0.8
+const AMBIENT_INTENSITY = 0.95
 const DIR_LIGHT_INTENSITY = 0.9
 const TARGET_WIDTH = 8
 const TEXT_DEPTH = 0.8
@@ -112,10 +114,6 @@ const RESET_DURATION_FRAMES = 60
 const RESET_INTERVAL_FRAMES = 300
 const ROOM_WALL_Z = -3.5
 const BACKGROUND_COLOR = 0x141b26
-const GRAIN_TEXTURE_SIZE = 256
-const GRAIN_WORLD_DENSITY = 1.5
-const GRAIN_MIN = 90
-const GRAIN_MAX = 255
 
 type IntroStage = 'asleep' | 'jumping' | 'awake'
 
@@ -207,31 +205,6 @@ interface PhysicsBody {
 type BodyEntry = { body: PhysicsBody; originalPos: THREE.Vector3 }
 type PhysicsBodies = Map<THREE.Object3D, BodyEntry>
 
-const createGrainTexture = (): THREE.CanvasTexture => {
-  const canvas = document.createElement('canvas')
-  canvas.width = GRAIN_TEXTURE_SIZE
-  canvas.height = GRAIN_TEXTURE_SIZE
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('Unable to create 2D context for grain texture')
-
-  const imageData = context.createImageData(GRAIN_TEXTURE_SIZE, GRAIN_TEXTURE_SIZE)
-  Array.from({ length: GRAIN_TEXTURE_SIZE * GRAIN_TEXTURE_SIZE }).forEach((_, index) => {
-    const value = GRAIN_MIN + Math.random() * (GRAIN_MAX - GRAIN_MIN)
-    const offset = index * 4
-    imageData.data[offset] = value
-    imageData.data[offset + 1] = value
-    imageData.data[offset + 2] = value
-    imageData.data[offset + 3] = 255
-  })
-  context.putImageData(imageData, 0, 0)
-
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.wrapS = THREE.RepeatWrapping
-  texture.wrapT = THREE.RepeatWrapping
-  texture.colorSpace = THREE.SRGBColorSpace
-  return texture
-}
-
 const projectTriplanar = (point: THREE.Vector3, normal: THREE.Vector3): [number, number] => {
   const axisX = Math.abs(normal.x)
   const axisY = Math.abs(normal.y)
@@ -255,8 +228,8 @@ const applyTriplanarGrainUVs = (mesh: THREE.Mesh): void => {
     worldVertex.fromBufferAttribute(position, index).applyMatrix4(mesh.matrixWorld)
     worldNormal.fromBufferAttribute(normal, index).applyMatrix3(normalMatrix)
     const [u, v] = projectTriplanar(worldVertex, worldNormal)
-    uvArray[index * 2] = u * GRAIN_WORLD_DENSITY
-    uvArray[index * 2 + 1] = v * GRAIN_WORLD_DENSITY
+    uvArray[index * 2] = u * PAPER_WORLD_DENSITY
+    uvArray[index * 2 + 1] = v * PAPER_WORLD_DENSITY
   })
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
 }
@@ -457,7 +430,6 @@ interface IntroDirectorOptions {
   letters: Letter[]
   path: LogoJumpPath
   lights: HeroLights
-  rim: THREE.IUniform<number>
   spot: THREE.SpotLight
   onAwake: () => void
 }
@@ -473,7 +445,6 @@ const createIntroDirector = ({
   letters,
   path,
   lights,
-  rim,
   spot,
   onAwake
 }: IntroDirectorOptions) => {
@@ -500,7 +471,6 @@ const createIntroDirector = ({
       DIR_LIGHT_INTENSITY,
       pose.lightProgress
     )
-    rim.value = RIM_LIGHT_INTENSITY * pose.lightProgress
 
     if (pose.done) onAwake()
     return pose.done
@@ -739,14 +709,15 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
 
   const camera = createOrthographicCamera()
   const { ambientLight, dirLight } = createLights(scene)
-  const grainTexture = createGrainTexture()
+  const grainTexture = createPaperTexture()
   const contentMaterial = new THREE.MeshStandardMaterial({
     color: LOGO_COLOR,
     roughness: LOGO_ROUGHNESS,
     map: grainTexture,
-    roughnessMap: grainTexture
+    bumpMap: grainTexture,
+    bumpScale: PAPER_BUMP_SCALE
   })
-  const rim = addRimLight(contentMaterial)
+  addEmbossShading(contentMaterial)
 
   const bodies: PhysicsBodies = new Map()
   const logo = await loadLogo(scene, world, contentMaterial)
@@ -755,7 +726,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   const path = getJumpPath(logo, letters, camera.right)
   parkLogoBody(logo, path)
 
-  const room = createRoom(scene, path.start[1], ROOM_WALL_Z)
+  const room = createRoom(scene, path.start[1], ROOM_WALL_Z, grainTexture)
   createRoomColliders(world, path.start[1])
   const spot = createCornerSpot(scene, new THREE.Vector3(...path.start))
 
@@ -804,7 +775,6 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     letters,
     path,
     lights: { ambientLight, dirLight },
-    rim,
     spot,
     onAwake: () => {
       introStage.value = 'awake'
@@ -862,6 +832,7 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     grainTexture.dispose()
     contentMaterial.dispose()
     room.materials.forEach((material) => material.dispose())
+    room.paper.dispose()
     room.meshes.forEach((mesh) => mesh.geometry.dispose())
     logo.eyelids.forEach((eyelid) => eyelid.geometry.dispose())
     renderer.dispose()

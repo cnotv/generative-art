@@ -57,25 +57,31 @@ export const SLEEP_AMBIENT_INTENSITY = 0.06
 export const SLEEP_DIRECTIONAL_INTENSITY = 0
 /** How much of the hero's light is gone once the page has scrolled past it. */
 export const HERO_SCROLL_DIMMING = 0.85
-/** The key light once awake: mostly from the front and a little above, so its shadow falls on the wall close behind the logo instead of across the floor. */
-export const DIRECTIONAL_LIGHT_POSITION = [3, 5, 10] as const
-/** A cool glow on the logo's faces that turn away from the camera, outlining it against the wall. */
-export const RIM_LIGHT_COLOR = 0x9fb8ff
-export const RIM_LIGHT_INTENSITY = 0.22
-/** How tightly the glow hugs the edges: higher keeps it to the faces most side-on to the camera. */
-export const RIM_LIGHT_POWER = 3
-/** How far shadows blur at their edges, in shadow map texels. */
-export const SHADOW_RADIUS = 6
-/** The logo and its letters: a shade lighter than the wall and a little glossier, so they read. */
-export const LOGO_COLOR = 0x27334c
-export const LOGO_ROUGHNESS = 0.7
-export const SPOT_INTENSITY = 500
+/** The key light once awake: from the front, above and to the left, the side the emboss lights. */
+export const DIRECTIONAL_LIGHT_POSITION = [-4, 6, 10] as const
+/** How far shadows blur at their edges, in shadow map texels: wide, for soft paper light. */
+export const SHADOW_RADIUS = 10
+/** The logo and its letters: the same navy card as the wall, a shade lighter, and matte. */
+export const LOGO_COLOR = 0x243049
+export const LOGO_ROUGHNESS = 0.95
+/**
+ * Navy cardstock: the paper's texture, how many times it repeats per scene unit, how strongly its
+ * fibres raise the surface, and the emboss that lights edges facing the light and shades the rest.
+ */
+export const PAPER_TEXTURE_SIZE = 256
+export const PAPER_WORLD_DENSITY = 0.25
+export const PAPER_TONE_RANGE = [196, 255] as const
+export const PAPER_FIBRE_COUNT = 420
+export const PAPER_BUMP_SCALE = 0.8
+export const EMBOSS_STRENGTH = 0.9
+export const EMBOSS_LIGHT_DIRECTION = [-0.6, 0.8] as const
+export const SPOT_INTENSITY = 380
 /** Where the spotlight hangs relative to what it lights: high, in front and a little to the side. */
 export const SPOT_SIDE = 5
 export const SPOT_HEIGHT = 10
 export const SPOT_FORWARD = 7
 export const SPOT_ANGLE = 0.36
-export const SPOT_PENUMBRA = 0.75
+export const SPOT_PENUMBRA = 1
 
 export const OWNER_NAME = 'Giuseppe Leo'
 export const OWNER_PROFESSION = 'Senior Frontend Developer'

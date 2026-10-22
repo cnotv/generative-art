@@ -85,24 +85,25 @@ logo is stealing attention.
 ![The same two frames in greyscale: before, the shadow is the strongest shape; after, the logo is](/img/homepage/hero-lighting-values.webp)
 
 In the before frame the largest dark shape is the shadow, and the brightest patch near the logo is
-floor. In the after frame the logo's outline is the strongest edge on screen after the text.
+floor. In the after frame the logo is the clearest shape after the text, and its shadow is a soft
+patch behind it.
 
 ### Find which light does what
 
 Every visible effect comes from one light, and guessing which is how time gets lost. Switch them
 off one at a time and watch what changes. The Lights panel in the app's debug view does this for
-the ambient and key lights; the spot, the rim and the logo's material are set in the view's
+the ambient and key lights; the spot, the emboss and the paper are set in the view's
 `config.ts`. During this pass the floor turned bright blue and the spotlight looked guilty; turning
 lights off one by one showed it was the new rim light, which lit every upward surface, floor
 included.
 
-| Light    | What it does here                                   | What to adjust                                                     |
-| -------- | --------------------------------------------------- | ------------------------------------------------------------------ |
-| Ambient  | lifts everything evenly, flattening shape           | keep low in a dark scene                                           |
-| Key      | gives form and casts the main shadow                | height sets shadow length, angle sets which surfaces it favours    |
-| Spot     | makes the pool of light that frames the subject     | aim, cone width and edge softness                                  |
-| Rim      | separates the subject's outline from the background | strength and how tightly it hugs edges                             |
-| Material | how much light the subject returns                  | a shade lighter than the background, a little gloss to catch edges |
+| Light    | What it does here                                                  | What to adjust                                                     |
+| -------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Ambient  | lifts everything evenly, flattening shape                          | keep low in a dark scene                                           |
+| Key      | gives form and casts the main shadow                               | height sets shadow length, angle sets which surfaces it favours    |
+| Spot     | makes the pool of light that frames the subject                    | aim, cone width and edge softness                                  |
+| Emboss   | separates the subject's edges from the background, in its material | strength and the side it lights                                    |
+| Material | how much light the subject returns                                 | a shade lighter than the background, a little gloss to catch edges |
 
 ### Read a shadow as a position
 
@@ -131,10 +132,24 @@ flowchart LR
 ### When a light cannot be contained
 
 A directional light reaches every surface facing it; there is no way to point it at the logo
-alone. When an effect must touch only one object, as the rim had to, it belongs in that object's
-material instead: here the logo's faces glow faintly where they turn side-on to the camera, which
-outlines it without lighting the room. The rim also follows the intro and the scroll fade, coming
-up with the lights and dimming with them.
+alone. The first fix for the logo's outline was a rim light from behind, and it lit the whole floor
+blue. When an effect must touch only one object, it belongs in that object's material instead.
+
+### From lighting to a material: navy cardstock
+
+The final look stopped treating the logo as a lit object and made the whole scene one material: navy
+cardstock. Wall, floor, logo and letters share a paper texture with a fine grain and short pressed
+fibres, used both for colour and for bump, so light catches the paper's tooth. The logo is the same
+card a shade lighter and fully matte, and it reads through an emboss in its own material: faces whose
+edges lean towards the light come out lighter and those leaning away darker, like a pressed card
+under a desk lamp. The light around it is soft: a wider shadow blur, a gentler spot, a little more
+ambient, and the key from the upper left, the side the emboss lights.
+
+![The cardstock up close: grain and fibres on the logo, letters and wall](/img/homepage/hero-cardstock-detail.webp)
+
+A paper texture has one trap of its own: scale. Repeated densely, its fibres shrink below a pixel
+and average out to flat colour; the texture only reads when one of its texels lands on roughly one
+pixel of the screen.
 
 ## The city of skills
 

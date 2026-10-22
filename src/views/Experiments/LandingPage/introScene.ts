@@ -13,8 +13,13 @@ import {
   ROOM_ROUGHNESS,
   SPOT_INTENSITY,
   SHADOW_RADIUS,
-  RIM_LIGHT_COLOR,
-  RIM_LIGHT_POWER,
+  PAPER_TEXTURE_SIZE,
+  PAPER_WORLD_DENSITY,
+  PAPER_TONE_RANGE,
+  PAPER_FIBRE_COUNT,
+  PAPER_BUMP_SCALE,
+  EMBOSS_STRENGTH,
+  EMBOSS_LIGHT_DIRECTION,
   SPOT_SIDE,
   SPOT_HEIGHT,
   SPOT_FORWARD,
@@ -24,8 +29,17 @@ import {
 } from './config'
 import type { LogoIntroPose, Room, LogoRest } from './types'
 
-const createRoomSurface = (color: number): [THREE.Mesh, THREE.MeshStandardMaterial] => {
-  const material = new THREE.MeshStandardMaterial({ color, roughness: ROOM_ROUGHNESS })
+const createRoomSurface = (
+  color: number,
+  paper: THREE.Texture
+): [THREE.Mesh, THREE.MeshStandardMaterial] => {
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: ROOM_ROUGHNESS,
+    map: paper,
+    bumpMap: paper,
+    bumpScale: PAPER_BUMP_SCALE
+  })
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), material)
   mesh.receiveShadow = true
   return [mesh, material]
@@ -37,20 +51,28 @@ const createRoomSurface = (color: number): [THREE.Mesh, THREE.MeshStandardMateri
  * @param scene The scene to add them to.
  * @param floorY Height of the floor.
  * @param wallZ Depth of the back wall.
+ * @param paper The cardstock texture, repeated here at the same scale as on the logo.
  * @returns The room meshes and their materials.
  */
-export const createRoom = (scene: THREE.Scene, floorY: number, wallZ: number): Room => {
-  const [wall, wallMaterial] = createRoomSurface(ROOM_WALL_COLOR)
+export const createRoom = (
+  scene: THREE.Scene,
+  floorY: number,
+  wallZ: number,
+  paper: THREE.Texture
+): Room => {
+  const roomPaper = paper.clone()
+  roomPaper.repeat.setScalar(ROOM_SIZE * PAPER_WORLD_DENSITY)
+  const [wall, wallMaterial] = createRoomSurface(ROOM_WALL_COLOR, roomPaper)
   wall.name = 'room-wall'
   wall.position.set(0, floorY + ROOM_SIZE / 2, wallZ)
 
-  const [floor, floorMaterial] = createRoomSurface(ROOM_FLOOR_COLOR)
+  const [floor, floorMaterial] = createRoomSurface(ROOM_FLOOR_COLOR, roomPaper)
   floor.name = 'room-floor'
   floor.rotation.x = -Math.PI / 2
   floor.position.set(0, floorY, wallZ + ROOM_SIZE / 2)
 
   scene.add(wall, floor)
-  return { meshes: [wall, floor], materials: [wallMaterial, floorMaterial] }
+  return { meshes: [wall, floor], materials: [wallMaterial, floorMaterial], paper: roomPaper }
 }
 
 /**
@@ -172,27 +194,67 @@ export const applyLogoPose = (model: THREE.Object3D, pose: LogoIntroPose, rest: 
   model.position.set(...pose.feet).add(scratchOffset)
 }
 
+const TILE_OFFSETS = [-1, 0, 1].flatMap((x) => [-1, 0, 1].map((y) => [x, y] as const))
+
+// A fibre drawn nine times, once per neighbouring tile, so it wraps across the texture's edges
+// and the paper repeats without seams.
+const drawFibre = (context: CanvasRenderingContext2D, size: number): void => {
+  const [x, y] = [Math.random() * size, Math.random() * size]
+  const angle = Math.random() * Math.PI
+  const length = 4 + Math.random() * 14
+  const [dx, dy] = [Math.cos(angle) * length, Math.sin(angle) * length]
+  context.strokeStyle = Math.random() < 0.5 ? 'rgb(255 255 255 / 22%)' : 'rgb(0 0 0 / 14%)'
+  context.lineWidth = 0.6 + Math.random() * 0.6
+  TILE_OFFSETS.forEach(([offsetX, offsetY]) => {
+    context.beginPath()
+    context.moveTo(x + offsetX * size, y + offsetY * size)
+    context.lineTo(x + offsetX * size + dx, y + offsetY * size + dy)
+    context.stroke()
+  })
+}
+
 /**
- * Gives a material a rim light of its own: faces that turn away from the camera glow faintly in a
- * cool colour, outlining the object. A real light from behind would also light the floor and the
- * wall; this touches only the objects that use the material.
- * @param material The logo and letters' material.
- * @returns The rim's strength, to dim and raise with the room's lights.
+ * A tileable cardstock texture: a fine, light grain with short pressed fibres running every way.
+ * Used both as the colour, which it only darkens slightly, and as the bump, so light catches the
+ * paper's tooth.
+ * @returns The texture, repeating, in the screen's colour space.
  */
-export const addRimLight = (material: THREE.MeshStandardMaterial): THREE.IUniform<number> => {
-  const strength: THREE.IUniform<number> = { value: 0 }
+export const createPaperTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas')
+  canvas.width = PAPER_TEXTURE_SIZE
+  canvas.height = PAPER_TEXTURE_SIZE
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Unable to create 2D context for the paper texture')
+  const [darkest, lightest] = PAPER_TONE_RANGE
+  const grain = context.createImageData(PAPER_TEXTURE_SIZE, PAPER_TEXTURE_SIZE)
+  Array.from({ length: PAPER_TEXTURE_SIZE * PAPER_TEXTURE_SIZE }).forEach((_, index) => {
+    const tone = darkest + Math.random() * (lightest - darkest)
+    grain.data.set([tone, tone, tone, 255], index * 4)
+  })
+  context.putImageData(grain, 0, 0)
+  Array.from({ length: PAPER_FIBRE_COUNT }).forEach(() => drawFibre(context, PAPER_TEXTURE_SIZE))
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+/**
+ * Makes a material look pressed into card: faces whose edges turn towards the light come out a
+ * little lighter and those turned away a little darker, like an emboss under a desk lamp. It
+ * changes only the material's own colour, so the room around it is untouched.
+ * @param material The logo and letters' material.
+ */
+export const addEmbossShading = (material: THREE.MeshStandardMaterial): void => {
+  const [lightX, lightY] = EMBOSS_LIGHT_DIRECTION
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.rimStrength = strength
-    shader.uniforms.rimColor = { value: new THREE.Color(RIM_LIGHT_COLOR) }
-    shader.fragmentShader = shader.fragmentShader
-      .replace('void main() {', 'uniform float rimStrength;\nuniform vec3 rimColor;\nvoid main() {')
-      .replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-        // In view space the camera looks along z, so a normal's z says how squarely a face meets it.
-        float sideOn = 1.0 - abs(normal.z);
-        totalEmissiveRadiance += rimColor * pow(sideOn, ${RIM_LIGHT_POWER.toFixed(1)}) * rimStrength;`
-      )
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <normal_fragment_begin>',
+      `#include <normal_fragment_begin>
+      // In view space x and y run along the screen, so a face's normal says which way it leans.
+      float towardsLight = dot(normal.xy, normalize(vec2(${lightX.toFixed(2)}, ${lightY.toFixed(2)})));
+      diffuseColor.rgb *= clamp(1.0 + ${EMBOSS_STRENGTH.toFixed(2)} * towardsLight, 0.0, 2.0);`
+    )
   }
-  return strength
 }
