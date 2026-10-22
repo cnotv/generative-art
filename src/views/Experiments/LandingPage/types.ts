@@ -186,6 +186,8 @@ export interface HeroLook {
   ink: boolean
   /** How strongly the logo mirrors the looping video of the skills city; 0 for no reflection. */
   reflection: number
+  /** How far the reflection is blurred, as a share of the footage; 0 for a sharp mirror. */
+  reflectionBlur: number
 }
 
 /** Everything in the hero a look changes: the lights, the room and the logo. */
@@ -204,4 +206,5 @@ export interface HeroLookParts {
   reflection: THREE.IUniform<number>
   reflectionMap: THREE.IUniform<THREE.Texture | null>
   reflectionShift: THREE.IUniform<number>
+  reflectionBlur: THREE.IUniform<number>
 }

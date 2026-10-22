@@ -706,7 +706,8 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     rim: shading.rim,
     reflection: shading.reflection,
     reflectionMap: shading.reflectionMap,
-    reflectionShift: shading.reflectionShift
+    reflectionShift: shading.reflectionShift,
+    reflectionBlur: shading.reflectionBlur
   }
   const heroLook = createHeroLook(lookParts, () => look.value)
   heroLook.apply(look.value)

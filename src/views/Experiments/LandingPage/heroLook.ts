@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { reactive } from 'vue'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
 import type { ElementPropertiesConfig } from '@/stores/elementProperties'
 import { useDebugSceneStore } from '@/stores/debugScene'
@@ -75,6 +76,7 @@ export const createHeroLook = (parts: HeroLookParts, getLook: () => HeroLook) =>
       reflection?.video.pause()
     }
     parts.reflection.value = look.reflection
+    parts.reflectionBlur.value = look.reflectionBlur
     setPaper(parts.logoMaterial, look.paper ? parts.logoPaper : null)
     parts.emboss.value = look.embossStrength
 
@@ -112,61 +114,105 @@ const materialSchema = {
   roughness: { min: 0, max: 1, step: 0.01, label: 'Roughness' }
 }
 
-const createMaterialConfig = (
-  material: THREE.MeshStandardMaterial,
-  title: string
-): ElementPropertiesConfig => ({
-  title,
-  schema: materialSchema,
-  getValue: (path) => {
-    if (path === 'color') return material.color.getHex()
-    if (path === 'metalness') return material.metalness
-    if (path === 'roughness') return material.roughness
-    return undefined
-  },
-  updateValue: (path, value) => {
-    if (path === 'color') material.color.set(value as number)
-    if (path === 'metalness') material.metalness = value as number
-    if (path === 'roughness') material.roughness = value as number
-  }
-})
-
-const createLogoConfig = (parts: HeroLookParts, title: string): ElementPropertiesConfig => {
-  const material = createMaterialConfig(parts.logoMaterial, title)
+/**
+ * A panel config whose controls redraw when edited. The panel redraws a control only when the
+ * value it reads is reactive, and a three.js material is not, so the config keeps a reactive copy
+ * of its values, read once from the scene and updated on every edit, and writes each edit through.
+ * @param title The element's title in the panel.
+ * @param schema The controls, by path.
+ * @param read Reads a value from the scene.
+ * @param write Writes an edited value to the scene.
+ * @returns The config to register.
+ */
+export const createLiveConfig = (
+  title: string,
+  schema: Record<string, unknown>,
+  read: (path: string) => unknown,
+  write: (path: string, value: unknown) => void
+): ElementPropertiesConfig => {
+  const values = reactive(Object.fromEntries(Object.keys(schema).map((path) => [path, read(path)])))
   return {
     title,
-    schema: {
-      ...materialSchema,
-      emboss: { min: 0, max: 2, step: 0.05, label: 'Emboss' },
-      rim: { min: 0, max: 1, step: 0.01, label: 'Rim glow' },
-      reflection: { min: 0, max: 3, step: 0.05, label: 'Reflection' },
-      paper: { boolean: true, label: 'Paper' }
-    },
-    getValue: (path) => {
-      if (path === 'emboss') return parts.emboss.value
-      if (path === 'rim') return parts.rim.value
-      if (path === 'reflection') return parts.reflection.value
-      if (path === 'paper') return parts.logoMaterial.map !== null
-      return material.getValue(path)
-    },
+    schema,
+    getValue: (path) => values[path],
     updateValue: (path, value) => {
-      if (path === 'emboss') parts.emboss.value = value as number
-      else if (path === 'rim') parts.rim.value = value as number
-      else if (path === 'reflection') parts.reflection.value = value as number
-      else if (path === 'paper') setPaper(parts.logoMaterial, value ? parts.logoPaper : null)
-      else material.updateValue(path, value)
+      values[path] = value
+      write(path, value)
     }
   }
 }
 
+const readMaterial = (material: THREE.MeshStandardMaterial, path: string): unknown => {
+  if (path === 'color') return material.color.getHex()
+  if (path === 'metalness') return material.metalness
+  if (path === 'roughness') return material.roughness
+  return undefined
+}
+
+const writeMaterial = (
+  material: THREE.MeshStandardMaterial,
+  path: string,
+  value: unknown
+): void => {
+  if (path === 'color') material.color.set(value as THREE.ColorRepresentation)
+  if (path === 'metalness') material.metalness = value as number
+  if (path === 'roughness') material.roughness = value as number
+}
+
+const createMaterialConfig = (
+  material: THREE.MeshStandardMaterial,
+  title: string
+): ElementPropertiesConfig =>
+  createLiveConfig(
+    title,
+    materialSchema,
+    (path) => readMaterial(material, path),
+    (path, value) => writeMaterial(material, path, value)
+  )
+
+const logoSchema = {
+  ...materialSchema,
+  emboss: { min: 0, max: 2, step: 0.05, label: 'Emboss' },
+  rim: { min: 0, max: 1, step: 0.01, label: 'Rim glow' },
+  reflection: { min: 0, max: 3, step: 0.05, label: 'Reflection' },
+  reflectionBlur: { min: 0, max: 0.08, step: 0.002, label: 'Reflection blur' },
+  paper: { boolean: true, label: 'Paper' }
+}
+
+// The logo and the letters share one material, so they share one config and always agree.
+const createLogoConfig = (parts: HeroLookParts): ElementPropertiesConfig =>
+  createLiveConfig(
+    'Logo and CNOTV text',
+    logoSchema,
+    (path) => {
+      if (path === 'emboss') return parts.emboss.value
+      if (path === 'rim') return parts.rim.value
+      if (path === 'reflection') return parts.reflection.value
+      if (path === 'reflectionBlur') return parts.reflectionBlur.value
+      if (path === 'paper') return parts.logoMaterial.map !== null
+      return readMaterial(parts.logoMaterial, path)
+    },
+    (path, value) => {
+      if (path === 'emboss') parts.emboss.value = value as number
+      else if (path === 'rim') parts.rim.value = value as number
+      else if (path === 'reflection') parts.reflection.value = value as number
+      else if (path === 'reflectionBlur') parts.reflectionBlur.value = value as number
+      else if (path === 'paper') setPaper(parts.logoMaterial, value ? parts.logoPaper : null)
+      else writeMaterial(parts.logoMaterial, path, value)
+    }
+  )
+
 // Each element the looks change, with its panel. Registered again after every switch, so the
 // panel shows the new look's values.
-const getLookElements = (parts: HeroLookParts): [string, string, ElementPropertiesConfig][] => [
-  ['logo', 'Group', createLogoConfig(parts, 'Logo')],
-  ['cnotv-text', 'Group', createLogoConfig(parts, 'CNOTV Text')],
-  ['room-wall', 'Mesh', createMaterialConfig(parts.wallMaterial, 'Wall')],
-  ['room-floor', 'Mesh', createMaterialConfig(parts.floorMaterial, 'Floor')]
-]
+const getLookElements = (parts: HeroLookParts): [string, string, ElementPropertiesConfig][] => {
+  const logo = createLogoConfig(parts)
+  return [
+    ['logo', 'Group', logo],
+    ['cnotv-text', 'Group', logo],
+    ['room-wall', 'Mesh', createMaterialConfig(parts.wallMaterial, 'Wall')],
+    ['room-floor', 'Mesh', createMaterialConfig(parts.floorMaterial, 'Floor')]
+  ]
+}
 
 /**
  * Lists everything a look changes in the Elements panel, with live controls: the logo and letters'

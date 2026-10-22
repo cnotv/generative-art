@@ -163,6 +163,11 @@ rather than a fixed answer. The Lights section recognises its lights by name, so
 named as the scene's spot light to join the ambient and key lights there instead of getting a row of
 its own.
 
+The panel's controls first looked frozen: a slider moved and snapped back. The panel redraws a
+control only when the value it reads is reactive, and a three.js material is not, so every control
+now reads a reactive copy of its values, updated on each edit and rebuilt on each preset switch.
+The logo and the letters share one material, so they share one set of controls too.
+
 ![The five hero presets: original, rim light, navy cardstock, letterpress and chrome](/img/homepage/hero-looks.webp)
 
 A preset is plain data, one entry per look, and switching applies it to the scene as it stands:
@@ -186,7 +191,9 @@ mirror face shows one spot of the map, not a picture.
 What works is closer to a real mirror in front of the scene: each face shows the footage at its own
 place in the view, mirrored left to right, shifted by the face's tilt so the bevels and sides catch
 other parts of it. The city barely moves, so the reflection also sways slowly sideways, as if the
-logo caught a moving view. The video only plays while the chrome preset is on.
+logo caught a moving view. The video only plays while the chrome preset is on. A blur setting
+turns the mirror into brushed metal: the material averages a dozen samples of the footage along a
+spiral, spread as wide as the blur asks.
 
 ## The city of skills
 

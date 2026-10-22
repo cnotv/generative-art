@@ -99,7 +99,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     },
     shadowRadius: 1,
     ink: false,
-    reflection: 0
+    reflection: 0,
+    reflectionBlur: 0
   },
   rim: {
     label: 'Rim light',
@@ -124,7 +125,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     },
     shadowRadius: 6,
     ink: false,
-    reflection: 0
+    reflection: 0,
+    reflectionBlur: 0
   },
   cardstock: {
     label: 'Navy cardstock',
@@ -149,7 +151,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     },
     shadowRadius: 10,
     ink: false,
-    reflection: 0
+    reflection: 0,
+    reflectionBlur: 0
   },
   letterpress: {
     label: 'Letterpress',
@@ -174,7 +177,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     },
     shadowRadius: 10,
     ink: true,
-    reflection: 0
+    reflection: 0,
+    reflectionBlur: 0
   },
   chrome: {
     label: 'Chrome',
@@ -199,7 +203,8 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     },
     shadowRadius: 8,
     ink: false,
-    reflection: 0.9
+    reflection: 0.9,
+    reflectionBlur: 0.006
   }
 }
 export const DEFAULT_HERO_LOOK = 'cardstock'
@@ -211,6 +216,8 @@ export const REFLECTION_VIDEO = 'hero/skills-city-reflection.mp4'
  */
 export const REFLECTION_SPAN = 14
 export const REFLECTION_TILT = 0.25
+/** How many samples of the footage a blurred reflection averages. */
+export const REFLECTION_BLUR_TAPS = 12
 /** The reflection sways slowly side to side: how far, as a share of the footage, and how fast. */
 export const REFLECTION_SWAY = 0.08
 export const REFLECTION_SWAY_SPEED = 0.25

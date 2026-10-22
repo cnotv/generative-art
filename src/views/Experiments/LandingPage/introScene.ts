@@ -18,7 +18,8 @@ import {
   RIM_LIGHT_COLOR,
   RIM_LIGHT_POWER,
   REFLECTION_SPAN,
-  REFLECTION_TILT
+  REFLECTION_TILT,
+  REFLECTION_BLUR_TAPS
 } from './config'
 import type { LogoIntroPose, Room, LogoRest, SpotPlacement } from './types'
 
@@ -255,6 +256,8 @@ export interface CardShading {
   reflectionMap: THREE.IUniform<THREE.Texture | null>
   /** How far the reflection has swayed sideways, as a share of the footage. */
   reflectionShift: THREE.IUniform<number>
+  /** How far the reflection is blurred, as a share of the footage. */
+  reflectionBlur: THREE.IUniform<number>
 }
 
 /**
@@ -271,7 +274,8 @@ export const addCardShading = (material: THREE.MeshStandardMaterial): CardShadin
     rim: { value: 0 },
     reflection: { value: 0 },
     reflectionMap: { value: null },
-    reflectionShift: { value: 0 }
+    reflectionShift: { value: 0 },
+    reflectionBlur: { value: 0 }
   }
   const [lightX, lightY] = EMBOSS_LIGHT_DIRECTION
   material.onBeforeCompile = (shader) => {
@@ -281,10 +285,11 @@ export const addCardShading = (material: THREE.MeshStandardMaterial): CardShadin
     shader.uniforms.reflectionStrength = shading.reflection
     shader.uniforms.reflectionMap = shading.reflectionMap
     shader.uniforms.reflectionShift = shading.reflectionShift
+    shader.uniforms.reflectionBlur = shading.reflectionBlur
     shader.fragmentShader = shader.fragmentShader
       .replace(
         'void main() {',
-        'uniform float embossStrength;\nuniform float rimStrength;\nuniform vec3 rimColor;\nuniform float reflectionStrength;\nuniform sampler2D reflectionMap;\nuniform float reflectionShift;\nvoid main() {'
+        'uniform float embossStrength;\nuniform float rimStrength;\nuniform vec3 rimColor;\nuniform float reflectionStrength;\nuniform sampler2D reflectionMap;\nuniform float reflectionShift;\nuniform float reflectionBlur;\nvoid main() {'
       )
       .replace(
         '#include <normal_fragment_begin>',
@@ -303,7 +308,14 @@ export const addCardShading = (material: THREE.MeshStandardMaterial): CardShadin
         // right, and shifted by its tilt so bevels and sides catch a different part of it.
         vec2 mirrorUv = vec2(0.5, 0.5) + vec2(vViewPosition.x, -vViewPosition.y) / ${REFLECTION_SPAN.toFixed(1)}
           + normal.xy * ${REFLECTION_TILT.toFixed(2)} + vec2(reflectionShift, 0.0);
-        totalEmissiveRadiance += texture2D(reflectionMap, mirrorUv).rgb * reflectionStrength;`
+        // Blurred by averaging taps along a golden-angle spiral, spread as far as the blur asks.
+        vec3 reflected = vec3(0.0);
+        for (int tap = 0; tap < ${REFLECTION_BLUR_TAPS}; tap++) {
+          float spiral = float(tap) * 2.39996;
+          float reach = sqrt(float(tap) / ${REFLECTION_BLUR_TAPS}.0) * reflectionBlur;
+          reflected += texture2D(reflectionMap, mirrorUv + vec2(cos(spiral), sin(spiral)) * reach).rgb;
+        }
+        totalEmissiveRadiance += reflected / ${REFLECTION_BLUR_TAPS}.0 * reflectionStrength;`
       )
   }
   return shading
