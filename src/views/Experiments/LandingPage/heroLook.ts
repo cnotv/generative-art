@@ -243,3 +243,12 @@ export const refreshLookElements = (parts: HeroLookParts): void => {
   if (parts.spot.parent instanceof THREE.Scene)
     useSceneViewStore().adoptSceneLights(parts.spot.parent)
 }
+
+/**
+ * The preset after the given one, wrapping round to the first.
+ * @param current The preset showing now.
+ * @param names Every preset, in order.
+ * @returns The next preset's name.
+ */
+export const getNextLook = (current: string, names: string[]): string =>
+  names[(names.indexOf(current) + 1) % names.length]

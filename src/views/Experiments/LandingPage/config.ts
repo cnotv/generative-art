@@ -211,12 +211,12 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     label: 'Polished chrome',
     wallColor: 0x10151f,
     floorColor: 0x1a2030,
-    logoColor: 0xdfe4ec,
-    logoRoughness: 0.12,
+    logoColor: 0x13161e,
+    logoRoughness: 0,
     logoMetalness: 1,
     paper: false,
     embossStrength: 0,
-    rimStrength: 0.1,
+    rimStrength: 0,
     ambientIntensity: 0.6,
     key: { color: 0xffffff, intensity: 0.8, position: [-4, 6, 10] },
     spot: {
@@ -230,11 +230,17 @@ export const HERO_LOOKS: Record<string, HeroLook> = {
     },
     shadowRadius: 8,
     ink: false,
-    reflection: 0.9,
-    reflectionBlur: 0.1
+    reflection: 0.25,
+    reflectionBlur: 0.36
   }
 }
 export const DEFAULT_HERO_LOOK = 'cardstock'
+/**
+ * How far the logo or a letter must be from its place, in scene units, or turned from it, in
+ * radians, for its return to count as coming back from a knock.
+ */
+export const HERO_MOVED_DISTANCE = 0.05
+export const HERO_MOVED_ANGLE = 0.05
 /** A short loop of the skills city, played forward then back, that the chrome look mirrors. */
 export const REFLECTION_VIDEO = 'hero/skills-city-reflection.mp4'
 /**

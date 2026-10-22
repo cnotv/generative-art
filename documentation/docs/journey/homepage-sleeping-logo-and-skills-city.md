@@ -156,9 +156,11 @@ pixel of the screen.
 Each finish tried is kept as a preset, so they can be compared rather than remembered: the original
 lighting, the first pass with a rim, navy cardstock, a light letterpress card with the logo in navy
 ink, and two chromes reflecting the skills city: a dark satin one tuned by hand in the panel, with a
-faint blurred reflection, and a polished one that mirrors it clearly. A glossy take and a layered cut-paper look were tried too and dropped.
+faint blurred reflection, and a polished dark mirror, also tuned by hand, with a stronger one. A glossy take and a layered cut-paper look were tried too and dropped.
 The Config panel switches between them live, and an address such as `?look=letterpress` opens one
-directly. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
+directly. Knocking the logo or the letters also moves the hero on to the next look
+once they ease back into place, but only when something was actually knocked: the easing back runs
+every few seconds regardless, so it checks first whether any piece was moved or turned. Everything a preset sets, the lights, the wall and floor, the logo's colour, emboss, rim
 and paper, is also listed in the Elements panel, so a preset is a starting point to tune by hand
 rather than a fixed answer. The Lights section recognises its lights by name, so the hero's spot is
 named as the scene's spot light to join the ambient and key lights there instead of getting a row of

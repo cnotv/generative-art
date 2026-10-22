@@ -37,6 +37,8 @@ import {
   PAPER_WORLD_DENSITY,
   HERO_LOOKS,
   DEFAULT_HERO_LOOK,
+  HERO_MOVED_DISTANCE,
+  HERO_MOVED_ANGLE,
   HERO_SCROLL_DIMMING,
   SLEEP_YAW,
   INTRO_SEEN_KEY,
@@ -50,7 +52,7 @@ import {
   BUILD_NOTES
 } from './config'
 import type { LogoJumpPath, LogoRest, HeroLook, HeroLookParts } from './types'
-import { createHeroLook, registerLookElements, refreshLookElements } from './heroLook'
+import { createHeroLook, registerLookElements, refreshLookElements, getNextLook } from './heroLook'
 import { registerCameraProperties } from '@/utils/cameraProperties'
 import { cameraSchema } from '@/views/Tools/SceneEditor/config'
 import { useElementPropertiesStore } from '@/stores/elementProperties'
@@ -616,7 +618,9 @@ const registerPanels = ({
   ])
 }
 
-const createResetTimeline = (bodies: PhysicsBodies) => {
+// Every few seconds the logo and letters ease back to their places. When that brings back
+// something that was knocked away, onReturn is called, so the page can mark the moment.
+const createResetTimeline = (bodies: PhysicsBodies, onReturn: () => void) => {
   const timelineManager = createTimelineManager()
   let resetFrame = 0
   const resetStartPositions = new Map<THREE.Object3D, THREE.Vector3>()
@@ -631,6 +635,18 @@ const createResetTimeline = (bodies: PhysicsBodies) => {
       resetFrame = 0
       resetStartPositions.clear()
       resetStartRotations.clear()
+      const wasMoved = [...bodies.values()].some(({ body, originalPos }) => {
+        const { x, y, z } = body.translation()
+        const rotation = body.rotation()
+        const turned = scratchRot
+          .set(rotation.x, rotation.y, rotation.z, rotation.w)
+          .angleTo(identityQuat)
+        return (
+          originalPos.distanceTo(scratchPos.set(x, y, z)) > HERO_MOVED_DISTANCE ||
+          turned > HERO_MOVED_ANGLE
+        )
+      })
+      if (wasMoved) onReturn()
       bodies.forEach(({ body }, mesh) => {
         const pos = body.translation()
         const rot = body.rotation()
@@ -741,7 +757,10 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
   registerPanels({ camera, orbit, ambientLight, dirLight, spot })
   registerLookElements(lookParts)
 
-  const timelineManager = createResetTimeline(bodies)
+  // Each time the knocked logo or letters come back, the hero changes to the next look.
+  const timelineManager = createResetTimeline(bodies, () => {
+    heroConfig.value.look = getNextLook(heroConfig.value.look, Object.keys(HERO_LOOKS))
+  })
 
   const onResize = createResizeHandler(camera, renderer)
   const clock = new THREE.Clock()

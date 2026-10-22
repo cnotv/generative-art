@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { HERO_LOOKS, DEFAULT_HERO_LOOK } from './config'
+import { getNextLook } from './heroLook'
 
 describe('HERO_LOOKS', () => {
   it('keeps every attempt as its own preset, including the default', () => {
@@ -17,5 +18,18 @@ describe('HERO_LOOKS', () => {
       'chrome',
       'polishedChrome'
     ])
+  })
+})
+
+describe('getNextLook', () => {
+  it('moves to the next preset and wraps round after the last', () => {
+    // Arrange
+    const names = ['original', 'rim', 'chrome']
+
+    // Act
+    const sequence = ['original', 'rim', 'chrome'].map((name) => getNextLook(name, names))
+
+    // Assert
+    expect(sequence).toEqual(['rim', 'chrome', 'original'])
   })
 })
