@@ -178,3 +178,23 @@ one detail: the screen's content is keyed on the hovered district, so it is rebu
 its animation starts over. With nothing hovered it shows the section heading; with reduced motion requested
 it shows the text at once. The panel is hidden from screen readers, which get the same descriptions
 as a list.
+
+## Traces to the market
+
+![Circuit traces running from the island's tip down to each of the six market sectors](/img/homepage/sector-traces.webp)
+
+The sectors the products serve hang off the city like components on a circuit board: one trace
+per sector leaves the island's tip, and a pulse runs down each in turn. The traces are an SVG
+drawn behind the section, from where the sector cells actually are, and redrawn whenever the list
+changes size, so they follow the grid from three columns to two.
+
+The routing is what keeps them readable. Every column's traces share a lane in the gap to its
+left, never crossing a sector's content; a deeper cell's trace runs on the outer side of its lane,
+and the trace heading furthest out turns off the trunk highest. Under those two rules no two traces
+cross, whatever the grid's shape. Where a lane has to pass the heading on a phone, the heading sits
+on a plate of the page colour and the trace runs behind it.
+
+Two details are easy to get wrong. The cells are measured by their offsets, not their bounding
+boxes, because they slide in as they scroll into view and a box measured mid-slide would leave
+every trace short. And each pulse is a single dash on a path declared one unit long, so every
+pulse takes the same time to arrive whatever its trace's length.

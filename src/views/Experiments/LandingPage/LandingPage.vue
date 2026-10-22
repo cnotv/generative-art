@@ -12,6 +12,7 @@ import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
+import SectorTraces from './SectorTraces.vue'
 import {
   Landmark,
   RadioTower,
@@ -62,6 +63,7 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const skills = ref<HTMLElement | null>(null)
+const sectorList = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
 const ICONS: Record<string, Component> = {
   bank: Landmark,
@@ -868,9 +870,15 @@ onUnmounted(() => {
       <p class="sr-only">{{ OWNER_SUMMARY }}</p>
       <SkillsCity />
     </section>
-    <section class="landing-page__section" aria-labelledby="sectors-title">
-      <h2 id="sectors-title" class="landing-page__heading">Market knowledge</h2>
-      <ul class="landing-page__sectors">
+    <section
+      class="landing-page__section landing-page__section--sectors"
+      aria-labelledby="sectors-title"
+    >
+      <SectorTraces :list="sectorList" />
+      <h2 id="sectors-title" class="landing-page__heading landing-page__heading--plated">
+        Market knowledge
+      </h2>
+      <ul ref="sectorList" class="landing-page__sectors">
         <li v-for="sector in PRODUCT_SECTORS" :key="sector.title" class="landing-page__sector">
           <component
             :is="ICONS[sector.icon]"
@@ -1002,6 +1010,18 @@ onUnmounted(() => {
   padding: var(--spacing-16) var(--spacing-6);
 }
 
+.landing-page__section--sectors {
+  position: relative;
+}
+
+/* The traces to the sectors run behind the heading, which sits on a plate of the page colour. */
+.landing-page__heading--plated {
+  position: relative;
+  width: fit-content;
+  box-shadow: 0 0 0 var(--spacing-1) var(--color-canvas-overlay-surface);
+  background-color: var(--color-canvas-overlay-surface);
+}
+
 .landing-page__heading {
   margin: 0 0 var(--spacing-8);
   color: var(--color-canvas-overlay-accent);
@@ -1039,6 +1059,7 @@ onUnmounted(() => {
 }
 
 .landing-page__sectors {
+  position: relative;
   margin: 0;
   padding: 0;
   list-style: none;
