@@ -135,6 +135,18 @@ export const SECTOR_TRACE_ORIGIN_RISE = 104
 /** How far short of a sector's avatar its arrow stops, in pixels. */
 export const SECTOR_ARROW_GAP = 6
 
+/** The contour map behind the city and market: page colour, line and glow, all muted blues. */
+export const BACKDROP_BASE_COLOR = 0x141a24
+export const BACKDROP_LINE_COLOR = 0x26314a
+export const BACKDROP_GLOW_COLOR = 0x171e2c
+/** How many page pixels one unit of the noise field spans, and how many contour levels it has. */
+export const BACKDROP_SCALE = 520
+export const BACKDROP_LEVELS = 16
+/** The backdrop's dot grid, in page pixels: the gap between dot centres and a dot's radius. */
+export const BACKDROP_DOT_SPACING = 8
+export const BACKDROP_DOT_RADIUS = 1
+export const BACKDROP_MAX_PIXEL_RATIO = 1.5
+
 export const SKILLS_CITY_MODEL = 'skills-city.glb'
 /** Direction the isometric camera looks at the city from, matching the Blender preview. */
 export const CITY_VIEW_DIRECTION = [14, 18, 20] as const

@@ -13,6 +13,7 @@ import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
 import MarketSectors from './MarketSectors.vue'
+import ContourBackdrop from './ContourBackdrop.vue'
 import { Github, Linkedin, Smartphone } from 'lucide-vue-next'
 import { createTimelineManager, animateTimeline } from '@webgamekit/animation'
 import { registerLightProperties } from '@/utils/lightProperties'
@@ -55,6 +56,8 @@ import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 const PROFILE_ICONS: Record<string, Component> = { linkedin: Linkedin, github: Github }
+const skills = ref<HTMLElement | null>(null)
+const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
 const route = useRoute()
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -834,36 +837,54 @@ onUnmounted(() => {
       <canvas ref="canvas" class="landing-page__canvas" />
       <h1 class="landing-page__name">{{ OWNER_NAME }}</h1>
       <p class="landing-page__profession">{{ OWNER_PROFESSION }}</p>
-      <p class="landing-page__turn">
-        <Smartphone class="landing-page__turn-icon" aria-hidden="true" />
-        Turn your phone for the best view
-      </p>
-    </header>
-    <section id="skills" class="landing-page__section" aria-labelledby="skills-title">
-      <!-- The display on the city's sign shows these; they stay in the page for screen readers and search. -->
-      <h2 id="skills-title" class="sr-only">What I work on</h2>
-      <p class="sr-only">{{ OWNER_SUMMARY }}</p>
-      <SkillsCity />
-    </section>
-    <MarketSectors class="landing-page__section" />
-    <footer class="landing-page__footer">
       <a
-        v-for="profile in OWNER_PROFILES"
-        :key="profile.label"
-        class="landing-page__profile"
-        :href="profile.url"
-        :aria-label="profile.label"
-        :title="profile.label"
-        target="_blank"
-        rel="me noopener"
+        class="landing-page__scroll"
+        href="#skills"
+        aria-label="Scroll to skills"
+        @click.prevent="scrollToSkills"
       >
-        <component
-          :is="PROFILE_ICONS[profile.icon]"
-          class="landing-page__profile-icon"
-          aria-hidden="true"
-        />
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="landing-page__scroll-icon">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
       </a>
-    </footer>
+    </header>
+    <div class="landing-page__content">
+      <ContourBackdrop />
+      <section
+        id="skills"
+        ref="skills"
+        class="landing-page__section"
+        aria-labelledby="skills-title"
+      >
+        <!-- The display on the city's sign shows these; they stay in the page for screen readers and search. -->
+        <h2 id="skills-title" class="sr-only">What I work on</h2>
+        <p class="sr-only">{{ OWNER_SUMMARY }}</p>
+        <p class="landing-page__turn">
+          <Smartphone class="landing-page__turn-icon" aria-hidden="true" />
+          Turn your phone to explore the city
+        </p>
+        <SkillsCity />
+      </section>
+      <MarketSectors class="landing-page__section" />
+      <footer class="landing-page__footer">
+        <a
+          v-for="profile in OWNER_PROFILES"
+          :key="profile.label"
+          class="landing-page__profile"
+          :href="profile.url"
+          :aria-label="profile.label"
+          :title="profile.label"
+          target="_blank"
+          rel="me noopener"
+        >
+          <component
+            :is="PROFILE_ICONS[profile.icon]"
+            class="landing-page__profile-icon"
+            aria-hidden="true"
+          />
+        </a>
+      </footer>
+    </div>
     <LoadingOverlay :visible="loadingVisible" :stage="loadingStage" :detail="loadingDetail" />
   </main>
 </template>
@@ -893,13 +914,15 @@ onUnmounted(() => {
 }
 
 .landing-page__name,
-.landing-page__profession {
+.landing-page__profession,
+.landing-page__scroll {
   opacity: 0;
   transition: opacity var(--transition-game-phase) ease-out;
 }
 
 .landing-page--awake .landing-page__name,
-.landing-page--awake .landing-page__profession {
+.landing-page--awake .landing-page__profession,
+.landing-page--awake .landing-page__scroll {
   opacity: 1;
 }
 
@@ -931,34 +954,33 @@ onUnmounted(() => {
   letter-spacing: 0.35em;
 }
 
-.landing-page__turn {
-  display: none;
+.landing-page__scroll {
+  position: absolute;
+  bottom: var(--spacing-6);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-2);
+  color: var(--color-canvas-overlay-muted);
 }
 
-/* A phone held upright crops the room to a sliver, so it suggests turning to landscape. */
-@media (orientation: portrait) and (width <= 640px) {
-  .landing-page__turn {
-    display: flex;
-    position: absolute;
-    top: var(--spacing-16);
-    left: 50%;
-    transform: translateX(-50%);
-    align-items: center;
-    margin: 0;
-    gap: var(--spacing-2);
-    color: var(--color-canvas-overlay-muted);
-    font-size: var(--font-size-2xs);
-    letter-spacing: 0.15em;
-    white-space: nowrap;
-    text-shadow: var(--shadow-text-canvas-overlay);
-    text-transform: uppercase;
-    pointer-events: none;
-  }
+.landing-page:not(.landing-page--awake) .landing-page__scroll {
+  pointer-events: none;
 }
 
-.landing-page__turn-icon {
-  width: var(--spacing-6);
-  height: var(--spacing-6);
+.landing-page__scroll:hover,
+.landing-page__scroll:focus-visible {
+  color: var(--color-canvas-overlay-accent);
+}
+
+.landing-page__scroll-icon {
+  display: block;
+  width: var(--spacing-8);
+  height: var(--spacing-8);
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .landing-page__section {
@@ -968,7 +990,40 @@ onUnmounted(() => {
   padding: var(--spacing-16) var(--spacing-6);
 }
 
+/* Positioned so it paints over the contour map behind the content. */
+.landing-page__turn {
+  display: none;
+  position: relative;
+}
+
+/* Held upright, a phone shows the city too small to read its districts, so it suggests landscape. */
+@media (orientation: portrait) and (width <= 640px) {
+  .landing-page__turn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 0 var(--spacing-4);
+    gap: var(--spacing-2);
+    color: var(--color-canvas-overlay-muted);
+    font-size: var(--font-size-2xs);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+}
+
+.landing-page__turn-icon {
+  width: var(--spacing-6);
+  height: var(--spacing-6);
+}
+
+/* Everything under the hero, over the contour map that sticks behind it. */
+.landing-page__content {
+  position: relative;
+}
+
+/* Positioned so it paints over the sticky map, like the sections above it. */
 .landing-page__footer {
+  position: relative;
   display: flex;
   justify-content: center;
   padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
@@ -993,6 +1048,10 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .landing-page__scroll-icon {
+    animation: landing-page-bob 2s ease-in-out infinite;
+  }
+
   .landing-page__turn-icon {
     animation: landing-page-turn 2.4s ease-in-out infinite;
   }
@@ -1003,6 +1062,12 @@ onUnmounted(() => {
   30%,
   70% {
     transform: rotate(-90deg);
+  }
+}
+
+@keyframes landing-page-bob {
+  50% {
+    transform: translateY(var(--spacing-1-5));
   }
 }
 </style>

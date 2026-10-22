@@ -31,9 +31,8 @@ comes from a short list of phases, each describing only its own slice of the mot
 | Settle       | 1.9 to 2.8           | a damped rock on landing; the letters appear under it           |
 | Lights       | 0.9 to 2.8           | the room brightens throughout, ending in the awake look         |
 
-The intro never holds the page: scrolling works from the first frame, and there is no scroll
-arrow, which misbehaved on phones. A phone held upright crops the room to a sliver, so it shows a
-small phone icon tipping over to suggest landscape. The name and profession use the bold face of
+The intro never holds the page: scrolling works from the first frame, and the arrow at the
+bottom is a shortcut rather than the way out. The name and profession use the bold face of
 the city's signs, tying the hero to the section below.
 
 Treating the intro as a pure function paid off three times. It is testable without a renderer.
@@ -220,3 +219,23 @@ filled the whole canvas with opaque black until the colour was set to transparen
 
 The lines measure the avatars the same way, once per resize, by their offsets summed up through
 every offset parent to the section, so a transformed ancestor on the way cannot leave them short.
+
+## A map behind it all
+
+![The dotted contour map behind the market avatars, brightened here so it shows in print](/img/homepage/contour-backdrop.webp)
+
+Below the hero, the city and the market stand on a faint topographic map: contours of a slowly
+drifting noise field, drawn in dots to match the lines to the market, and kept close to the page
+colour so it reads as texture rather than content. It is a single shader on a canvas the size of
+the screen that sticks behind the content as it scrolls past, and shifts the map by how far the
+content has moved, so a long page costs no more than one screen.
+
+Two details made it work. Each dot cell asks whether a contour passes through it in screen pixels,
+not in height, so contours stay one dot wide on steep and flat ground alike; a height threshold
+drew thin rows on slopes and broad clumps on the flats. And a shader material receives its colours
+in linear space and must convert them back for the screen, or the whole map comes out darker than
+the colours it was given.
+
+On a phone held upright the city is too small to read its districts, so a small phone icon above
+it tips over to suggest landscape. It sits outside the city's own frame: inside, it would push the
+canvas down and misplace the screen display, which is positioned as a share of that frame.
