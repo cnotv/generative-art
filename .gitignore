@@ -35,3 +35,6 @@ coverage
 .env
 # Throwaway checkouts of this repo, created for isolated agent work
 .claude/worktrees/
+
+# Python bytecode from the Blender scripts
+__pycache__/
