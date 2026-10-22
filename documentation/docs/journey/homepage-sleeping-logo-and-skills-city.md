@@ -34,7 +34,9 @@ comes from a short list of phases, each describing only its own slice of the mot
 The intro never holds the page: scrolling works from the first frame, and the arrow at the
 bottom is a shortcut rather than the way out. On a phone that also meant giving touches on
 the hero back to the page, since the disabled orbit controls still claimed them, and widening the
-hero's view on an upright screen, where a fixed height cut the logo off at both sides. The name and profession use the bold face of
+hero's view on an upright screen, where a fixed height cut the logo off at both sides. Scrolling away dims the room's lights first, then closes a
+cover in the next section's colour over the hero, so the hero dissolves into the page below rather
+than ending at a hard edge. The name and profession use the bold face of
 the city's signs, tying the hero to the section below.
 
 Treating the intro as a pure function paid off three times. It is testable without a renderer.

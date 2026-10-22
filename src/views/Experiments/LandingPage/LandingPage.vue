@@ -12,7 +12,7 @@ import { getTools, getModel, getPhysic } from '@webgamekit/threejs'
 import type { LoadProgress } from '@webgamekit/threejs'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import SkillsCity from './SkillsCity.vue'
-import { getHeroFrustum } from './heroFrame'
+import { getHeroFrustum, getHeroScrollFade } from './heroFrame'
 import MarketSectors from './MarketSectors.vue'
 import ContourBackdrop from './ContourBackdrop.vue'
 import { Github, Linkedin, Smartphone } from 'lucide-vue-next'
@@ -35,6 +35,8 @@ import {
   SLEEP_AMBIENT_INTENSITY,
   SLEEP_DIRECTIONAL_INTENSITY,
   DIRECTIONAL_LIGHT_POSITION,
+  HERO_SCROLL_DIMMING,
+  SPOT_INTENSITY,
   ROOM_WALL_COLOR,
   ROOM_ROUGHNESS,
   SLEEP_YAW,
@@ -57,6 +59,9 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig, createReactiveConfig } from '@/stores/viewConfig'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+const page = ref<HTMLElement | null>(null)
+const hero = ref<HTMLElement | null>(null)
+const heroCover = ref<HTMLElement | null>(null)
 const PROFILE_ICONS: Record<string, Component> = { linkedin: Linkedin, github: Github }
 const skills = ref<HTMLElement | null>(null)
 const scrollToSkills = (): void => skills.value?.scrollIntoView({ behavior: 'smooth' })
@@ -813,7 +818,20 @@ const init = async (canvasElement: HTMLCanvasElement): Promise<void> => {
     if (clock.elapsedTime >= AUTO_WAKE_DELAY) wakeUp()
     if (introStage.value !== 'awake') {
       updateIntro(wokenAt === null ? null : clock.elapsedTime - wokenAt)
+    } else {
+      ambientLight.intensity = AMBIENT_INTENSITY
+      dirLight.intensity = DIR_LIGHT_INTENSITY
     }
+    // Scrolling away dims the room and then closes a cover of the next section's colour over it.
+    const fade = getHeroScrollFade(
+      page.value?.scrollTop ?? 0,
+      hero.value?.clientHeight ?? 0,
+      HERO_SCROLL_DIMMING
+    )
+    ambientLight.intensity *= fade.light
+    dirLight.intensity *= fade.light
+    spot.intensity = SPOT_INTENSITY * fade.light
+    if (heroCover.value) heroCover.value.style.opacity = String(fade.cover)
 
     bodies.forEach(({ body }, mesh) => {
       const pos = body.translation()
@@ -854,8 +872,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="landing-page" :class="{ 'landing-page--awake': introStage === 'awake' }">
-    <header class="landing-page__hero">
+  <main ref="page" class="landing-page" :class="{ 'landing-page--awake': introStage === 'awake' }">
+    <header ref="hero" class="landing-page__hero">
       <canvas ref="canvas" class="landing-page__canvas" />
       <h1 class="landing-page__name">{{ OWNER_NAME }}</h1>
       <p class="landing-page__profession">{{ OWNER_PROFESSION }}</p>
@@ -869,6 +887,7 @@ onUnmounted(() => {
           <path d="M6 9l6 6 6-6" />
         </svg>
       </a>
+      <div ref="heroCover" class="landing-page__hero-cover" aria-hidden="true" />
     </header>
     <div class="landing-page__content">
       <ContourBackdrop />
@@ -1050,6 +1069,14 @@ onUnmounted(() => {
 }
 
 /* Everything under the hero, over the contour map that sticks behind it. */
+.landing-page__hero-cover {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-color: var(--color-canvas-overlay-surface);
+  pointer-events: none;
+}
+
 .landing-page__content {
   position: relative;
 }
