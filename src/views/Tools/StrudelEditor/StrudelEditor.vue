@@ -21,6 +21,7 @@ const {
   editorStatus,
   errorMessage,
   exampleOptions,
+  examples,
   electroTunes,
   logEntries,
   activeTab,
@@ -130,9 +131,11 @@ onUnmounted(() => {
           <WelcomeTab v-if="activeTab === 'welcome'" />
           <PatternsTab
             v-else-if="activeTab === 'patterns'"
+            :examples="examples"
             :electro-tunes="electroTunes"
             :current-code="patternCode"
-            @select="onElectroTuneSelected"
+            @select-example="onExampleSelected"
+            @select-tune="onElectroTuneSelected"
           />
           <ImportTab
             v-else-if="activeTab === 'import'"

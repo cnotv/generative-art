@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StrudelEditor from './StrudelEditor.vue'
-import { ELECTRO_TUNES } from './config'
+import { ELECTRO_TUNES, STRUDEL_EXAMPLES } from './config'
 import type { StrudelCodeMirrorOptions } from './types'
 
 // CodeMirror and the Strudel engine only load in a real browser; the browser tests cover
@@ -136,7 +136,7 @@ describe('StrudelEditor view', () => {
     expect(welcomeContent.exists()).toBe(true)
   })
 
-  it('switches to the patterns tab and lists electro tunes', async () => {
+  it('switches to the patterns tab and lists the examples, then the tunes', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
@@ -147,26 +147,36 @@ describe('StrudelEditor view', () => {
     await patternsTab?.trigger('click')
 
     // Assert
-    expect(wrapper.find('.strudel-patterns').exists()).toBe(true)
-    const patternButtons = wrapper.findAll('.strudel-patterns__button')
-    expect(patternButtons.length).toBe(ELECTRO_TUNES.length)
+    expect(wrapper.findAll('.strudel-patterns__group-title').map((title) => title.text())).toEqual([
+      'Examples',
+      'Tunes'
+    ])
+    expect(wrapper.findAll('.strudel-patterns__button').map((button) => button.text())).toEqual([
+      ...STRUDEL_EXAMPLES.map((example) => example.label),
+      ...ELECTRO_TUNES.map((tune) => tune.label)
+    ])
   })
 
-  it('loads an electro tune into the editor when clicked', async () => {
+  it.each([
+    ['an example', STRUDEL_EXAMPLES.at(-1)],
+    ['an electro tune', ELECTRO_TUNES[0]]
+  ])('loads %s into the editor when clicked', async (_kind, pattern) => {
     // Arrange
     const wrapper = await mountEditorView()
     const patternsTab = wrapper
       .findAll('.strudel-editor__tab')
       .find((tab) => tab.text() === 'patterns')
     await patternsTab?.trigger('click')
-    const firstTuneButton = wrapper.find('.strudel-patterns__button')
+    const patternButton = wrapper
+      .findAll('.strudel-patterns__button')
+      .find((button) => button.text() === pattern?.label)
 
     // Act
-    await firstTuneButton.trigger('click')
+    await patternButton?.trigger('click')
 
     // Assert
     const codeField = wrapper.find<HTMLTextAreaElement>('.fake-strudel-code')
-    expect(codeField.element.value).toBe(ELECTRO_TUNES[0].code)
+    expect(codeField.element.value).toBe(pattern?.code)
   })
 
   it('switches to the console tab', async () => {

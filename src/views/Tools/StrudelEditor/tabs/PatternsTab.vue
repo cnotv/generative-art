@@ -3,30 +3,41 @@ import { computed, ref } from 'vue'
 import type { StrudelExample } from '../types'
 
 const props = defineProps<{
+  examples: StrudelExample[]
   electroTunes: StrudelExample[]
   currentCode: string
 }>()
 
 const emit = defineEmits<{
-  select: [tuneId: string]
+  selectExample: [exampleId: string]
+  selectTune: [tuneId: string]
   play: []
 }>()
 
 const searchQuery = ref('')
 
-const filteredTunes = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
-  if (query.length === 0) {
-    return props.electroTunes
-  }
-  return props.electroTunes.filter(
-    (tune) => tune.label.toLowerCase().includes(query) || tune.code.toLowerCase().includes(query)
-  )
-})
+const matchesSearch = (pattern: StrudelExample, query: string): boolean =>
+  query.length === 0 ||
+  pattern.label.toLowerCase().includes(query) ||
+  pattern.code.toLowerCase().includes(query)
 
-const onTuneClick = (tuneId: string): void => {
-  emit('select', tuneId)
-}
+const patternGroups = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  return [
+    {
+      id: 'examples',
+      title: 'Examples',
+      patterns: props.examples.filter((example) => matchesSearch(example, query)),
+      select: (exampleId: string) => emit('selectExample', exampleId)
+    },
+    {
+      id: 'tunes',
+      title: 'Tunes',
+      patterns: props.electroTunes.filter((tune) => matchesSearch(tune, query)),
+      select: (tuneId: string) => emit('selectTune', tuneId)
+    }
+  ].filter((group) => group.patterns.length > 0)
+})
 </script>
 
 <template>
@@ -38,19 +49,29 @@ const onTuneClick = (tuneId: string): void => {
       placeholder="Search patterns..."
       aria-label="Search patterns"
     />
-    <ul class="strudel-patterns__list">
-      <li
-        v-for="tune in filteredTunes"
-        :key="tune.id"
-        class="strudel-patterns__item"
-        :class="{ 'strudel-patterns__item--active': tune.code === currentCode }"
-      >
-        <button class="strudel-patterns__button" type="button" @click="onTuneClick(tune.id)">
-          {{ tune.label }}
-        </button>
-      </li>
-    </ul>
-    <p v-if="filteredTunes.length === 0" class="strudel-patterns__empty">No patterns found</p>
+    <section
+      v-for="group in patternGroups"
+      :key="group.id"
+      class="strudel-patterns__group"
+      :aria-labelledby="`strudel-patterns-${group.id}`"
+    >
+      <h3 :id="`strudel-patterns-${group.id}`" class="strudel-patterns__group-title">
+        {{ group.title }}
+      </h3>
+      <ul class="strudel-patterns__list">
+        <li
+          v-for="pattern in group.patterns"
+          :key="pattern.id"
+          class="strudel-patterns__item"
+          :class="{ 'strudel-patterns__item--active': pattern.code === currentCode }"
+        >
+          <button class="strudel-patterns__button" type="button" @click="group.select(pattern.id)">
+            {{ pattern.label }}
+          </button>
+        </li>
+      </ul>
+    </section>
+    <p v-if="patternGroups.length === 0" class="strudel-patterns__empty">No patterns found</p>
   </div>
 </template>
 
@@ -71,6 +92,20 @@ const onTuneClick = (tuneId: string): void => {
   color: var(--color-foreground);
   font-size: var(--font-size-md);
   box-sizing: border-box;
+}
+
+.strudel-patterns__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.strudel-patterns__group-title {
+  margin: 0;
+  padding: 0 var(--spacing-3);
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
 }
 
 .strudel-patterns__list {

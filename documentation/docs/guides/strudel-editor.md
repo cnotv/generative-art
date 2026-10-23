@@ -8,8 +8,9 @@ The Strudel Editor at `/tools/StrudelEditor` reproduces the strudel.cc player: p
 edit the code, and press Play. A bottom panel carries the seven strudel.cc tabs plus an import tab:
 
 - **welcome**: intro and about
-- **patterns**: the shipped electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk),
-  plus Bike by Autechre, typed in by hand from a score and only approximate
+- **patterns**: the examples, the same ones the Example pattern menu offers, then the shipped
+  electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
+  typed in by hand from a score and only approximate
 - **import**: turn an MP3 or other audio file into a pattern (below)
 - **sounds**: sound browser
 - **reference**: function quick list
@@ -41,13 +42,17 @@ here unchanged:
 
 ![Inline sliders, pianoroll and scope while the Sliders and scopes example plays](/img/strudel-editor/inline-widgets.webp)
 
-The **Sliders and scopes** example in the pattern picker shows all of them at once.
+The **Sliders and scopes** example shows all of them at once.
 
-Five more examples in the picker show one visual each: **Punchcard drums**, **Spiral**, **Pitch
-wheel**, **Spectrum** and **Pianoroll behind the code**. **Punchcard vs pianoroll** is the example
-from strudel.cc's visual feedback guide: `._punchcard()` draws what everything chained after it
-does, so a later `.color()` shows, while `._pianoroll()` draws the pattern as it stood at the call. Each passes the visual a colour through
-`.color()`, and each is a starting point for a visual of your own.
+Five more examples show one visual each: **Punchcard drums**, **Spiral**, **Pitch wheel**,
+**Spectrum** and **Pianoroll behind the code**. Each passes the visual a colour through
+`.color()`, and each is a starting point for a visual of your own. Two more come from strudel.cc's
+visual feedback guide:
+
+- **Punchcard vs pianoroll**: `._punchcard()` draws what everything chained after it does, so a
+  later `.color()` shows, while `._pianoroll()` draws the pattern as it stood at the call.
+- **Scope**: the guide's `s("sawtooth")._scope()`, then a second scope sized with its `thickness`
+  and `scale` options. A scope ignores a `color` option and reads the pattern's `.color()`.
 
 ![Punchcard drums, Spiral and Pitch wheel above Spectrum and Pianoroll behind the code, each playing](/img/strudel-editor/visual-examples.webp)
 

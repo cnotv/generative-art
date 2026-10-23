@@ -61,6 +61,7 @@ type StrudelEditorState = StrudelTranscriptionState & {
   editorStatus: Ref<StrudelEditorStatus>
   errorMessage: Ref<string>
   exampleOptions: StrudelExampleOption[]
+  examples: StrudelExample[]
   electroTunes: StrudelExample[]
   logEntries: Ref<StrudelLogEntry[]>
   activeTab: Ref<StrudelTabId>
@@ -219,6 +220,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     editorStatus,
     errorMessage,
     exampleOptions: listStrudelExampleOptions(exampleList),
+    examples: exampleList,
     electroTunes: ELECTRO_TUNES,
     logEntries,
     activeTab,
