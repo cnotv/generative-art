@@ -320,6 +320,8 @@ stack(
 ]
 
 export const DEFAULT_STRUDEL_EXAMPLE_ID = 'first-beat'
+/** Where the code on screen is kept between visits. */
+export const STRUDEL_SAVED_CODE_STORAGE_KEY = 'strudel-editor-code'
 
 /**
  * Classic TR-909 style kit the shipped examples play. Loaded once before the first

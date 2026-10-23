@@ -1,7 +1,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StrudelEditor from './StrudelEditor.vue'
-import { ELECTRO_TUNES, STRUDEL_EXAMPLES } from './config'
+import { ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_SAVED_CODE_STORAGE_KEY } from './config'
 import type { StrudelCodeMirrorOptions } from './types'
 
 // CodeMirror and the Strudel engine only load in a real browser; the browser tests cover
@@ -31,6 +31,11 @@ const clearLocationHash = (): void => {
   window.history.replaceState(null, '', window.location.pathname)
 }
 
+const clearSavedState = (): void => {
+  clearLocationHash()
+  localStorage.clear()
+}
+
 const readEditorCode = (wrapper: Awaited<ReturnType<typeof mountEditorView>>): string =>
   wrapper.find<HTMLTextAreaElement>('.fake-strudel-code').element.value
 
@@ -44,7 +49,7 @@ const mountEditorView = async () => {
 }
 
 describe('StrudelEditor view', () => {
-  afterEach(clearLocationHash)
+  afterEach(clearSavedState)
 
   it('renders the code, one play button above it and the license note', async () => {
     // Arrange
@@ -183,6 +188,25 @@ describe('StrudelEditor view', () => {
 
     // Assert
     expect(readEditorCode(wrapper)).toBe(ELECTRO_TUNES[0].code)
+  })
+
+  it.each([
+    ['the code saved on the last visit', '', 's("cp*3")'],
+    [
+      'the pattern its address names, over saved code',
+      `#${ELECTRO_TUNES[0].id}`,
+      ELECTRO_TUNES[0].code
+    ]
+  ])('opens on %s', async (_case, hash, expectedCode) => {
+    // Arrange
+    localStorage.setItem(STRUDEL_SAVED_CODE_STORAGE_KEY, 's("cp*3")')
+    window.history.replaceState(null, '', `${window.location.pathname}${hash}`)
+
+    // Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    expect(readEditorCode(wrapper)).toBe(expectedCode)
   })
 
   it('keeps the default example for an anchor that names no pattern', async () => {

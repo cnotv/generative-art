@@ -5,11 +5,17 @@ sidebar_position: 25
 # Live-coding music with Strudel
 
 The Strudel Editor at `/tools/StrudelEditor` reproduces the strudel.cc player: pick a pattern,
-edit the code, and press the play button above the editor, which turns into a stop button
-while the pattern plays. Loading another pattern stops the one playing. Editing the code while it plays turns the button into
-**Update**, which swaps the playing pattern, and its visuals, for the edited code; Ctrl+Enter
-does the same. Code that fails to run stops playback rather than leave the old pattern going. A panel carries the seven strudel.cc tabs plus an import
-tab:
+edit the code, and press the play button above the editor.
+
+- The button reads **Stop** while the pattern plays, and **Update** once the code has been
+  edited since it started; Update, like Ctrl+Enter, swaps the playing pattern and its visuals
+  for the edited code. Code that fails to run stops playback rather than leave the old pattern
+  going, and loading another pattern stops the one playing.
+- The code is saved to the browser's local storage as you type, so a refresh or a later visit
+  opens where you left off. An address naming a pattern opens that pattern instead, and picking
+  one replaces the saved code.
+
+A panel carries the seven strudel.cc tabs plus an import tab:
 
 - **welcome**: intro and about
 - **patterns**: the examples, then the shipped

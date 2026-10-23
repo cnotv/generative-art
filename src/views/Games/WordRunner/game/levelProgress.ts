@@ -1,4 +1,4 @@
-import { readStorage, writeStorage } from './storage'
+import { readStorage, writeStorage } from '@/utils/storage'
 
 const STORAGE_KEY = 'word-runner-progress'
 

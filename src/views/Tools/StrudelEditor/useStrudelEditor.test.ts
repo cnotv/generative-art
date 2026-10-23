@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { nextTick } from 'vue'
 import {
   DEFAULT_SAMPLE_BANK,
   DEFAULT_STRUDEL_EXAMPLE_ID,
+  STRUDEL_SAVED_CODE_STORAGE_KEY,
   ELECTRO_TUNES,
   STRUDEL_EXAMPLES,
   STRUDEL_TABS
@@ -378,6 +380,41 @@ describe('loadDefaultStrudelPlayback', () => {
 })
 
 describe('useStrudelEditor', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it.each([
+    ['the saved code', 's("hh*16")', 's("hh*16")'],
+    ['the default example, with nothing saved', null, 's("bd sd")']
+  ])('opens on %s', (_case, savedCode, expectedCode) => {
+    // Arrange
+    if (savedCode !== null) {
+      localStorage.setItem(STRUDEL_SAVED_CODE_STORAGE_KEY, savedCode)
+    }
+
+    // Act
+    const { patternCode } = useStrudelEditor({ initialExamples: buildExampleList() })
+
+    // Assert
+    expect(patternCode.value).toBe(expectedCode)
+  })
+
+  it.each([
+    ['typed code', 'updatePatternCode', 's("cp*3")', 's("cp*3")'],
+    ['a picked example', 'selectExample', 'four-floor', 's("bd*4")']
+  ] as const)('saves %s to local storage', async (_case, action, argument, expectedSaved) => {
+    // Arrange
+    const editor = useStrudelEditor({ initialExamples: buildExampleList() })
+
+    // Act
+    editor[action](argument)
+    await nextTick()
+
+    // Assert
+    expect(localStorage.getItem(STRUDEL_SAVED_CODE_STORAGE_KEY)).toBe(expectedSaved)
+  })
+
   it('starts on the default example code', () => {
     // Arrange
     const exampleList = buildExampleList()

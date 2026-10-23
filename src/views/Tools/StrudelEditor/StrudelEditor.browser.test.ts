@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { page, userEvent } from 'vitest/browser'
 // The app's global styles size the nav and lock the page, which the phone layout depends on.
@@ -69,6 +69,33 @@ const encodeMonoWav = (samples: Float32Array, sampleRate: number): Blob => {
 }
 
 describe('StrudelEditor audible playback', () => {
+  // The editor saves its code to local storage, which would carry one test's code into the next.
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('brings back the code typed before the editor was closed', { timeout: 30000 }, async () => {
+    // Arrange
+    const firstVisit = mount(StrudelEditor, { attachTo: document.body })
+    await page.getByRole('textbox', { name: 'Live code pattern' }).fill('s("cp*3").room(.4)')
+    firstVisit.unmount()
+
+    // Act
+    const secondVisit = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(readEditorCode()).toBe('s("cp*3").room(.4)')
+        },
+        { timeout: 15000 }
+      )
+    } finally {
+      secondVisit.unmount()
+    }
+  })
+
   it('starts real buffer playback with no missing sounds', { timeout: 90000 }, async () => {
     // Arrange: count scheduled audio buffers and capture engine errors.
     let bufferStartCount = 0

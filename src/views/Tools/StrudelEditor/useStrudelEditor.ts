@@ -1,6 +1,13 @@
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
-import { DEFAULT_STRUDEL_EXAMPLE_ID, ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_TABS } from './config'
+import { readStorage, writeStorage } from '@/utils/storage'
+import {
+  DEFAULT_STRUDEL_EXAMPLE_ID,
+  ELECTRO_TUNES,
+  STRUDEL_EXAMPLES,
+  STRUDEL_SAVED_CODE_STORAGE_KEY,
+  STRUDEL_TABS
+} from './config'
 import type {
   StrudelEditorHandle,
   StrudelEditorStatus,
@@ -99,7 +106,9 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   const playbackLoader = editorOptions?.playbackLoader ?? loadDefaultStrudelPlayback
 
   const selectedExampleId = ref(defaultExample?.id ?? '')
-  const patternCode = ref(defaultExample?.code ?? '')
+  // The code from the last visit, so a refresh or a closed tab loses nothing.
+  const patternCode = ref(readStorage(STRUDEL_SAVED_CODE_STORAGE_KEY) ?? defaultExample?.code ?? '')
+  watch(patternCode, (code) => writeStorage(STRUDEL_SAVED_CODE_STORAGE_KEY, code))
   const editorStatus = ref<StrudelEditorStatus>('idle')
   const errorMessage = ref('')
   const playbackReference = ref<StrudelPlayback | null>(null)
