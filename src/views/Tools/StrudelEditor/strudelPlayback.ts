@@ -9,6 +9,7 @@ import type {
 type UnknownCallable = (...callArguments: unknown[]) => unknown
 
 type ReplCallbacks = {
+  beforeEval: () => void
   onEvalError: (error: unknown) => void
   afterEval: (evaluation: unknown) => void
   onToggle: (started: unknown) => void
@@ -163,6 +164,24 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
  * @param hooks - the editor callbacks to report frames to
  * @returns the Drawer, started and stopped with the scheduler
  */
+/**
+ * `.pianoroll()`, `.scope()` and the other visuals each run their own animation, which an
+ * evaluation that no longer calls them never stops, so they kept drawing after their code was
+ * gone. strudel.cc clears them before every evaluation and on stop, and so does this; only
+ * while the editor's canvas exists, since `cleanupDraw` puts a full-window canvas over the
+ * page when it finds none.
+ * @param hooks - the editor callbacks, which report whether its canvas is there
+ * @returns a function that stops and clears every visual
+ */
+const createVisualsCleanup = async (hooks: StrudelPlaybackHooks): Promise<() => void> => {
+  const { cleanupDraw } = await import('@strudel/draw')
+  return () => {
+    if (hooks.getDrawContext() !== null) {
+      cleanupDraw(true)
+    }
+  }
+}
+
 const createPlaybackDrawer = async (hooks: StrudelPlaybackHooks) => {
   const { Drawer } = await import('@strudel/draw')
   return new Drawer((haps, time, _drawer, painters) => {
@@ -194,9 +213,11 @@ export const loadDefaultStrudelPlayback = async (
   const audioContext: unknown = await engine.contextGetter()
   await resumeAudioContext(audioContext)
   const drawer = await createPlaybackDrawer(hooks)
+  const cleanupVisuals = await createVisualsCleanup(hooks)
   let replScheduler: unknown = null
   let latestEvaluationError: unknown = null
   const callbacks: ReplCallbacks = {
+    beforeEval: cleanupVisuals,
     // The REPL reports a failed evaluation here and never rejects, so a typo would
     // otherwise read as playing.
     onEvalError: (error) => {
@@ -213,6 +234,7 @@ export const loadDefaultStrudelPlayback = async (
         return
       }
       drawer.stop()
+      cleanupVisuals()
       hooks.onStopped()
     }
   }

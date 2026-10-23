@@ -29,6 +29,9 @@ const hasPaintedPixels = (canvas: HTMLCanvasElement | null): boolean => {
 const readExampleCode = (exampleId: string): string =>
   STRUDEL_EXAMPLES.find((example) => example.id === exampleId)?.code ?? ''
 
+// Long enough for a leftover animation loop to have drawn several frames.
+const VISUAL_SETTLE_MS = 1000
+
 const INLINE_WIDGET_CODE = [
   '$: note("<c3 e3 g3 b3>*4").s("sawtooth").lpf(slider(800, 200, 4000, 10))._pianoroll()',
   '$: s("bd*4")._scope()'
@@ -278,6 +281,43 @@ describe('StrudelEditor audible playback', () => {
           },
           { timeout: 10000, interval: 250 }
         )
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it.each([
+    ['a pianoroll, which animates itself', 'note("c3 e3 g3 b3").s("triangle").pianoroll()'],
+    ['a punchcard, painted every frame', 'note("c3 e3 g3 b3").s("triangle").punchcard()']
+  ])(
+    'stops drawing %s once the code no longer asks for it',
+    { timeout: 90000 },
+    async (_visual, visualCode) => {
+      // Arrange
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+      const codeEditor = page.getByRole('textbox', { name: 'Live code pattern' })
+      const backgroundCanvas = (): HTMLCanvasElement | null =>
+        document.querySelector('.strudel-code-editor__visuals')
+
+      try {
+        await codeEditor.fill(visualCode)
+        await page.getByRole('button', { name: 'Play' }).click()
+        await vi.waitFor(
+          () => {
+            expect(hasPaintedPixels(backgroundCanvas())).toBe(true)
+          },
+          { timeout: 60000, interval: 250 }
+        )
+
+        // Act: take the visual out and run the code again, as Ctrl+Enter does while playing.
+        await codeEditor.fill('note("c3 e3 g3 b3").s("triangle")')
+        await userEvent.keyboard('{Control>}{Enter}{/Control}')
+        await new Promise((resolve) => setTimeout(resolve, VISUAL_SETTLE_MS))
+
+        // Assert
+        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        expect(hasPaintedPixels(backgroundCanvas())).toBe(false)
       } finally {
         wrapper.unmount()
       }

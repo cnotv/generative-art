@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import Button from '@/components/ui/button/Button.vue'
 import { Select } from '@/components/ui/select'
 import { STRUDEL_LICENSE_NOTE } from './config'
@@ -86,7 +86,8 @@ const onTabSelected = (tabId: string): void => {
   setActiveTab(tabId as StrudelTabId)
 }
 
-onUnmounted(() => {
+// Before unmounting, while the code editor and its canvas are still there to clear.
+onBeforeUnmount(() => {
   window.removeEventListener('hashchange', loadAnchoredPattern)
   void stopPattern()
 })

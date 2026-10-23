@@ -34,6 +34,7 @@ const {
   mockStopFunction,
   mockDrawer,
   mockDrawerConstructor,
+  mockCleanupDraw,
   mockSlider,
   mockSliderWithId
 } = vi.hoisted(() => {
@@ -50,6 +51,7 @@ const {
   return {
     mockDrawer: drawer,
     mockDrawerConstructor: vi.fn(createDrawer),
+    mockCleanupDraw: vi.fn(),
     mockSlider: vi.fn(),
     mockSliderWithId: vi.fn(),
     mockReplFactory: vi.fn(),
@@ -83,7 +85,8 @@ vi.mock('@strudel/transpiler', () => ({
   transpiler: mockCodeTranspiler
 }))
 vi.mock('@strudel/draw', () => ({
-  Drawer: mockDrawerConstructor
+  Drawer: mockDrawerConstructor,
+  cleanupDraw: mockCleanupDraw
 }))
 vi.mock('@strudel/codemirror', () => ({
   slider: mockSlider,
@@ -324,6 +327,40 @@ describe('loadDefaultStrudelPlayback', () => {
     // Assert
     expect(mockDrawer[drawerMethod]).toHaveBeenCalledTimes(1)
     expect(hooks.onStopped).toHaveBeenCalledTimes(started ? 0 : 1)
+  })
+
+  it.each([
+    ['before the next evaluation', 'beforeEval', undefined],
+    ['when playing stops', 'onToggle', false]
+  ] as const)(
+    'stops and clears every visual %s while the editor canvas is there',
+    async (_moment, replOption, optionArgument) => {
+      // Arrange
+      const hooks = {
+        ...buildPlaybackHooks(),
+        // jsdom has no 2D canvas; the loader only checks that the editor still has one.
+        getDrawContext: vi.fn(() => ({}) as CanvasRenderingContext2D)
+      }
+      await loadDefaultStrudelPlayback(hooks)
+
+      // Act
+      callReplOption(replOption, optionArgument)
+
+      // Assert
+      expect(mockCleanupDraw).toHaveBeenCalledWith(true)
+    }
+  )
+
+  it('leaves the visuals alone once the editor canvas is gone', async () => {
+    // Arrange
+    await loadDefaultStrudelPlayback(buildPlaybackHooks())
+
+    // Act
+    callReplOption('beforeEval', undefined)
+    callReplOption('onToggle', false)
+
+    // Assert
+    expect(mockCleanupDraw).not.toHaveBeenCalled()
   })
 
   it('reports a pattern that fails to evaluate instead of claiming it plays', async () => {

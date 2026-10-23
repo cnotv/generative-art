@@ -37,6 +37,11 @@ declare module '@strudel/draw' {
   }
 
   export const Drawer: new (onFrame: DrawFrameCallback, drawTime: [number, number]) => Drawer
+  /**
+   * Stops every animation `.pianoroll()`, `.scope()` and the like started, and clears the
+   * `test-canvas`, creating a full-window one first if none exists.
+   */
+  export function cleanupDraw(clearScreen?: boolean, id?: string): void
 }
 
 declare module '@strudel/transpiler' {
