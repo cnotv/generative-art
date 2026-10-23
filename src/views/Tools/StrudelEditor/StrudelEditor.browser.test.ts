@@ -130,7 +130,7 @@ describe('StrudelEditor audible playback', () => {
     try {
       // Act: switch to patterns tab, click Caverave, then play
       await page.getByRole('tab', { name: 'patterns' }).click()
-      await page.getByRole('button', { name: 'Caverave' }).click()
+      await page.getByRole('link', { name: 'Caverave' }).click()
       await page.getByRole('button', { name: 'Play' }).click()
       await vi.waitFor(
         () => {
@@ -311,6 +311,43 @@ describe('StrudelEditor audible playback', () => {
   )
 
   it(
+    'puts the picked pattern in the address, from a link or the menu',
+    { timeout: 30000 },
+    async () => {
+      // Arrange
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await vi.waitFor(
+          () => {
+            expect(document.querySelector('.cm-content')).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+        await page.getByRole('tab', { name: 'patterns' }).click()
+
+        // Act
+        await page.getByRole('link', { name: 'Scope', exact: true }).click()
+        const linkedHash = window.location.hash
+        const linkedCode = readEditorCode()
+        await page.getByRole('combobox').click()
+        await page.getByRole('option', { name: 'Spiral', exact: true }).click()
+
+        // Assert
+        expect(linkedHash).toBe('#scope')
+        expect(linkedCode).toContain('s("sawtooth")._scope()')
+        await vi.waitFor(() => {
+          expect(window.location.hash).toBe('#spiral')
+        })
+        expect(readEditorCode()).toContain('._spiral(')
+      } finally {
+        wrapper.unmount()
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      }
+    }
+  )
+
+  it(
     'brings the editor back into view when a pattern is picked on a phone',
     { timeout: 30000 },
     async () => {
@@ -336,7 +373,7 @@ describe('StrudelEditor audible playback', () => {
         expect(codeEditor?.getBoundingClientRect().bottom).toBeLessThan(navigationClearance)
 
         // Act
-        await page.getByRole('button', { name: 'Caverave' }).click()
+        await page.getByRole('link', { name: 'Caverave' }).click()
 
         // Assert
         await vi.waitFor(() => {

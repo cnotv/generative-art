@@ -10,7 +10,9 @@ edit the code, and press Play. A bottom panel carries the seven strudel.cc tabs 
 - **welcome**: intro and about
 - **patterns**: the examples, the same ones the Example pattern menu offers, then the shipped
   electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
-  typed in by hand from a score and only approximate
+  typed in by hand from a score and only approximate. Each is a link to its own anchor, so
+  `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
+  pattern can open in a new tab. Picking from the Example pattern menu moves the anchor too.
 - **import**: turn an MP3 or other audio file into a pattern (below)
 - **sounds**: sound browser
 - **reference**: function quick list

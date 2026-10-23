@@ -68,6 +68,8 @@ type StrudelEditorState = StrudelTranscriptionState & {
   tabList: { id: StrudelTabId; label: string }[]
   selectExample: (exampleId: string) => void
   selectElectroTune: (tuneId: string) => void
+  /** Loads the example or tune with this id; false when neither has it. */
+  selectPattern: (patternId: string) => boolean
   updatePatternCode: (nextCode: string) => void
   playPattern: () => Promise<void>
   stopPattern: () => Promise<void>
@@ -153,6 +155,18 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     appendLog(`Loaded electro tune: ${matchedTune.label}`)
   }
 
+  const selectPattern = (patternId: string): boolean => {
+    if (findStrudelExample(exampleList, patternId) !== undefined) {
+      selectExample(patternId)
+      return true
+    }
+    if (ELECTRO_TUNES.some((tune) => tune.id === patternId)) {
+      selectElectroTune(patternId)
+      return true
+    }
+    return false
+  }
+
   const updatePatternCode = (nextCode: string): void => {
     patternCode.value = nextCode
   }
@@ -227,6 +241,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     tabList: STRUDEL_TABS,
     selectExample,
     selectElectroTune,
+    selectPattern,
     updatePatternCode,
     playPattern,
     stopPattern,

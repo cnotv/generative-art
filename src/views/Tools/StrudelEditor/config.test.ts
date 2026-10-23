@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  ELECTRO_TUNES,
   DEFAULT_SAMPLE_BANK,
   DEFAULT_STRUDEL_EXAMPLE_ID,
   STRUDEL_EXAMPLES,
@@ -44,6 +45,17 @@ describe('StrudelEditor config', () => {
 
     // Assert
     expect(uniqueIds.size).toBe(exampleIds.length)
+  })
+
+  it('gives every example and tune its own id, since each id is its anchor', () => {
+    // Arrange
+    const patternIds = [...STRUDEL_EXAMPLES, ...ELECTRO_TUNES].map((pattern) => pattern.id)
+
+    // Act
+    const uniqueIds = new Set(patternIds)
+
+    // Assert
+    expect(uniqueIds.size).toBe(patternIds.length)
   })
 
   it('points the default at a shipped example', () => {

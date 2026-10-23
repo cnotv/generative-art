@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StrudelEditor from './StrudelEditor.vue'
 import { ELECTRO_TUNES, STRUDEL_EXAMPLES } from './config'
@@ -27,6 +27,13 @@ vi.mock('./codeEditor/createStrudelCodeMirror', () => ({
   }
 }))
 
+const clearLocationHash = (): void => {
+  window.history.replaceState(null, '', window.location.pathname)
+}
+
+const readEditorCode = (wrapper: Awaited<ReturnType<typeof mountEditorView>>): string =>
+  wrapper.find<HTMLTextAreaElement>('.fake-strudel-code').element.value
+
 const mountEditorView = async () => {
   const wrapper = mount(StrudelEditor)
   // The editor module loads through a dynamic import, which outlasts a promise flush.
@@ -37,6 +44,8 @@ const mountEditorView = async () => {
 }
 
 describe('StrudelEditor view', () => {
+  afterEach(clearLocationHash)
+
   it('renders the editor shell with code, actions and license note', async () => {
     // Arrange
     const wrapper = await mountEditorView()
@@ -136,7 +145,7 @@ describe('StrudelEditor view', () => {
     expect(welcomeContent.exists()).toBe(true)
   })
 
-  it('switches to the patterns tab and lists the examples, then the tunes', async () => {
+  it('switches to the patterns tab and links the examples, then the tunes', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
@@ -151,32 +160,51 @@ describe('StrudelEditor view', () => {
       'Examples',
       'Tunes'
     ])
-    expect(wrapper.findAll('.strudel-patterns__button').map((button) => button.text())).toEqual([
-      ...STRUDEL_EXAMPLES.map((example) => example.label),
-      ...ELECTRO_TUNES.map((tune) => tune.label)
-    ])
+    expect(
+      wrapper
+        .findAll('.strudel-patterns__link')
+        .map((link) => [link.text(), link.attributes('href')])
+    ).toEqual(
+      [...STRUDEL_EXAMPLES, ...ELECTRO_TUNES].map((pattern) => [pattern.label, `#${pattern.id}`])
+    )
   })
 
   it.each([
     ['an example', STRUDEL_EXAMPLES.at(-1)],
     ['an electro tune', ELECTRO_TUNES[0]]
-  ])('loads %s into the editor when clicked', async (_kind, pattern) => {
+  ])('loads %s when the address moves to its anchor', async (_kind, pattern) => {
     // Arrange
     const wrapper = await mountEditorView()
-    const patternsTab = wrapper
-      .findAll('.strudel-editor__tab')
-      .find((tab) => tab.text() === 'patterns')
-    await patternsTab?.trigger('click')
-    const patternButton = wrapper
-      .findAll('.strudel-patterns__button')
-      .find((button) => button.text() === pattern?.label)
 
     // Act
-    await patternButton?.trigger('click')
+    window.location.hash = `#${pattern?.id}`
 
     // Assert
-    const codeField = wrapper.find<HTMLTextAreaElement>('.fake-strudel-code')
-    expect(codeField.element.value).toBe(pattern?.code)
+    await vi.waitFor(() => {
+      expect(readEditorCode(wrapper)).toBe(pattern?.code)
+    })
+  })
+
+  it('opens on the pattern its address names', async () => {
+    // Arrange
+    window.history.replaceState(null, '', `${window.location.pathname}#${ELECTRO_TUNES[0].id}`)
+
+    // Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    expect(readEditorCode(wrapper)).toBe(ELECTRO_TUNES[0].code)
+  })
+
+  it('keeps the default example for an anchor that names no pattern', async () => {
+    // Arrange
+    window.history.replaceState(null, '', `${window.location.pathname}#no-such-pattern`)
+
+    // Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
   it('switches to the console tab', async () => {

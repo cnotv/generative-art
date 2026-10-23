@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import Button from '@/components/ui/button/Button.vue'
 import { Select } from '@/components/ui/select'
 import { STRUDEL_LICENSE_NOTE } from './config'
@@ -27,7 +27,7 @@ const {
   activeTab,
   tabList,
   selectExample,
-  selectElectroTune,
+  selectPattern,
   updatePatternCode,
   playPattern,
   stopPattern,
@@ -43,13 +43,32 @@ const {
   loadTranscription
 } = useStrudelEditor()
 
-const onExampleSelected = (exampleId: string): void => {
-  selectExample(exampleId)
+const readAnchoredPatternId = (): string => decodeURIComponent(window.location.hash.slice(1))
+
+// Every pattern has its own anchor, so a pattern can be linked to, and Back steps through them.
+const loadAnchoredPattern = (): void => {
+  selectPattern(readAnchoredPatternId())
 }
 
-const onElectroTuneSelected = (tuneId: string): void => {
-  selectElectroTune(tuneId)
+const anchorPattern = (patternId: string): void => {
+  if (readAnchoredPatternId() !== patternId) {
+    window.location.hash = patternId
+  }
 }
+
+const onExampleSelected = (exampleId: string): void => {
+  selectExample(exampleId)
+  anchorPattern(exampleId)
+}
+
+const onPatternSelected = (patternId: string): void => {
+  selectPattern(patternId)
+}
+
+onMounted(() => {
+  loadAnchoredPattern()
+  window.addEventListener('hashchange', loadAnchoredPattern)
+})
 
 const onPlayRequested = (): void => {
   void playPattern()
@@ -68,6 +87,7 @@ const onTabSelected = (tabId: string): void => {
 }
 
 onUnmounted(() => {
+  window.removeEventListener('hashchange', loadAnchoredPattern)
   void stopPattern()
 })
 </script>
@@ -134,8 +154,7 @@ onUnmounted(() => {
             :examples="examples"
             :electro-tunes="electroTunes"
             :current-code="patternCode"
-            @select-example="onExampleSelected"
-            @select-tune="onElectroTuneSelected"
+            @select="onPatternSelected"
           />
           <ImportTab
             v-else-if="activeTab === 'import'"

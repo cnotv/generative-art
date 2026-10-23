@@ -9,8 +9,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  selectExample: [exampleId: string]
-  selectTune: [tuneId: string]
+  select: [patternId: string]
   play: []
 }>()
 
@@ -27,17 +26,26 @@ const patternGroups = computed(() => {
     {
       id: 'examples',
       title: 'Examples',
-      patterns: props.examples.filter((example) => matchesSearch(example, query)),
-      select: (exampleId: string) => emit('selectExample', exampleId)
+      patterns: props.examples.filter((example) => matchesSearch(example, query))
     },
     {
       id: 'tunes',
       title: 'Tunes',
-      patterns: props.electroTunes.filter((tune) => matchesSearch(tune, query)),
-      select: (tuneId: string) => emit('selectTune', tuneId)
+      patterns: props.electroTunes.filter((tune) => matchesSearch(tune, query))
     }
   ].filter((group) => group.patterns.length > 0)
 })
+
+// The link's own navigation sets the anchor; loading here as well reloads a pattern whose
+// anchor is already in the address, which would otherwise not change. A modified or middle
+// click is left to the browser, to open the pattern in a new tab.
+const onPatternClick = (event: MouseEvent, patternId: string): void => {
+  const opensElsewhere =
+    event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+  if (!opensElsewhere) {
+    emit('select', patternId)
+  }
+}
 </script>
 
 <template>
@@ -59,15 +67,15 @@ const patternGroups = computed(() => {
         {{ group.title }}
       </h3>
       <ul class="strudel-patterns__list">
-        <li
-          v-for="pattern in group.patterns"
-          :key="pattern.id"
-          class="strudel-patterns__item"
-          :class="{ 'strudel-patterns__item--active': pattern.code === currentCode }"
-        >
-          <button class="strudel-patterns__button" type="button" @click="group.select(pattern.id)">
+        <li v-for="pattern in group.patterns" :key="pattern.id" class="strudel-patterns__item">
+          <a
+            class="strudel-patterns__link"
+            :href="`#${pattern.id}`"
+            :aria-current="pattern.code === currentCode ? 'true' : undefined"
+            @click="onPatternClick($event, pattern.id)"
+          >
             {{ pattern.label }}
-          </button>
+          </a>
         </li>
       </ul>
     </section>
@@ -117,29 +125,24 @@ const patternGroups = computed(() => {
   gap: var(--spacing-1);
 }
 
-.strudel-patterns__item {
+.strudel-patterns__link {
+  display: block;
+  padding: var(--spacing-2) var(--spacing-3);
   border-radius: var(--radius-md);
+  color: var(--color-foreground);
+  font-size: var(--font-size-md);
+  text-decoration: none;
   transition: background-color 0.15s;
 }
 
-.strudel-patterns__item--active {
+.strudel-patterns__link:hover,
+.strudel-patterns__link[aria-current='true'] {
   background: var(--color-secondary);
 }
 
-.strudel-patterns__button {
-  width: 100%;
-  text-align: left;
-  padding: var(--spacing-2) var(--spacing-3);
-  border: none;
-  background: transparent;
-  color: var(--color-foreground);
-  font-size: var(--font-size-md);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-}
-
-.strudel-patterns__button:hover {
-  background: var(--color-secondary);
+.strudel-patterns__link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-ring);
 }
 
 .strudel-patterns__empty {
