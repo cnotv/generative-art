@@ -33,14 +33,23 @@ here unchanged:
 - **Ctrl+Enter** (or Alt+Enter) plays the code, **Ctrl+.** stops it.
 - **`slider(value, min, max, step)`** draws a slider in the code. Dragging it rewrites the
   number and changes the sound while it plays. `min` and `max` default to 0 and 1.
-- **`._pianoroll()`**, **`._scope()`**, **`._punchcard()`**, **`._spiral()`** and
-  **`._pitchwheel()`** draw under the line the call is on.
+- **`._pianoroll()`**, **`._scope()`**, **`._punchcard()`**, **`._spiral()`**,
+  **`._pitchwheel()`** and **`._spectrum()`** draw under the line the call is on.
 - **`.pianoroll()`** and **`.scope()`**, without the underscore, draw behind the code.
 - The notes that are playing are boxed in the mini-notation as they sound.
 
 ![Inline sliders, pianoroll and scope while the Sliders and scopes example plays](/img/strudel-editor/inline-widgets.webp)
 
 The **Sliders and scopes** example in the pattern picker shows all of them at once.
+
+Five more examples in the picker show one visual each: **Punchcard drums**, **Spiral**, **Pitch
+wheel**, **Spectrum** and **Pianoroll behind the code**. Each passes the visual a colour through
+`.color()`, and each is a starting point for a visual of your own.
+
+![Punchcard drums, Spiral and Pitch wheel above Spectrum and Pianoroll behind the code, each playing](/img/strudel-editor/visual-examples.webp)
+
+The spiral, the pitch wheel and the spectrum size their drawing in canvas pixels, which is
+Strudel's own behaviour. They look smaller on a high-density screen than on a standard one.
 
 ## Turning an MP3 into a pattern
 

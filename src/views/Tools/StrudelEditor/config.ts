@@ -40,6 +40,65 @@ $: note("<c3 eb3 g3 bb3>*8").s("sawtooth")
 $: note("<c2 c2 g1 bb1>").s("square").lpf(400)
   ._scope()
 $: s("bd*4, [~ hh]*4")`
+  },
+  {
+    id: 'punchcard-drums',
+    label: 'Punchcard drums',
+    code: `// One row per drum and one block per hit; the blocks light up as they play.
+stack(
+  s("bd*2 [~ bd] ~").color("lightpink"),
+  s("~ sd ~ sd").color("plum"),
+  s("hh*8").gain(.6).color("lightblue"),
+  s("~ ~ ~ cp").color("palegreen")
+)._punchcard()`
+  },
+  {
+    id: 'spiral',
+    label: 'Spiral',
+    code: `// The spiral turns once per cycle and draws each note along it as it plays.
+$: note("c2 a2 eb2")
+  .euclid(5, 8)
+  .s("sawtooth")
+  .lpenv(4).lpf(300)
+  .color("plum")
+  ._spiral({ steady: .96, inset: 2, colorizeInactive: 1 })
+$: s("bd*4, [~ hh]*4").gain(.8)`
+  },
+  {
+    id: 'pitch-wheel',
+    label: 'Pitch wheel',
+    code: `// The twelve pitch classes sit round a wheel; the notes playing now join into a shape.
+chord("<Cm7 Fm7 Ab^7 G7>")
+  .voicing()
+  .s("triangle")
+  .room(.4)
+  .color("lightblue")
+  ._pitchwheel()`
+  },
+  {
+    id: 'spectrum',
+    label: 'Spectrum',
+    code: `// The spectrum shows how loud each frequency is, scrolling as the sound changes.
+n("<0 4 <2 3> 1>*3")
+  .off(1/8, add(n(5)))
+  .off(1/5, add(n(7)))
+  .scale("d3:minor:pentatonic")
+  .s("sine")
+  .dec(.3).room(.5)
+  .color("palegreen")
+  ._spectrum()`
+  },
+  {
+    id: 'pianoroll-behind',
+    label: 'Pianoroll behind the code',
+    code: `// Without the underscore, a visual fills the editor behind the code.
+$: stack(
+  note("<[c3,eb3,g3] [ab2,c3,eb3] [bb2,d3,f3] [g2,bb2,d3]>")
+    .s("sawtooth").lpf(1200).release(.3).gain(.5).color("thistle"),
+  note("<c2 ab1 bb1 g1>*8").s("square").lpf(400).gain(.6).color("lightpink"),
+  note("<[g4 eb4] [c5 ~] [d5 f5] [~ bb4]>*2").s("triangle").delay(.3).color("lightblue")
+).pianoroll({ cycles: 4, playhead: .5, fold: 0, minMidi: 30, maxMidi: 84 })
+$: s("bd*4, [~ hh]*4").gain(.8)`
   }
 ]
 

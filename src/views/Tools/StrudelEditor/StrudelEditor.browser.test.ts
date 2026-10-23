@@ -6,6 +6,7 @@ import '@/style.css'
 import '@/assets/styles/_variables.scss'
 import StrudelEditor from './StrudelEditor.vue'
 import { createDrumLoop } from './transcription/syntheticSignals'
+import { STRUDEL_EXAMPLES } from './config'
 
 const WAV_SAMPLE_RATE = 22050
 const WAV_HEADER_BYTES = 44
@@ -14,6 +15,19 @@ const PCM_MAX_VALUE = 0x7fff
 
 const readEditorCode = (): string =>
   [...document.querySelectorAll('.cm-line')].map((line) => line.textContent).join('\n')
+
+const hasPaintedPixels = (canvas: HTMLCanvasElement | null): boolean => {
+  const drawContext = canvas?.getContext('2d')
+  if (!canvas || !drawContext || canvas.width === 0 || canvas.height === 0) {
+    return false
+  }
+  return drawContext
+    .getImageData(0, 0, canvas.width, canvas.height)
+    .data.some((channel, index) => index % 4 === 3 && channel > 0)
+}
+
+const readExampleCode = (exampleId: string): string =>
+  STRUDEL_EXAMPLES.find((example) => example.id === exampleId)?.code ?? ''
 
 const INLINE_WIDGET_CODE = [
   '$: note("<c3 e3 g3 b3>*4").s("sawtooth").lpf(slider(800, 200, 4000, 10))._pianoroll()',
@@ -227,6 +241,46 @@ describe('StrudelEditor audible playback', () => {
       wrapper.unmount()
     }
   })
+
+  it.each([
+    ['punchcard-drums', '.cm-content canvas'],
+    ['spiral', '.cm-content canvas'],
+    ['pitch-wheel', '.cm-content canvas'],
+    ['spectrum', '.cm-content canvas'],
+    ['pianoroll-behind', '.strudel-code-editor__visuals']
+  ])(
+    'plays the %s example and draws it into %s',
+    { timeout: 90000 },
+    async (exampleId, canvasSelector) => {
+      // Arrange
+      const exampleCode = readExampleCode(exampleId)
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        // Act
+        await page.getByRole('textbox', { name: 'Live code pattern' }).fill(exampleCode)
+        await page.getByRole('button', { name: 'Play' }).click()
+        await vi.waitFor(
+          () => {
+            expect(wrapper.find('.strudel-editor__status').text()).not.toContain('Idle')
+          },
+          { timeout: 60000, interval: 500 }
+        )
+
+        // Assert
+        expect(exampleCode).not.toBe('')
+        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        await vi.waitFor(
+          () => {
+            expect(hasPaintedPixels(document.querySelector(canvasSelector))).toBe(true)
+          },
+          { timeout: 10000, interval: 250 }
+        )
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
 
   it(
     'reports a pattern with a syntax error instead of playing it',
