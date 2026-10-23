@@ -322,6 +322,12 @@ stack(
 export const DEFAULT_STRUDEL_EXAMPLE_ID = 'first-beat'
 /** Where the code on screen is kept between visits. */
 export const STRUDEL_SAVED_CODE_STORAGE_KEY = 'strudel-editor-code'
+/** Where the patterns saved under a name are kept. */
+export const STRUDEL_SAVED_PATTERNS_STORAGE_KEY = 'strudel-editor-saved-patterns'
+/** Starts every saved pattern's anchor, so none can collide with an example's or a tune's. */
+export const STRUDEL_SAVED_PATTERN_ID_PREFIX = 'saved-'
+/** The anchor of a saved pattern whose name has no letters or digits to make one from. */
+export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
 
 /**
  * Classic TR-909 style kit the shipped examples play. Loaded once before the first

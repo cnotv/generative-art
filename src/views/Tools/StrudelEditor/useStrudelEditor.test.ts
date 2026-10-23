@@ -4,6 +4,7 @@ import {
   DEFAULT_SAMPLE_BANK,
   DEFAULT_STRUDEL_EXAMPLE_ID,
   STRUDEL_SAVED_CODE_STORAGE_KEY,
+  STRUDEL_SAVED_PATTERNS_STORAGE_KEY,
   ELECTRO_TUNES,
   STRUDEL_EXAMPLES,
   STRUDEL_TABS
@@ -398,6 +399,62 @@ describe('useStrudelEditor', () => {
 
     // Assert
     expect(patternCode.value).toBe(expectedCode)
+  })
+
+  it('saves the code under a name, lists it and keeps it for the next visit', () => {
+    // Arrange
+    const firstVisit = useStrudelEditor({ initialExamples: buildExampleList() })
+    firstVisit.updatePatternCode('s("cp*3")')
+
+    // Act
+    firstVisit.savePattern('My beat')
+    const nextVisit = useStrudelEditor({ initialExamples: buildExampleList() })
+
+    // Assert
+    expect(firstVisit.savedPatterns.value).toEqual([
+      { id: 'saved-my-beat', label: 'My beat', code: 's("cp*3")' }
+    ])
+    expect(nextVisit.savedPatterns.value).toEqual(firstVisit.savedPatterns.value)
+    expect(localStorage.getItem(STRUDEL_SAVED_PATTERNS_STORAGE_KEY)).toBe(
+      '[{"name":"My beat","code":"s(\\"cp*3\\")"}]'
+    )
+  })
+
+  it('replaces a save under the same name and deletes one by its anchor', () => {
+    // Arrange
+    const { savePattern, deleteSavedPattern, updatePatternCode, savedPatterns } = useStrudelEditor({
+      initialExamples: buildExampleList()
+    })
+    savePattern('Keep')
+    savePattern('My beat')
+    updatePatternCode('s("hh*8")')
+    savePattern('my beat')
+
+    // Act
+    deleteSavedPattern('saved-keep')
+
+    // Assert
+    expect(savedPatterns.value).toEqual([
+      { id: 'saved-my-beat', label: 'my beat', code: 's("hh*8")' }
+    ])
+  })
+
+  it('loads a save by its anchor, as it does an example or a tune', () => {
+    // Arrange
+    localStorage.setItem(
+      STRUDEL_SAVED_PATTERNS_STORAGE_KEY,
+      JSON.stringify([{ name: 'Night drive', code: 'note("c2 g2")' }])
+    )
+    const { selectPattern, patternCode } = useStrudelEditor({
+      initialExamples: buildExampleList()
+    })
+
+    // Act
+    const found = selectPattern('saved-night-drive')
+
+    // Assert
+    expect(found).toBe(true)
+    expect(patternCode.value).toBe('note("c2 g2")')
   })
 
   it.each([

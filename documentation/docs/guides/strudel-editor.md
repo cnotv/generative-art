@@ -18,11 +18,13 @@ edit the code, and press the play button above the editor.
 A panel carries six of the strudel.cc tabs plus an import tab:
 
 - **welcome**: intro and about
-- **patterns**: the examples, then the shipped
+- **patterns**: your saved patterns, then the examples, then the shipped
   electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
   typed in by hand from a score and only approximate. Each is a link to its own anchor, so
   `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
-  pattern can open in a new tab.
+  pattern can open in a new tab. The name field at the top saves the code in the editor under
+  that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under
+  a name already used replaces it, and its cross deletes it.
 - **import**: turn an MP3 or other audio file into a pattern (below)
 - **reference**: function quick list
 - **export**: WAV export settings

@@ -6,6 +6,12 @@ export type StrudelExample = {
   code: string
 }
 
+/** A pattern the player saved under a name, kept in local storage. */
+export type StrudelSavedPattern = {
+  name: string
+  code: string
+}
+
 export type StrudelEditorStatus = 'idle' | 'playing' | 'error'
 
 export type StrudelEvaluationResult = {

@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { X } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import IconButton from '@/components/IconButton.vue'
 import type { StrudelExample } from '../types'
 
 const props = defineProps<{
+  savedPatterns: StrudelExample[]
   examples: StrudelExample[]
   electroTunes: StrudelExample[]
   currentCode: string
@@ -10,10 +15,26 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [patternId: string]
+  save: [name: string]
+  delete: [patternId: string]
   play: []
 }>()
 
 const searchQuery = ref('')
+const patternName = ref('')
+const hasPatternName = computed(() => patternName.value.trim().length > 0)
+
+const onSaveSubmitted = (): void => {
+  if (!hasPatternName.value) {
+    return
+  }
+  emit('save', patternName.value)
+  patternName.value = ''
+}
+
+const onPatternNameInput = (value: string | number): void => {
+  patternName.value = String(value)
+}
 
 const matchesSearch = (pattern: StrudelExample, query: string): boolean =>
   query.length === 0 ||
@@ -24,13 +45,21 @@ const patternGroups = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   return [
     {
+      id: 'saved',
+      title: 'Saved',
+      deletable: true,
+      patterns: props.savedPatterns.filter((savedPattern) => matchesSearch(savedPattern, query))
+    },
+    {
       id: 'examples',
       title: 'Examples',
+      deletable: false,
       patterns: props.examples.filter((example) => matchesSearch(example, query))
     },
     {
       id: 'tunes',
       title: 'Tunes',
+      deletable: false,
       patterns: props.electroTunes.filter((tune) => matchesSearch(tune, query))
     }
   ].filter((group) => group.patterns.length > 0)
@@ -50,6 +79,16 @@ const onPatternClick = (event: MouseEvent, patternId: string): void => {
 
 <template>
   <div class="strudel-patterns">
+    <form class="strudel-patterns__save" @submit.prevent="onSaveSubmitted">
+      <Input
+        :model-value="patternName"
+        class="strudel-patterns__name"
+        placeholder="Name this pattern"
+        aria-label="Pattern name"
+        @update:model-value="onPatternNameInput"
+      />
+      <Button type="submit" :disabled="!hasPatternName">Save</Button>
+    </form>
     <input
       v-model="searchQuery"
       class="strudel-patterns__search"
@@ -67,7 +106,12 @@ const onPatternClick = (event: MouseEvent, patternId: string): void => {
         {{ group.title }}
       </h3>
       <ul class="strudel-patterns__list">
-        <li v-for="pattern in group.patterns" :key="pattern.id" class="strudel-patterns__item">
+        <li
+          v-for="pattern in group.patterns"
+          :key="pattern.id"
+          class="strudel-patterns__item"
+          :class="{ 'strudel-patterns__item--deletable': group.deletable }"
+        >
           <a
             class="strudel-patterns__link"
             :href="`#${pattern.id}`"
@@ -76,6 +120,15 @@ const onPatternClick = (event: MouseEvent, patternId: string): void => {
           >
             {{ pattern.label }}
           </a>
+          <IconButton
+            v-if="group.deletable"
+            size="sm"
+            :title="`Delete ${pattern.label}`"
+            :aria-label="`Delete ${pattern.label}`"
+            @click="emit('delete', pattern.id)"
+          >
+            <X aria-hidden="true" />
+          </IconButton>
         </li>
       </ul>
     </section>
@@ -89,6 +142,16 @@ const onPatternClick = (event: MouseEvent, patternId: string): void => {
   flex-direction: column;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
+}
+
+.strudel-patterns__save {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.strudel-patterns__name {
+  flex: 1;
+  min-width: 0;
 }
 
 .strudel-patterns__search {
@@ -125,8 +188,16 @@ const onPatternClick = (event: MouseEvent, patternId: string): void => {
   gap: var(--spacing-1);
 }
 
+.strudel-patterns__item--deletable {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
 .strudel-patterns__link {
   display: block;
+  flex: 1;
+  min-width: 0;
   padding: var(--spacing-2) var(--spacing-3);
   border-radius: var(--radius-md);
   color: var(--color-foreground);

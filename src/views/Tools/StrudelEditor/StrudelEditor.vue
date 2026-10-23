@@ -25,6 +25,9 @@ const {
   activeTab,
   tabList,
   selectPattern,
+  savedPatterns,
+  savePattern,
+  deleteSavedPattern,
   updatePatternCode,
   playPattern,
   stopPattern,
@@ -148,10 +151,13 @@ onBeforeUnmount(() => {
           <WelcomeTab v-if="activeTab === 'welcome'" />
           <PatternsTab
             v-else-if="activeTab === 'patterns'"
+            :saved-patterns="savedPatterns"
             :examples="examples"
             :electro-tunes="electroTunes"
             :current-code="patternCode"
             @select="onPatternSelected"
+            @save="savePattern"
+            @delete="deleteSavedPattern"
           />
           <ImportTab
             v-else-if="activeTab === 'import'"

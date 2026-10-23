@@ -162,6 +162,48 @@ describe('StrudelEditor view', () => {
     )
   })
 
+  it('saves the code under a name, lists it first, and deletes it', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    await wrapper
+      .findAll('.strudel-editor__tab')
+      .find((tab) => tab.text() === 'patterns')
+      ?.trigger('click')
+    await wrapper.find('.fake-strudel-code').setValue('s("cp*3")')
+
+    // Act
+    await wrapper.find('input[aria-label="Pattern name"]').setValue('My beat')
+    await wrapper.find('.strudel-patterns__save').trigger('submit')
+    const groupsAfterSave = wrapper
+      .findAll('.strudel-patterns__group-title')
+      .map((title) => title.text())
+    const savedLink = wrapper.find('.strudel-patterns__link')
+    await wrapper.find('button[aria-label="Delete My beat"]').trigger('click')
+
+    // Assert
+    expect(groupsAfterSave).toEqual(['Saved', 'Examples', 'Tunes'])
+    expect([savedLink.text(), savedLink.attributes('href')]).toEqual(['My beat', '#saved-my-beat'])
+    expect(wrapper.findAll('.strudel-patterns__group-title').map((title) => title.text())).toEqual([
+      'Examples',
+      'Tunes'
+    ])
+  })
+
+  it('keeps Save disabled until the pattern has a name', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    await wrapper
+      .findAll('.strudel-editor__tab')
+      .find((tab) => tab.text() === 'patterns')
+      ?.trigger('click')
+
+    // Act
+    await wrapper.find('input[aria-label="Pattern name"]').setValue('   ')
+
+    // Assert
+    expect(wrapper.find('.strudel-patterns__save button').attributes('disabled')).toBeDefined()
+  })
+
   it.each([
     ['an example', STRUDEL_EXAMPLES.at(-1)],
     ['an electro tune', ELECTRO_TUNES[0]]

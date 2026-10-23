@@ -8,6 +8,8 @@ import {
   STRUDEL_SAVED_CODE_STORAGE_KEY,
   STRUDEL_TABS
 } from './config'
+import { useSavedPatterns } from './useSavedPatterns'
+import { useStrudelLog } from './useStrudelLog'
 import type {
   StrudelEditorHandle,
   StrudelEditorStatus,
@@ -69,6 +71,11 @@ type StrudelEditorState = StrudelTranscriptionState & {
   selectElectroTune: (tuneId: string) => void
   /** Loads the example or tune with this id; false when neither has it. */
   selectPattern: (patternId: string) => boolean
+  /** The patterns saved under a name, newest first, as the patterns tab lists them. */
+  savedPatterns: ComputedRef<StrudelExample[]>
+  /** Saves the code on screen under a name, replacing a save with the same anchor. */
+  savePattern: (name: string) => void
+  deleteSavedPattern: (savedPatternId: string) => void
   updatePatternCode: (nextCode: string) => void
   playPattern: () => Promise<void>
   stopPattern: () => Promise<void>
@@ -113,13 +120,12 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   const errorMessage = ref('')
   const playbackReference = ref<StrudelPlayback | null>(null)
   const activeTab = ref<StrudelTabId>('welcome')
-  const logEntries = ref<StrudelLogEntry[]>([])
+  const { logEntries, appendLog, clearLogEntries } = useStrudelLog()
   const playingCode = ref('')
   const hasUnplayedChanges = computed(
     () => editorStatus.value === 'playing' && patternCode.value !== playingCode.value
   )
   const editorHandle = shallowRef<StrudelEditorHandle | null>(null)
-  let logCounter = 0
 
   // Playback outlives any one editor instance, so it reaches the editor through this ref.
   const playbackHooks: StrudelPlaybackHooks = {
@@ -130,11 +136,6 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
       editorHandle.value?.clearVisuals()
     },
     getDrawContext: () => editorHandle.value?.getDrawContext() ?? null
-  }
-
-  const appendLog = (message: string, level: StrudelLogEntry['level'] = 'info'): void => {
-    logCounter += 1
-    logEntries.value = [...logEntries.value, { id: logCounter, message, level }]
   }
 
   const playPattern = async (): Promise<void> => {
@@ -186,35 +187,39 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     errorMessage.value = ''
   }
 
-  const selectExample = (exampleId: string): void => {
-    const matchedExample = findStrudelExample(exampleList, exampleId)
-    if (matchedExample === undefined) {
-      return
+  const loadListedPattern = (pattern: StrudelExample | undefined): boolean => {
+    if (pattern === undefined) {
+      return false
     }
-    selectedExampleId.value = matchedExample.id
-    loadPatternCode(matchedExample.code)
+    selectedExampleId.value = pattern.id
+    loadPatternCode(pattern.code)
+    return true
+  }
+
+  const selectExample = (exampleId: string): void => {
+    loadListedPattern(findStrudelExample(exampleList, exampleId))
   }
 
   const selectElectroTune = (tuneId: string): void => {
     const matchedTune = ELECTRO_TUNES.find((tune) => tune.id === tuneId)
-    if (matchedTune === undefined) {
-      return
+    if (loadListedPattern(matchedTune)) {
+      appendLog(`Loaded electro tune: ${matchedTune?.label}`)
     }
-    selectedExampleId.value = matchedTune.id
-    loadPatternCode(matchedTune.code)
-    appendLog(`Loaded electro tune: ${matchedTune.label}`)
   }
 
+  const { savedPatterns, savePattern, deleteSavedPattern } = useSavedPatterns(
+    () => patternCode.value
+  )
+
   const selectPattern = (patternId: string): boolean => {
-    if (findStrudelExample(exampleList, patternId) !== undefined) {
-      selectExample(patternId)
-      return true
-    }
     if (ELECTRO_TUNES.some((tune) => tune.id === patternId)) {
       selectElectroTune(patternId)
       return true
     }
-    return false
+    return loadListedPattern(
+      findStrudelExample(exampleList, patternId) ??
+        savedPatterns.value.find((savedPattern) => savedPattern.id === patternId)
+    )
   }
 
   const updatePatternCode = (nextCode: string): void => {
@@ -229,10 +234,6 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
 
   const setActiveTab = (tabId: StrudelTabId): void => {
     activeTab.value = tabId
-  }
-
-  const clearLogEntries = (): void => {
-    logEntries.value = []
   }
 
   const attachEditor = (nextEditorHandle: StrudelEditorHandle | null): void => {
@@ -253,6 +254,9 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     selectExample,
     selectElectroTune,
     selectPattern,
+    savedPatterns,
+    savePattern,
+    deleteSavedPattern,
     updatePatternCode,
     playPattern,
     stopPattern,
