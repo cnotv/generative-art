@@ -46,7 +46,7 @@ const mountEditorView = async () => {
 describe('StrudelEditor view', () => {
   afterEach(clearLocationHash)
 
-  it('renders the code, one play button in the corner and the license note', async () => {
+  it('renders the code, one play button above it and the license note', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
@@ -56,6 +56,7 @@ describe('StrudelEditor view', () => {
     // Assert
     expect(wrapper.find('.fake-strudel-code').exists()).toBe(true)
     expect(playButtons).toHaveLength(1)
+    expect(wrapper.find('.strudel-editor__code-header .strudel-editor__play').exists()).toBe(true)
     expect(playButtons[0]?.attributes('aria-label')).toBe('Play')
     expect(wrapper.find('.strudel-editor__license').text()).toContain('AGPL-3.0')
   })

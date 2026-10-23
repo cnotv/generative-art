@@ -65,8 +65,8 @@ const onStopRequested = (): void => {
   void stopPattern()
 }
 
-// One button: Play when idle, Stop while playing, and Update once the code has changed since it
-// started, which swaps the old pattern for the new one.
+// One button above the editor: Play when idle, Stop while playing, and Update once the code has
+// changed since it started, which swaps the old pattern for the new one.
 const playButtonAction = computed(() => {
   if (editorStatus.value !== 'playing') {
     return 'Play'
@@ -100,7 +100,21 @@ onBeforeUnmount(() => {
 <template>
   <div class="strudel-editor">
     <section class="strudel-editor__code" aria-label="Code">
-      <p class="strudel-editor__label">Live code pattern</p>
+      <header class="strudel-editor__code-header">
+        <p class="strudel-editor__label">Live code pattern</p>
+        <IconButton
+          class="strudel-editor__play"
+          size="md"
+          variant="default"
+          :title="playButtonAction"
+          :aria-label="playButtonAction"
+          @click="onPlayButtonPressed"
+        >
+          <Square v-if="playButtonAction === 'Stop'" aria-hidden="true" />
+          <RefreshCw v-else-if="playButtonAction === 'Update'" aria-hidden="true" />
+          <Play v-else aria-hidden="true" />
+        </IconButton>
+      </header>
       <StrudelCodeEditor
         class="strudel-editor__code-editor"
         :code="patternCode"
@@ -164,19 +178,6 @@ onBeforeUnmount(() => {
 
       <p class="strudel-editor__license">{{ STRUDEL_LICENSE_NOTE }}</p>
     </section>
-
-    <IconButton
-      class="strudel-editor__play"
-      size="lg"
-      variant="default"
-      :title="playButtonAction"
-      :aria-label="playButtonAction"
-      @click="onPlayButtonPressed"
-    >
-      <Square v-if="playButtonAction === 'Stop'" aria-hidden="true" />
-      <RefreshCw v-else-if="playButtonAction === 'Update'" aria-hidden="true" />
-      <Play v-else aria-hidden="true" />
-    </IconButton>
   </div>
 </template>
 
@@ -228,9 +229,6 @@ onBeforeUnmount(() => {
       'code'
       'side';
     overflow-y: auto;
-
-    /* Room under the last of the page, so scrolling to the end clears the corner play button. */
-    padding-bottom: calc(var(--btn-lg-height) + var(--spacing-4) * 2);
   }
 
   .strudel-editor__side {
@@ -259,14 +257,15 @@ onBeforeUnmount(() => {
   color: var(--color-destructive);
 }
 
-/* Fixed to the viewport, so on a phone it stays in reach wherever the stacked view is scrolled. */
+.strudel-editor__code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
 .strudel-editor__play {
-  position: fixed;
-  right: var(--spacing-4);
-  bottom: var(--spacing-4);
-  z-index: var(--z-fixed);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow-lg);
 }
 
 .strudel-editor__panel {

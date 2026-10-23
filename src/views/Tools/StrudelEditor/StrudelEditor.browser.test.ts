@@ -16,7 +16,8 @@ const PCM_MAX_VALUE = 0x7fff
 const readEditorCode = (): string =>
   [...document.querySelectorAll('.cm-line')].map((line) => line.textContent).join('\n')
 
-// The corner button reads Stop while a pattern plays and Play otherwise.
+// The play button above the editor reads Stop while a pattern plays, Update once its code is
+// edited, and Play otherwise.
 const readPlayButtonLabel = (): string | null =>
   document.querySelector('.strudel-editor__play')?.getAttribute('aria-label') ?? null
 
