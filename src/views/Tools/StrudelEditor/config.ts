@@ -53,6 +53,19 @@ stack(
 )._punchcard()`
   },
   {
+    id: 'punchcard-vs-pianoroll',
+    label: 'Punchcard vs pianoroll',
+    code: `// From strudel.cc's visual feedback guide: both draw the same notes as a pianoroll.
+// _punchcard draws the pattern after everything chained onto it, so the cyan shows.
+// _pianoroll draws the pattern as it stands at that call, so its notes stay white.
+$: note("c a f e").color("white")
+  ._punchcard()
+  .color("cyan")
+$: note("c a f e").color("white")
+  ._pianoroll()
+  .color("cyan")`
+  },
+  {
     id: 'spiral',
     label: 'Spiral',
     code: `// The spiral turns once per cycle and draws each note along it as it plays.

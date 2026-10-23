@@ -43,7 +43,9 @@ here unchanged:
 The **Sliders and scopes** example in the pattern picker shows all of them at once.
 
 Five more examples in the picker show one visual each: **Punchcard drums**, **Spiral**, **Pitch
-wheel**, **Spectrum** and **Pianoroll behind the code**. Each passes the visual a colour through
+wheel**, **Spectrum** and **Pianoroll behind the code**. **Punchcard vs pianoroll** is the example
+from strudel.cc's visual feedback guide: `._punchcard()` draws what everything chained after it
+does, so a later `.color()` shows, while `._pianoroll()` draws the pattern as it stood at the call. Each passes the visual a colour through
 `.color()`, and each is a starting point for a visual of your own.
 
 ![Punchcard drums, Spiral and Pitch wheel above Spectrum and Pianoroll behind the code, each playing](/img/strudel-editor/visual-examples.webp)
