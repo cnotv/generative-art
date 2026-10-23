@@ -19,7 +19,13 @@ import { STRUDEL_EDITOR_THEME } from '../config'
 import { inlineWidgetField, showInlineWidgets } from './inlineWidgets'
 import { createCompletionVocabulary } from './completionVocabulary'
 import { createStrudelCompletionSource } from './strudelCompletions'
-import type { StrudelCodeMirror, StrudelCodeMirrorOptions, StrudelEvaluationMeta } from '../types'
+import { strudelHoverDocumentation } from './strudelHoverDocumentation'
+import type {
+  StrudelCodeMirror,
+  StrudelCodeMirrorOptions,
+  StrudelCompletionVocabulary,
+  StrudelEvaluationMeta
+} from '../types'
 
 const isSliderWidget = (widget: unknown): boolean =>
   typeof widget === 'object' && widget !== null && 'type' in widget && widget.type === 'slider'
@@ -43,7 +49,10 @@ const runAndClaim = (handler: () => void) => (): boolean => {
   return true
 }
 
-const buildExtensions = (options: StrudelCodeMirrorOptions): Extension[] => [
+const buildExtensions = (
+  options: StrudelCodeMirrorOptions,
+  completionVocabulary: StrudelCompletionVocabulary
+): Extension[] => [
   lineNumbers(),
   history(),
   drawSelection(),
@@ -71,7 +80,7 @@ const buildExtensions = (options: StrudelCodeMirrorOptions): Extension[] => [
       color: 'var(--foreground)'
     },
     '.cm-completionDetail': { opacity: 'var(--opacity-muted)', fontStyle: 'normal' },
-    '.cm-completionInfo': {
+    '.cm-completionInfo, .cm-tooltip-hover .cm-strudel-doc': {
       maxWidth: 'min(28rem, 80vw)',
       padding: 'var(--spacing-2) var(--spacing-3)',
       fontSize: 'var(--font-size-sm)'
@@ -87,10 +96,11 @@ const buildExtensions = (options: StrudelCodeMirrorOptions): Extension[] => [
     }
   }),
   autocompletion({
-    override: [createStrudelCompletionSource(createCompletionVocabulary())],
+    override: [createStrudelCompletionSource(completionVocabulary)],
     // Stays open while the pointer moves to the documentation beside the list.
     closeOnBlur: false
   }),
+  strudelHoverDocumentation(completionVocabulary.functionDocumentations),
   sliderPlugin,
   inlineWidgetField,
   Prec.highest(highlightExtension),
@@ -120,7 +130,10 @@ const buildExtensions = (options: StrudelCodeMirrorOptions): Extension[] => [
 export const createStrudelCodeMirror = (options: StrudelCodeMirrorOptions): StrudelCodeMirror => {
   applyThemeVariables(options.parent, STRUDEL_EDITOR_THEME)
   const view = new EditorView({
-    state: EditorState.create({ doc: options.initialCode, extensions: buildExtensions(options) }),
+    state: EditorState.create({
+      doc: options.initialCode,
+      extensions: buildExtensions(options, createCompletionVocabulary())
+    }),
     parent: options.parent
   })
   return {

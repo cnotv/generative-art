@@ -40,7 +40,8 @@ here unchanged:
   **`._pitchwheel()`** and **`._spectrum()`** draw under the line the call is on.
 - **`.pianoroll()`** and **`.scope()`**, without the underscore, draw behind the code.
 - The notes that are playing are boxed in the mini-notation as they sound.
-- **Autocomplete** lists the options as you type, described below.
+- **Autocomplete** lists the options as you type, and resting the pointer on a function's name
+  shows its documentation, both described below.
 
 ![Inline sliders, pianoroll and scope while the Sliders and scopes example plays](/img/strudel-editor/inline-widgets.webp)
 
@@ -78,6 +79,13 @@ down move through it, Enter writes the selected option, and Escape closes it.
 | a comment, or any other mini-notation | nothing                                                               |
 
 Sounds load with the engine, so `s("…")` offers names only after the first Play.
+
+Resting the pointer on a function's name in the code shows the same documentation in a tooltip,
+whether it is written as a call, such as `note(`, or chained, such as `.lpf(`, and under any of
+its synonyms. Names in comments and strings show nothing. A touch screen has no pointer to rest,
+so on a phone the documentation shows only beside the completion list.
+
+![The documentation for lpf in a tooltip over its name](/img/strudel-editor/hover-documentation.webp)
 
 The documentation comes from Strudel itself. `codeEditor/strudelDocumentation.json` is generated from
 the JSDoc comments in the installed `@strudel/*` and `superdough` sources, the same comments

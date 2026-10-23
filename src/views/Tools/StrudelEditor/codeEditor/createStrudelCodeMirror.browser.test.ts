@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { userEvent } from 'vitest/browser'
+import { page, userEvent } from 'vitest/browser'
 import { getWidgetID, transpiler } from '@strudel/transpiler'
 import { setWidget } from '@strudel/codemirror'
 import { createStrudelCodeMirror } from './createStrudelCodeMirror'
@@ -179,6 +179,36 @@ describe('createStrudelCodeMirror', () => {
       // Assert
       expect(info.toLowerCase()).toContain(infoText)
       expect(editorText(parent)).toBe(expectedCode)
+    }
+  )
+
+  it.each([
+    ['a documented function', 's("bd").lpf(800)', 'lpf', 'low-pass'],
+    ['a synonym of one', 's("bd").cutoff(800)', 'cutoff', 'low-pass']
+  ])(
+    'describes %s in a tooltip while the pointer rests on it',
+    async (_case, initialCode, hoveredWord, expectedText) => {
+      // Arrange
+      const { parent } = mountEditor(initialCode)
+      const hoveredLine = parent.querySelector<HTMLElement>('.cm-line')
+      const wordRange = document.createRange()
+      const textNode = [...(hoveredLine?.querySelectorAll('span') ?? [])]
+        .map((span) => span.firstChild)
+        .find((node) => node?.textContent === hoveredWord)
+      wordRange.selectNodeContents(textNode ?? document.body)
+      const wordBox = wordRange.getBoundingClientRect()
+
+      // Act
+      await userEvent.hover(page.elementLocator(textNode?.parentElement ?? document.body), {
+        position: { x: wordBox.width / 2, y: wordBox.height / 2 }
+      })
+
+      // Assert
+      await vi.waitFor(() => {
+        const tooltip = parent.querySelector('.cm-tooltip-hover')
+        expect(tooltip?.textContent?.toLowerCase()).toContain(expectedText)
+        expect(tooltip?.textContent).toContain(`${hoveredWord}(`)
+      })
     }
   )
 

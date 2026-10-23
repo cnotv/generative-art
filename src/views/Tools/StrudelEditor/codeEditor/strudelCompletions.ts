@@ -1,4 +1,3 @@
-import { ensureSyntaxTree, syntaxTree } from '@codemirror/language'
 import type {
   Completion,
   CompletionContext,
@@ -6,15 +5,11 @@ import type {
   CompletionSource
 } from '@codemirror/autocomplete'
 import type { EditorState } from '@codemirror/state'
-import {
-  STRUDEL_COMPLETION_PARSE_TIMEOUT_MS,
-  STRUDEL_COMPLETION_PITCH_NAMES,
-  STRUDEL_COMPLETION_CALLEE_LOOKBEHIND
-} from '../config'
+import { STRUDEL_COMPLETION_PITCH_NAMES, STRUDEL_COMPLETION_CALLEE_LOOKBEHIND } from '../config'
+import { resolveSyntaxNode } from './syntaxNodeAt'
+import type { SyntaxNode } from './syntaxNodeAt'
+import { renderFunctionDocumentation } from './renderFunctionDocumentation'
 import type { StrudelCompletionVocabulary, StrudelFunctionDocumentation } from '../types'
-
-// @lezer/common is not a direct dependency, so its node type is read off CodeMirror's.
-type SyntaxNode = ReturnType<ReturnType<typeof syntaxTree>['resolveInner']>
 
 type StringArgument = {
   callee: string
@@ -29,52 +24,6 @@ const SOUND_TOKEN = /[\w-]*$/
 const CHORD_ROOT = /^([A-G][#b]?)(.*)$/
 const IDENTIFIER_BEFORE_CURSOR = /[\w$]*/
 const IDENTIFIER_CHARACTERS = /^[\w$]*$/
-
-const createElement = (tagName: string, className: string, text = ''): HTMLElement => {
-  const element = document.createElement(tagName)
-  element.className = className
-  element.textContent = text
-  return element
-}
-
-const renderFunctionDocumentation = (
-  functionDocumentation: StrudelFunctionDocumentation,
-  label: string
-): HTMLElement => {
-  const container = createElement('div', 'cm-strudel-doc')
-  const otherNames = [functionDocumentation.name, ...functionDocumentation.synonyms].filter(
-    (name) => name !== label
-  )
-  const parameterNames = functionDocumentation.params.map((parameter) => parameter.name).join(', ')
-  container.append(
-    createElement('strong', 'cm-strudel-doc__signature', `${label}(${parameterNames})`)
-  )
-  if (otherNames.length > 0) {
-    container.append(
-      createElement('p', 'cm-strudel-doc__synonyms', `Also: ${otherNames.join(', ')}`)
-    )
-  }
-  functionDocumentation.description
-    .split('\n\n')
-    .forEach((paragraph) => container.append(createElement('p', 'cm-strudel-doc__text', paragraph)))
-  if (functionDocumentation.params.length > 0) {
-    const parameterList = createElement('ul', 'cm-strudel-doc__params')
-    functionDocumentation.params.forEach((parameter) => {
-      const parameterItem = createElement('li', 'cm-strudel-doc__param')
-      parameterItem.append(
-        createElement('code', 'cm-strudel-doc__param-name', parameter.name),
-        ` ${[parameter.type, parameter.description].filter((part) => part.length > 0).join(': ')}`
-      )
-      parameterList.append(parameterItem)
-    })
-    container.append(parameterList)
-  }
-  const [firstExample] = functionDocumentation.examples
-  if (firstExample !== undefined) {
-    container.append(createElement('pre', 'cm-strudel-doc__example', firstExample))
-  }
-  return container
-}
 
 const toFunctionCompletions = (
   functionDocumentations: StrudelFunctionDocumentation[]
@@ -109,11 +58,6 @@ const toBankNames = (soundNames: string[]): string[] => [
       .map((soundName) => soundName.slice(0, soundName.indexOf('_')))
   )
 ]
-
-const resolveSyntaxNode = (state: EditorState, position: number): SyntaxNode =>
-  (
-    ensureSyntaxTree(state, position, STRUDEL_COMPLETION_PARSE_TIMEOUT_MS) ?? syntaxTree(state)
-  ).resolveInner(position, -1)
 
 const findEnclosing = (node: SyntaxNode, names: Set<string>): SyntaxNode | null => {
   if (names.has(node.name)) {
@@ -256,7 +200,7 @@ export const createStrudelCompletionSource = (
 ): CompletionSource => {
   const functionCompletions = toFunctionCompletions(vocabulary.functionDocumentations)
   return (context) => {
-    const node = resolveSyntaxNode(context.state, context.pos)
+    const node = resolveSyntaxNode(context.state, context.pos, -1)
     if (findEnclosing(node, COMMENT_NODE_NAMES) !== null) {
       return null
     }
