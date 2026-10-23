@@ -15,7 +15,7 @@ edit the code, and press the play button above the editor.
   opens where you left off. An address naming a pattern opens that pattern instead, and picking
   one replaces the saved code.
 
-A panel carries the seven strudel.cc tabs plus an import tab:
+A panel carries six of the strudel.cc tabs plus an import tab:
 
 - **welcome**: intro and about
 - **patterns**: the examples, then the shipped
@@ -24,7 +24,6 @@ A panel carries the seven strudel.cc tabs plus an import tab:
   `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
   pattern can open in a new tab.
 - **import**: turn an MP3 or other audio file into a pattern (below)
-- **sounds**: sound browser
 - **reference**: function quick list
 - **export**: WAV export settings
 - **console**: evaluation log

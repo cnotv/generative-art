@@ -89,7 +89,6 @@ export type StrudelTabId =
   | 'welcome'
   | 'patterns'
   | 'import'
-  | 'sounds'
   | 'reference'
   | 'export'
   | 'console'

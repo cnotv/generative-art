@@ -333,7 +333,6 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
   { id: 'import', label: 'import' },
-  { id: 'sounds', label: 'sounds' },
   { id: 'reference', label: 'reference' },
   { id: 'export', label: 'export' },
   { id: 'console', label: 'console' },

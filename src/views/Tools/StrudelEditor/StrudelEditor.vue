@@ -9,7 +9,6 @@ import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
 import ImportTab from './tabs/ImportTab.vue'
 import StrudelCodeEditor from './StrudelCodeEditor.vue'
-import SoundsTab from './tabs/SoundsTab.vue'
 import ReferenceTab from './tabs/ReferenceTab.vue'
 import ExportTab from './tabs/ExportTab.vue'
 import ConsoleTab from './tabs/ConsoleTab.vue'
@@ -164,7 +163,6 @@ onBeforeUnmount(() => {
             @file="onAudioFileChosen"
             @load="loadTranscription"
           />
-          <SoundsTab v-else-if="activeTab === 'sounds'" />
           <ReferenceTab v-else-if="activeTab === 'reference'" />
           <ExportTab v-else-if="activeTab === 'export'" />
           <ConsoleTab
