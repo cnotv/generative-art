@@ -479,6 +479,64 @@ describe('useStrudelEditor', () => {
     expect(playback.evaluateCode).toHaveBeenCalledTimes(2)
   })
 
+  it.each([
+    ['nothing has played yet', [], false],
+    ['the code playing is the code shown', ['play'], false],
+    ['the code was edited after it started', ['play', 'edit'], true],
+    ['the edit was run with Update', ['play', 'edit', 'play'], false],
+    ['the edit was undone', ['play', 'edit', 'undo'], false],
+    ['playing has stopped', ['play', 'edit', 'stop'], false]
+  ] as const)(
+    'reports unplayed changes as %s: %s',
+    async (_case, steps, expectedUnplayedChanges) => {
+      // Arrange
+      const { playPattern, stopPattern, updatePatternCode, hasUnplayedChanges } = useStrudelEditor({
+        initialExamples: buildExampleList(),
+        playbackLoader: async () => buildSuccessfulPlayback()
+      })
+      const runStep = async (step: (typeof steps)[number]): Promise<void> => {
+        if (step === 'play') {
+          await playPattern()
+        } else if (step === 'stop') {
+          await stopPattern()
+        } else {
+          updatePatternCode(step === 'edit' ? 's("hh*8")' : 's("bd sd")')
+        }
+      }
+
+      // Act
+      await steps.reduce<Promise<void>>(
+        (previousStep, step) => previousStep.then(() => runStep(step)),
+        Promise.resolve()
+      )
+
+      // Assert
+      expect(hasUnplayedChanges.value).toBe(expectedUnplayedChanges)
+    }
+  )
+
+  it('stops the old pattern when edited code fails, rather than leave it playing', async () => {
+    // Arrange
+    const playback = buildSuccessfulPlayback()
+    const { playPattern, updatePatternCode, editorStatus } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    await playPattern()
+    vi.mocked(playback.evaluateCode).mockResolvedValueOnce({
+      success: false,
+      errorMessage: 'bad pattern'
+    })
+    updatePatternCode('s("bd sd"')
+
+    // Act
+    await playPattern()
+
+    // Assert
+    expect(playback.stopPlayback).toHaveBeenCalledTimes(1)
+    expect(editorStatus.value).toBe('error')
+  })
+
   it('reports evaluation failures instead of playing', async () => {
     // Arrange
     const failingPlayback: StrudelPlayback = {

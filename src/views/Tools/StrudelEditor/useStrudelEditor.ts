@@ -1,5 +1,5 @@
-import { ref, shallowRef } from 'vue'
-import type { Ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
 import { DEFAULT_STRUDEL_EXAMPLE_ID, ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_TABS } from './config'
 import type {
   StrudelEditorHandle,
@@ -50,6 +50,8 @@ type StrudelEditorState = StrudelTranscriptionState & {
   selectedExampleId: Ref<string>
   patternCode: Ref<string>
   editorStatus: Ref<StrudelEditorStatus>
+  /** True while a pattern plays and the code on screen has changed since it started. */
+  hasUnplayedChanges: ComputedRef<boolean>
   errorMessage: Ref<string>
   examples: StrudelExample[]
   electroTunes: StrudelExample[]
@@ -103,6 +105,10 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   const playbackReference = ref<StrudelPlayback | null>(null)
   const activeTab = ref<StrudelTabId>('welcome')
   const logEntries = ref<StrudelLogEntry[]>([])
+  const playingCode = ref('')
+  const hasUnplayedChanges = computed(
+    () => editorStatus.value === 'playing' && patternCode.value !== playingCode.value
+  )
   const editorHandle = shallowRef<StrudelEditorHandle | null>(null)
   let logCounter = 0
 
@@ -162,16 +168,20 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   }
 
   const playPattern = async (): Promise<void> => {
-    editorStatus.value = 'idle'
     errorMessage.value = ''
     appendLog('Playing pattern...')
+    const evaluatedCode = patternCode.value
     try {
       const playback = await loadCachedPlayback(playbackReference, playbackLoader, playbackHooks)
-      const evaluationResult = await playback.evaluateCode(patternCode.value)
+      const evaluationResult = await playback.evaluateCode(evaluatedCode)
       if (evaluationResult.success) {
+        playingCode.value = evaluatedCode
         editorStatus.value = 'playing'
         appendLog('Pattern playing')
       } else {
+        // The engine keeps the previous pattern going when new code fails, which would leave
+        // sound playing under a Play button; only the code on screen should ever play.
+        await playback.stopPlayback()
         editorStatus.value = 'error'
         errorMessage.value = evaluationResult.errorMessage ?? 'Pattern failed to evaluate'
         appendLog(errorMessage.value, 'error')
@@ -222,6 +232,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     selectedExampleId,
     patternCode,
     editorStatus,
+    hasUnplayedChanges,
     errorMessage,
     examples: exampleList,
     electroTunes: ELECTRO_TUNES,

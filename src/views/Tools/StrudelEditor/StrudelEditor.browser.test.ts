@@ -331,6 +331,40 @@ describe('StrudelEditor audible playback', () => {
   )
 
   it(
+    'offers Update once the playing code is edited, and plays only the new code',
+    { timeout: 90000 },
+    async () => {
+      // Arrange
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+      const codeEditor = page.getByRole('textbox', { name: 'Live code pattern' })
+
+      try {
+        await codeEditor.fill('note("c3 e3").s("triangle")')
+        await page.getByRole('button', { name: 'Play' }).click()
+        await vi.waitFor(
+          () => {
+            expect(readPlayButtonLabel()).toBe('Stop')
+          },
+          { timeout: 60000, interval: 250 }
+        )
+
+        // Act
+        await codeEditor.fill('note("g3 b3").s("triangle")')
+        const labelAfterEdit = readPlayButtonLabel()
+        await page.getByRole('button', { name: 'Update' }).click()
+
+        // Assert
+        expect(labelAfterEdit).toBe('Update')
+        await vi.waitFor(() => {
+          expect(readPlayButtonLabel()).toBe('Stop')
+        })
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it(
     'reports a pattern with a syntax error instead of playing it',
     { timeout: 90000 },
     async () => {

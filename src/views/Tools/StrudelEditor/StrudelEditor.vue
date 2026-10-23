@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
-import { Play, Square } from 'lucide-vue-next'
+import { Play, RefreshCw, Square } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import { STRUDEL_LICENSE_NOTE } from './config'
 import { useStrudelEditor } from './useStrudelEditor'
@@ -18,6 +18,7 @@ import SettingsTab from './tabs/SettingsTab.vue'
 const {
   patternCode,
   editorStatus,
+  hasUnplayedChanges,
   errorMessage,
   examples,
   electroTunes,
@@ -64,10 +65,17 @@ const onStopRequested = (): void => {
   void stopPattern()
 }
 
-const isPlaying = computed(() => editorStatus.value === 'playing')
+// One button: Play when idle, Stop while playing, and Update once the code has changed since it
+// started, which swaps the old pattern for the new one.
+const playButtonAction = computed(() => {
+  if (editorStatus.value !== 'playing') {
+    return 'Play'
+  }
+  return hasUnplayedChanges.value ? 'Update' : 'Stop'
+})
 
-const onPlayToggled = (): void => {
-  if (isPlaying.value) {
+const onPlayButtonPressed = (): void => {
+  if (playButtonAction.value === 'Stop') {
     onStopRequested()
     return
   }
@@ -161,11 +169,12 @@ onBeforeUnmount(() => {
       class="strudel-editor__play"
       size="lg"
       variant="default"
-      :title="isPlaying ? 'Stop' : 'Play'"
-      :aria-label="isPlaying ? 'Stop' : 'Play'"
-      @click="onPlayToggled"
+      :title="playButtonAction"
+      :aria-label="playButtonAction"
+      @click="onPlayButtonPressed"
     >
-      <Square v-if="isPlaying" aria-hidden="true" />
+      <Square v-if="playButtonAction === 'Stop'" aria-hidden="true" />
+      <RefreshCw v-else-if="playButtonAction === 'Update'" aria-hidden="true" />
       <Play v-else aria-hidden="true" />
     </IconButton>
   </div>

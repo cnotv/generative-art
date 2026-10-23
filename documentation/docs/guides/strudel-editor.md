@@ -6,7 +6,9 @@ sidebar_position: 25
 
 The Strudel Editor at `/tools/StrudelEditor` reproduces the strudel.cc player: pick a pattern,
 edit the code, and press the play button fixed in the bottom-right corner, which turns into a
-stop button while the pattern plays. A panel carries the seven strudel.cc tabs plus an import
+stop button while the pattern plays. Editing the code while it plays turns the button into
+**Update**, which swaps the playing pattern, and its visuals, for the edited code; Ctrl+Enter
+does the same. Code that fails to run stops playback rather than leave the old pattern going. A panel carries the seven strudel.cc tabs plus an import
 tab:
 
 - **welcome**: intro and about
