@@ -515,6 +515,44 @@ describe('useStrudelEditor', () => {
     }
   )
 
+  it.each([
+    ['an example', 'selectExample', 'four-floor'],
+    ['an electro tune', 'selectElectroTune', ELECTRO_TUNES[0].id],
+    ['a pattern by its anchor', 'selectPattern', 'four-floor']
+  ] as const)('stops the music when %s is loaded over it', async (_kind, loader, patternId) => {
+    // Arrange
+    const playback = buildSuccessfulPlayback()
+    const editor = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    await editor.playPattern()
+
+    // Act
+    editor[loader](patternId)
+
+    // Assert
+    await vi.waitFor(() => {
+      expect(playback.stopPlayback).toHaveBeenCalledTimes(1)
+    })
+    expect(editor.editorStatus.value).toBe('idle')
+  })
+
+  it('loads a pattern without stopping anything when nothing plays', async () => {
+    // Arrange
+    const playback = buildSuccessfulPlayback()
+    const { selectExample } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+
+    // Act
+    selectExample('four-floor')
+
+    // Assert
+    expect(playback.stopPlayback).not.toHaveBeenCalled()
+  })
+
   it('stops the old pattern when edited code fails, rather than leave it playing', async () => {
     // Arrange
     const playback = buildSuccessfulPlayback()

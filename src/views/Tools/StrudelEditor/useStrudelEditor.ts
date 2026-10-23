@@ -128,45 +128,6 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     logEntries.value = [...logEntries.value, { id: logCounter, message, level }]
   }
 
-  const selectExample = (exampleId: string): void => {
-    const matchedExample = findStrudelExample(exampleList, exampleId)
-    if (matchedExample === undefined) {
-      return
-    }
-    selectedExampleId.value = matchedExample.id
-    patternCode.value = matchedExample.code
-    editorStatus.value = 'idle'
-    errorMessage.value = ''
-  }
-
-  const selectElectroTune = (tuneId: string): void => {
-    const matchedTune = ELECTRO_TUNES.find((tune) => tune.id === tuneId)
-    if (matchedTune === undefined) {
-      return
-    }
-    selectedExampleId.value = matchedTune.id
-    patternCode.value = matchedTune.code
-    editorStatus.value = 'idle'
-    errorMessage.value = ''
-    appendLog(`Loaded electro tune: ${matchedTune.label}`)
-  }
-
-  const selectPattern = (patternId: string): boolean => {
-    if (findStrudelExample(exampleList, patternId) !== undefined) {
-      selectExample(patternId)
-      return true
-    }
-    if (ELECTRO_TUNES.some((tune) => tune.id === patternId)) {
-      selectElectroTune(patternId)
-      return true
-    }
-    return false
-  }
-
-  const updatePatternCode = (nextCode: string): void => {
-    patternCode.value = nextCode
-  }
-
   const playPattern = async (): Promise<void> => {
     errorMessage.value = ''
     appendLog('Playing pattern...')
@@ -206,13 +167,54 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     appendLog('Stopped')
   }
 
+  // Loading another pattern over one that plays stops it, so only the code on screen sounds.
+  const loadPatternCode = (nextCode: string): void => {
+    if (editorStatus.value === 'playing') {
+      void stopPattern()
+    }
+    patternCode.value = nextCode
+    editorStatus.value = 'idle'
+    errorMessage.value = ''
+  }
+
+  const selectExample = (exampleId: string): void => {
+    const matchedExample = findStrudelExample(exampleList, exampleId)
+    if (matchedExample === undefined) {
+      return
+    }
+    selectedExampleId.value = matchedExample.id
+    loadPatternCode(matchedExample.code)
+  }
+
+  const selectElectroTune = (tuneId: string): void => {
+    const matchedTune = ELECTRO_TUNES.find((tune) => tune.id === tuneId)
+    if (matchedTune === undefined) {
+      return
+    }
+    selectedExampleId.value = matchedTune.id
+    loadPatternCode(matchedTune.code)
+    appendLog(`Loaded electro tune: ${matchedTune.label}`)
+  }
+
+  const selectPattern = (patternId: string): boolean => {
+    if (findStrudelExample(exampleList, patternId) !== undefined) {
+      selectExample(patternId)
+      return true
+    }
+    if (ELECTRO_TUNES.some((tune) => tune.id === patternId)) {
+      selectElectroTune(patternId)
+      return true
+    }
+    return false
+  }
+
+  const updatePatternCode = (nextCode: string): void => {
+    patternCode.value = nextCode
+  }
+
   const transcription = useStrudelTranscription({
     runner: editorOptions?.transcriptionRunner ?? runTranscriptionInWorker,
-    applyCode: (transcribedCode) => {
-      patternCode.value = transcribedCode
-      editorStatus.value = 'idle'
-      errorMessage.value = ''
-    },
+    applyCode: loadPatternCode,
     appendLog
   })
 
