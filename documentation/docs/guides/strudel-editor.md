@@ -39,6 +39,9 @@ here unchanged:
 - **`._pianoroll()`**, **`._scope()`**, **`._punchcard()`**, **`._spiral()`**,
   **`._pitchwheel()`** and **`._spectrum()`** draw under the line the call is on.
 - **`.pianoroll()`** and **`.scope()`**, without the underscore, draw behind the code.
+- Deleting an underscore call removes its drawing and the space under its line at once.
+  Every visual the code no longer calls stops and is cleared when the code next runs, with
+  Ctrl+Enter or Play, and on Stop.
 - The notes that are playing are boxed in the mini-notation as they sound.
 - **Autocomplete** lists the options as you type, and resting the pointer on a function's name
   shows its documentation, both described below.

@@ -256,6 +256,37 @@ describe('createStrudelCodeMirror', () => {
     expect(editorText(parent)).toBe(code)
   })
 
+  it.each([
+    ['deleting its call', '{Backspace>13/}', 0, 'note("c3")\ns("bd")'],
+    [
+      'changing its options',
+      '{ArrowLeft}{{ height: 90 }',
+      1,
+      'note("c3")._pianoroll({ height: 90 })\ns("bd")'
+    ],
+    ['typing after it', ' ', 1, 'note("c3")._pianoroll() \ns("bd")']
+  ])(
+    'follows %s at once, before the code runs again',
+    async (_edit, keys, expectedCanvases, expectedCode) => {
+      // Arrange
+      const code = 'note("c3")._pianoroll()\ns("bd")'
+      const { parent, editor } = mountEditor(code)
+      const meta = transpiledMeta(code)
+      registerWidgetCanvases(meta.widgets)
+      editor.applyEvaluation(meta)
+      parent.querySelector<HTMLElement>('.cm-content')?.focus()
+      await userEvent.keyboard('{Control>}{Home}{/Control}{End}')
+
+      // Act
+      await userEvent.keyboard(keys)
+
+      // Assert
+      expect(editorText(parent)).toBe(expectedCode)
+      expect(parent.querySelectorAll('.cm-content canvas')).toHaveLength(expectedCanvases)
+      expect(parent.querySelectorAll('.cm-content .cm-line')).toHaveLength(2)
+    }
+  )
+
   it('keeps inline widgets in their rows despite the global canvas rule', () => {
     // Arrange: App.vue makes every canvas absolute and full-size for the 3D views.
     const globalCanvasRule = document.createElement('style')
