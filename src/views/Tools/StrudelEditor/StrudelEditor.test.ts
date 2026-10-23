@@ -46,23 +46,33 @@ const mountEditorView = async () => {
 describe('StrudelEditor view', () => {
   afterEach(clearLocationHash)
 
-  it('renders the editor shell with code, actions and license note', async () => {
+  it('renders the code, one play button in the corner and the license note', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    const editorRoot = wrapper.find('.strudel-editor')
-    const codeField = wrapper.find('.fake-strudel-code')
-    const playButton = wrapper.findAll('button').find((button) => button.text() === 'Play')
-    const stopButton = wrapper.findAll('button').find((button) => button.text() === 'Stop')
-    const licenseNote = wrapper.find('.strudel-editor__license')
+    const playButtons = wrapper.findAll('.strudel-editor__play')
 
     // Assert
-    expect(editorRoot.exists()).toBe(true)
-    expect(codeField.exists()).toBe(true)
-    expect(playButton?.exists()).toBe(true)
-    expect(stopButton?.exists()).toBe(true)
-    expect(licenseNote.text()).toContain('AGPL-3.0')
+    expect(wrapper.find('.fake-strudel-code').exists()).toBe(true)
+    expect(playButtons).toHaveLength(1)
+    expect(playButtons[0]?.attributes('aria-label')).toBe('Play')
+    expect(wrapper.find('.strudel-editor__license').text()).toContain('AGPL-3.0')
+  })
+
+  it.each([
+    ['an example menu', '[role="combobox"]'],
+    ['a status line', '.strudel-editor__status'],
+    ['an error while nothing has failed', '.strudel-editor__error']
+  ])('shows no %s', async (_part, selector) => {
+    // Arrange
+    const wrapper = await mountEditorView()
+
+    // Act
+    const part = wrapper.find(selector)
+
+    // Assert
+    expect(part.exists()).toBe(false)
   })
 
   it('starts with the default example code in the editor', async () => {
@@ -74,28 +84,6 @@ describe('StrudelEditor view', () => {
 
     // Assert
     expect(codeField.element.value).toBe('s("bd sd, hh*8")')
-  })
-
-  it('shows the idle hint before anything plays', async () => {
-    // Arrange
-    const wrapper = await mountEditorView()
-
-    // Act
-    const statusText = wrapper.find('.strudel-editor__status').text()
-
-    // Assert
-    expect(statusText).toContain('Idle')
-  })
-
-  it('keeps Stop disabled until a pattern is playing', async () => {
-    // Arrange
-    const wrapper = await mountEditorView()
-
-    // Act
-    const stopButton = wrapper.findAll('button').find((button) => button.text() === 'Stop')
-
-    // Assert
-    expect(stopButton?.attributes('disabled')).toBeDefined()
   })
 
   it('updates the code as the player types', async () => {

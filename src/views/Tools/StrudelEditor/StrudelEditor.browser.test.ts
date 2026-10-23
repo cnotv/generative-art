@@ -16,6 +16,10 @@ const PCM_MAX_VALUE = 0x7fff
 const readEditorCode = (): string =>
   [...document.querySelectorAll('.cm-line')].map((line) => line.textContent).join('\n')
 
+// The corner button reads Stop while a pattern plays and Play otherwise.
+const readPlayButtonLabel = (): string | null =>
+  document.querySelector('.strudel-editor__play')?.getAttribute('aria-label') ?? null
+
 const hasPaintedPixels = (canvas: HTMLCanvasElement | null): boolean => {
   const drawContext = canvas?.getContext('2d')
   if (!canvas || !drawContext || canvas.width === 0 || canvas.height === 0) {
@@ -96,7 +100,7 @@ describe('StrudelEditor audible playback', () => {
 
       // Assert
       await vi.waitFor(() => {
-        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        expect(readPlayButtonLabel()).toBe('Stop')
       })
       const failureMessages = [...consoleError.mock.calls, ...consoleWarn.mock.calls]
         .map((callArguments) => String(callArguments[0]))
@@ -144,7 +148,7 @@ describe('StrudelEditor audible playback', () => {
 
       // Assert
       await vi.waitFor(() => {
-        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        expect(readPlayButtonLabel()).toBe('Stop')
       })
       const failureMessages = [...consoleError.mock.calls, ...consoleWarn.mock.calls]
         .map((callArguments) => String(callArguments[0]))
@@ -200,7 +204,7 @@ describe('StrudelEditor audible playback', () => {
       expect(editorCode).toMatch(/s\("[^"]*bd[^"]*"\)/)
       expect(editorCode).toMatch(/s\("[^"]*hh[^"]*"\)/)
       await vi.waitFor(() => {
-        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        expect(readPlayButtonLabel()).toBe('Stop')
       })
     } finally {
       AudioContext.prototype.createBufferSource = originalCreateBufferSource
@@ -232,7 +236,7 @@ describe('StrudelEditor audible playback', () => {
 
       // Assert
       await vi.waitFor(() => {
-        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        expect(readPlayButtonLabel()).toBe('Stop')
       })
       expect(readEditorCode()).toBe(INLINE_WIDGET_CODE)
       const sliderInput = document.querySelector<HTMLInputElement>('.cm-slider input[type="range"]')
@@ -267,14 +271,16 @@ describe('StrudelEditor audible playback', () => {
         await page.getByRole('button', { name: 'Play' }).click()
         await vi.waitFor(
           () => {
-            expect(wrapper.find('.strudel-editor__status').text()).not.toContain('Idle')
+            expect(
+              readPlayButtonLabel() === 'Stop' || wrapper.find('[role="alert"]').exists()
+            ).toBe(true)
           },
           { timeout: 60000, interval: 500 }
         )
 
         // Assert
         expect(exampleCode).not.toBe('')
-        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        expect(readPlayButtonLabel()).toBe('Stop')
         await vi.waitFor(
           () => {
             expect(hasPaintedPixels(document.querySelector(canvasSelector))).toBe(true)
@@ -316,7 +322,7 @@ describe('StrudelEditor audible playback', () => {
         await new Promise((resolve) => setTimeout(resolve, VISUAL_SETTLE_MS))
 
         // Assert
-        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+        expect(readPlayButtonLabel()).toBe('Stop')
         expect(hasPaintedPixels(backgroundCanvas())).toBe(false)
       } finally {
         wrapper.unmount()
@@ -337,13 +343,14 @@ describe('StrudelEditor audible playback', () => {
         await page.getByRole('button', { name: 'Play' }).click()
         await vi.waitFor(
           () => {
-            expect(wrapper.find('.strudel-editor__status').text()).not.toContain('Idle')
+            expect(wrapper.find('.strudel-editor__error').exists()).toBe(true)
           },
           { timeout: 60000, interval: 500 }
         )
 
         // Assert
-        expect(wrapper.find('.strudel-editor__status').text()).not.toContain('Playing')
+        expect(wrapper.find('.strudel-editor__error').text()).not.toBe('')
+        expect(readPlayButtonLabel()).toBe('Play')
       } finally {
         wrapper.unmount()
       }
@@ -351,7 +358,7 @@ describe('StrudelEditor audible playback', () => {
   )
 
   it(
-    'puts the picked pattern in the address, from a link or the menu',
+    'puts the picked pattern in the address, and Back returns to the one before',
     { timeout: 30000 },
     async () => {
       // Arrange
@@ -370,16 +377,16 @@ describe('StrudelEditor audible playback', () => {
         await page.getByRole('link', { name: 'Scope', exact: true }).click()
         const linkedHash = window.location.hash
         const linkedCode = readEditorCode()
-        await page.getByRole('combobox').click()
-        await page.getByRole('option', { name: 'Spiral', exact: true }).click()
+        await page.getByRole('link', { name: 'Spiral', exact: true }).click()
+        window.history.back()
 
         // Assert
         expect(linkedHash).toBe('#scope')
         expect(linkedCode).toContain('s("sawtooth")._scope()')
         await vi.waitFor(() => {
-          expect(window.location.hash).toBe('#spiral')
+          expect(window.location.hash).toBe('#scope')
+          expect(readEditorCode()).toContain('s("sawtooth")._scope()')
         })
-        expect(readEditorCode()).toContain('._spiral(')
       } finally {
         wrapper.unmount()
         window.history.replaceState(null, '', window.location.pathname + window.location.search)

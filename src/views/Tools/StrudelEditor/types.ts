@@ -13,11 +13,6 @@ export type StrudelEvaluationResult = {
   errorMessage?: string
 }
 
-export type StrudelExampleOption = {
-  value: string
-  label: string
-}
-
 export type StrudelPlayback = {
   evaluateCode: (patternCode: string) => Promise<StrudelEvaluationResult>
   stopPlayback: () => Promise<void>

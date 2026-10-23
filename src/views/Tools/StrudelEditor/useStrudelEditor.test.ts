@@ -15,7 +15,6 @@ import type {
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
 import {
   findStrudelExample,
-  listStrudelExampleOptions,
   resolveDefaultStrudelExample,
   useStrudelEditor
 } from './useStrudelEditor'
@@ -145,22 +144,6 @@ describe('findStrudelExample', () => {
 
     // Assert
     expect(matchedExample).toBeUndefined()
-  })
-})
-
-describe('listStrudelExampleOptions', () => {
-  it('maps every example to a select option', () => {
-    // Arrange
-    const exampleList = buildExampleList()
-
-    // Act
-    const exampleOptions = listStrudelExampleOptions(exampleList)
-
-    // Assert
-    expect(exampleOptions).toEqual([
-      { value: 'first-beat', label: 'First beat' },
-      { value: 'four-floor', label: 'Four floor' }
-    ])
   })
 })
 

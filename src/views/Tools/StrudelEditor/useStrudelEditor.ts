@@ -5,7 +5,6 @@ import type {
   StrudelEditorHandle,
   StrudelEditorStatus,
   StrudelExample,
-  StrudelExampleOption,
   StrudelLogEntry,
   StrudelPlayback,
   StrudelPlaybackHooks,
@@ -30,14 +29,6 @@ export const findStrudelExample = (
 ): StrudelExample | undefined => exampleList.find((example) => example.id === exampleId)
 
 /**
- * Select options for the example picker.
- * @param exampleList - examples to list
- * @returns one option per example
- */
-export const listStrudelExampleOptions = (exampleList: StrudelExample[]): StrudelExampleOption[] =>
-  exampleList.map((example) => ({ value: example.id, label: example.label }))
-
-/**
  * The example to open with: the requested one, or the first when it does not exist.
  * @param exampleList - examples to choose from
  * @param defaultExampleId - id of the preferred example
@@ -60,7 +51,6 @@ type StrudelEditorState = StrudelTranscriptionState & {
   patternCode: Ref<string>
   editorStatus: Ref<StrudelEditorStatus>
   errorMessage: Ref<string>
-  exampleOptions: StrudelExampleOption[]
   examples: StrudelExample[]
   electroTunes: StrudelExample[]
   logEntries: Ref<StrudelLogEntry[]>
@@ -233,7 +223,6 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     patternCode,
     editorStatus,
     errorMessage,
-    exampleOptions: listStrudelExampleOptions(exampleList),
     examples: exampleList,
     electroTunes: ELECTRO_TUNES,
     logEntries,

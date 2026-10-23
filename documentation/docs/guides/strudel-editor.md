@@ -5,14 +5,16 @@ sidebar_position: 25
 # Live-coding music with Strudel
 
 The Strudel Editor at `/tools/StrudelEditor` reproduces the strudel.cc player: pick a pattern,
-edit the code, and press Play. A bottom panel carries the seven strudel.cc tabs plus an import tab:
+edit the code, and press the play button fixed in the bottom-right corner, which turns into a
+stop button while the pattern plays. A panel carries the seven strudel.cc tabs plus an import
+tab:
 
 - **welcome**: intro and about
-- **patterns**: the examples, the same ones the Example pattern menu offers, then the shipped
+- **patterns**: the examples, then the shipped
   electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
   typed in by hand from a score and only approximate. Each is a link to its own anchor, so
   `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
-  pattern can open in a new tab. Picking from the Example pattern menu moves the anchor too.
+  pattern can open in a new tab.
 - **import**: turn an MP3 or other audio file into a pattern (below)
 - **sounds**: sound browser
 - **reference**: function quick list
@@ -23,13 +25,13 @@ edit the code, and press Play. A bottom panel carries the seven strudel.cc tabs 
 Audio starts on the first Play press, since browsers only allow sound after a user gesture.
 Patterns run on the Strudel engine (`@strudel/core`, `@strudel/mini`, `@strudel/transpiler`,
 `@strudel/webaudio`, `@strudel/tonal`, `@strudel/draw`), loaded lazily so the rest of the app
-never pays for it. Press Stop to hush the output; leaving the view stops it too. A pattern
-that fails to evaluate shows its error under the editor instead of playing.
+never pays for it. Press the stop button to hush the output; leaving the view stops it too. A
+pattern that fails to evaluate shows its error under the editor instead of playing.
 
 ## The code editor
 
 The editor fills the left side of the screen at full height and scrolls on its own; the
-player, its status and the tabs sit on the right. On a phone they stack, editor first. It is
+tabs sit on the right. On a phone they stack, editor first. It is
 strudel.cc's own CodeMirror setup from `@strudel/codemirror`, so code written there works
 here unchanged:
 

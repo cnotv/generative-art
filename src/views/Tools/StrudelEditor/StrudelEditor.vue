@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
-import Button from '@/components/ui/button/Button.vue'
-import { Select } from '@/components/ui/select'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { Play, Square } from 'lucide-vue-next'
+import IconButton from '@/components/IconButton.vue'
 import { STRUDEL_LICENSE_NOTE } from './config'
 import { useStrudelEditor } from './useStrudelEditor'
 import type { StrudelTabId } from './types'
@@ -16,17 +16,14 @@ import ConsoleTab from './tabs/ConsoleTab.vue'
 import SettingsTab from './tabs/SettingsTab.vue'
 
 const {
-  selectedExampleId,
   patternCode,
   editorStatus,
   errorMessage,
-  exampleOptions,
   examples,
   electroTunes,
   logEntries,
   activeTab,
   tabList,
-  selectExample,
   selectPattern,
   updatePatternCode,
   playPattern,
@@ -50,17 +47,6 @@ const loadAnchoredPattern = (): void => {
   selectPattern(readAnchoredPatternId())
 }
 
-const anchorPattern = (patternId: string): void => {
-  if (readAnchoredPatternId() !== patternId) {
-    window.location.hash = patternId
-  }
-}
-
-const onExampleSelected = (exampleId: string): void => {
-  selectExample(exampleId)
-  anchorPattern(exampleId)
-}
-
 const onPatternSelected = (patternId: string): void => {
   selectPattern(patternId)
 }
@@ -76,6 +62,16 @@ const onPlayRequested = (): void => {
 
 const onStopRequested = (): void => {
   void stopPattern()
+}
+
+const isPlaying = computed(() => editorStatus.value === 'playing')
+
+const onPlayToggled = (): void => {
+  if (isPlaying.value) {
+    onStopRequested()
+    return
+  }
+  onPlayRequested()
 }
 
 const onAudioFileChosen = (audioFile: File): void => {
@@ -106,33 +102,12 @@ onBeforeUnmount(() => {
         @ready="attachEditor"
       />
       <p class="strudel-editor__hint">Ctrl+Enter plays the code, Ctrl+. stops it.</p>
+      <p v-if="editorStatus === 'error'" class="strudel-editor__error" role="alert">
+        {{ errorMessage || 'Pattern failed to evaluate.' }}
+      </p>
     </section>
 
     <section class="strudel-editor__side" aria-label="Player">
-      <div class="strudel-editor__toolbar">
-        <label class="strudel-editor__label" for="strudel-example">Example pattern</label>
-        <Select
-          :model-value="selectedExampleId"
-          :options="exampleOptions"
-          placeholder="Choose a pattern"
-          @update:model-value="onExampleSelected"
-        />
-        <div class="strudel-editor__actions">
-          <Button :disabled="editorStatus === 'playing'" @click="onPlayRequested">Play</Button>
-          <Button variant="outline" :disabled="editorStatus !== 'playing'" @click="onStopRequested">
-            Stop
-          </Button>
-        </div>
-      </div>
-
-      <p class="strudel-editor__status" role="status">
-        <template v-if="editorStatus === 'playing'">Playing the current pattern.</template>
-        <template v-else-if="editorStatus === 'error'">
-          {{ errorMessage || 'Pattern failed to evaluate.' }}
-        </template>
-        <template v-else>Idle. Choose a pattern and press Play.</template>
-      </p>
-
       <div class="strudel-editor__panel">
         <div class="strudel-editor__tabs" role="tablist">
           <button
@@ -181,6 +156,18 @@ onBeforeUnmount(() => {
 
       <p class="strudel-editor__license">{{ STRUDEL_LICENSE_NOTE }}</p>
     </section>
+
+    <IconButton
+      class="strudel-editor__play"
+      size="lg"
+      variant="default"
+      :title="isPlaying ? 'Stop' : 'Play'"
+      :aria-label="isPlaying ? 'Stop' : 'Play'"
+      @click="onPlayToggled"
+    >
+      <Square v-if="isPlaying" aria-hidden="true" />
+      <Play v-else aria-hidden="true" />
+    </IconButton>
   </div>
 </template>
 
@@ -232,27 +219,14 @@ onBeforeUnmount(() => {
       'code'
       'side';
     overflow-y: auto;
+
+    /* Room under the last of the page, so scrolling to the end clears the corner play button. */
+    padding-bottom: calc(var(--btn-lg-height) + var(--spacing-4) * 2);
   }
 
   .strudel-editor__side {
     overflow-y: visible;
   }
-}
-
-.strudel-editor__toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-4);
-  background: var(--color-secondary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-}
-
-.strudel-editor__actions {
-  display: flex;
-  gap: var(--spacing-2);
-  flex-wrap: wrap;
 }
 
 .strudel-editor__label {
@@ -270,10 +244,20 @@ onBeforeUnmount(() => {
   color: var(--color-muted-foreground);
 }
 
-.strudel-editor__status {
-  font-size: var(--font-size-md);
-  color: var(--color-muted-foreground);
+.strudel-editor__error {
   margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-destructive);
+}
+
+/* Fixed to the viewport, so on a phone it stays in reach wherever the stacked view is scrolled. */
+.strudel-editor__play {
+  position: fixed;
+  right: var(--spacing-4);
+  bottom: var(--spacing-4);
+  z-index: var(--z-fixed);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
 }
 
 .strudel-editor__panel {
