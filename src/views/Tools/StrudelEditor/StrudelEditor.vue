@@ -8,6 +8,7 @@ import type { StrudelTabId } from './types'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
 import ImportTab from './tabs/ImportTab.vue'
+import StrudelCodeEditor from './StrudelCodeEditor.vue'
 import SoundsTab from './tabs/SoundsTab.vue'
 import ReferenceTab from './tabs/ReferenceTab.vue'
 import ExportTab from './tabs/ExportTab.vue'
@@ -31,6 +32,7 @@ const {
   stopPattern,
   setActiveTab,
   clearLogEntries,
+  attachEditor,
   transcriptionStatus,
   transcriptionProgress,
   transcriptionResult,
@@ -46,14 +48,6 @@ const onExampleSelected = (exampleId: string): void => {
 
 const onElectroTuneSelected = (tuneId: string): void => {
   selectElectroTune(tuneId)
-}
-
-const onCodeInput = (inputEvent: Event): void => {
-  const textArea = inputEvent.target as HTMLTextAreaElement | null
-  if (textArea === null) {
-    return
-  }
-  updatePatternCode(textArea.value)
 }
 
 const onPlayRequested = (): void => {
@@ -95,15 +89,15 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <label class="strudel-editor__label" for="strudel-code">Live code pattern</label>
-    <textarea
-      id="strudel-code"
-      class="strudel-editor__code"
-      :value="patternCode"
-      spellcheck="false"
-      rows="6"
-      @input="onCodeInput"
+    <p class="strudel-editor__label">Live code pattern</p>
+    <StrudelCodeEditor
+      :code="patternCode"
+      @update:code="updatePatternCode"
+      @evaluate="onPlayRequested"
+      @stop="onStopRequested"
+      @ready="attachEditor"
     />
+    <p class="strudel-editor__hint">Ctrl+Enter plays the code, Ctrl+. stops it.</p>
 
     <p class="strudel-editor__status" role="status">
       <template v-if="editorStatus === 'playing'">Playing the current pattern.</template>
@@ -192,6 +186,7 @@ onUnmounted(() => {
 }
 
 .strudel-editor__label {
+  margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-muted-foreground);
@@ -199,19 +194,10 @@ onUnmounted(() => {
   letter-spacing: 0.05em;
 }
 
-.strudel-editor__code {
-  width: 100%;
-  box-sizing: border-box;
-  min-height: 10rem;
-  padding: var(--spacing-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-md);
-  line-height: 1.5;
-  resize: vertical;
+.strudel-editor__hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
 }
 
 .strudel-editor__status {

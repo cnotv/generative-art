@@ -1,0 +1,118 @@
+import { EditorState, Prec } from '@codemirror/state'
+import type { Extension } from '@codemirror/state'
+import { EditorView, drawSelection, keymap, lineNumbers } from '@codemirror/view'
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+import { javascript } from '@codemirror/lang-javascript'
+import {
+  flash,
+  flashField,
+  highlightExtension,
+  highlightMiniLocations,
+  settings,
+  sliderPlugin,
+  theme,
+  updateMiniLocations,
+  updateSliderWidgets
+} from '@strudel/codemirror'
+import { STRUDEL_EDITOR_THEME } from '../config'
+import { inlineWidgetField, showInlineWidgets } from './inlineWidgets'
+import type { StrudelCodeMirror, StrudelCodeMirrorOptions, StrudelEvaluationMeta } from '../types'
+
+const isSliderWidget = (widget: unknown): boolean =>
+  typeof widget === 'object' && widget !== null && 'type' in widget && widget.type === 'slider'
+
+/**
+ * strudel.cc applies a theme by writing its colours to `:root` with `!important` and adding
+ * the `dark` class to `<html>`, which this app also reads for its own dark mode. The same
+ * variables are set on the editor's own element instead, where the highlight and slider
+ * styles still find them.
+ * @param element - the element that holds the editor
+ * @param themeName - a strudel.cc theme name
+ */
+const applyThemeVariables = (element: HTMLElement, themeName: string): void => {
+  Object.entries(settings[themeName] ?? {})
+    .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+    .forEach(([variableName, value]) => element.style.setProperty(`--${variableName}`, value))
+}
+
+const runAndClaim = (handler: () => void) => (): boolean => {
+  handler()
+  return true
+}
+
+const buildExtensions = (options: StrudelCodeMirrorOptions): Extension[] => [
+  lineNumbers(),
+  history(),
+  drawSelection(),
+  javascript(),
+  theme(STRUDEL_EDITOR_THEME),
+  EditorView.lineWrapping,
+  EditorView.contentAttributes.of({ 'aria-label': options.ariaLabel }),
+  // Above the strudel.cc theme, so the visuals canvas behind the editor stays visible.
+  Prec.highest(EditorView.theme({ '&': { backgroundColor: 'transparent' } })),
+  EditorView.theme({
+    '&': { height: '100%', fontSize: 'var(--font-size-md)' },
+    '.cm-scroller': { fontFamily: 'var(--font-mono)' },
+    // App.vue pins every canvas full-size and absolute for the 3D views, which would lift
+    // the inline pianoroll and scope out of their rows and over the code.
+    '.cm-content canvas': { position: 'static', display: 'block', maxWidth: '100%' }
+  }),
+  sliderPlugin,
+  inlineWidgetField,
+  Prec.highest(highlightExtension),
+  flashField,
+  EditorView.updateListener.of((update) => {
+    if (update.docChanged) {
+      options.onCodeChange(update.state.doc.toString())
+    }
+  }),
+  Prec.highest(
+    keymap.of([
+      { key: 'Ctrl-Enter', run: runAndClaim(options.onEvaluate) },
+      { key: 'Alt-Enter', run: runAndClaim(options.onEvaluate) },
+      { key: 'Ctrl-.', run: runAndClaim(options.onStop) },
+      { key: 'Alt-.', preventDefault: true, run: runAndClaim(options.onStop) }
+    ])
+  ),
+  keymap.of([...defaultKeymap, ...historyKeymap])
+]
+
+/**
+ * The strudel.cc code editor: CodeMirror with inline sliders, inline pianoroll and scope
+ * widgets, the playhead highlighted in the mini-notation, and the same play and stop keys.
+ * @param options - where to mount it, the starting code and the callbacks it reports to
+ * @returns controls to replace the code, show an evaluation and highlight playing notes
+ */
+export const createStrudelCodeMirror = (options: StrudelCodeMirrorOptions): StrudelCodeMirror => {
+  applyThemeVariables(options.parent, STRUDEL_EDITOR_THEME)
+  const view = new EditorView({
+    state: EditorState.create({ doc: options.initialCode, extensions: buildExtensions(options) }),
+    parent: options.parent
+  })
+  return {
+    setCode: (patternCode: string): void => {
+      const currentCode = view.state.doc.toString()
+      if (currentCode !== patternCode) {
+        view.dispatch({ changes: { from: 0, to: currentCode.length, insert: patternCode } })
+      }
+    },
+    applyEvaluation: (meta: StrudelEvaluationMeta): void => {
+      updateSliderWidgets(view, meta.widgets.filter(isSliderWidget))
+      showInlineWidgets(
+        view,
+        meta.widgets.filter((widget) => !isSliderWidget(widget))
+      )
+      updateMiniLocations(view, meta.miniLocations)
+      flash(view)
+    },
+    highlight: (activeHaps: unknown[], time: number): void => {
+      highlightMiniLocations(view, time, activeHaps)
+    },
+    clearHighlights: (): void => {
+      updateMiniLocations(view, [])
+    },
+    destroy: (): void => {
+      view.destroy()
+    }
+  }
+}

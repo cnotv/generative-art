@@ -6,11 +6,16 @@ import {
   STRUDEL_EXAMPLES,
   STRUDEL_TABS
 } from './config'
-import type { StrudelExample, StrudelPlayback } from './types'
+import type {
+  StrudelEditorHandle,
+  StrudelExample,
+  StrudelPlayback,
+  StrudelPlaybackHooks
+} from './types'
+import { loadDefaultStrudelPlayback } from './strudelPlayback'
 import {
   findStrudelExample,
   listStrudelExampleOptions,
-  loadDefaultStrudelPlayback,
   resolveDefaultStrudelExample,
   useStrudelEditor
 } from './useStrudelEditor'
@@ -26,20 +31,40 @@ const {
   mockScheduleHandler,
   mockCodeTranspiler,
   mockEvaluateFunction,
-  mockStopFunction
-} = vi.hoisted(() => ({
-  mockReplFactory: vi.fn(),
-  mockScopeInitializer: vi.fn(),
-  mockAudioInitializer: vi.fn(),
-  mockSynthRegistrar: vi.fn(),
-  mockSampleBankLoader: vi.fn(),
-  mockContextGetter: vi.fn(),
-  mockResumeFunction: vi.fn(),
-  mockScheduleHandler: vi.fn(),
-  mockCodeTranspiler: vi.fn(),
-  mockEvaluateFunction: vi.fn(),
-  mockStopFunction: vi.fn()
-}))
+  mockStopFunction,
+  mockDrawer,
+  mockDrawerConstructor,
+  mockSlider,
+  mockSliderWithId
+} = vi.hoisted(() => {
+  const drawer = {
+    start: vi.fn(),
+    stop: vi.fn(),
+    setDrawTime: vi.fn(),
+    invalidate: vi.fn()
+  }
+  // The loader calls `new Drawer(...)`, and an arrow function cannot be constructed.
+  function createDrawer() {
+    return drawer
+  }
+  return {
+    mockDrawer: drawer,
+    mockDrawerConstructor: vi.fn(createDrawer),
+    mockSlider: vi.fn(),
+    mockSliderWithId: vi.fn(),
+    mockReplFactory: vi.fn(),
+    mockScopeInitializer: vi.fn(),
+    mockAudioInitializer: vi.fn(),
+    mockSynthRegistrar: vi.fn(),
+    mockSampleBankLoader: vi.fn(),
+    mockContextGetter: vi.fn(),
+    mockResumeFunction: vi.fn(),
+    mockScheduleHandler: vi.fn(),
+    mockCodeTranspiler: vi.fn(),
+    mockEvaluateFunction: vi.fn(),
+    mockStopFunction: vi.fn()
+  }
+})
 
 vi.mock('@strudel/core', () => ({
   repl: mockReplFactory,
@@ -57,6 +82,34 @@ vi.mock('@strudel/tonal', () => ({}))
 vi.mock('@strudel/transpiler', () => ({
   transpiler: mockCodeTranspiler
 }))
+vi.mock('@strudel/draw', () => ({
+  Drawer: mockDrawerConstructor
+}))
+vi.mock('@strudel/codemirror', () => ({
+  slider: mockSlider,
+  sliderWithID: mockSliderWithId
+}))
+
+const buildPlaybackHooks = (): StrudelPlaybackHooks => ({
+  onEvaluated: vi.fn(),
+  onFrame: vi.fn(),
+  onStopped: vi.fn(),
+  getDrawContext: vi.fn(() => null)
+})
+
+const readReplOptions = (): Record<string, unknown> => {
+  const replOptions: unknown = mockReplFactory.mock.calls[0]?.[0]
+  return typeof replOptions === 'object' && replOptions !== null
+    ? Object.fromEntries(Object.entries(replOptions))
+    : {}
+}
+
+const callReplOption = (optionName: string, ...callArguments: unknown[]): void => {
+  const option = readReplOptions()[optionName]
+  if (typeof option === 'function') {
+    option(...callArguments)
+  }
+}
 
 const buildExampleList = (): StrudelExample[] => [
   { id: 'first-beat', label: 'First beat', code: 's("bd sd")' },
@@ -159,7 +212,7 @@ describe('loadDefaultStrudelPlayback', () => {
     const playbackLoader = loadDefaultStrudelPlayback
 
     // Act
-    await playbackLoader()
+    await playbackLoader(buildPlaybackHooks())
     const replOptions = mockReplFactory.mock.calls[0]?.[0] as Record<string, unknown>
 
     // Assert
@@ -172,7 +225,7 @@ describe('loadDefaultStrudelPlayback', () => {
     const playbackLoader = loadDefaultStrudelPlayback
 
     // Act
-    await playbackLoader()
+    await playbackLoader(buildPlaybackHooks())
 
     // Assert
     expect(mockAudioInitializer).toHaveBeenCalledTimes(1)
@@ -185,7 +238,7 @@ describe('loadDefaultStrudelPlayback', () => {
     mockContextGetter.mockResolvedValue({ currentTime: 1.5, resume: mockResumeFunction })
 
     // Act
-    await loadDefaultStrudelPlayback()
+    await loadDefaultStrudelPlayback(buildPlaybackHooks())
     const replOptions = mockReplFactory.mock.calls[0]?.[0] as Record<string, unknown>
     const getTime = replOptions.getTime as () => number
 
@@ -195,7 +248,7 @@ describe('loadDefaultStrudelPlayback', () => {
 
   it('evaluates code through the repl instance', async () => {
     // Arrange
-    const playback = await loadDefaultStrudelPlayback()
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
 
     // Act
     const evaluationResult = await playback.evaluateCode('s("bd sd")')
@@ -210,7 +263,7 @@ describe('loadDefaultStrudelPlayback', () => {
     const playbackLoader = loadDefaultStrudelPlayback
 
     // Act
-    const playback = await playbackLoader()
+    const playback = await playbackLoader(buildPlaybackHooks())
     await playback.evaluateCode('s("bd sd")')
 
     // Assert
@@ -218,6 +271,73 @@ describe('loadDefaultStrudelPlayback', () => {
     const bankLoadOrder = mockSampleBankLoader.mock.invocationCallOrder[0] ?? 0
     const evaluateOrder = mockEvaluateFunction.mock.invocationCallOrder[0] ?? 0
     expect(bankLoadOrder).toBeLessThan(evaluateOrder)
+  })
+
+  it('puts slider() and the draw functions in the evaluation scope', async () => {
+    // Arrange
+    const hooks = buildPlaybackHooks()
+
+    // Act
+    await loadDefaultStrudelPlayback(hooks)
+    const scopeModules = mockScopeInitializer.mock.calls[0] ?? []
+
+    // Assert
+    expect(scopeModules).toContainEqual({ slider: mockSlider, sliderWithID: mockSliderWithId })
+  })
+
+  it('hands the sliders and widgets of each evaluation to the editor', async () => {
+    // Arrange
+    const hooks = buildPlaybackHooks()
+    await loadDefaultStrudelPlayback(hooks)
+    const meta = { miniLocations: [[0, 2]], widgets: [{ type: 'slider', from: 10, to: 13 }] }
+
+    // Act
+    callReplOption('afterEval', { meta, pattern: { getPainters: () => [] } })
+
+    // Assert
+    expect(hooks.onEvaluated).toHaveBeenCalledWith(meta)
+    expect(mockDrawer.setDrawTime).toHaveBeenCalledWith([0, 0])
+  })
+
+  it('opens the draw window when the pattern paints a pianoroll or scope', async () => {
+    // Arrange
+    await loadDefaultStrudelPlayback(buildPlaybackHooks())
+
+    // Act
+    callReplOption('afterEval', { meta: {}, pattern: { getPainters: () => [vi.fn()] } })
+
+    // Assert
+    expect(mockDrawer.setDrawTime).toHaveBeenCalledWith([-2, 2])
+  })
+
+  it.each([
+    [true, 'start'],
+    [false, 'stop']
+  ] as const)('runs the drawer while playing is %s', async (started, drawerMethod) => {
+    // Arrange
+    const hooks = buildPlaybackHooks()
+    await loadDefaultStrudelPlayback(hooks)
+
+    // Act
+    callReplOption('onToggle', started)
+
+    // Assert
+    expect(mockDrawer[drawerMethod]).toHaveBeenCalledTimes(1)
+    expect(hooks.onStopped).toHaveBeenCalledTimes(started ? 0 : 1)
+  })
+
+  it('reports a pattern that fails to evaluate instead of claiming it plays', async () => {
+    // Arrange
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+    mockEvaluateFunction.mockImplementation(async () => {
+      callReplOption('onEvalError', new Error('Unexpected token'))
+    })
+
+    // Act
+    const evaluationResult = await playback.evaluateCode('s("bd"')
+
+    // Assert
+    expect(evaluationResult).toEqual({ success: false, errorMessage: 'Unexpected token' })
   })
 
   it('plays through the real loader wiring with mocked modules', async () => {
@@ -604,6 +724,66 @@ describe('ELECTRO_TUNES', () => {
 
     // Assert
     expect(uniqueIds.size).toBe(tuneIds.length)
+  })
+})
+
+describe('useStrudelEditor editor attachment', () => {
+  const buildEditorHandle = (): StrudelEditorHandle => ({
+    applyEvaluation: vi.fn(),
+    highlight: vi.fn(),
+    clearHighlights: vi.fn(),
+    getDrawContext: vi.fn(() => null),
+    clearVisuals: vi.fn()
+  })
+
+  it('routes evaluations, frames and stops to the attached editor', async () => {
+    // Arrange
+    const editorHandle = buildEditorHandle()
+    const capturedHooks: StrudelPlaybackHooks[] = []
+    const { playPattern, attachEditor } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async (hooks) => {
+        capturedHooks.push(hooks)
+        return buildSuccessfulPlayback()
+      }
+    })
+    attachEditor(editorHandle)
+    await playPattern()
+    const meta = { miniLocations: [], widgets: [] }
+
+    // Act
+    capturedHooks[0]?.onEvaluated(meta)
+    capturedHooks[0]?.onFrame(['hap'], 1.25)
+    capturedHooks[0]?.onStopped()
+
+    // Assert
+    expect(editorHandle.applyEvaluation).toHaveBeenCalledWith(meta)
+    expect(editorHandle.highlight).toHaveBeenCalledWith(['hap'], 1.25)
+    expect(editorHandle.clearHighlights).toHaveBeenCalledTimes(1)
+    expect(editorHandle.clearVisuals).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops reaching an editor once it is detached', async () => {
+    // Arrange
+    const editorHandle = buildEditorHandle()
+    const capturedHooks: StrudelPlaybackHooks[] = []
+    const { playPattern, attachEditor } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async (hooks) => {
+        capturedHooks.push(hooks)
+        return buildSuccessfulPlayback()
+      }
+    })
+    attachEditor(editorHandle)
+    await playPattern()
+
+    // Act
+    attachEditor(null)
+    capturedHooks[0]?.onFrame(['hap'], 1)
+
+    // Assert
+    expect(editorHandle.highlight).not.toHaveBeenCalled()
+    expect(capturedHooks[0]?.getDrawContext()).toBeNull()
   })
 })
 

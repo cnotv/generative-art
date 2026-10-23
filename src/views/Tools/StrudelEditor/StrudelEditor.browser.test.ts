@@ -9,6 +9,14 @@ const WAV_HEADER_BYTES = 44
 const PCM_BYTES_PER_SAMPLE = 2
 const PCM_MAX_VALUE = 0x7fff
 
+const readEditorCode = (): string =>
+  [...document.querySelectorAll('.cm-line')].map((line) => line.textContent).join('\n')
+
+const INLINE_WIDGET_CODE = [
+  '$: note("<c3 e3 g3 b3>*4").s("sawtooth").lpf(slider(800, 200, 4000, 10))._pianoroll()',
+  '$: s("bd*4")._scope()'
+].join('\n')
+
 const encodeMonoWav = (samples: Float32Array, sampleRate: number): Blob => {
   const dataBytes = samples.length * PCM_BYTES_PER_SAMPLE
   const view = new DataView(new ArrayBuffer(WAV_HEADER_BYTES + dataBytes))
@@ -67,7 +75,9 @@ describe('StrudelEditor audible playback', () => {
       )
 
       // Assert
-      expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+      await vi.waitFor(() => {
+        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+      })
       const failureMessages = [...consoleError.mock.calls, ...consoleWarn.mock.calls]
         .map((callArguments) => String(callArguments[0]))
         .filter((message) => message.includes('not found'))
@@ -113,7 +123,9 @@ describe('StrudelEditor audible playback', () => {
       )
 
       // Assert
-      expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+      await vi.waitFor(() => {
+        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+      })
       const failureMessages = [...consoleError.mock.calls, ...consoleWarn.mock.calls]
         .map((callArguments) => String(callArguments[0]))
         .filter((message) => message.includes('not found'))
@@ -154,7 +166,7 @@ describe('StrudelEditor audible playback', () => {
       const fileInput = wrapper.find<HTMLInputElement>('input[type="file"]').element
       await userEvent.upload(page.elementLocator(fileInput), audioFile)
       await page.getByRole('button', { name: 'Load into editor' }).click({ timeout: 60000 })
-      const editorCode = wrapper.find<HTMLTextAreaElement>('.strudel-editor__code').element.value
+      const editorCode = readEditorCode()
       await page.getByRole('button', { name: 'Play' }).click()
       await vi.waitFor(
         () => {
@@ -167,10 +179,75 @@ describe('StrudelEditor audible playback', () => {
       expect(editorCode).toContain('setcps(120/60/4)')
       expect(editorCode).toMatch(/s\("[^"]*bd[^"]*"\)/)
       expect(editorCode).toMatch(/s\("[^"]*hh[^"]*"\)/)
-      expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+      await vi.waitFor(() => {
+        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+      })
     } finally {
       AudioContext.prototype.createBufferSource = originalCreateBufferSource
       wrapper.unmount()
     }
   })
+
+  it('shows inline sliders, pianoroll and scope, and plays', { timeout: 90000 }, async () => {
+    // Arrange: count started oscillators, since this pattern plays a synth and no samples.
+    let oscillatorCount = 0
+    const originalCreateOscillator = AudioContext.prototype.createOscillator
+    AudioContext.prototype.createOscillator = function (this: AudioContext) {
+      oscillatorCount += 1
+      return originalCreateOscillator.call(this)
+    }
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      // Act: type the code the way a player would, then press Play.
+      const codeEditor = page.getByRole('textbox', { name: 'Live code pattern' })
+      await codeEditor.fill(INLINE_WIDGET_CODE)
+      await page.getByRole('button', { name: 'Play' }).click()
+      await vi.waitFor(
+        () => {
+          expect(oscillatorCount).toBeGreaterThan(0)
+        },
+        { timeout: 60000, interval: 500 }
+      )
+
+      // Assert
+      await vi.waitFor(() => {
+        expect(wrapper.find('.strudel-editor__status').text()).toContain('Playing')
+      })
+      expect(readEditorCode()).toBe(INLINE_WIDGET_CODE)
+      const sliderInput = document.querySelector<HTMLInputElement>('.cm-slider input[type="range"]')
+      expect(sliderInput?.value).toBe('800')
+      expect(document.querySelectorAll('.cm-content canvas').length).toBe(2)
+      expect(document.documentElement.classList.contains('dark')).toBe(false)
+    } finally {
+      AudioContext.prototype.createOscillator = originalCreateOscillator
+      wrapper.unmount()
+    }
+  })
+
+  it(
+    'reports a pattern with a syntax error instead of playing it',
+    { timeout: 90000 },
+    async () => {
+      // Arrange
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        // Act
+        await page.getByRole('textbox', { name: 'Live code pattern' }).fill('s("bd sd"')
+        await page.getByRole('button', { name: 'Play' }).click()
+        await vi.waitFor(
+          () => {
+            expect(wrapper.find('.strudel-editor__status').text()).not.toContain('Idle')
+          },
+          { timeout: 60000, interval: 500 }
+        )
+
+        // Assert
+        expect(wrapper.find('.strudel-editor__status').text()).not.toContain('Playing')
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
 })

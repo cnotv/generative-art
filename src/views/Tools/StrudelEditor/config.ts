@@ -27,6 +27,19 @@ export const STRUDEL_EXAMPLES: StrudelExample[] = [
     id: 'soft-melody',
     label: 'Soft melody',
     code: 'note("c3 [e3 g3] a3 [g3 e3]").s("triangle").lpf(800)'
+  },
+  {
+    id: 'sliders-and-scopes',
+    label: 'Sliders and scopes',
+    code: `// Drag the sliders while it plays; the pianoroll and scope draw under their lines.
+$: note("<c3 eb3 g3 bb3>*8").s("sawtooth")
+  .lpf(slider(1200, 200, 4000))
+  .delay(slider(0.4))
+  .pan(rand)
+  ._pianoroll()
+$: note("<c2 c2 g1 bb1>").s("square").lpf(400)
+  ._scope()
+$: s("bd*4, [~ hh]*4")`
   }
 ]
 
@@ -293,3 +306,17 @@ export const TRANSCRIPTION_STAGE_LABELS: Record<TranscriptionStage, string> = {
 }
 
 export const SECONDS_PER_MINUTE = 60
+
+/** strudel.cc's own colours, applied to the editor alone rather than the page. */
+export const STRUDEL_EDITOR_THEME = 'strudelTheme'
+export const STRUDEL_EDITOR_ARIA_LABEL = 'Live code pattern'
+/** Seconds of pattern either side of now that pianoroll and scope painters see. */
+export const STRUDEL_DRAW_TIME: [number, number] = [-2, 2]
+export const STRUDEL_NO_DRAW_TIME: [number, number] = [0, 0]
+
+/**
+ * Strudel's `getDrawContext()` draws on the element with this id, and creates a full-window
+ * canvas pinned over the whole page when there is none. Naming the editor's background
+ * canvas so keeps `.pianoroll()` and `.scope()` behind the code, as on strudel.cc.
+ */
+export const STRUDEL_DRAW_CANVAS_ID = 'test-canvas'

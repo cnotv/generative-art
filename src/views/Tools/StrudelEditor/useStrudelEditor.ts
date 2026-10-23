@@ -1,23 +1,20 @@
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import type { Ref } from 'vue'
-import {
-  DEFAULT_SAMPLE_BANK,
-  DEFAULT_STRUDEL_EXAMPLE_ID,
-  ELECTRO_TUNES,
-  STRUDEL_EXAMPLES,
-  STRUDEL_TABS
-} from './config'
+import { DEFAULT_STRUDEL_EXAMPLE_ID, ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_TABS } from './config'
 import type {
+  StrudelEditorHandle,
   StrudelEditorStatus,
-  StrudelEvaluationResult,
   StrudelExample,
   StrudelExampleOption,
   StrudelLogEntry,
   StrudelPlayback,
+  StrudelPlaybackHooks,
+  StrudelPlaybackLoader,
   StrudelTabId,
   StrudelTranscriptionState,
   TranscriptionRunner
 } from './types'
+import { loadDefaultStrudelPlayback } from './strudelPlayback'
 import { runTranscriptionInWorker } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 
@@ -51,115 +48,10 @@ export const resolveDefaultStrudelExample = (
   defaultExampleId: string
 ): StrudelExample | undefined => findStrudelExample(exampleList, defaultExampleId) ?? exampleList[0]
 
-const isRecordModule = (moduleValue: unknown): moduleValue is Record<string, unknown> =>
-  typeof moduleValue === 'object' && moduleValue !== null
-
-type UnknownCallable = (...callArguments: unknown[]) => unknown
-
-const toCallable = (callableValue: unknown): UnknownCallable | undefined =>
-  // Strudel ships untyped JS, so the shape is checked before calling.
-  typeof callableValue === 'function' ? (callableValue as UnknownCallable) : undefined
-
-const readAudioTime = (audioContext: unknown): number => {
-  if (isRecordModule(audioContext) && typeof audioContext.currentTime === 'number') {
-    return audioContext.currentTime
-  }
-  return 0
-}
-
-const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
-  if (!isRecordModule(audioContext)) {
-    return
-  }
-  const resumeFunction = toCallable(audioContext.resume)
-  if (resumeFunction === undefined) {
-    return
-  }
-  await resumeFunction.call(audioContext)
-}
-
-/**
- * Loads the Strudel engine on demand, starts audio, loads the default sample kit and
- * returns a playback handle around one REPL (read-eval-print loop) instance.
- * @returns functions to evaluate code and stop playback
- */
-export const loadDefaultStrudelPlayback = async (): Promise<StrudelPlayback> => {
-  const [coreModule, miniModule, webaudioModule, tonalModule, transpilerModule]: unknown[] =
-    await Promise.all([
-      import('@strudel/core'),
-      import('@strudel/mini'),
-      import('@strudel/webaudio'),
-      import('@strudel/tonal'),
-      import('@strudel/transpiler')
-    ])
-
-  if (
-    !isRecordModule(coreModule) ||
-    !isRecordModule(webaudioModule) ||
-    !isRecordModule(transpilerModule)
-  ) {
-    throw new Error('Strudel modules failed to load')
-  }
-
-  const replFactory = toCallable(coreModule.repl)
-  const scopeInitializer = toCallable(coreModule.evalScope)
-  const audioInitializer = toCallable(webaudioModule.initAudio)
-  const synthRegistrar = toCallable(webaudioModule.registerSynthSounds)
-  const sampleBankLoader = toCallable(webaudioModule.samples)
-  const contextGetter = toCallable(webaudioModule.getAudioContext)
-  const scheduleHandler = webaudioModule.webaudioOutput
-  const codeTranspiler = transpilerModule.transpiler
-  if (
-    replFactory === undefined ||
-    scopeInitializer === undefined ||
-    audioInitializer === undefined ||
-    synthRegistrar === undefined ||
-    sampleBankLoader === undefined ||
-    contextGetter === undefined ||
-    typeof scheduleHandler !== 'function' ||
-    typeof codeTranspiler !== 'function'
-  ) {
-    throw new Error('Strudel modules failed to load')
-  }
-
-  await audioInitializer()
-  synthRegistrar()
-  await sampleBankLoader(DEFAULT_SAMPLE_BANK)
-  await scopeInitializer(miniModule, webaudioModule, tonalModule, coreModule)
-
-  const audioContext: unknown = await contextGetter()
-  await resumeAudioContext(audioContext)
-  const replInstance: unknown = await replFactory({
-    // Pinned @strudel/core 1.2.6 schedules through defaultOutput; newer Strudel renamed
-    // it to onSchedule, so this key has to move with the pinned version.
-    defaultOutput: scheduleHandler,
-    getTime: () => readAudioTime(audioContext),
-    transpiler: codeTranspiler
-  })
-  if (!isRecordModule(replInstance)) {
-    throw new Error('Strudel modules failed to load')
-  }
-  const evaluateFunction = toCallable(replInstance.evaluate)
-  const stopFunction = toCallable(replInstance.stop)
-  if (evaluateFunction === undefined || stopFunction === undefined) {
-    throw new Error('Strudel modules failed to load')
-  }
-
-  return {
-    evaluateCode: async (patternCode: string): Promise<StrudelEvaluationResult> => {
-      await evaluateFunction(patternCode)
-      return { success: true }
-    },
-    stopPlayback: async (): Promise<void> => {
-      await stopFunction()
-    }
-  }
-}
-
 type StrudelEditorOptions = {
   initialExamples?: StrudelExample[]
   initialExampleId?: string
-  playbackLoader?: () => Promise<StrudelPlayback>
+  playbackLoader?: StrudelPlaybackLoader
   transcriptionRunner?: TranscriptionRunner
 }
 
@@ -180,16 +72,18 @@ type StrudelEditorState = StrudelTranscriptionState & {
   stopPattern: () => Promise<void>
   setActiveTab: (tabId: StrudelTabId) => void
   clearLogEntries: () => void
+  attachEditor: (editorHandle: StrudelEditorHandle | null) => void
 }
 
 const loadCachedPlayback = async (
   playbackReference: Ref<StrudelPlayback | null>,
-  playbackLoader: () => Promise<StrudelPlayback>
+  playbackLoader: StrudelPlaybackLoader,
+  playbackHooks: StrudelPlaybackHooks
 ): Promise<StrudelPlayback> => {
   if (playbackReference.value !== null) {
     return playbackReference.value
   }
-  const playback = await playbackLoader()
+  const playback = await playbackLoader(playbackHooks)
   playbackReference.value = playback
   return playback
 }
@@ -216,7 +110,19 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   const playbackReference = ref<StrudelPlayback | null>(null)
   const activeTab = ref<StrudelTabId>('welcome')
   const logEntries = ref<StrudelLogEntry[]>([])
+  const editorHandle = shallowRef<StrudelEditorHandle | null>(null)
   let logCounter = 0
+
+  // Playback outlives any one editor instance, so it reaches the editor through this ref.
+  const playbackHooks: StrudelPlaybackHooks = {
+    onEvaluated: (meta) => editorHandle.value?.applyEvaluation(meta),
+    onFrame: (activeHaps, time) => editorHandle.value?.highlight(activeHaps, time),
+    onStopped: () => {
+      editorHandle.value?.clearHighlights()
+      editorHandle.value?.clearVisuals()
+    },
+    getDrawContext: () => editorHandle.value?.getDrawContext() ?? null
+  }
 
   const appendLog = (message: string, level: StrudelLogEntry['level'] = 'info'): void => {
     logCounter += 1
@@ -255,7 +161,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     errorMessage.value = ''
     appendLog('Playing pattern...')
     try {
-      const playback = await loadCachedPlayback(playbackReference, playbackLoader)
+      const playback = await loadCachedPlayback(playbackReference, playbackLoader, playbackHooks)
       const evaluationResult = await playback.evaluateCode(patternCode.value)
       if (evaluationResult.success) {
         editorStatus.value = 'playing'
@@ -303,6 +209,10 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     logEntries.value = []
   }
 
+  const attachEditor = (nextEditorHandle: StrudelEditorHandle | null): void => {
+    editorHandle.value = nextEditorHandle
+  }
+
   return {
     selectedExampleId,
     patternCode,
@@ -320,6 +230,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     stopPattern,
     setActiveTab,
     clearLogEntries,
+    attachEditor,
     ...transcription
   }
 }

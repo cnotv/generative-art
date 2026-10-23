@@ -23,6 +23,48 @@ export type StrudelPlayback = {
   stopPlayback: () => Promise<void>
 }
 
+/** What the transpiler found in the evaluated code, in Strudel's own untyped shapes. */
+export type StrudelEvaluationMeta = {
+  miniLocations: unknown[]
+  widgets: unknown[]
+}
+
+/** The CodeMirror editor: the code, plus inline sliders, widgets and the playhead. */
+export type StrudelCodeMirror = {
+  setCode: (patternCode: string) => void
+  applyEvaluation: (meta: StrudelEvaluationMeta) => void
+  highlight: (activeHaps: unknown[], time: number) => void
+  clearHighlights: () => void
+  destroy: () => void
+}
+
+/** The code editor as playback sees it: where to show sliders, widgets, the playhead and visuals. */
+export type StrudelEditorHandle = {
+  applyEvaluation: (meta: StrudelEvaluationMeta) => void
+  highlight: (activeHaps: unknown[], time: number) => void
+  clearHighlights: () => void
+  getDrawContext: () => CanvasRenderingContext2D | null
+  clearVisuals: () => void
+}
+
+export type StrudelPlaybackHooks = {
+  onEvaluated: (meta: StrudelEvaluationMeta) => void
+  onFrame: (activeHaps: unknown[], time: number) => void
+  onStopped: () => void
+  getDrawContext: () => CanvasRenderingContext2D | null
+}
+
+export type StrudelPlaybackLoader = (hooks: StrudelPlaybackHooks) => Promise<StrudelPlayback>
+
+export type StrudelCodeMirrorOptions = {
+  parent: HTMLElement
+  initialCode: string
+  ariaLabel: string
+  onCodeChange: (patternCode: string) => void
+  onEvaluate: () => void
+  onStop: () => void
+}
+
 export type StrudelTabId =
   | 'welcome'
   | 'patterns'
