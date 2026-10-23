@@ -66,6 +66,17 @@ $: note("c a f e").color("white")
   .color("cyan")`
   },
   {
+    id: 'scope',
+    label: 'Scope',
+    code: `// From strudel.cc's visual feedback guide: the scope draws the waveform as it sounds.
+// A sawtooth climbs and drops, so its scope is a row of ramps.
+$: s("sawtooth")._scope()
+// Options: thickness, scale (height), pos (0 top to 1 bottom), align and trigger.
+// The line takes its colour from .color(), which the scope reads off the pattern.
+$: note("<c4 eb4 g4 bb4>*2").s("triangle").gain(.6).color("plum")
+  ._scope({ thickness: 2, scale: .5 })`
+  },
+  {
     id: 'spiral',
     label: 'Spiral',
     code: `// The spiral turns once per cycle and draws each note along it as it plays.

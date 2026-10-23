@@ -245,6 +245,7 @@ describe('StrudelEditor audible playback', () => {
   it.each([
     ['punchcard-drums', '.cm-content canvas'],
     ['punchcard-vs-pianoroll', '.cm-content canvas'],
+    ['scope', '.cm-content canvas'],
     ['spiral', '.cm-content canvas'],
     ['pitch-wheel', '.cm-content canvas'],
     ['spectrum', '.cm-content canvas'],
