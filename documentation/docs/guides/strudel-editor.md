@@ -19,8 +19,26 @@ edit the code, and press Play. A bottom panel carries the seven strudel.cc tabs 
 
 Audio starts on the first Play press, since browsers only allow sound after a user gesture.
 Patterns run on the Strudel engine (`@strudel/core`, `@strudel/mini`, `@strudel/transpiler`,
-`@strudel/webaudio`, `@strudel/tonal`), loaded lazily so the rest of the app never pays for
-it. Press Stop to hush the output; leaving the view stops it too.
+`@strudel/webaudio`, `@strudel/tonal`, `@strudel/draw`), loaded lazily so the rest of the app
+never pays for it. Press Stop to hush the output; leaving the view stops it too. A pattern
+that fails to evaluate shows its error under the editor instead of playing.
+
+## The code editor
+
+The editor is strudel.cc's own CodeMirror setup from `@strudel/codemirror`, so code written
+there works here unchanged:
+
+- **Ctrl+Enter** (or Alt+Enter) plays the code, **Ctrl+.** stops it.
+- **`slider(value, min, max, step)`** draws a slider in the code. Dragging it rewrites the
+  number and changes the sound while it plays. `min` and `max` default to 0 and 1.
+- **`._pianoroll()`**, **`._scope()`**, **`._punchcard()`**, **`._spiral()`** and
+  **`._pitchwheel()`** draw under the line the call is on.
+- **`.pianoroll()`** and **`.scope()`**, without the underscore, draw behind the code.
+- The notes that are playing are boxed in the mini-notation as they sound.
+
+![Inline sliders, pianoroll and scope while the Sliders and scopes example plays](/img/strudel-editor/inline-widgets.webp)
+
+The **Sliders and scopes** example in the pattern picker shows all of them at once.
 
 ## Turning an MP3 into a pattern
 
@@ -46,7 +64,9 @@ song comes out as four bars. Only the first 90 seconds, at most 64 bars, are ana
 Treat the result as a sketch in the spirit of the track, not a copy. The melody is not
 transcribed, chords richer than a triad are reduced to one, and a dense mix confuses the drum
 classifier. Edit the code from there. How the analysis works and where it fails is in
-[Transcribing audio into a pattern](../journey/strudel-audio-transcription.md).
+[Transcribing audio into a pattern](../journey/strudel-audio-transcription.md). Why the editor
+is assembled from parts rather than strudel.cc's ready-made one is in
+[Embedding the strudel.cc editor](../journey/strudel-editor-widgets.md).
 
 The electro tunes are ported from [strudel.cc](https://strudel.cc/) repl tunes by Felix Roos
 under CC BY-NC-SA 4.0.
