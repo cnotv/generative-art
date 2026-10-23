@@ -103,6 +103,8 @@ onUnmounted(() => {
 .strudel-code-editor {
   position: relative;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-height: 14rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

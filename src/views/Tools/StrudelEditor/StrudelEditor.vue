@@ -73,100 +73,147 @@ onUnmounted(() => {
 
 <template>
   <div class="strudel-editor">
-    <div class="strudel-editor__toolbar">
-      <label class="strudel-editor__label" for="strudel-example">Example pattern</label>
-      <Select
-        :model-value="selectedExampleId"
-        :options="exampleOptions"
-        placeholder="Choose a pattern"
-        @update:model-value="onExampleSelected"
+    <section class="strudel-editor__code" aria-label="Code">
+      <p class="strudel-editor__label">Live code pattern</p>
+      <StrudelCodeEditor
+        class="strudel-editor__code-editor"
+        :code="patternCode"
+        @update:code="updatePatternCode"
+        @evaluate="onPlayRequested"
+        @stop="onStopRequested"
+        @ready="attachEditor"
       />
-      <div class="strudel-editor__actions">
-        <Button :disabled="editorStatus === 'playing'" @click="onPlayRequested">Play</Button>
-        <Button variant="outline" :disabled="editorStatus !== 'playing'" @click="onStopRequested">
-          Stop
-        </Button>
-      </div>
-    </div>
+      <p class="strudel-editor__hint">Ctrl+Enter plays the code, Ctrl+. stops it.</p>
+    </section>
 
-    <p class="strudel-editor__label">Live code pattern</p>
-    <StrudelCodeEditor
-      :code="patternCode"
-      @update:code="updatePatternCode"
-      @evaluate="onPlayRequested"
-      @stop="onStopRequested"
-      @ready="attachEditor"
-    />
-    <p class="strudel-editor__hint">Ctrl+Enter plays the code, Ctrl+. stops it.</p>
-
-    <p class="strudel-editor__status" role="status">
-      <template v-if="editorStatus === 'playing'">Playing the current pattern.</template>
-      <template v-else-if="editorStatus === 'error'">
-        {{ errorMessage || 'Pattern failed to evaluate.' }}
-      </template>
-      <template v-else>Idle. Choose a pattern and press Play.</template>
-    </p>
-
-    <div class="strudel-editor__panel">
-      <div class="strudel-editor__tabs" role="tablist">
-        <button
-          v-for="tab in tabList"
-          :key="tab.id"
-          class="strudel-editor__tab"
-          :class="{ 'strudel-editor__tab--active': activeTab === tab.id }"
-          role="tab"
-          :aria-selected="activeTab === tab.id"
-          type="button"
-          @click="onTabSelected(tab.id)"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
-      <div class="strudel-editor__panel-content">
-        <WelcomeTab v-if="activeTab === 'welcome'" />
-        <PatternsTab
-          v-else-if="activeTab === 'patterns'"
-          :electro-tunes="electroTunes"
-          :current-code="patternCode"
-          @select="onElectroTuneSelected"
+    <section class="strudel-editor__side" aria-label="Player">
+      <div class="strudel-editor__toolbar">
+        <label class="strudel-editor__label" for="strudel-example">Example pattern</label>
+        <Select
+          :model-value="selectedExampleId"
+          :options="exampleOptions"
+          placeholder="Choose a pattern"
+          @update:model-value="onExampleSelected"
         />
-        <ImportTab
-          v-else-if="activeTab === 'import'"
-          :status="transcriptionStatus"
-          :progress="transcriptionProgress"
-          :result="transcriptionResult"
-          :code="transcribedCode"
-          :error-message="transcriptionError"
-          @file="onAudioFileChosen"
-          @load="loadTranscription"
-        />
-        <SoundsTab v-else-if="activeTab === 'sounds'" />
-        <ReferenceTab v-else-if="activeTab === 'reference'" />
-        <ExportTab v-else-if="activeTab === 'export'" />
-        <ConsoleTab
-          v-else-if="activeTab === 'console'"
-          :log-entries="logEntries"
-          @clear="clearLogEntries"
-        />
-        <SettingsTab v-else />
+        <div class="strudel-editor__actions">
+          <Button :disabled="editorStatus === 'playing'" @click="onPlayRequested">Play</Button>
+          <Button variant="outline" :disabled="editorStatus !== 'playing'" @click="onStopRequested">
+            Stop
+          </Button>
+        </div>
       </div>
-    </div>
 
-    <p class="strudel-editor__license">{{ STRUDEL_LICENSE_NOTE }}</p>
+      <p class="strudel-editor__status" role="status">
+        <template v-if="editorStatus === 'playing'">Playing the current pattern.</template>
+        <template v-else-if="editorStatus === 'error'">
+          {{ errorMessage || 'Pattern failed to evaluate.' }}
+        </template>
+        <template v-else>Idle. Choose a pattern and press Play.</template>
+      </p>
+
+      <div class="strudel-editor__panel">
+        <div class="strudel-editor__tabs" role="tablist">
+          <button
+            v-for="tab in tabList"
+            :key="tab.id"
+            class="strudel-editor__tab"
+            :class="{ 'strudel-editor__tab--active': activeTab === tab.id }"
+            role="tab"
+            :aria-selected="activeTab === tab.id"
+            type="button"
+            @click="onTabSelected(tab.id)"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+        <div class="strudel-editor__panel-content">
+          <WelcomeTab v-if="activeTab === 'welcome'" />
+          <PatternsTab
+            v-else-if="activeTab === 'patterns'"
+            :electro-tunes="electroTunes"
+            :current-code="patternCode"
+            @select="onElectroTuneSelected"
+          />
+          <ImportTab
+            v-else-if="activeTab === 'import'"
+            :status="transcriptionStatus"
+            :progress="transcriptionProgress"
+            :result="transcriptionResult"
+            :code="transcribedCode"
+            :error-message="transcriptionError"
+            @file="onAudioFileChosen"
+            @load="loadTranscription"
+          />
+          <SoundsTab v-else-if="activeTab === 'sounds'" />
+          <ReferenceTab v-else-if="activeTab === 'reference'" />
+          <ExportTab v-else-if="activeTab === 'export'" />
+          <ConsoleTab
+            v-else-if="activeTab === 'console'"
+            :log-entries="logEntries"
+            @clear="clearLogEntries"
+          />
+          <SettingsTab v-else />
+        </div>
+      </div>
+
+      <p class="strudel-editor__license">{{ STRUDEL_LICENSE_NOTE }}</p>
+    </section>
   </div>
 </template>
 
 <style scoped>
+/*
+ * html and body never scroll in this app (src/style.css, for the full-screen 3D views), so
+ * the view fills the viewport and each column scrolls on its own.
+ */
 .strudel-editor {
-  padding-top: var(--nav-height);
-  min-height: 100vh;
-  max-width: 56rem;
-  margin: 0 auto;
-  padding-inline: var(--spacing-4);
-  padding-bottom: var(--spacing-10);
+  box-sizing: border-box;
+  height: 100dvh;
+  padding: var(--nav-height) var(--spacing-4) var(--spacing-4);
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(20rem, 2fr);
+  grid-template-areas: 'code side';
+  gap: var(--spacing-4);
+}
+
+.strudel-editor__code {
+  grid-area: code;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-height: 0;
+  padding-top: var(--spacing-4);
+}
+
+.strudel-editor__code-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.strudel-editor__side {
+  grid-area: side;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+  min-width: 0;
+  min-height: 0;
+  padding-top: var(--spacing-4);
+  overflow-y: auto;
+}
+
+@media (width <= 900px) {
+  .strudel-editor {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 70dvh max-content;
+    grid-template-areas:
+      'code'
+      'side';
+    overflow-y: auto;
+  }
+
+  .strudel-editor__side {
+    overflow-y: visible;
+  }
 }
 
 .strudel-editor__toolbar {
@@ -207,6 +254,7 @@ onUnmounted(() => {
 }
 
 .strudel-editor__panel {
+  flex: 1 0 auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;

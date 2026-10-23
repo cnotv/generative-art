@@ -25,8 +25,10 @@ that fails to evaluate shows its error under the editor instead of playing.
 
 ## The code editor
 
-The editor is strudel.cc's own CodeMirror setup from `@strudel/codemirror`, so code written
-there works here unchanged:
+The editor fills the left side of the screen at full height and scrolls on its own; the
+player, its status and the tabs sit on the right. On a phone they stack, editor first. It is
+strudel.cc's own CodeMirror setup from `@strudel/codemirror`, so code written there works
+here unchanged:
 
 - **Ctrl+Enter** (or Alt+Enter) plays the code, **Ctrl+.** stops it.
 - **`slider(value, min, max, step)`** draws a slider in the code. Dragging it rewrites the
