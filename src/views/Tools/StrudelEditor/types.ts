@@ -66,6 +66,30 @@ export type StrudelCodeMirrorOptions = {
   onStop: () => void
 }
 
+export type StrudelFunctionParameter = {
+  name: string
+  type: string
+  description: string
+}
+
+/** One documented Strudel function, as its JSDoc comment in Strudel's own sources describes it. */
+export type StrudelFunctionDocumentation = {
+  name: string
+  synonyms: string[]
+  description: string
+  params: StrudelFunctionParameter[]
+  examples: string[]
+}
+
+/** Everything the code editor completes from, beyond the language's own syntax. */
+export type StrudelCompletionVocabulary = {
+  functionDocumentations: StrudelFunctionDocumentation[]
+  chordSymbols: string[]
+  scaleNames: string[]
+  /** The sounds the engine has registered, which is none until the first Play loads the kit. */
+  listSoundNames: () => Promise<string[]>
+}
+
 export type StrudelTabId =
   | 'welcome'
   | 'patterns'

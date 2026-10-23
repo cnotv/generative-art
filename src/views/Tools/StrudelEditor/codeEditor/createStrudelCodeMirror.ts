@@ -2,6 +2,7 @@ import { EditorState, Prec } from '@codemirror/state'
 import type { Extension } from '@codemirror/state'
 import { EditorView, drawSelection, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+import { autocompletion } from '@codemirror/autocomplete'
 import { javascript } from '@codemirror/lang-javascript'
 import {
   flash,
@@ -16,6 +17,8 @@ import {
 } from '@strudel/codemirror'
 import { STRUDEL_EDITOR_THEME } from '../config'
 import { inlineWidgetField, showInlineWidgets } from './inlineWidgets'
+import { createCompletionVocabulary } from './completionVocabulary'
+import { createStrudelCompletionSource } from './strudelCompletions'
 import type { StrudelCodeMirror, StrudelCodeMirrorOptions, StrudelEvaluationMeta } from '../types'
 
 const isSliderWidget = (widget: unknown): boolean =>
@@ -55,7 +58,38 @@ const buildExtensions = (options: StrudelCodeMirrorOptions): Extension[] => [
     '.cm-scroller': { fontFamily: 'var(--font-mono)' },
     // App.vue pins every canvas full-size and absolute for the 3D views, which would lift
     // the inline pianoroll and scope out of their rows and over the code.
-    '.cm-content canvas': { position: 'static', display: 'block', maxWidth: '100%' }
+    '.cm-content canvas': { position: 'static', display: 'block', maxWidth: '100%' },
+    '.cm-tooltip': {
+      backgroundColor: 'var(--background)',
+      color: 'var(--foreground)',
+      border: '1px solid var(--color-border)',
+      borderRadius: 'var(--radius-md)'
+    },
+    '.cm-tooltip-autocomplete > ul': { fontFamily: 'var(--font-mono)', maxHeight: '14em' },
+    '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+      backgroundColor: 'var(--selection)',
+      color: 'var(--foreground)'
+    },
+    '.cm-completionDetail': { opacity: 'var(--opacity-muted)', fontStyle: 'normal' },
+    '.cm-completionInfo': {
+      maxWidth: 'min(28rem, 80vw)',
+      padding: 'var(--spacing-2) var(--spacing-3)',
+      fontSize: 'var(--font-size-sm)'
+    },
+    '.cm-strudel-doc__signature': { fontFamily: 'var(--font-mono)' },
+    '.cm-strudel-doc__synonyms': { opacity: 'var(--opacity-muted)' },
+    '.cm-strudel-doc p, .cm-strudel-doc ul': { margin: 'var(--spacing-1) 0' },
+    '.cm-strudel-doc__params': { paddingLeft: 'var(--spacing-4)' },
+    '.cm-strudel-doc__example': {
+      margin: 'var(--spacing-2) 0 0',
+      fontFamily: 'var(--font-mono)',
+      whiteSpace: 'pre-wrap'
+    }
+  }),
+  autocompletion({
+    override: [createStrudelCompletionSource(createCompletionVocabulary())],
+    // Stays open while the pointer moves to the documentation beside the list.
+    closeOnBlur: false
   }),
   sliderPlugin,
   inlineWidgetField,

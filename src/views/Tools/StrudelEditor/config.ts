@@ -392,3 +392,27 @@ export const STRUDEL_NO_DRAW_TIME: [number, number] = [0, 0]
  * canvas so keeps `.pianoroll()` and `.scope()` behind the code, as on strudel.cc.
  */
 export const STRUDEL_DRAW_CANVAS_ID = 'test-canvas'
+
+/** How long completion may wait for the parser to reach the cursor before using what it has. */
+export const STRUDEL_COMPLETION_PARSE_TIMEOUT_MS = 50
+/** How far before a string to look for the call it belongs to, such as `s(` or `.scale(`. */
+export const STRUDEL_COMPLETION_CALLEE_LOOKBEHIND = 40
+export const STRUDEL_COMPLETION_PITCH_NAMES = [
+  'C',
+  'C#',
+  'Db',
+  'D',
+  'D#',
+  'Eb',
+  'E',
+  'F',
+  'F#',
+  'Gb',
+  'G',
+  'G#',
+  'Ab',
+  'A',
+  'A#',
+  'Bb',
+  'B'
+]

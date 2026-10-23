@@ -1,9 +1,11 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
+import { userEvent } from 'vitest/browser'
 import { getWidgetID, transpiler } from '@strudel/transpiler'
 import { setWidget } from '@strudel/codemirror'
 import { createStrudelCodeMirror } from './createStrudelCodeMirror'
 import type { StrudelCodeMirror } from '../types'
 
+const COMPLETION_INTERACTION_DELAY_MS = 150
 const SLIDER_CODE = 'note("c3 e3").lpf(slider(500, 100, 2000, 10))'
 
 const mountedEditors: { parent: HTMLElement; editor: StrudelCodeMirror }[] = []
@@ -133,6 +135,52 @@ describe('createStrudelCodeMirror', () => {
     expect(editorText(parent)).toContain('slider(1500, 100, 2000, 10)')
     expect(onCodeChange).toHaveBeenLastCalledWith('note("c3 e3").lpf(slider(1500, 100, 2000, 10))')
   })
+
+  it.each([
+    {
+      label: 'a function, with its documentation',
+      initialCode: 's("bd")',
+      typedText: '.cuto',
+      offeredLabel: 'cutoff',
+      infoText: 'low-pass',
+      expectedCode: 's("bd").cutoff'
+    },
+    {
+      label: 'a chord symbol',
+      initialCode: 'note("c")',
+      typedText: '.chord("C7susa',
+      offeredLabel: '7susadd3',
+      infoText: '',
+      expectedCode: 'note("c").chord("C7susadd3'
+    }
+  ])(
+    'offers $label while typing and writes the picked one',
+    async ({ initialCode, typedText, offeredLabel, infoText, expectedCode }) => {
+      // Arrange
+      const { parent } = mountEditor(initialCode)
+      const content = parent.querySelector<HTMLElement>('.cm-content')
+      content?.focus()
+      await userEvent.keyboard('{End}')
+
+      // Act
+      await userEvent.keyboard(typedText)
+      await vi.waitFor(() => {
+        const offeredLabels = [
+          ...parent.querySelectorAll('.cm-tooltip-autocomplete .cm-completionLabel')
+        ].map((label) => label.textContent)
+        expect(offeredLabels).toContain(offeredLabel)
+      })
+      const info = parent.querySelector('.cm-completionInfo')?.textContent ?? ''
+      // CodeMirror ignores Enter for a moment after the list opens, so a fast typist's newline
+      // is never taken as picking whatever happened to be selected.
+      await new Promise((resolve) => setTimeout(resolve, COMPLETION_INTERACTION_DELAY_MS))
+      await userEvent.keyboard('{Enter}')
+
+      // Assert
+      expect(info.toLowerCase()).toContain(infoText)
+      expect(editorText(parent)).toBe(expectedCode)
+    }
+  )
 
   it('reports typing as a code change', () => {
     // Arrange

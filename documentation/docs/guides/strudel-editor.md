@@ -37,6 +37,7 @@ here unchanged:
   **`._pitchwheel()`** and **`._spectrum()`** draw under the line the call is on.
 - **`.pianoroll()`** and **`.scope()`**, without the underscore, draw behind the code.
 - The notes that are playing are boxed in the mini-notation as they sound.
+- **Autocomplete** lists the options as you type, described below.
 
 ![Inline sliders, pianoroll and scope while the Sliders and scopes example plays](/img/strudel-editor/inline-widgets.webp)
 
@@ -52,6 +53,34 @@ does, so a later `.color()` shows, while `._pianoroll()` draws the pattern as it
 
 The spiral, the pitch wheel and the spectrum size their drawing in canvas pixels, which is
 Strudel's own behaviour. They look smaller on a high-density screen than on a standard one.
+
+## Autocomplete
+
+Typing in the editor lists what can come next, and Ctrl+Space opens the list anywhere. Up and
+down move through it, Enter writes the selected option, and Escape closes it.
+
+![Completing a function with its documentation beside the list, and a sound name inside s()](/img/strudel-editor/autocomplete.webp)
+
+| Where the cursor is                   | What it offers                                                        |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| a name, or straight after a `.`       | every documented function and its synonyms, with its documentation    |
+| inside `s("…")` or `sound("…")`       | the sounds the engine has loaded                                      |
+| inside `.bank("…")`                   | the banks among those sounds, such as `RolandTR808`                   |
+| inside `chord("…")`                   | a root, then Strudel's chord symbols after it, such as `^7` and `-7`  |
+| inside `.scale("…")`                  | a root, then a scale name after the colon, written `minor:pentatonic` |
+| a comment, or any other mini-notation | nothing                                                               |
+
+Sounds load with the engine, so `s("…")` offers names only after the first Play.
+
+The documentation comes from Strudel itself. `codeEditor/strudelDocumentation.json` is generated from
+the JSDoc comments in the installed `@strudel/*` and `superdough` sources, the same comments
+strudel.cc builds its reference from. `codeEditor/strudelDocumentation.test.ts` regenerates it and fails
+when it differs from the committed file, so upgrading a Strudel package without regenerating
+fails the unit tests. To regenerate it:
+
+```sh
+pnpm vitest run src/views/Tools/StrudelEditor/codeEditor/strudelDocumentation.test.ts -u
+```
 
 ## Turning an MP3 into a pattern
 
