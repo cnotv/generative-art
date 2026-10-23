@@ -31,7 +31,8 @@ export type StrudelEvaluationMeta = {
 
 /** The CodeMirror editor: the code, plus inline sliders, widgets and the playhead. */
 export type StrudelCodeMirror = {
-  setCode: (patternCode: string) => void
+  /** Replaces the code; false when it already matched, as after the player's own typing. */
+  setCode: (patternCode: string) => boolean
   applyEvaluation: (meta: StrudelEvaluationMeta) => void
   highlight: (activeHaps: unknown[], time: number) => void
   clearHighlights: () => void

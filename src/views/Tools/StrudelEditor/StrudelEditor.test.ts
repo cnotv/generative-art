@@ -15,7 +15,9 @@ vi.mock('./codeEditor/createStrudelCodeMirror', () => ({
     options.parent.append(codeField)
     return {
       setCode: (patternCode: string) => {
+        const changed = codeField.value !== patternCode
         codeField.value = patternCode
+        return changed
       },
       applyEvaluation: () => undefined,
       highlight: () => undefined,

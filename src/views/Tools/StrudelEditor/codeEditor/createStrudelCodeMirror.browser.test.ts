@@ -68,16 +68,23 @@ describe('createStrudelCodeMirror', () => {
     expect(content?.getAttribute('aria-label')).toBe('Live code pattern')
   })
 
-  it('replaces the code when it changes outside the editor', () => {
-    // Arrange
-    const { parent, editor } = mountEditor('s("bd")')
+  it.each([
+    ['different code', 's("hh*8")', true, 's("hh*8")'],
+    ['the same code', 's("bd")', false, 's("bd")']
+  ])(
+    'replaces the code with %s and reports whether it changed',
+    (_label, nextCode, expectedChanged, expectedText) => {
+      // Arrange
+      const { parent, editor } = mountEditor('s("bd")')
 
-    // Act
-    editor.setCode('s("hh*8")')
+      // Act
+      const changed = editor.setCode(nextCode)
 
-    // Assert
-    expect(editorText(parent)).toBe('s("hh*8")')
-  })
+      // Assert
+      expect(changed).toBe(expectedChanged)
+      expect(editorText(parent)).toBe(expectedText)
+    }
+  )
 
   it.each([
     ['Ctrl-Enter', { key: 'Enter', ctrlKey: true }, 'onEvaluate'],

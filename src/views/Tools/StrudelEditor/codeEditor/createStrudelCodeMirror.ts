@@ -90,11 +90,13 @@ export const createStrudelCodeMirror = (options: StrudelCodeMirrorOptions): Stru
     parent: options.parent
   })
   return {
-    setCode: (patternCode: string): void => {
+    setCode: (patternCode: string): boolean => {
       const currentCode = view.state.doc.toString()
-      if (currentCode !== patternCode) {
-        view.dispatch({ changes: { from: 0, to: currentCode.length, insert: patternCode } })
+      if (currentCode === patternCode) {
+        return false
       }
+      view.dispatch({ changes: { from: 0, to: currentCode.length, insert: patternCode } })
+      return true
     },
     applyEvaluation: (meta: StrudelEvaluationMeta): void => {
       updateSliderWidgets(view, meta.widgets.filter(isSliderWidget))

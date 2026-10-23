@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { page, userEvent } from 'vitest/browser'
+// The app's global styles size the nav and lock the page, which the phone layout depends on.
+import '@/style.css'
+import '@/assets/styles/_variables.scss'
 import StrudelEditor from './StrudelEditor.vue'
 import { createDrumLoop } from './transcription/syntheticSignals'
 
@@ -245,6 +248,47 @@ describe('StrudelEditor audible playback', () => {
 
         // Assert
         expect(wrapper.find('.strudel-editor__status').text()).not.toContain('Playing')
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it(
+    'brings the editor back into view when a pattern is picked on a phone',
+    { timeout: 30000 },
+    async () => {
+      // Arrange: on a phone the player stacks below the editor, so the tabs sit out of its sight.
+      await page.viewport(390, 664)
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await vi.waitFor(
+          () => {
+            expect(document.querySelector('.cm-content')).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+        await page.getByRole('tab', { name: 'patterns' }).click()
+        const editorView = document.querySelector('.strudel-editor')
+        editorView?.scrollTo({ top: editorView.scrollHeight })
+        // The fixed navigation covers the view's top padding, so code scrolled into it is hidden.
+        const navigationClearance = editorView
+          ? Number.parseFloat(getComputedStyle(editorView).paddingTop)
+          : Number.NaN
+        const codeEditor = document.querySelector('.strudel-code-editor')
+        expect(codeEditor?.getBoundingClientRect().bottom).toBeLessThan(navigationClearance)
+
+        // Act
+        await page.getByRole('button', { name: 'Caverave' }).click()
+
+        // Assert
+        await vi.waitFor(() => {
+          const editorTop = codeEditor?.getBoundingClientRect().top ?? Number.NaN
+          expect(editorTop).toBeGreaterThanOrEqual(navigationClearance)
+          expect(editorTop).toBeLessThan(window.innerHeight)
+        })
+        expect(readEditorCode()).toContain('"Caverave"')
       } finally {
         wrapper.unmount()
       }

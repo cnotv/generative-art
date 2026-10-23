@@ -71,9 +71,23 @@ onMounted(async () => {
   })
 })
 
+/*
+ * Code replaced from outside, by a pattern, an example or a transcription, lands in an
+ * editor that a phone layout may have scrolled far above the button that was pressed.
+ */
+const revealEditor = (): void => {
+  if (typeof editorHost.value?.scrollIntoView === 'function') {
+    editorHost.value.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }
+}
+
 watch(
   () => props.code,
-  (patternCode) => codeMirror.value?.setCode(patternCode)
+  (patternCode) => {
+    if (codeMirror.value?.setCode(patternCode) === true) {
+      revealEditor()
+    }
+  }
 )
 
 onUnmounted(() => {
@@ -110,6 +124,7 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--background);
+  scroll-margin-top: calc(var(--nav-height) + var(--spacing-4));
 }
 
 .strudel-code-editor__visuals {
