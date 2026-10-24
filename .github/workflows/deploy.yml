@@ -85,6 +85,10 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           port: ${{ secrets.HETZNER_PORT || '22' }}
           script: |
+            # Without this a failed compose build still reports success, and the website
+            # keeps running its old container behind a green deploy
+            set -e
+
             # Navigate to where your docker-compose.yml is located
             cd ${{ secrets.HETZNER_TARGET_DIR }}
             
