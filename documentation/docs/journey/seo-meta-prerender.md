@@ -40,7 +40,7 @@ Both scripts share a route discovery module at `scripts/routes.mjs`. It scans `s
 
 ## Static HTML generation
 
-`scripts/generate-route-html.mjs` reads `dist/index.html` and, for each route, replaces the meta tag `content` attributes with route-specific values using regex, then writes the result to `dist/{path}/index.html`.
+`scripts/generate-route-html.mjs` reads `dist/index.html` and, for each route, replaces the meta tag `content` attributes with route-specific values using regex, then writes the result twice: to `dist/{path}/index.html` and to `dist/{path}.html`.
 
 ```
 dist/
@@ -48,6 +48,7 @@ dist/
   experiments/
     MaterialsList/
       index.html                      ← og:title = "Materials List | Generative Art"
+    MaterialsList.html                ← same file, for URLs without a trailing slash
     EarthGazer/
       index.html
   games/
@@ -56,7 +57,7 @@ dist/
   ...
 ```
 
-Netlify (and any static file server) serves the per-route file when a crawler hits that URL directly. Client-side navigation still uses the main bundle — only the initial HTML differs.
+Netlify serves `{path}/index.html` for `/{path}` with or without the trailing slash. Production on cnotv.xyz runs `vite preview` in Docker, which does not: for `/{path}` it only looks for `{path}.html` and otherwise falls back to the root `index.html`, so every shared link (they never end in `/`) got the default tags. Writing the sibling `{path}.html` covers both servers. Client-side navigation still uses the main bundle — only the initial HTML differs.
 
 **Image resolution order:**
 
