@@ -79,7 +79,9 @@ Strudel's own behaviour. They look smaller on a high-density screen than on a st
 ## Autocomplete
 
 Typing in the editor lists what can come next, and Ctrl+Space opens the list anywhere. Up and
-down move through it, Enter writes the selected option, and Escape closes it.
+down move through it, Enter writes the selected option, and Escape closes it. The list is narrow
+and tall, so the documentation beside it has room to be up to 800px wide. It drops under the
+list when the screen has no room beside it.
 
 ![Completing a function with its documentation beside the list, and a sound name inside s()](/img/strudel-editor/autocomplete.webp)
 

@@ -413,6 +413,10 @@ export const STRUDEL_DRAW_CANVAS_ID = 'test-canvas'
 
 /** How long completion may wait for the parser to reach the cursor before using what it has. */
 export const STRUDEL_COMPLETION_PARSE_TIMEOUT_MS = 50
+/** The documentation beside the completion list: twice CodeMirror's 400px default. */
+export const STRUDEL_COMPLETION_INFO_MAX_WIDTH = 800
+/** How far in from the list's left edge the documentation sits when it drops under the list. */
+export const STRUDEL_COMPLETION_INFO_MARGIN = 30
 /** How far before a string to look for the call it belongs to, such as `s(` or `.scale(`. */
 export const STRUDEL_COMPLETION_CALLEE_LOOKBEHIND = 40
 export const STRUDEL_COMPLETION_PITCH_NAMES = [
