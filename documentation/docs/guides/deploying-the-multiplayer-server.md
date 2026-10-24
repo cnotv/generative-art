@@ -51,6 +51,11 @@ docker compose up -d --build --force-recreate --remove-orphans
 clears containers left behind by earlier service names, which has previously caused a silent
 port bind failure — see [Docker Deployment](../journey/docker-deployment.md).
 
+The script runs under `set -e`. If the multiplayer server fails to build, compose stops before it
+recreates any container, so the website keeps its old version. Without `set -e` that run still
+reported success. `Dockerfile.server` installs with `--legacy-peer-deps` because the npm in its
+Node image crashes resolving vitest's optional browser peers.
+
 The workflow needs the usual secrets: `HETZNER_HOST`, `HETZNER_USERNAME`, `HETZNER_SSH_KEY`,
 `HETZNER_PORT` (optional, defaults to 22) and `HETZNER_TARGET_DIR`.
 

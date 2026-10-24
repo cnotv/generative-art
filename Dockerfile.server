@@ -7,7 +7,9 @@ FROM node:${NODE_VERSION}-alpine AS build
 WORKDIR /build
 
 COPY packages/multiplayer-server/package.json ./
-RUN npm install --ignore-scripts
+# npm 10.8.2, the version in this image, crashes with "Cannot read properties of null (reading
+# 'edgesOut')" resolving vitest 4's optional @vitest/browser-* peers, which nothing here needs.
+RUN npm install --ignore-scripts --legacy-peer-deps
 
 COPY packages/multiplayer-server/tsconfig.json packages/multiplayer-server/vite.config.ts ./
 COPY packages/multiplayer-server/src ./src
@@ -19,7 +21,7 @@ WORKDIR /usr/src/app
 
 # socket.io is the only runtime dependency; the build toolchain stays in the stage above.
 COPY packages/multiplayer-server/package.json ./
-RUN npm install --omit=dev --ignore-scripts && npm cache clean --force
+RUN npm install --omit=dev --ignore-scripts --legacy-peer-deps && npm cache clean --force
 
 COPY --from=build /build/dist ./dist
 
