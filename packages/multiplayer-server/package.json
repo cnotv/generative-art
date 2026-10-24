@@ -16,7 +16,7 @@
   "scripts": {
     "build": "vite build && tsc",
     "start": "node dist/main.js",
-    "prepare": "pnpm run build",
+    "prepare": "vite build && tsc",
     "prepublishOnly": "pnpm run build"
   },
   "publishConfig": {

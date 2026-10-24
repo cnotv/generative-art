@@ -37,6 +37,7 @@ of these is a bug, not a variation — add a prop instead.
 | `IconButton`         | an icon-only button in app chrome, with size and variant                       |
 | `LoadingOverlay`     | a blocking load state with stage and detail text                               |
 | `LoaderCube`         | the small inline spinner                                                       |
+| `DropZone`           | a drag-and-drop file picker with a click-to-browse fallback and its own label  |
 | `RecordingControls`  | start/stop capture UI for a scene                                              |
 | `DebugStats`         | a list of live numeric readouts while debugging                                |
 | `ControlsLogger`     | a rolling log of input events, for verifying a mapping                         |
@@ -116,6 +117,10 @@ Only a concern that is genuinely shared by unrelated views earns a new root comp
   colour it is painting. An overlay that inherits looks correct until the scene, or the
   inherited value, changes underneath it. See
   `documentation/docs/journey/background-propagation.md`.
+- **`App.vue` makes every `canvas` absolute and full-size**, for the 3D views. A canvas that
+  belongs in the flow of ordinary UI, such as a chart or an editor widget, has to set
+  `position: static` itself, or it lifts out of place and covers whatever sits at the top
+  of its positioned ancestor.
 - Never `!important` outside a utility class designed to override, such as in `vendor.scss`.
   If a style is not applying, fix the specificity.
 - Never put `overflow: hidden` on an element that also has a text or box shadow — the

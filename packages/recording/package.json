@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "vite build && tsc",
-    "prepare": "pnpm run build",
+    "prepare": "vite build && tsc",
     "prepublishOnly": "pnpm run build"
   },
   "publishConfig": {

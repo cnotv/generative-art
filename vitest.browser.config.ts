@@ -15,22 +15,17 @@ export default mergeConfig(
       server: {
         deps: {
           inline: ['@dimforge/rapier3d-compat'],
-          optimize: [
-            'vue',
-            'vue-router',
-            'pinia',
-            'three',
-            'stats.js',
-            '@vue/test-utils'
-          ]
+          optimize: ['vue', 'vue-router', 'pinia', 'three', 'stats.js', '@vue/test-utils']
         }
       },
       browser: {
         enabled: true,
         provider: playwright(),
-        instances: [{
-          browser: 'chromium'
-        }],
+        instances: [
+          {
+            browser: 'chromium'
+          }
+        ],
         headless: true, // Always run headless for faster tests
         screenshotFailures: false
       }

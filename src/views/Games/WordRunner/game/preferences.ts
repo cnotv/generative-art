@@ -1,4 +1,4 @@
-import { readStorage, writeStorage } from './storage'
+import { readStorage, writeStorage } from '@/utils/storage'
 
 /**
  * A value from outside, as one of the choices on offer, or the fallback when it is none.

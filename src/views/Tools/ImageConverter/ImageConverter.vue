@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onUnmounted } from 'vue'
 import ConverterWorker from './imageConverter.worker?worker'
-import DropZone from './DropZone.vue'
+import DropZone from '@/components/DropZone.vue'
 import { isHeicBuffer } from './heic'
 import {
   FORMAT_OPTIONS,
@@ -280,7 +280,12 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <DropZone multiple :accept="ACCEPTED_TYPES" @change="addFiles" />
+        <DropZone
+          multiple
+          label="Drop images here or click to browse"
+          :accept="ACCEPTED_TYPES"
+          @change="addFiles"
+        />
       </template>
     </div>
 

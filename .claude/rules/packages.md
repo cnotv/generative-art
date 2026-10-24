@@ -61,6 +61,14 @@ job at once, long after lint and tests passed locally.
 Run `pnpm -r run build` before pushing a change to `packages/`. Assigning `undefined` to a
 non-optional field is the usual way to trip it.
 
+`prepare` runs the build commands themselves (`vite build && tsc`), never `pnpm run build`.
+pnpm 10 hands lifecycle scripts `pnpm_config_verify_deps_before_run="false"` as a string, which a
+nested pnpm reads as true. That nested pnpm then parses `node_modules/.pnpm-workspace-state-v1.json`
+before running anything, and the env var outranks `.npmrc` and CLI flags, so nothing in the repo
+turns the check off. When a restored build cache holds an empty copy of that file, every package
+fails with `Unexpected end of JSON input` and the install never finishes, which is the only
+thing that would rewrite the file. Netlify previews failed this way on every retry.
+
 ## Registration
 
 A new package must be added to the `packages` array in `vite.config.ts`. Without it Vite
