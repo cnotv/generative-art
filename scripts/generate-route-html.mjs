@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT, discoverRoutes } from './routes.mjs'
 
-const DIST = join(ROOT, 'dist')
+const DIST = process.env.DIST_DIR || join(ROOT, 'dist')
 const SITE_URL = process.env.SITE_URL || 'https://cnotv.xyz'
 const DEFAULT_DESCRIPTION =
   'Interactive generative art, 3D experiments, and games built with Three.js and Vue.'
@@ -40,6 +40,8 @@ const run = () => {
     const outDirectory = join(DIST, path)
     mkdirSync(outDirectory, { recursive: true })
     writeFileSync(join(outDirectory, 'index.html'), html)
+    // vite preview (production) resolves /route to route.html only, never route/index.html
+    writeFileSync(`${outDirectory}.html`, html)
     process.stdout.write(`  ✓ ${path}\n`)
   })
 
