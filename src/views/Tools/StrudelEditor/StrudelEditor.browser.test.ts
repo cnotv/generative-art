@@ -6,7 +6,7 @@ import '@/style.css'
 import '@/assets/styles/_variables.scss'
 import StrudelEditor from './StrudelEditor.vue'
 import { createDrumLoop } from './transcription/syntheticSignals'
-import { STRUDEL_EXAMPLES } from './config'
+import { STRUDEL_EXAMPLES, STRUDEL_MUSIC_STYLES } from './config'
 
 const WAV_SAMPLE_RATE = 22050
 const WAV_HEADER_BYTES = 44
@@ -33,6 +33,43 @@ const hasPaintedPixels = (canvas: HTMLCanvasElement | null): boolean => {
 
 const readExampleCode = (exampleId: string): string =>
   STRUDEL_EXAMPLES.find((example) => example.id === exampleId)?.code ?? ''
+
+// Longer than one cycle of the slowest style, so every layer has played at least once.
+const PLAYBACK_SETTLE_MS = 4000
+
+// Strudel reports a sound it cannot find, and any other error while playing, through its own
+// logger: a console.log and a strudel.log event on the document, never console.error.
+const collectEngineErrors = (): { engineErrors: string[]; stopCollecting: () => void } => {
+  const engineErrors: string[] = []
+  const recordEngineError = (event: Event): void => {
+    if (event instanceof CustomEvent && String(event.detail?.message).includes('error')) {
+      engineErrors.push(String(event.detail.message))
+    }
+  }
+  document.addEventListener('strudel.log', recordEngineError)
+  return {
+    engineErrors,
+    stopCollecting: () => document.removeEventListener('strudel.log', recordEngineError)
+  }
+}
+
+// More than any style offers, so a hint that never goes away fails instead of looping forever.
+const MAX_HINTS_APPLIED = 20
+
+const countHints = (): number => document.querySelectorAll('.strudel-hints__item').length
+
+const applyEveryHint = async (appliedCount = 0): Promise<number> => {
+  const addButton = document.querySelector<HTMLButtonElement>('.strudel-hints__item button')
+  if (addButton === null || appliedCount >= MAX_HINTS_APPLIED) {
+    return appliedCount
+  }
+  const codeBefore = readEditorCode()
+  await userEvent.click(addButton)
+  await vi.waitFor(() => {
+    expect(readEditorCode()).not.toBe(codeBefore)
+  })
+  return applyEveryHint(appliedCount + 1)
+}
 
 // Long enough for a leftover animation loop to have drawn several frames.
 const VISUAL_SETTLE_MS = 1000
@@ -492,6 +529,43 @@ describe('StrudelEditor audible playback', () => {
         })
         expect(readEditorCode()).toContain('"Caverave"')
       } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it.each(STRUDEL_MUSIC_STYLES.map((style) => ({ styleId: style.id, keyword: style.keywords[0] })))(
+    'applies every $styleId hint and plays the result with no missing sounds',
+    { timeout: 90000 },
+    async ({ keyword }) => {
+      // Arrange
+      const { engineErrors, stopCollecting } = collectEngineErrors()
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await page.getByRole('textbox', { name: 'Live code pattern' }).fill(`// ${keyword}`)
+        await vi.waitFor(() => {
+          expect(countHints()).toBeGreaterThan(0)
+        })
+
+        // Act
+        const appliedCount = await applyEveryHint()
+        await page.getByRole('button', { name: 'Play' }).click()
+
+        // Assert
+        expect(appliedCount).toBeLessThan(MAX_HINTS_APPLIED)
+        expect(document.querySelector('.strudel-hints')?.textContent).toContain('Nothing missing')
+        await vi.waitFor(
+          () => {
+            expect(readPlayButtonLabel()).toBe('Stop')
+          },
+          { timeout: 60000, interval: 500 }
+        )
+        await new Promise((resolve) => setTimeout(resolve, PLAYBACK_SETTLE_MS))
+        expect(document.querySelector('.strudel-editor__error')).toBeNull()
+        expect(engineErrors).toEqual([])
+      } finally {
+        stopCollecting()
         wrapper.unmount()
       }
     }

@@ -4,7 +4,9 @@ import { Play, RefreshCw, Square } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import { STRUDEL_LICENSE_NOTE } from './config'
 import { useStrudelEditor } from './useStrudelEditor'
+import { useStrudelHints } from './hints/useStrudelHints'
 import type { StrudelTabId } from './types'
+import HintsTab from './tabs/HintsTab.vue'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
 import ImportTab from './tabs/ImportTab.vue'
@@ -42,6 +44,11 @@ const {
   transcribeAudioFile,
   loadTranscription
 } = useStrudelEditor()
+
+const { musicStyles, pickedStyleId, styleDetection, hints, pickStyle, applyHint } = useStrudelHints(
+  patternCode,
+  updatePatternCode
+)
 
 const readAnchoredPatternId = (): string => decodeURIComponent(window.location.hash.slice(1))
 
@@ -148,7 +155,16 @@ onBeforeUnmount(() => {
           </button>
         </div>
         <div class="strudel-editor__panel-content">
-          <WelcomeTab v-if="activeTab === 'welcome'" />
+          <HintsTab
+            v-if="activeTab === 'hints'"
+            :music-styles="musicStyles"
+            :picked-style-id="pickedStyleId"
+            :detection="styleDetection"
+            :hints="hints"
+            @pick="pickStyle"
+            @apply="applyHint"
+          />
+          <WelcomeTab v-else-if="activeTab === 'welcome'" />
           <PatternsTab
             v-else-if="activeTab === 'patterns'"
             :saved-patterns="savedPatterns"

@@ -20,6 +20,7 @@ import { inlineWidgetField, showInlineWidgets } from './inlineWidgets'
 import { createCompletionVocabulary } from './completionVocabulary'
 import { createStrudelCompletionSource } from './strudelCompletions'
 import { strudelHoverDocumentation } from './strudelHoverDocumentation'
+import { positionCompletionInfo } from './positionCompletionInfo'
 import type {
   StrudelCodeMirror,
   StrudelCodeMirrorOptions,
@@ -74,14 +75,20 @@ const buildExtensions = (
       border: '1px solid var(--color-border)',
       borderRadius: 'var(--radius-md)'
     },
-    '.cm-tooltip-autocomplete > ul': { fontFamily: 'var(--font-mono)', maxHeight: '14em' },
+    // CodeMirror's own rule names both classes, so a narrower one would lose to it. Half its
+    // default width and taller, leaving the documentation beside it room to be wide.
+    '.cm-tooltip.cm-tooltip-autocomplete > ul': {
+      fontFamily: 'var(--font-mono)',
+      maxWidth: 'min(350px, 95vw)',
+      maxHeight: '24em'
+    },
     '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
       backgroundColor: 'var(--selection)',
       color: 'var(--foreground)'
     },
     '.cm-completionDetail': { opacity: 'var(--opacity-muted)', fontStyle: 'normal' },
     '.cm-completionInfo, .cm-tooltip-hover .cm-strudel-doc': {
-      maxWidth: 'min(28rem, 80vw)',
+      maxWidth: 'min(56rem, 80vw)',
       padding: 'var(--spacing-2) var(--spacing-3)',
       fontSize: 'var(--font-size-sm)'
     },
@@ -97,6 +104,7 @@ const buildExtensions = (
   }),
   autocompletion({
     override: [createStrudelCompletionSource(completionVocabulary)],
+    positionInfo: positionCompletionInfo,
     // Stays open while the pointer moves to the documentation beside the list.
     closeOnBlur: false
   }),

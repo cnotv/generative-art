@@ -182,6 +182,29 @@ describe('createStrudelCodeMirror', () => {
     }
   )
 
+  it('keeps the completion list narrow and tall, with the documentation up to 800px beside it', async () => {
+    // Arrange
+    await page.viewport(1600, 900)
+    const { parent } = mountEditor('s("bd")')
+    parent.querySelector<HTMLElement>('.cm-content')?.focus()
+    await userEvent.keyboard('{End}')
+
+    // Act: every function starting with b, long signatures included, fills the list.
+    await userEvent.keyboard('.b')
+    await vi.waitFor(() => {
+      expect(parent.querySelector('.cm-completionInfo')).not.toBeNull()
+    })
+
+    // Assert
+    const list = parent.querySelector<HTMLElement>('.cm-tooltip-autocomplete > ul')
+    const listBox = list?.getBoundingClientRect()
+    expect(listBox?.width).toBeLessThanOrEqual(350)
+    expect(listBox?.height).toBeGreaterThan(300)
+    await vi.waitFor(() => {
+      expect(parent.querySelector<HTMLElement>('.cm-completionInfo')?.style.maxWidth).toBe('800px')
+    })
+  })
+
   it.each([
     ['a documented function', 's("bd").lpf(800)', 'lpf', 'low-pass'],
     ['a synonym of one', 's("bd").cutoff(800)', 'cutoff', 'low-pass']

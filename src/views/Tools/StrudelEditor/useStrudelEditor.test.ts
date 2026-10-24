@@ -792,7 +792,7 @@ describe('useStrudelEditor', () => {
     expect(patternCode.value).toBe(codeBeforeSelection)
   })
 
-  it('starts on the welcome tab', () => {
+  it('starts on the hints tab', () => {
     // Arrange
     const { activeTab } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -803,7 +803,7 @@ describe('useStrudelEditor', () => {
     const tabId = activeTab.value
 
     // Assert
-    expect(tabId).toBe('welcome')
+    expect(tabId).toBe('hints')
   })
 
   it('switches tabs and tracks the active one', () => {
@@ -832,6 +832,7 @@ describe('useStrudelEditor', () => {
 
     // Assert
     expect(tabLabels).toEqual([
+      'hints',
       'welcome',
       'patterns',
       'import',
@@ -874,9 +875,10 @@ describe('useStrudelEditor', () => {
 })
 
 describe('STRUDEL_TABS', () => {
-  it('matches the strudel.cc player menu order, with import after patterns', () => {
+  it('puts hints first, then the strudel.cc player menu order with import after patterns', () => {
     // Arrange
     const expectedOrder = [
+      'hints',
       'welcome',
       'patterns',
       'import',

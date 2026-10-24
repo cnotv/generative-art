@@ -67,7 +67,7 @@ describe('StrudelEditor view', () => {
   })
 
   it.each([
-    ['an example menu', '[role="combobox"]'],
+    ['an example menu over the code', '.strudel-editor__code [role="combobox"]'],
     ['a status line', '.strudel-editor__status'],
     ['an error while nothing has failed', '.strudel-editor__error']
   ])('shows no %s', async (_part, selector) => {
@@ -104,7 +104,7 @@ describe('StrudelEditor view', () => {
     expect((codeField.element as HTMLTextAreaElement).value).toBe('s("hh*8")')
   })
 
-  it('renders the seven player menu tabs, without the empty sounds tab', async () => {
+  it('renders the hints tab and the seven player menu tabs, without the empty sounds tab', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
@@ -112,9 +112,10 @@ describe('StrudelEditor view', () => {
     const tabButtons = wrapper.findAll('.strudel-editor__tab')
 
     // Assert
-    expect(tabButtons.length).toBe(7)
+    expect(tabButtons.length).toBe(8)
     const tabLabels = tabButtons.map((tab) => tab.text())
     expect(tabLabels).toEqual([
+      'hints',
       'welcome',
       'patterns',
       'import',
@@ -125,17 +126,17 @@ describe('StrudelEditor view', () => {
     ])
   })
 
-  it('shows the welcome tab by default', async () => {
+  it('shows the hints tab by default', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
     const activeTab = wrapper.find('.strudel-editor__tab--active')
-    const welcomeContent = wrapper.find('.strudel-welcome')
+    const hintsContent = wrapper.find('.strudel-hints')
 
     // Assert
-    expect(activeTab.text()).toBe('welcome')
-    expect(welcomeContent.exists()).toBe(true)
+    expect(activeTab.text()).toBe('hints')
+    expect(hintsContent.exists()).toBe(true)
   })
 
   it('switches to the patterns tab and links the examples, then the tunes', async () => {
