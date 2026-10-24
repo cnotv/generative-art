@@ -14,6 +14,9 @@ export type StrudelSavedPattern = {
 
 export type StrudelEditorStatus = 'idle' | 'playing' | 'error'
 
+/** Which editor the left side shows: the code editor or the node canvas. */
+export type StrudelEditorMode = 'code' | 'flow'
+
 export type StrudelEvaluationResult = {
   success: boolean
   errorMessage?: string
@@ -195,6 +198,7 @@ export type StrudelTabId =
   | 'export'
   | 'console'
   | 'settings'
+  | 'flow'
 
 export type StrudelSoundEntry = {
   name: string

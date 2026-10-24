@@ -839,7 +839,8 @@ describe('useStrudelEditor', () => {
       'reference',
       'export',
       'console',
-      'settings'
+      'settings',
+      'flow'
     ])
   })
 
@@ -885,7 +886,8 @@ describe('STRUDEL_TABS', () => {
       'reference',
       'export',
       'console',
-      'settings'
+      'settings',
+      'flow'
     ]
 
     // Act

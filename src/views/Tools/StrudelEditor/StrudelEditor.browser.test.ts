@@ -457,6 +457,91 @@ describe('StrudelEditor audible playback', () => {
   )
 
   it(
+    'compiles a node added and connected on the flow canvas, and plays it',
+    { timeout: 90000 },
+    async () => {
+      // Arrange
+      let bufferStartCount = 0
+      const originalCreateBufferSource = AudioContext.prototype.createBufferSource
+      AudioContext.prototype.createBufferSource = function (
+        this: AudioContext,
+        ...creationArguments: []
+      ) {
+        const source = originalCreateBufferSource.apply(this, creationArguments)
+        const originalStart = source.start.bind(source)
+        source.start = (...startArguments: [number]) => {
+          bufferStartCount += 1
+          return originalStart(...startArguments)
+        }
+        return source
+      }
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        // Act: open flow, add Beats, and connect it to the starter Filter by clicking its handles.
+        await page.getByRole('tab', { name: 'flow' }).click()
+        await vi.waitFor(
+          () => {
+            expect(
+              document.querySelector('.strudel-flow-node[data-node-kind="filter"]')
+            ).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+        await page.getByRole('button', { name: 'Add Beats node' }).click()
+        await vi.waitFor(
+          () => {
+            expect(
+              document.querySelector('.strudel-flow-node[data-node-kind="beats"]')
+            ).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+        const beatsOutput = document.querySelector(
+          '.strudel-flow-node[data-node-kind="beats"] .strudel-flow-node__handle--output'
+        )
+        const filterInput = document.querySelector(
+          '.strudel-flow-node[data-node-kind="filter"] .strudel-flow-node__handle--input'
+        )
+        expect(beatsOutput).not.toBeNull()
+        expect(filterInput).not.toBeNull()
+        if (beatsOutput === null || filterInput === null) {
+          return
+        }
+        await userEvent.click(beatsOutput)
+        await userEvent.click(filterInput)
+
+        // Assert: both instruments reach the editor as one stacked, filtered pattern.
+        await vi.waitFor(
+          () => {
+            const blocks = readEditorCode()
+              .split('\n')
+              .filter((line) => line.startsWith('$:'))
+            expect(blocks).toHaveLength(1)
+            expect(blocks[0]).toContain('note("<c3 eb3 g3 bb3>")')
+            expect(blocks[0]).toContain('s("bd")')
+            expect(blocks[0]).toContain('.lpf(1500)')
+          },
+          { timeout: 15000 }
+        )
+        await page.getByRole('button', { name: 'Play' }).click()
+        await vi.waitFor(
+          () => {
+            expect(bufferStartCount).toBeGreaterThan(0)
+          },
+          { timeout: 60000, interval: 500 }
+        )
+        await vi.waitFor(() => {
+          expect(readPlayButtonLabel()).toBe('Stop')
+        })
+      } finally {
+        AudioContext.prototype.createBufferSource = originalCreateBufferSource
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it(
     'puts the picked pattern in the address, and Back returns to the one before',
     { timeout: 30000 },
     async () => {

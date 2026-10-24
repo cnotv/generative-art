@@ -350,7 +350,8 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'reference', label: 'reference' },
   { id: 'export', label: 'export' },
   { id: 'console', label: 'console' },
-  { id: 'settings', label: 'settings' }
+  { id: 'settings', label: 'settings' },
+  { id: 'flow', label: 'flow' }
 ]
 
 /** Analysis runs on mono audio resampled to this rate; it keeps hi-hats below Nyquist. */

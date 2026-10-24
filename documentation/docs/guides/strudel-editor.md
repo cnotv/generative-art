@@ -15,7 +15,8 @@ edit the code, and press the play button above the editor.
   opens where you left off. An address naming a pattern opens that pattern instead, and picking
   one replaces the saved code.
 
-A panel opens on the hints tab, followed by six of the strudel.cc tabs and an import tab:
+A panel opens on the hints tab, followed by six of the strudel.cc tabs, an import tab and the
+flow tab:
 
 - **hints**: what the pattern is missing for its style (below)
 - **welcome**: intro and about
@@ -31,6 +32,7 @@ A panel opens on the hints tab, followed by six of the strudel.cc tabs and an im
 - **export**: WAV export settings
 - **console**: evaluation log
 - **settings**: theme and panel position
+- **flow**: build a pattern from instrument and effect nodes (below)
 
 Audio starts on the first Play press, since browsers only allow sound after a user gesture.
 Patterns run on the Strudel engine (`@strudel/core`, `@strudel/mini`, `@strudel/transpiler`,
@@ -110,6 +112,48 @@ visual feedback guide:
 
 The spiral, the pitch wheel and the spectrum size their drawing in canvas pixels, which is
 Strudel's own behaviour. They look smaller on a high-density screen than on a standard one.
+
+## The flow editor
+
+The **Code** and **Flow** switch above the editor changes what fills the left side. Choosing Flow
+also opens the flow tab in the player panel; choosing Code puts the code editor back. The player
+tabs keep working in either mode, so hints, patterns and settings stay one click away.
+
+Flow replaces typing with a small graph. The palette adds four instruments and three effects:
+
+| Node       | Kind       | What it plays                                              |
+| ---------- | ---------- | ---------------------------------------------------------- |
+| **Pad**    | instrument | notes through a synth, with the notes and sound editable   |
+| **Beats**  | instrument | a sixteen-step kick, snare and hi-hat grid                 |
+| **Chords** | instrument | a chord voicing from a root, chord type and sound          |
+| **Code**   | instrument | any Strudel expression, for what the controls do not cover |
+| **Filter** | effect     | `lpf` and `lpq`                                            |
+| **Delay**  | effect     | `delay`, `delaytime` and `delayfeedback`                   |
+| **Space**  | effect     | `room` and `roomsize`                                      |
+
+Drag a node by its header to arrange the canvas. Connect an output dot to an effect input by
+dragging, or click the output and then the input. The cross on a node, or Delete/Backspace while
+it is selected, removes the node and its cables. An instrument has no input, a pair of nodes
+connects only once, an effect cannot feed an instrument, and a cable cannot close a loop.
+
+Each connected group of nodes compiles to one `$: <pattern>` block. A group stacks its
+instruments and then applies its effects in signal order. The **Tempo** field writes
+`setcpm(<bpm>/4)` above the blocks. A patch with no instrument, or one whose instrument makes no
+sound yet, says what to fix instead of writing code, and Play does nothing until it is fixed.
+
+While Flow is open every valid patch is written into the code editor, so the same Play, Update
+and Stop button drives the graph. Switch to Code to read or hand-edit the generated pattern.
+Editing the code that way is a one-way trip: going back to Flow compiles the nodes again, and the
+next graph change replaces those edits. Picking a listed pattern or opening a pattern anchor
+switches back to Code, so the picked code is not overwritten.
+
+The patch and its tempo are saved in local storage, apart from the code. **Reset patch** brings
+back the starter Pad into Filter at 120 BPM. A graph emptied down to nothing stays empty on the
+next visit rather than silently returning the starter patch.
+
+The graph has one effect chain per connected group, so an effect applies to every instrument
+stacked in that group rather than to one branch alone. Code edited by hand is not turned back
+into nodes.
 
 ## Autocomplete
 
