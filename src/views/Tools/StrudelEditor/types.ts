@@ -91,7 +91,103 @@ export type StrudelCompletionVocabulary = {
   listSoundNames: () => Promise<string[]>
 }
 
+export type StrudelMusicStyleId =
+  | 'techno'
+  | 'house'
+  | 'drum-and-bass'
+  | 'hip-hop'
+  | 'ambient'
+  | 'trance'
+  | 'dub'
+  | 'breakbeat'
+
+/** What a layer of a pattern plays, as far as its sound names and calls tell. */
+export type StrudelInstrumentRole =
+  | 'kick'
+  | 'snare'
+  | 'clap'
+  | 'hihat'
+  | 'percussion'
+  | 'breaks'
+  | 'bass'
+  | 'chords'
+  | 'melody'
+
+/** A visual Strudel draws, by its method name without the inline underscore. */
+export type StrudelVisualName =
+  | 'pianoroll'
+  | 'punchcard'
+  | 'scope'
+  | 'spectrum'
+  | 'spiral'
+  | 'pitchwheel'
+
+/** An instrument a style expects, with the layer that adds it and why it belongs. */
+export type StrudelStyleInstrument = {
+  role: StrudelInstrumentRole
+  label: string
+  snippet: string
+  reason: string
+}
+
+export type StrudelMusicStyle = {
+  id: StrudelMusicStyleId
+  label: string
+  /** Words that name the style in a comment, lowercase. */
+  keywords: string[]
+  minBeatsPerMinute: number
+  maxBeatsPerMinute: number
+  /** The tempo a tempo hint sets. */
+  beatsPerMinute: number
+  instruments: StrudelStyleInstrument[]
+  visuals: StrudelVisualName[]
+}
+
+export type StrudelStyleSource = 'picker' | 'comment' | 'code'
+
+export type StrudelStyleDetection = {
+  style: StrudelMusicStyle
+  source: StrudelStyleSource
+}
+
+export type StrudelCodeRange = {
+  from: number
+  to: number
+}
+
+export type StrudelCodeTempo = {
+  /** Null when the tempo is set with an expression too complex to read. */
+  beatsPerMinute: number | null
+  statement: StrudelCodeRange
+}
+
+/** What the hints need to know about a piece of code, read from its syntax tree. */
+export type StrudelCodeFacts = {
+  /** The first line's comment text without its slashes, or null when it is not a comment. */
+  firstLineComment: string | null
+  /** Where the comments at the top of the code end, or 0 when it starts with code. */
+  headerEnd: number
+  tempo: StrudelCodeTempo | null
+  instrumentRoles: StrudelInstrumentRole[]
+  visualNames: StrudelVisualName[]
+  /** The top-level statements that make sound, `$:` blocks and plain expressions alike. */
+  patternStatements: StrudelCodeRange[]
+  usesPatternBlocks: boolean
+}
+
+export type StrudelHintKind = 'tempo' | 'instrument' | 'visual'
+
+export type StrudelHint = {
+  id: string
+  kind: StrudelHintKind
+  title: string
+  reason: string
+  /** The code the Add button inserts. */
+  snippet: string
+}
+
 export type StrudelTabId =
+  | 'hints'
   | 'welcome'
   | 'patterns'
   | 'import'

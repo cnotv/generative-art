@@ -1,4 +1,11 @@
-import type { StrudelExample, StrudelTabId, TranscriptionStage } from './types'
+import type {
+  StrudelExample,
+  StrudelInstrumentRole,
+  StrudelMusicStyle,
+  StrudelTabId,
+  StrudelVisualName,
+  TranscriptionStage
+} from './types'
 
 /**
  * The Strudel audio engine stays under AGPL-3.0-or-later while this repo is MIT.
@@ -336,6 +343,7 @@ export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
 export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'
 
 export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
+  { id: 'hints', label: 'hints' },
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
   { id: 'import', label: 'import' },
@@ -437,4 +445,385 @@ export const STRUDEL_COMPLETION_PITCH_NAMES = [
   'A#',
   'Bb',
   'B'
+]
+
+/** Strudel plays a cycle every two seconds until told otherwise: 120 BPM at four beats a cycle. */
+export const STRUDEL_DEFAULT_BEATS_PER_MINUTE = 120
+/** The hints tab's picker value for "take the style from the comment or the code". */
+export const STRUDEL_STYLE_PICKER_DETECT = 'detect'
+
+/**
+ * Each style's usual tempo, the instruments it is built from and the visuals that suit it.
+ * Snippets use only the dirt-samples kit the editor loads and Strudel's built-in synths.
+ */
+export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
+  {
+    id: 'techno',
+    label: 'Techno',
+    keywords: ['techno', 'minimal techno', 'acid techno'],
+    minBeatsPerMinute: 125,
+    maxBeatsPerMinute: 140,
+    beatsPerMinute: 130,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a four-on-the-floor kick',
+        snippet: 's("bd*4")',
+        reason: 'Techno is built on a kick on every beat; everything else hangs off it.'
+      },
+      {
+        role: 'hihat',
+        label: 'offbeat hi-hats',
+        snippet: 's("[~ hh]*4").gain(.6)',
+        reason: 'Hats between the kicks give the groove its push.'
+      },
+      {
+        role: 'clap',
+        label: 'a clap on two and four',
+        snippet: 's("~ cp ~ cp")',
+        reason: 'A clap on the backbeat answers the kick.'
+      },
+      {
+        role: 'bass',
+        label: 'a rolling bass',
+        snippet: 'note("c2*8").s("sawtooth").lpf(500)',
+        reason: 'A filtered eighth-note bass fills the space under the kick.'
+      },
+      {
+        role: 'percussion',
+        label: 'syncopated percussion',
+        snippet: 's("perc(3,8)").gain(.5)',
+        reason: 'An off-grid percussion line keeps a long loop from going flat.'
+      }
+    ],
+    visuals: ['punchcard', 'scope']
+  },
+  {
+    id: 'house',
+    label: 'House',
+    keywords: ['house', 'deep house', 'tech house', 'garage'],
+    minBeatsPerMinute: 118,
+    maxBeatsPerMinute: 128,
+    beatsPerMinute: 124,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a four-on-the-floor kick',
+        snippet: 's("bd*4")',
+        reason: 'House runs on a steady kick on every beat.'
+      },
+      {
+        role: 'hihat',
+        label: 'offbeat hi-hats',
+        snippet: 's("[~ hh]*4")',
+        reason: 'The offbeat hat is the swing that makes house move.'
+      },
+      {
+        role: 'clap',
+        label: 'a clap on two and four',
+        snippet: 's("~ cp ~ cp")',
+        reason: 'A clap on the backbeat is the other half of the house groove.'
+      },
+      {
+        role: 'bass',
+        label: 'a bassline',
+        snippet: 'note("<c2 c2 eb2 f2>*4").s("sawtooth").lpf(600)',
+        reason: 'A short, moving bass carries the harmony under the drums.'
+      },
+      {
+        role: 'chords',
+        label: 'warm chords',
+        snippet: 'chord("<Cm7 Fm7>").voicing().s("triangle").gain(.4)',
+        reason: 'Seventh chords give house its warmth.'
+      }
+    ],
+    visuals: ['punchcard', 'pianoroll']
+  },
+  {
+    id: 'drum-and-bass',
+    label: 'Drum and bass',
+    keywords: [
+      'drum and bass',
+      'drum & bass',
+      'drum n bass',
+      "drum'n'bass",
+      'dnb',
+      'd&b',
+      'jungle'
+    ],
+    minBeatsPerMinute: 165,
+    maxBeatsPerMinute: 178,
+    beatsPerMinute: 174,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a two-step kick',
+        snippet: 's("bd ~ ~ ~ ~ ~ bd ~")',
+        reason: 'The kick on one and the and of three sets up the two-step.'
+      },
+      {
+        role: 'snare',
+        label: 'a snare on two and four',
+        snippet: 's("~ ~ sd ~ ~ ~ sd ~")',
+        reason: 'The backbeat snare is what makes the tempo feel half as fast as it is.'
+      },
+      {
+        role: 'hihat',
+        label: 'fast hi-hats',
+        snippet: 's("hh*8").gain(.5)',
+        reason: 'Steady hats keep the double-time energy.'
+      },
+      {
+        role: 'bass',
+        label: 'a sub bass',
+        snippet: 'note("<c1 c1 g1 eb1>").s("sine")',
+        reason: 'A deep sine sub is the "bass" half of drum and bass.'
+      }
+    ],
+    visuals: ['scope', 'spectrum']
+  },
+  {
+    id: 'hip-hop',
+    label: 'Hip hop',
+    keywords: ['hip hop', 'hip-hop', 'hiphop', 'boom bap', 'boombap', 'rap', 'lofi', 'lo-fi'],
+    minBeatsPerMinute: 80,
+    maxBeatsPerMinute: 100,
+    beatsPerMinute: 90,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a boom-bap kick',
+        snippet: 's("bd ~ ~ bd ~ ~ bd ~")',
+        reason: 'A loose, syncopated kick is the "boom".'
+      },
+      {
+        role: 'snare',
+        label: 'a snare on two and four',
+        snippet: 's("~ ~ sd ~ ~ ~ sd ~")',
+        reason: 'The backbeat snare is the "bap".'
+      },
+      {
+        role: 'hihat',
+        label: 'eighth-note hi-hats',
+        snippet: 's("hh*8").gain(.5)',
+        reason: 'Steady hats hold a slow beat together.'
+      },
+      {
+        role: 'chords',
+        label: 'jazzy chords',
+        snippet: 'chord("<Cm7 Ab^7>").voicing().s("triangle").gain(.4)',
+        reason: 'Sampled-sounding seventh chords are the classic hip hop bed.'
+      },
+      {
+        role: 'bass',
+        label: 'a bassline',
+        snippet: 'note("<c2 ~ eb2 g1>").s("triangle")',
+        reason: 'A sparse bass follows the kick and fills the bottom.'
+      }
+    ],
+    visuals: ['punchcard', 'pianoroll']
+  },
+  {
+    id: 'ambient',
+    label: 'Ambient',
+    keywords: ['ambient', 'drone', 'chill', 'chillout', 'downtempo', 'meditation'],
+    minBeatsPerMinute: 60,
+    maxBeatsPerMinute: 90,
+    beatsPerMinute: 70,
+    instruments: [
+      {
+        role: 'chords',
+        label: 'slow chords',
+        snippet: 'chord("<C^7 Am7 F^7 G7>").voicing().s("triangle").slow(2).room(.8)',
+        reason: 'Long, reverberant chords are the body of ambient music.'
+      },
+      {
+        role: 'melody',
+        label: 'a sparse melody',
+        snippet: 'n("0 ~ 4 ~ 7 ~ 4 ~").scale("C:major").s("sine").slow(2).delay(.5)',
+        reason: 'A few notes with echo give the ear something to follow.'
+      },
+      {
+        role: 'bass',
+        label: 'a drone bass',
+        snippet: 'note("<c2 a1 f1 g1>").s("sine").slow(2)',
+        reason: 'A low, slow root note anchors the chords.'
+      }
+    ],
+    visuals: ['spiral', 'spectrum']
+  },
+  {
+    id: 'trance',
+    label: 'Trance',
+    keywords: ['trance', 'psytrance', 'psy trance', 'uplifting'],
+    minBeatsPerMinute: 130,
+    maxBeatsPerMinute: 145,
+    beatsPerMinute: 138,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a four-on-the-floor kick',
+        snippet: 's("bd*4")',
+        reason: 'Trance keeps a kick on every beat.'
+      },
+      {
+        role: 'hihat',
+        label: 'offbeat hi-hats',
+        snippet: 's("[~ hh]*4").gain(.6)',
+        reason: 'The offbeat hat drives the build.'
+      },
+      {
+        role: 'bass',
+        label: 'an offbeat rolling bass',
+        snippet: 'note("[~ a1]*4").s("sawtooth").lpf(800)',
+        reason: 'A bass between the kicks gives trance its rolling feel.'
+      },
+      {
+        role: 'melody',
+        label: 'an arpeggiated lead',
+        snippet: 'n("0 2 4 7 4 2 0 2").scale("A:minor").s("sawtooth").lpf(2000).gain(.5)',
+        reason: 'A fast arpeggio is the hook trance is known for.'
+      }
+    ],
+    visuals: ['pianoroll', 'spectrum']
+  },
+  {
+    id: 'dub',
+    label: 'Dub',
+    keywords: ['dub', 'reggae', 'roots'],
+    minBeatsPerMinute: 65,
+    maxBeatsPerMinute: 85,
+    beatsPerMinute: 75,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a one-drop kick',
+        snippet: 's("~ ~ bd ~")',
+        reason: 'The one drop leaves the first beat empty and lands on the third.'
+      },
+      {
+        role: 'clap',
+        label: 'a rimshot with the drop',
+        snippet: 's("~ ~ rm ~").gain(.6)',
+        reason: 'A rim on the same beat as the kick marks the drop.'
+      },
+      {
+        role: 'bass',
+        label: 'a heavy bassline',
+        snippet: 'note("<c2 ~ c2 eb2>").s("sine").lpf(300)',
+        reason: 'Dub is led by a deep, round bass.'
+      },
+      {
+        role: 'chords',
+        label: 'an offbeat skank',
+        snippet: 'chord("<Cm Fm>").voicing().struct("~ x ~ x").s("square").gain(.3).delay(.5)',
+        reason: 'Short chords on the offbeat, echoed, are the skank.'
+      }
+    ],
+    visuals: ['scope', 'punchcard']
+  },
+  {
+    id: 'breakbeat',
+    label: 'Breakbeat',
+    keywords: ['breakbeat', 'breaks', 'big beat', 'nu skool'],
+    minBeatsPerMinute: 120,
+    maxBeatsPerMinute: 140,
+    beatsPerMinute: 130,
+    instruments: [
+      {
+        role: 'breaks',
+        label: 'a sampled break',
+        snippet: 's("breaks125").fit()',
+        reason: 'A chopped drum break, not a drum machine, is what defines breakbeat.'
+      },
+      {
+        role: 'bass',
+        label: 'a bassline',
+        snippet: 'note("<c2 eb2>*2").s("sawtooth").lpf(500)',
+        reason: 'A gritty bass rides on top of the break.'
+      },
+      {
+        role: 'clap',
+        label: 'a clap on two and four',
+        snippet: 's("~ cp ~ cp")',
+        reason: 'A clap on the backbeat reinforces the break.'
+      },
+      {
+        role: 'percussion',
+        label: 'extra percussion',
+        snippet: 's("perc(5,8)").gain(.5)',
+        reason: 'Percussion on top fills the gaps in the break.'
+      }
+    ],
+    visuals: ['punchcard', 'scope']
+  }
+]
+
+export const STRUDEL_VISUAL_REASONS: Record<StrudelVisualName, string> = {
+  pianoroll: 'A pianoroll under the pattern shows its notes scroll past as they play.',
+  punchcard: 'A punchcard shows every hit as a block, so the groove is visible at a glance.',
+  scope: 'A scope draws the waveform, so you can see the bass and the filter move.',
+  spectrum: 'A spectrum shows which frequencies the mix fills and which it leaves empty.',
+  spiral: 'A spiral turns the notes into a slowly winding shape that suits long, calm pieces.',
+  pitchwheel: 'A pitch wheel shows the notes as points around a circle of pitch.'
+}
+
+/** Sound names, as written in a pattern's strings, and the instrument each one plays. */
+export const STRUDEL_INSTRUMENT_SOUND_NAMES: Record<StrudelInstrumentRole, string[]> = {
+  kick: ['bd', 'kick', '808bd', '909bd'],
+  snare: ['sd', 'sn', 'snare', '808sd', '909sd'],
+  clap: ['cp', 'clap', 'rm', 'rim', 'realclaps'],
+  hihat: ['hh', 'hc', 'oh', 'ho', 'hihat', '808hc', '808oh', 'hh27'],
+  percussion: ['perc', 'lt', 'mt', 'ht', 'tabla', 'cr', 'click', 'cb', 'cowbell', 'shaker', 'tom'],
+  breaks: ['breaks125', 'breaks152', 'breaks157', 'breaks165', 'amencutup', 'amen'],
+  bass: ['bass', 'bass1', 'bass2', 'bass3', 'jvbass', 'subroc3d'],
+  chords: ['pad', 'padlong'],
+  melody: ['arpy', 'piano', 'casio', 'pluck', 'lead']
+}
+
+/** Calls that mark an instrument whatever sounds they play. */
+export const STRUDEL_INSTRUMENT_CALL_NAMES: Partial<Record<StrudelInstrumentRole, string[]>> = {
+  chords: ['chord', 'voicing', 'voicings'],
+  melody: ['scale', 'arp']
+}
+
+/** Notes at or below this octave count as bass, and above it as melody. */
+export const STRUDEL_BASS_MAX_OCTAVE = 2
+
+/** Each method that draws a visual, inline with an underscore or behind the code without. */
+export const STRUDEL_VISUAL_CALL_NAMES: Record<string, StrudelVisualName> = {
+  pianoroll: 'pianoroll',
+  _pianoroll: 'pianoroll',
+  punchcard: 'punchcard',
+  _punchcard: 'punchcard',
+  scope: 'scope',
+  _scope: 'scope',
+  tscope: 'scope',
+  _tscope: 'scope',
+  spectrum: 'spectrum',
+  _spectrum: 'spectrum',
+  spiral: 'spiral',
+  _spiral: 'spiral',
+  pitchwheel: 'pitchwheel',
+  _pitchwheel: 'pitchwheel'
+}
+
+/** Tempo calls and the factor from their argument to beats per minute, at four beats a cycle. */
+export const STRUDEL_TEMPO_CALL_FACTORS: Record<string, number> = {
+  setcps: 240,
+  setCps: 240,
+  setcpm: 4,
+  setCpm: 4
+}
+
+/** Top-level calls that set things up rather than make sound. */
+export const STRUDEL_SETUP_CALL_NAMES = [
+  'setcps',
+  'setCps',
+  'setcpm',
+  'setCpm',
+  'samples',
+  'all',
+  'each',
+  'hush'
 ]

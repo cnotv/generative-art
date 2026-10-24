@@ -15,8 +15,9 @@ edit the code, and press the play button above the editor.
   opens where you left off. An address naming a pattern opens that pattern instead, and picking
   one replaces the saved code.
 
-A panel carries six of the strudel.cc tabs plus an import tab:
+A panel opens on the hints tab, followed by six of the strudel.cc tabs and an import tab:
 
+- **hints**: what the pattern is missing for its style (below)
 - **welcome**: intro and about
 - **patterns**: your saved patterns, then the examples, then the shipped
   electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
@@ -36,6 +37,40 @@ Patterns run on the Strudel engine (`@strudel/core`, `@strudel/mini`, `@strudel/
 `@strudel/webaudio`, `@strudel/tonal`, `@strudel/draw`), loaded lazily so the rest of the app
 never pays for it. Press the stop button to hush the output; leaving the view stops it too. A
 pattern that fails to evaluate shows its error under the editor instead of playing.
+
+## Hints
+
+The hints tab names the pattern's style and lists what the code is missing for it. Each hint
+says why it matters for that style, shows the code it adds, and has an **Add** button that writes
+that code in. The list follows the code as you type.
+
+![The hints tab for a pattern whose first line reads "deep house groove": a tempo, four instruments and two visuals to add](/img/strudel-editor/hints-tab.webp)
+
+The style comes from the first of these that names one, and the tab says which:
+
+1. the **Style** picker at the top of the tab;
+2. the comment on the code's first line, such as `// deep house groove` or `// my first dnb tune`;
+3. a guess from the tempo the code plays at and the sounds it uses.
+
+There are eight styles: techno, house, drum and bass, hip hop, ambient, trance, dub and
+breakbeat. Each has a usual tempo range, the instruments it is built from, and the visuals that
+suit it. The table is `STRUDEL_MUSIC_STYLES` in the editor's `config.ts`, and nothing is sent
+anywhere.
+
+| Hint           | When it shows                                             | What Add writes                                                            |
+| -------------- | --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Tempo**      | no `setcps` or `setcpm`, or one outside the style's range | `setcps(<bpm>/60/4)`, replacing the tempo set or under the header comments |
+| **Instrument** | none of the code's sounds or calls plays that part        | a new `$:` block with the layer                                            |
+| **Visual**     | the code has a pattern but doesn't draw that visual yet   | `._punchcard()` or similar, chained onto the last pattern                  |
+
+Instruments are read from sound names in strings (`bd` is a kick, `hh` a hi-hat, `jvbass` a bass),
+from notes (octave 2 and below is bass, above is melody), and from calls (`chord` and `voicing`
+are chords, `scale` a melody). Words in comments name the style but never an instrument, so
+`// bass and hats` counts as neither.
+
+Strudel plays only the `$:` blocks once any exists, so the first instrument added to a plain
+pattern turns that pattern into a block too, and both keep playing. Every snippet uses only the
+sounds the editor loads and Strudel's built-in synths.
 
 ## The code editor
 
