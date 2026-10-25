@@ -4,8 +4,8 @@ import { Play, RefreshCw, Square } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { STRUDEL_LICENSE_NOTE } from './config'
-import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from './flow/config'
-import { useStrudelFlow } from './flow/useStrudelFlow'
+import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
+import { useStrudelFlow } from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
 import { useStrudelHints } from './hints/useStrudelHints'
 import type { StrudelEditorMode, StrudelTabId } from './types'
@@ -21,7 +21,9 @@ import SettingsTab from './tabs/SettingsTab.vue'
 import FlowTab from './tabs/FlowTab.vue'
 
 // Vue Flow is a large canvas library and only loads when the player opens flow mode.
-const StrudelFlowEditor = defineAsyncComponent(() => import('./flow/StrudelFlowEditor.vue'))
+const StrudelFlowEditor = defineAsyncComponent(() =>
+  import('@webgamekit/strudel-flow').then((module) => module.StrudelFlowEditor)
+)
 
 const {
   patternCode,

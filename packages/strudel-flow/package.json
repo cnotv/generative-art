@@ -1,0 +1,42 @@
+{
+  "name": "@webgamekit/strudel-flow",
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.umd.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.umd.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "vite build && tsc",
+    "prepare": "vite build && tsc",
+    "prepublishOnly": "pnpm run build"
+  },
+  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@vue-flow/core": "^1.48.2",
+    "@vue-flow/controls": "^1.1.3",
+    "lucide-vue-next": "^0.563.0",
+    "vue": "^3.4.21"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vitest": "^4.0.18"
+  }
+}

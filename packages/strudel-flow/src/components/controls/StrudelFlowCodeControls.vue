@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { STRUDEL_FLOW_CODE_DEFAULTS } from '../nodeDefaults'
-import type { StrudelFlowCodeData } from '../types'
+import type { StrudelFlowCodeData } from '../../types'
+import { STRUDEL_FLOW_CODE_DEFAULTS } from '../../nodeDefaults'
 
 const props = defineProps<{
   data: StrudelFlowCodeData

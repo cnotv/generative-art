@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import FlowTab from './FlowTab.vue'
-import type { StrudelFlowCompilation } from '../flow/types'
+import type { StrudelFlowCompilation } from '@webgamekit/strudel-flow'
 
 const validCompilation: StrudelFlowCompilation = {
   code: 'setcpm(120/4)\n$: note("<c3 eb3 g3 bb3>").sound("triangle")',

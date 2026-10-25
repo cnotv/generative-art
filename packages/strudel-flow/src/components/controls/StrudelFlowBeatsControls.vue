@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { STRUDEL_FLOW_DRUM_LABELS } from '../nodeDefaults'
-import type { StrudelFlowBeatsData, StrudelFlowDrumInstrument } from '../types'
+import type { StrudelFlowBeatsData, StrudelFlowDrumInstrument } from '../../types'
+import { STRUDEL_FLOW_DRUM_LABELS } from '../../nodeDefaults'
 
 const props = defineProps<{
   data: StrudelFlowBeatsData

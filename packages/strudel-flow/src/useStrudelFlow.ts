@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
-import { readStorage, writeStorage } from '@/utils/storage'
+import { readStorage, writeStorage } from './storage'
 import { compileStrudelFlow } from './compileStrudelFlow'
 import {
   STRUDEL_FLOW_NODE_COLUMN_GAP,

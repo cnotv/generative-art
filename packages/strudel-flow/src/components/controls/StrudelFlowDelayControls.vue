@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import StrudelFlowSliderField from './StrudelFlowSliderField.vue'
-import type { StrudelFlowDelayData } from '../types'
+import StrudelFlowKnob from './StrudelFlowKnob.vue'
+import type { StrudelFlowDelayData } from '../../types'
 
 const props = defineProps<{
   data: StrudelFlowDelayData
@@ -24,8 +24,8 @@ const onFeedbackChange = (feedback: number): void => {
 </script>
 
 <template>
-  <div class="strudel-flow-controls">
-    <StrudelFlowSliderField
+  <div class="strudel-flow-knobs">
+    <StrudelFlowKnob
       label="Mix"
       :model-value="data.mix"
       :min="0"
@@ -33,16 +33,16 @@ const onFeedbackChange = (feedback: number): void => {
       :step="0.01"
       @update:model-value="onMixChange"
     />
-    <StrudelFlowSliderField
+    <StrudelFlowKnob
       label="Time"
       :model-value="data.time"
       :min="0"
       :max="1"
       :step="0.01"
-      suffix=" s"
+      suffix="s"
       @update:model-value="onTimeChange"
     />
-    <StrudelFlowSliderField
+    <StrudelFlowKnob
       label="Feedback"
       :model-value="data.feedback"
       :min="0"

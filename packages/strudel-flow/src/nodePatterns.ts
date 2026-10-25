@@ -101,6 +101,6 @@ export const generateStrudelFlowNodePattern = (
     case 'space':
       return generateSpacePattern(data, input)
     default:
-      throw new Error(`Unsupported node kind: ${data.kind}`)
+      throw new Error('Unsupported node kind')
   }
 }

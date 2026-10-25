@@ -8,8 +8,8 @@ export const STRUDEL_FLOW_STEP_COUNT = 16
 /** Where a newly added node lands, in graph coordinates, two to a row. */
 export const STRUDEL_FLOW_NODE_START_X = 80
 export const STRUDEL_FLOW_NODE_START_Y = 120
-export const STRUDEL_FLOW_NODE_COLUMN_GAP = 320
-export const STRUDEL_FLOW_NODE_ROW_GAP = 320
+export const STRUDEL_FLOW_NODE_COLUMN_GAP = 480
+export const STRUDEL_FLOW_NODE_ROW_GAP = 360
 export const STRUDEL_FLOW_NODE_COLUMNS = 2
 export const STRUDEL_FLOW_MAX_NODE_COORDINATE = 100000
 
@@ -55,65 +55,14 @@ export const STRUDEL_FLOW_CHORD_TYPE_OPTIONS = [
 export const STRUDEL_FLOW_DRUM_ROWS = [
   {
     instrument: 'bd',
-    steps: [
-      true,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false
-    ]
+    steps: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false]
   },
   {
     instrument: 'sd',
-    steps: [
-      false,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false
-    ]
+    steps: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false]
   },
   {
     instrument: 'hh',
-    steps: [
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false
-    ]
+    steps: [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false]
   }
 ]

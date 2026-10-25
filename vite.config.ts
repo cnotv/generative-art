@@ -20,7 +20,8 @@ const packages = [
   'dictionary',
   'chat',
   'canvas-editor',
-  'history'
+  'history',
+  'strudel-flow'
 ]
 const allowedHosts = ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz', 'cnotv.github.io']
 

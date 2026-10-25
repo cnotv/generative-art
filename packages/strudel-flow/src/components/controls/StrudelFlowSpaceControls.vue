@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import StrudelFlowSliderField from './StrudelFlowSliderField.vue'
-import type { StrudelFlowSpaceData } from '../types'
+import StrudelFlowKnob from './StrudelFlowKnob.vue'
+import type { StrudelFlowSpaceData } from '../../types'
 
 const props = defineProps<{
   data: StrudelFlowSpaceData
@@ -20,8 +20,8 @@ const onRoomSizeChange = (roomSize: number): void => {
 </script>
 
 <template>
-  <div class="strudel-flow-controls">
-    <StrudelFlowSliderField
+  <div class="strudel-flow-knobs">
+    <StrudelFlowKnob
       label="Room"
       :model-value="data.room"
       :min="0"
@@ -29,7 +29,7 @@ const onRoomSizeChange = (roomSize: number): void => {
       :step="0.01"
       @update:model-value="onRoomChange"
     />
-    <StrudelFlowSliderField
+    <StrudelFlowKnob
       label="Room size"
       :model-value="data.roomSize"
       :min="0"

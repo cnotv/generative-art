@@ -17,7 +17,7 @@ export const createDefaultStrudelFlowPatch = (): StrudelFlowPatch => ({
     {
       id: 'filter-starter',
       type: 'strudel',
-      position: { x: 500, y: 120 },
+      position: { x: 580, y: 120 },
       data: createStrudelFlowNodeData('filter')
     }
   ],

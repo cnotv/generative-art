@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import StrudelFlowSliderField from './StrudelFlowSliderField.vue'
-import type { StrudelFlowFilterData } from '../types'
+import StrudelFlowKnob from './StrudelFlowKnob.vue'
+import type { StrudelFlowFilterData } from '../../types'
 
 const props = defineProps<{
   data: StrudelFlowFilterData
@@ -20,17 +20,17 @@ const onResonanceChange = (resonance: number): void => {
 </script>
 
 <template>
-  <div class="strudel-flow-controls">
-    <StrudelFlowSliderField
+  <div class="strudel-flow-knobs">
+    <StrudelFlowKnob
       label="Cutoff"
       :model-value="data.cutoff"
       :min="20"
       :max="20000"
       :step="10"
-      suffix=" Hz"
+      suffix="Hz"
       @update:model-value="onCutoffChange"
     />
-    <StrudelFlowSliderField
+    <StrudelFlowKnob
       label="Resonance"
       :model-value="data.resonance"
       :min="0.1"

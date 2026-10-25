@@ -3,9 +3,9 @@ import type {
   StrudelFlowChordsData,
   StrudelFlowCodeData,
   StrudelFlowDelayData,
+  StrudelFlowDrumInstrument,
   StrudelFlowDrumRow,
   StrudelFlowFilterData,
-  StrudelFlowNodeCategory,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
   StrudelFlowPadData,
@@ -65,7 +65,7 @@ export const STRUDEL_FLOW_SPACE_DEFAULTS: StrudelFlowSpaceData = {
  */
 export const createDefaultDrumRows = (): StrudelFlowDrumRow[] =>
   STRUDEL_FLOW_DRUM_ROWS.map((row) => ({
-    instrument: row.instrument,
+    instrument: row.instrument as StrudelFlowDrumInstrument,
     steps: [...row.steps]
   }))
 
@@ -110,11 +110,3 @@ export const isStrudelFlowInstrumentKind = (kind: StrudelFlowNodeKind): boolean 
  */
 export const isStrudelFlowEffectKind = (kind: StrudelFlowNodeKind): boolean =>
   EFFECT_KINDS.includes(kind)
-
-/**
- * The category a node kind belongs to in the palette and on its badge.
- * @param kind - the node kind
- * @returns the category name
- */
-export const getStrudelFlowNodeCategory = (kind: StrudelFlowNodeKind): StrudelFlowNodeCategory =>
-  isStrudelFlowInstrumentKind(kind) ? 'Instruments' : 'Effects'

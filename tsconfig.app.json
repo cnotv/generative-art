@@ -12,7 +12,8 @@
       "@webgamekit/threejs": ["./packages/threejs/src/index.ts"],
       "@webgamekit/audio": ["./packages/audio/src/index.ts"],
       "@webgamekit/game": ["./packages/game/src/index.ts"],
-      "@webgamekit/controls": ["./packages/controls/src/index.ts"]
+      "@webgamekit/controls": ["./packages/controls/src/index.ts"],
+      "@webgamekit/strudel-flow": ["./packages/strudel-flow/src/index.ts"]
     }
   }
 }

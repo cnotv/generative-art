@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input'
 import {
   STRUDEL_FLOW_MAX_BEATS_PER_MINUTE,
   STRUDEL_FLOW_MIN_BEATS_PER_MINUTE
-} from '../flow/config'
-import { STRUDEL_FLOW_NODE_DEFINITIONS } from '../flow/nodeDefinitions'
-import { normalizeStrudelFlowBeatsPerMinute } from '../flow/tempo'
-import type { StrudelFlowCompilation, StrudelFlowNodeKind } from '../flow/types'
+} from '@webgamekit/strudel-flow'
+import { STRUDEL_FLOW_NODE_DEFINITIONS } from '@webgamekit/strudel-flow'
+import { normalizeStrudelFlowBeatsPerMinute } from '@webgamekit/strudel-flow'
+import type { StrudelFlowCompilation, StrudelFlowNodeKind } from '@webgamekit/strudel-flow'
 
 const props = defineProps<{
   beatsPerMinute: number

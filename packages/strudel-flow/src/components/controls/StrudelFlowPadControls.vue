@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
-import { STRUDEL_FLOW_SOUND_OPTIONS } from '../config'
-import type { StrudelFlowPadData } from '../types'
+import type { StrudelFlowPadData } from '../../types'
+import { STRUDEL_FLOW_SOUND_OPTIONS } from '../../config'
 
 const props = defineProps<{
   data: StrudelFlowPadData
@@ -16,8 +14,11 @@ const onNotesInput = (value: string | number): void => {
   emit('update', { ...props.data, notes: String(value) })
 }
 
-const onSoundChange = (sound: string): void => {
-  emit('update', { ...props.data, sound })
+const onSoundChange = (event: Event): void => {
+  const select = event.target
+  if (select instanceof HTMLSelectElement) {
+    emit('update', { ...props.data, sound: select.value })
+  }
 }
 </script>
 
@@ -25,21 +26,29 @@ const onSoundChange = (sound: string): void => {
   <div class="strudel-flow-controls">
     <label class="strudel-flow-field">
       <span class="strudel-flow-field__label">Notes</span>
-      <Input
+      <input
+        class="input"
         :model-value="data.notes"
         aria-label="Pad notes"
         placeholder="&lt;c3 eb3 g3&gt;"
-        @update:model-value="onNotesInput"
+        @input="onNotesInput"
       />
     </label>
     <label class="strudel-flow-field">
       <span class="strudel-flow-field__label">Synth</span>
-      <Select
-        :model-value="data.sound"
-        :options="STRUDEL_FLOW_SOUND_OPTIONS"
+      <select
+        :value="data.sound"
         aria-label="Pad synth"
-        @update:model-value="onSoundChange"
-      />
+        @change="onSoundChange"
+      >
+        <option
+          v-for="option in STRUDEL_FLOW_SOUND_OPTIONS"
+          :key="option.value"
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
     </label>
   </div>
 </template>

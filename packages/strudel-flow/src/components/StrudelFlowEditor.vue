@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { VueFlow } from '@vue-flow/core'
 import type { Connection } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
-import './flowCanvas.scss'
+import '../styles/flowCanvas.scss'
 import StrudelFlowNode from './StrudelFlowNode.vue'
-import { canUseStrudelFlowConnection } from './connections'
+import { canUseStrudelFlowConnection } from '../connections'
 import type {
   StrudelFlowEdge,
   StrudelFlowNode as StrudelFlowNodeType,
   StrudelFlowNodeData
-} from './types'
+} from '../types'
 
 const props = defineProps<{
   nodes: StrudelFlowNodeType[]
@@ -28,7 +27,7 @@ const emit = defineEmits<{
   'remove-node': [nodeId: string]
 }>()
 
-const DEFAULT_EDGE_OPTIONS = { type: 'smoothstep' }
+const DEFAULT_EDGE_OPTIONS = { type: 'default' }
 const DELETE_KEYS = ['Backspace', 'Delete']
 
 const isValidConnection = (connection: Connection): boolean =>
@@ -74,7 +73,6 @@ const onNodeRemoved = (nodeId: string): void => {
     @update:edges="onEdgesUpdated"
     @connect="onConnect"
   >
-    <Background variant="dots" :gap="20" :size="1.4" color="var(--color-border)" />
     <Controls />
     <template #node-strudel="nodeProperties">
       <StrudelFlowNode

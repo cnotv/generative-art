@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { X } from 'lucide-vue-next'
-import IconButton from '@/components/IconButton.vue'
 import StrudelFlowBeatsControls from './controls/StrudelFlowBeatsControls.vue'
 import StrudelFlowChordsControls from './controls/StrudelFlowChordsControls.vue'
 import StrudelFlowCodeControls from './controls/StrudelFlowCodeControls.vue'
@@ -10,9 +9,9 @@ import StrudelFlowDelayControls from './controls/StrudelFlowDelayControls.vue'
 import StrudelFlowFilterControls from './controls/StrudelFlowFilterControls.vue'
 import StrudelFlowPadControls from './controls/StrudelFlowPadControls.vue'
 import StrudelFlowSpaceControls from './controls/StrudelFlowSpaceControls.vue'
-import { getStrudelFlowNodeCategory, isStrudelFlowInstrumentKind } from './nodeDefaults'
-import { getStrudelFlowNodeDefinition } from './nodeDefinitions'
-import type { StrudelFlowNodeData } from './types'
+import { isStrudelFlowInstrumentKind } from '../nodeDefaults'
+import { getStrudelFlowNodeDefinition } from '../nodeDefinitions'
+import type { StrudelFlowNodeData } from '../types'
 
 const props = defineProps<{
   id: string
@@ -26,7 +25,6 @@ const emit = defineEmits<{
 }>()
 
 const definition = computed(() => getStrudelFlowNodeDefinition(props.data.kind))
-const category = computed(() => getStrudelFlowNodeCategory(props.data.kind))
 const isInstrument = computed(() => isStrudelFlowInstrumentKind(props.data.kind))
 const inputLabel = computed(() => `${definition.value.title} pattern input`)
 const outputLabel = computed(() => `${definition.value.title} pattern output`)
@@ -57,18 +55,16 @@ const onRemove = (): void => {
     <header class="strudel-flow-node__header">
       <div class="strudel-flow-node__title-group">
         <h3 class="strudel-flow-node__title">{{ definition.title }}</h3>
-        <span class="strudel-flow-node__badge">{{ category }}</span>
       </div>
-      <IconButton
-        class="strudel-flow-node__remove nodrag"
-        size="xs"
+      <button
+        class="strudel-flow-node__remove btn--icon nodrag"
         :title="removeLabel"
         :aria-label="removeLabel"
         @pointerdown.stop
         @click.stop="onRemove"
       >
         <X aria-hidden="true" />
-      </IconButton>
+      </button>
     </header>
     <div class="strudel-flow-node__body nodrag">
       <StrudelFlowPadControls v-if="data.kind === 'pad'" :data="data" @update="onDataUpdate" />

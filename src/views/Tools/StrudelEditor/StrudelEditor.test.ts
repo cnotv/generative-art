@@ -6,13 +6,16 @@ import type { StrudelCodeMirrorOptions } from './types'
 
 // Vue Flow needs a real layout engine; the browser tests mount it. This stand-in proves the
 // view switches between the editor and the canvas while the graph state stays in the view.
-vi.mock('./flow/StrudelFlowEditor.vue', () => ({
-  __esModule: true,
-  default: {
-    name: 'StrudelFlowEditorStub',
-    template: '<div class="strudel-flow-editor-stub" />'
+vi.mock('@webgamekit/strudel-flow', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    StrudelFlowEditor: {
+      name: 'StrudelFlowEditorStub',
+      template: '<div class="strudel-flow-editor-stub" />'
+    }
   }
-}))
+})
 
 // CodeMirror and the Strudel engine only load in a real browser; the browser tests cover
 // them. This stand-in keeps the code in a textarea so the view wiring can be checked.
