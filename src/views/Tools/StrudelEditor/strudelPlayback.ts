@@ -207,11 +207,10 @@ export const loadDefaultStrudelPlayback = async (
   const engine = await loadStrudelEngine()
   await engine.audioInitializer()
   engine.synthRegistrar()
-  await engine.sampleBankLoader(DEFAULT_SAMPLE_BANK)
-  await engine.scopeInitializer(...engine.scopeModules)
-
   const audioContext: unknown = await engine.contextGetter()
   await resumeAudioContext(audioContext)
+  await engine.sampleBankLoader(DEFAULT_SAMPLE_BANK)
+  await engine.scopeInitializer(...engine.scopeModules)
   const drawer = await createPlaybackDrawer(hooks)
   const cleanupVisuals = await createVisualsCleanup(hooks)
   let replScheduler: unknown = null
