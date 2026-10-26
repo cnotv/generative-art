@@ -323,12 +323,78 @@ describe('StrudelEditor view', () => {
     await clickMode(wrapper, 'Code')
 
     // Assert
-    expect(wrapper.find('.strudel-flow-tab__code').text()).toContain('setcpm(120/4)')
+    expect(wrapper.find('.strudel-flow-tab__code').exists()).toBe(false)
     expect(generatedCode).toBe(
-      ['setcpm(120/4)', '$: note("<c3 eb3 g3 bb3>").sound("triangle").lpf(1500).lpq(1)'].join('\n')
+      [
+        'setcpm(120/4)',
+        '$: n("[0 4] [2] [4] [2] [0]").scale("C3:major").sound("triangle").lpf(1500).lpq(1)'
+      ].join('\n')
     )
     expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(false)
     expect(readEditorCode(wrapper)).toBe(generatedCode)
+  })
+
+  it('rebuilds the graph from code and keeps the same code when flow mode opens', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    const code = ['setcpm(100/4)', '$: n("[0 2] [4]").scale("D4:minor").sound("sine")'].join('\n')
+
+    // Act
+    await wrapper.find('.fake-strudel-code').setValue(code)
+    await clickTab(wrapper, 'flow')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
+    })
+    await clickMode(wrapper, 'Code')
+
+    // Assert
+    expect(readEditorCode(wrapper)).toBe(code)
+  })
+
+  it('shows a flow error in the main editor area instead of the side panel', async () => {
+    // Arrange
+    localStorage.setItem(
+      'strudel-flow-patch',
+      JSON.stringify({
+        nodes: [
+          {
+            id: 'filter-only',
+            type: 'strudel',
+            position: { x: 0, y: 0 },
+            data: { kind: 'filter', cutoff: 1200, resonance: 2 }
+          }
+        ],
+        edges: [],
+        beatsPerMinute: 120
+      })
+    )
+    const wrapper = await mountEditorView()
+
+    // Act
+    await clickTab(wrapper, 'flow')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-editor__error').exists()).toBe(true)
+    })
+
+    // Assert
+    expect(wrapper.find('.strudel-editor__error').text()).toContain('instrument')
+    expect(wrapper.find('.strudel-flow-tab [role="alert"]').exists()).toBe(false)
+  })
+
+  it('collapses and reopens the side panel', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+
+    // Act
+    await wrapper.find('button[aria-label="Hide side panel"]').trigger('click')
+    const collapsed = wrapper.find('.strudel-editor').classes()
+    await wrapper.find('button[aria-label="Show side panel"]').trigger('click')
+
+    // Assert
+    expect(collapsed).toContain('strudel-editor--side-collapsed')
+    expect(wrapper.find('.strudel-editor').classes()).not.toContain(
+      'strudel-editor--side-collapsed'
+    )
   })
 
   it('returns to code mode when a listed pattern is picked from flow mode', async () => {

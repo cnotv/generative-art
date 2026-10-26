@@ -50,12 +50,31 @@ styled through the same `.strudel-flow-field select` rules as everything else.
 ## Colour tokens
 
 The reference is dark by default. The package defines its own oklch tokens scoped to
-`.strudel-flow-editor` — light set on the base, dark set under `.dark` and the
-`prefers-color-scheme: dark` media query — rather than borrowing the app's `--color-*`
-hsl tokens. The reference's palette does not map onto the app's: its card is `oklch(0.21)`,
-its canvas `oklch(0.18)`, its accent `oklch(0.92 0.05 66.17)`. Borrowing would have meant
-either a wrong look or a fight with the app's theme system. `oklch` requires modern
-browsers; the app already targets them.
+`.strudel-flow-editor` and its shell `.strudel-flow-editor-shell` — light set on the base,
+dark set under `.dark` and the `prefers-color-scheme: dark` media query — rather than
+borrowing the app's `--color-*` hsl tokens. The reference's palette does not map onto the
+app's: its card is `oklch(0.21)`, its canvas `oklch(0.18)`, its accent `oklch(0.92 0.05 66.17)`.
+Borrowing would have meant either a wrong look or a fight with the app's theme system. The
+shell needs the same tokens because the radial menu and its add button sit outside the Vue
+Flow canvas but inside that shell. `oklch` requires modern browsers; the app already targets
+them.
+
+## The second pass
+
+The first port kept some of the old editor's form controls. The second pass made the pads and
+chords behave like the reference: an eight-note pad grid with an arpeggio/chord mode, a key,
+scale and octave in a collapsed footer; a chord progression with preset shapes and a note
+editor; and a radial add menu opened by the **+** button or a canvas right-click. Level,
+Envelope and Scope joined the effects, and Space gained `roomfade`, `roomlp` and `roomdim`.
+Scope draws a canvas waveform, which needed its own `position: relative` because the app's
+global `canvas { position: absolute }` rule would otherwise pull it over the node header.
+
+Fixed row gaps did not survive the taller cards: a new node could hide underneath a Pad. The
+canvas now measures each Vue Flow node and `layout.ts` finds the first free slot with the real
+heights, then frames the graph after an add. Code edits travel back through
+`parseStrudelFlowCode`; recognised calls become nodes and anything else becomes a Code node,
+so a hand edit never silently loses its sound. The known gap is a stack of instruments: it is
+kept as one Code node rather than split into separate instrument nodes.
 
 ## Workflow compliance gap
 

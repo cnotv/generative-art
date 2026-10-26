@@ -106,8 +106,10 @@ const encodeMonoWav = (samples: Float32Array, sampleRate: number): Blob => {
 }
 
 describe('StrudelEditor audible playback', () => {
-  // The editor saves its code to local storage, which would carry one test's code into the next.
+  // The editor saves its code to local storage and reads the address, so both would carry one
+  // test's pattern into the next.
   beforeEach(() => {
+    window.history.replaceState(null, '', window.location.pathname)
     localStorage.clear()
   })
 
@@ -518,7 +520,9 @@ describe('StrudelEditor audible playback', () => {
               .split('\n')
               .filter((line) => line.startsWith('$:'))
             expect(blocks).toHaveLength(1)
-            expect(blocks[0]).toContain('note("<c3 eb3 g3 bb3>")')
+            expect(blocks[0]).toContain(
+              'n("[0 4] [2] [4] [2] [0]").scale("C3:major").sound("triangle")'
+            )
             expect(blocks[0]).toContain('s("bd")')
             expect(blocks[0]).toContain('.lpf(1500)')
           },
@@ -540,6 +544,193 @@ describe('StrudelEditor audible playback', () => {
       }
     }
   )
+
+  it('writes every pad grid click into the pattern', { timeout: 60000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      await page.getByRole('tab', { name: 'flow' }).click()
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+      const cell = document.querySelector<HTMLButtonElement>(
+        '.strudel-flow-node[data-node-kind="pad"] button[aria-label="Note 8, step 1"]'
+      )
+      expect(cell).not.toBeNull()
+      if (cell === null) {
+        return
+      }
+
+      // Act
+      await userEvent.click(cell)
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(readEditorCode()).toContain('n("[0 4 7] [2] [4] [2] [0]")')
+        },
+        { timeout: 15000 }
+      )
+      expect(cell.getAttribute('aria-pressed')).toBe('true')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('writes an added chord tone into the pattern', { timeout: 60000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      await page.getByRole('tab', { name: 'flow' }).click()
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+      await page.getByRole('button', { name: 'Add Chords node' }).click()
+      await vi.waitFor(
+        () => {
+          expect(
+            document.querySelector('.strudel-flow-node[data-node-kind="chords"]')
+          ).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+      const degree = document.querySelector<HTMLButtonElement>(
+        '.strudel-flow-node[data-node-kind="chords"] button[aria-label^="Scale degree 1:"]'
+      )
+      expect(degree).not.toBeNull()
+      if (degree === null) {
+        return
+      }
+
+      // Act
+      await userEvent.click(degree)
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(readEditorCode()).toContain('<[0,1,2,4] [5,7,9] [3,5,7] [4,6,8]>')
+        },
+        { timeout: 15000 }
+      )
+      expect(degree.getAttribute('aria-pressed')).toBe('true')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('adds a Level node from the radial menu', { timeout: 60000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      await page.getByRole('tab', { name: 'flow' }).click()
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+
+      // Act
+      await page.getByRole('button', { name: 'Add node' }).click()
+      const effectsCategory = document.querySelector<HTMLButtonElement>(
+        '.strudel-flow-radial__category[aria-label="Effects"]'
+      )
+      expect(effectsCategory).not.toBeNull()
+      if (effectsCategory === null) {
+        return
+      }
+      await userEvent.click(effectsCategory)
+      const levelItem = [
+        ...document.querySelectorAll<HTMLButtonElement>('.strudel-flow-radial__item')
+      ].find((item) => item.textContent?.includes('Level'))
+      expect(levelItem).not.toBeUndefined()
+      if (levelItem === undefined) {
+        return
+      }
+      await userEvent.click(levelItem)
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(
+            document.querySelector('.strudel-flow-node[data-node-kind="level"]')
+          ).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('draws the scope waveform', { timeout: 60000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      await page.getByRole('tab', { name: 'flow' }).click()
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+
+      // Act
+      await page.getByRole('button', { name: 'Add Scope node' }).click()
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(
+            hasPaintedPixels(
+              document.querySelector<HTMLCanvasElement>('.strudel-flow-scope__canvas')
+            )
+          ).toBe(true)
+        },
+        { timeout: 15000 }
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('rebuilds the flow graph when the code changes', { timeout: 30000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      // Act
+      await page
+        .getByRole('textbox', { name: 'Live code pattern' })
+        .fill(
+          'setcpm(120/4)\n$: n("[0 2] [4]").scale("A4:minor").sound("sine")\n$: n("<[0,2,4] [5,7,9]>").scale("C3:major").sound("sawtooth")'
+        )
+      await page.getByRole('tab', { name: 'flow' }).click()
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          const kinds = [...document.querySelectorAll<HTMLElement>('.strudel-flow-node')].map(
+            (node) => node.dataset.nodeKind
+          )
+          expect(kinds.sort()).toEqual(['chords', 'pad'])
+        },
+        { timeout: 15000 }
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
 
   it(
     'puts the picked pattern in the address, and Back returns to the one before',

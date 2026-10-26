@@ -48,7 +48,7 @@ describe('compileStrudelFlow', () => {
     expect(compilation.code).toBe(
       [
         'setcpm(120/4)',
-        '$: note("<c3 eb3 g3 bb3>").sound("triangle").lpf(1500).lpq(1).delay(0.5).delaytime(0.25).delayfeedback(0.4)'
+        '$: n("[0 4] [2] [4] [2] [0]").scale("C3:major").sound("triangle").lpf(1500).lpq(1).delay(0.5).delaytime(0.25).delayfeedback(0.4)'
       ].join('\n')
     )
   })
@@ -68,7 +68,9 @@ describe('compileStrudelFlow', () => {
     // Assert
     expect(compilation.errorMessage).toBeNull()
     expect(compilation.code).toContain('$: stack(')
-    expect(compilation.code).toContain('note("<c3 eb3 g3 bb3>")')
+    expect(compilation.code).toContain(
+      'n("[0 4] [2] [4] [2] [0]").scale("C3:major").sound("triangle")'
+    )
     expect(compilation.code).toContain('s("bd").struct(')
     expect(compilation.code).toContain(').lpf(1500).lpq(1)')
   })
@@ -84,8 +86,12 @@ describe('compileStrudelFlow', () => {
     // Assert
     expect(compilation.errorMessage).toBeNull()
     expect(compilation.code.match(/^\$: /gm)).toHaveLength(2)
-    expect(compilation.code).toContain('note("<c3 eb3 g3 bb3>")')
-    expect(compilation.code).toContain('chord("<C^7>")')
+    expect(compilation.code).toContain(
+      'n("[0 4] [2] [4] [2] [0]").scale("C3:major").sound("triangle")'
+    )
+    expect(compilation.code).toContain(
+      'n("<[0,2,4] [5,7,9] [3,5,7] [4,6,8]>").scale("C4:major").sound("sawtooth")'
+    )
   })
 
   it('refuses a cycle instead of writing a patch that would repeat forever', () => {
@@ -164,12 +170,14 @@ describe('compileStrudelFlow', () => {
     expect(compilation.code.split('\n')[0]).toBe(tempoLine)
   })
 
-  it('writes a chord node with its root, chord type and voice', () => {
+  it('writes a chord progression with its key, scale and voice', () => {
     // Arrange
     const chords = createNode('chords', {
       kind: 'chords',
-      root: 'E',
-      chordType: '-7',
+      key: 'E',
+      octave: 4,
+      scaleType: 'minor',
+      chordProgression: [0, 5],
       sound: 'square'
     })
 
@@ -177,7 +185,9 @@ describe('compileStrudelFlow', () => {
     const compilation = compile([chords])
 
     // Assert
-    expect(compilation.code).toContain('$: chord("<E-7>").voicing().sound("square")')
+    expect(compilation.code).toContain(
+      '$: n("<[0,2,4] [5,7,9]>").scale("E4:minor").sound("square")'
+    )
   })
 
   it('wraps a custom code node in parentheses so it can span several lines', () => {
@@ -195,9 +205,19 @@ describe('compileStrudelFlow', () => {
     expect(compilation.code).toContain('.sound("triangle")\n)')
   })
 
-  it('skips an instrument with no notes and keeps the rest of its component', () => {
+  it('skips a silent instrument and keeps the rest of its component', () => {
     // Arrange
-    const emptyPad = createNode('pad', { kind: 'pad', notes: '   ', sound: 'triangle' })
+    const emptyPad = createNode('pad', {
+      kind: 'pad',
+      steps: 5,
+      mode: 'arp',
+      octave: 3,
+      key: 'C',
+      scaleType: 'major',
+      grid: Array.from({ length: 16 }, () => Array<boolean>(8).fill(false)),
+      columnModifiers: {},
+      sound: 'triangle'
+    })
     const chords = createNode('chords', defaultData('chords'))
     const filter = createNode('filter', defaultData('filter'))
 
@@ -209,9 +229,9 @@ describe('compileStrudelFlow', () => {
 
     // Assert
     expect(compilation.errorMessage).toBeNull()
-    expect(compilation.code).not.toContain('note(')
+    expect(compilation.code).not.toContain('[0 4] [2]')
     expect(compilation.code).toContain(
-      'chord("<C^7>").voicing().sound("sawtooth").lpf(1500).lpq(1)'
+      'n("<[0,2,4] [5,7,9] [3,5,7] [4,6,8]>").scale("C4:major").sound("sawtooth").lpf(1500).lpq(1)'
     )
   })
 })

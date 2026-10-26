@@ -1,4 +1,11 @@
-import type { StrudelFlowBeatsData, StrudelFlowDrumRow, StrudelFlowNodeData } from './types'
+import { getStrudelFlowChordNotes } from './chords'
+import type {
+  StrudelFlowBeatsData,
+  StrudelFlowChordsData,
+  StrudelFlowDrumRow,
+  StrudelFlowNodeData,
+  StrudelFlowPadData
+} from './types'
 
 const MINI_NOTATION_HIT = '1'
 const MINI_NOTATION_REST = '~'
@@ -11,12 +18,33 @@ const MINI_NOTATION_REST = '~'
 export const formatStrudelFlowNumber = (value: number): number =>
   Number.isFinite(value) ? Math.round(value * 100) / 100 : 0
 
-const generatePadPattern = (data: Extract<StrudelFlowNodeData, { kind: 'pad' }>): string => {
-  const notes = data.notes.trim()
+const padStep = (
+  row: boolean[] | undefined,
+  stepIndex: number,
+  data: StrudelFlowPadData
+): string => {
+  const notes = (row ?? [])
+    .map((isOn, noteIndex) => (isOn ? String(noteIndex) : null))
+    .filter((note): note is string => note !== null)
+  const modifier = data.columnModifiers[stepIndex] ?? ''
   if (notes.length === 0) {
+    return `[~]${modifier}`
+  }
+  return `[${notes.join(data.mode === 'arp' ? ' ' : ', ')}]${modifier}`
+}
+
+const generatePadPattern = (data: StrudelFlowPadData): string => {
+  const steps = Math.max(1, Math.min(data.steps, data.grid.length))
+  const stepPatterns = data.grid
+    .slice(0, steps)
+    .map((row, stepIndex) => padStep(row, stepIndex, data))
+  if (stepPatterns.every((step) => step.startsWith('[~]'))) {
     return ''
   }
-  return `note(${JSON.stringify(notes)}).sound(${JSON.stringify(data.sound)})`
+  const scale = `${data.key}${data.octave}:${data.scaleType}`
+  return `n(${JSON.stringify(stepPatterns.join(' '))}).scale(${JSON.stringify(scale)}).sound(${JSON.stringify(
+    data.sound
+  )})`
 }
 
 const generateDrumRowPattern = (row: StrudelFlowDrumRow): string => {
@@ -35,8 +63,17 @@ const generateBeatsPattern = (data: StrudelFlowBeatsData): string => {
   return rowPatterns.length === 1 ? rowPatterns[0] : `stack(${rowPatterns.join(', ')})`
 }
 
-const generateChordsPattern = (data: Extract<StrudelFlowNodeData, { kind: 'chords' }>): string =>
-  `chord(${JSON.stringify(`<${data.root}${data.chordType}>`)}).voicing().sound(${JSON.stringify(data.sound)})`
+const generateChordsPattern = (data: StrudelFlowChordsData): string => {
+  const chords = getStrudelFlowChordNotes(data)
+  if (chords.every((chord) => chord.length === 0)) {
+    return ''
+  }
+  const chordPatterns = chords.map((chord) => (chord.length > 0 ? `[${chord.join(',')}]` : '~'))
+  const scale = `${data.key}${data.octave}:${data.scaleType}`
+  return `n(${JSON.stringify(`<${chordPatterns.join(' ')}>`)}).scale(${JSON.stringify(scale)}).sound(${JSON.stringify(
+    data.sound
+  )})`
+}
 
 const generateCodePattern = (data: Extract<StrudelFlowNodeData, { kind: 'code' }>): string => {
   const expression = data.code.trim().replace(/;+\s*$/, '')
@@ -71,7 +108,36 @@ const generateSpacePattern = (
     ? ''
     : `${input}.room(${formatStrudelFlowNumber(data.room)}).roomsize(${formatStrudelFlowNumber(
         data.roomSize
+      )}).roomfade(${formatStrudelFlowNumber(data.roomFade)}).roomlp(${formatStrudelFlowNumber(
+        data.roomLowPass
+      )}).roomdim(${formatStrudelFlowNumber(data.roomDim)})`
+
+const generateLevelPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'level' }>,
+  input: string
+): string =>
+  input.length === 0
+    ? ''
+    : `${input}.gain(${formatStrudelFlowNumber(data.gain)}).pan(${formatStrudelFlowNumber(
+        data.pan
+      )}).postgain(${formatStrudelFlowNumber(data.postgain)})`
+
+const generateEnvelopePattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'envelope' }>,
+  input: string
+): string =>
+  input.length === 0
+    ? ''
+    : `${input}.attack(${formatStrudelFlowNumber(data.attack)}).decay(${formatStrudelFlowNumber(
+        data.decay
+      )}).sustain(${formatStrudelFlowNumber(data.sustain)}).release(${formatStrudelFlowNumber(
+        data.release
       )})`
+
+const generateScopePattern = (
+  _data: Extract<StrudelFlowNodeData, { kind: 'scope' }>,
+  input: string
+): string => (input.length === 0 ? '' : `${input}.analyze("flow-scope")`)
 
 /**
  * The Strudel expression a node contributes, with its input already chained in.
@@ -84,6 +150,8 @@ const generateSpacePattern = (
 export const generateStrudelFlowNodePattern = (
   data: StrudelFlowNodeData,
   input: string
+  // The switch is one branch per node kind; splitting it would only hide that shape.
+  // eslint-disable-next-line complexity
 ): string => {
   switch (data.kind) {
     case 'pad':
@@ -100,6 +168,12 @@ export const generateStrudelFlowNodePattern = (
       return generateDelayPattern(data, input)
     case 'space':
       return generateSpacePattern(data, input)
+    case 'level':
+      return generateLevelPattern(data, input)
+    case 'envelope':
+      return generateEnvelopePattern(data, input)
+    case 'scope':
+      return generateScopePattern(data, input)
     default:
       throw new Error('Unsupported node kind')
   }

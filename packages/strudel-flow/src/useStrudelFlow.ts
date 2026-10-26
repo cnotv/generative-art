@@ -2,18 +2,13 @@ import { computed, ref, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
 import { readStorage, writeStorage } from './storage'
 import { compileStrudelFlow } from './compileStrudelFlow'
-import {
-  STRUDEL_FLOW_NODE_COLUMN_GAP,
-  STRUDEL_FLOW_NODE_COLUMNS,
-  STRUDEL_FLOW_NODE_ROW_GAP,
-  STRUDEL_FLOW_NODE_START_X,
-  STRUDEL_FLOW_NODE_START_Y,
-  STRUDEL_FLOW_PATCH_STORAGE_KEY
-} from './config'
+import { STRUDEL_FLOW_PATCH_STORAGE_KEY } from './config'
 import { canConnectStrudelFlowNodes } from './connections'
 import { createDefaultStrudelFlowPatch } from './defaultPatch'
+import { findStrudelFlowNodePosition } from './layout'
 import { createStrudelFlowNodeData } from './nodeDefaults'
 import { parseStrudelFlowPatch } from './patchStorage'
+import { parseStrudelFlowCode } from './parseStrudelFlowCode'
 import { normalizeStrudelFlowBeatsPerMinute } from './tempo'
 import type {
   StrudelFlowCompilation,
@@ -36,6 +31,8 @@ export type StrudelFlowState = {
   connectNodes: (sourceNodeId: string, targetNodeId: string) => boolean
   setBeatsPerMinute: (beatsPerMinute: number) => void
   resetPatch: () => void
+  /** Rebuilds the graph from code, reusing node positions where it can. */
+  loadCode: (code: string) => void
 }
 
 const readInitialPatch = (): StrudelFlowPatch =>
@@ -46,15 +43,6 @@ const nextNodeId = (kind: StrudelFlowNodeKind, nodes: StrudelFlowNode[], index: 
   nodes.some((node) => node.id === `${kind}-${index}`)
     ? nextNodeId(kind, nodes, index + 1)
     : `${kind}-${index}`
-
-const nextNodePosition = (nodes: StrudelFlowNode[]): StrudelFlowNode['position'] => ({
-  x:
-    STRUDEL_FLOW_NODE_START_X +
-    (nodes.length % STRUDEL_FLOW_NODE_COLUMNS) * STRUDEL_FLOW_NODE_COLUMN_GAP,
-  y:
-    STRUDEL_FLOW_NODE_START_Y +
-    Math.floor(nodes.length / STRUDEL_FLOW_NODE_COLUMNS) * STRUDEL_FLOW_NODE_ROW_GAP
-})
 
 // The canvas adds layout details to the nodes and edges it is given. Only the patch itself is
 // worth storing, so a saved graph stays small and free of canvas internals.
@@ -99,7 +87,7 @@ export const useStrudelFlow = (): StrudelFlowState => {
       {
         id: nextNodeId(kind, nodes.value, 1),
         type: 'strudel',
-        position: nextNodePosition(nodes.value),
+        position: findStrudelFlowNodePosition(nodes.value, kind),
         data: createStrudelFlowNodeData(kind)
       }
     ]
@@ -140,6 +128,16 @@ export const useStrudelFlow = (): StrudelFlowState => {
     beatsPerMinute.value = defaultPatch.beatsPerMinute
   }
 
+  const loadCode = (code: string): void => {
+    const patch = parseStrudelFlowCode(code, nodes.value)
+    if (patch === null) {
+      return
+    }
+    nodes.value = patch.nodes
+    edges.value = patch.edges
+    beatsPerMinute.value = patch.beatsPerMinute
+  }
+
   watch(
     [nodes, edges, beatsPerMinute],
     () => {
@@ -161,6 +159,7 @@ export const useStrudelFlow = (): StrudelFlowState => {
     removeNode,
     connectNodes,
     setBeatsPerMinute,
-    resetPatch
+    resetPatch,
+    loadCode
   }
 }

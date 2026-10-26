@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Play, RefreshCw, Square } from 'lucide-vue-next'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from 'vue'
+import { PanelRightClose, PanelRightOpen, Play, RefreshCw, Square } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { STRUDEL_LICENSE_NOTE } from './config'
@@ -64,22 +72,60 @@ const {
   removeNode: removeFlowNode,
   connectNodes: connectFlowNodes,
   setBeatsPerMinute: setFlowBeatsPerMinute,
-  resetPatch: resetFlowPatch
+  resetPatch: resetFlowPatch,
+  loadCode: loadFlowCode
 } = useStrudelFlow()
 
 const editorMode = ref<StrudelEditorMode>('code')
+const sidePanelCollapsed = ref(false)
+// A flow edit writes the code editor; that echo must not parse itself back into the graph.
+const skipNextCodeParse = ref(false)
+let flowPlaybackTimer: number | null = null
 
-// In flow mode the patch owns the code: every valid compile replaces what the editor holds.
-// An invalid patch leaves the last playable code alone and says what to fix instead.
-watch(
-  () => [flowCompilation.value.code, flowCompilation.value.errorMessage, editorMode.value] as const,
-  ([compiledCode, compilationError, mode]) => {
-    if (mode === 'flow' && compilationError === null) {
-      updatePatternCode(compiledCode)
+const scheduleFlowPlayback = (): void => {
+  if (flowPlaybackTimer !== null) {
+    window.clearTimeout(flowPlaybackTimer)
+  }
+  flowPlaybackTimer = window.setTimeout(() => {
+    flowPlaybackTimer = null
+    if (editorStatus.value === 'playing') {
+      void playPattern()
     }
-  },
-  { immediate: true }
-)
+  }, 300)
+}
+
+/**
+ * Copies a valid flow compilation into the code editor and, when asked, swaps the playing
+ * pattern for it. An invalid patch keeps the last playable code and reports its error instead.
+ * @param play - whether to restart playback after the code changes
+ */
+const syncFlowToCode = (play = false): void => {
+  const compilation = flowCompilation.value
+  if (compilation.errorMessage !== null) {
+    return
+  }
+  if (compilation.code !== patternCode.value) {
+    skipNextCodeParse.value = true
+    updatePatternCode(compilation.code)
+  }
+  if (play) {
+    scheduleFlowPlayback()
+  }
+}
+
+const runFlowAction = (action: () => void): void => {
+  action()
+  void nextTick(() => syncFlowToCode(true))
+}
+
+// Code is the other source of truth: typing, hints and loaded patterns rebuild the graph.
+watch(patternCode, (code) => {
+  if (skipNextCodeParse.value) {
+    skipNextCodeParse.value = false
+    return
+  }
+  loadFlowCode(code)
+})
 
 const flowErrorMessage = computed(() =>
   editorMode.value === 'flow' ? flowCompilation.value.errorMessage : null
@@ -146,6 +192,7 @@ const onEditorModeChange = (mode: string): void => {
   if (mode === 'flow') {
     editorMode.value = 'flow'
     setActiveTab('flow')
+    void nextTick(() => syncFlowToCode())
     return
   }
   editorMode.value = 'code'
@@ -156,18 +203,51 @@ const onTabSelected = (tabId: string): void => {
   setActiveTab(nextTabId)
   if (nextTabId === 'flow') {
     editorMode.value = 'flow'
+    void nextTick(() => syncFlowToCode())
   }
+}
+
+const onFlowNodeAdded = (kind: Parameters<typeof addFlowNode>[0]): void => {
+  runFlowAction(() => addFlowNode(kind))
+}
+
+const onFlowNodeUpdated = (
+  nodeId: string,
+  data: Parameters<typeof updateFlowNodeData>[1]
+): void => {
+  runFlowAction(() => updateFlowNodeData(nodeId, data))
+}
+
+const onFlowNodeRemoved = (nodeId: string): void => {
+  runFlowAction(() => removeFlowNode(nodeId))
+}
+
+const onFlowNodesConnected = (sourceNodeId: string, targetNodeId: string): void => {
+  runFlowAction(() => {
+    connectFlowNodes(sourceNodeId, targetNodeId)
+  })
+}
+
+const onFlowBeatsPerMinuteChange = (beatsPerMinute: number): void => {
+  runFlowAction(() => setFlowBeatsPerMinute(beatsPerMinute))
+}
+
+const onFlowReset = (): void => {
+  runFlowAction(resetFlowPatch)
 }
 
 // Before unmounting, while the code editor and its canvas are still there to clear.
 onBeforeUnmount(() => {
   window.removeEventListener('hashchange', loadAnchoredPattern)
+  if (flowPlaybackTimer !== null) {
+    window.clearTimeout(flowPlaybackTimer)
+  }
   void stopPattern()
 })
 </script>
 
 <template>
-  <div class="strudel-editor">
+  <div class="strudel-editor" :class="{ 'strudel-editor--side-collapsed': sidePanelCollapsed }">
     <section class="strudel-editor__code" aria-label="Code">
       <header class="strudel-editor__code-header">
         <p class="strudel-editor__label">
@@ -181,6 +261,16 @@ onBeforeUnmount(() => {
               @update:model-value="onEditorModeChange"
             />
           </div>
+          <IconButton
+            size="md"
+            variant="ghost"
+            :title="sidePanelCollapsed ? 'Show side panel' : 'Hide side panel'"
+            :aria-label="sidePanelCollapsed ? 'Show side panel' : 'Hide side panel'"
+            @click="sidePanelCollapsed = !sidePanelCollapsed"
+          >
+            <PanelRightOpen v-if="sidePanelCollapsed" aria-hidden="true" />
+            <PanelRightClose v-else aria-hidden="true" />
+          </IconButton>
           <IconButton
             class="strudel-editor__play"
             size="md"
@@ -208,9 +298,10 @@ onBeforeUnmount(() => {
         <StrudelFlowEditor
           v-model:nodes="flowNodes"
           v-model:edges="flowEdges"
-          @connect="connectFlowNodes"
-          @update-node="updateFlowNodeData"
-          @remove-node="removeFlowNode"
+          @connect="onFlowNodesConnected"
+          @update-node="onFlowNodeUpdated"
+          @remove-node="onFlowNodeRemoved"
+          @add-node="onFlowNodeAdded"
         />
       </div>
       <p v-if="editorMode === 'code'" class="strudel-editor__hint">
@@ -220,11 +311,7 @@ onBeforeUnmount(() => {
         Drag a node by its header to arrange it; drag from an output dot into an effect input to
         route it.
       </p>
-      <p
-        v-if="flowErrorMessage !== null && activeTab !== 'flow'"
-        class="strudel-editor__error"
-        role="alert"
-      >
+      <p v-if="flowErrorMessage !== null" class="strudel-editor__error" role="alert">
         {{ flowErrorMessage }}
       </p>
       <p v-if="editorStatus === 'error'" class="strudel-editor__error" role="alert">
@@ -289,10 +376,9 @@ onBeforeUnmount(() => {
           <FlowTab
             v-else-if="activeTab === 'flow'"
             :beats-per-minute="flowBeatsPerMinute"
-            :compilation="flowCompilation"
-            @add-node="addFlowNode"
-            @update:beats-per-minute="setFlowBeatsPerMinute"
-            @reset="resetFlowPatch"
+            @add-node="onFlowNodeAdded"
+            @update:beats-per-minute="onFlowBeatsPerMinuteChange"
+            @reset="onFlowReset"
           />
           <SettingsTab v-else />
         </div>
@@ -313,7 +399,7 @@ onBeforeUnmount(() => {
   height: 100dvh;
   padding: var(--nav-height) var(--spacing-4) var(--spacing-4);
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(20rem, 2fr);
+  grid-template-columns: minmax(0, 1fr) clamp(17rem, 24vw, 22rem);
   grid-template-areas: 'code side';
   gap: var(--spacing-4);
 }
@@ -363,6 +449,21 @@ onBeforeUnmount(() => {
 
   .strudel-editor__side {
     overflow-y: visible;
+  }
+}
+
+.strudel-editor--side-collapsed {
+  grid-template-columns: minmax(0, 1fr) 0;
+  gap: 0;
+}
+
+.strudel-editor--side-collapsed .strudel-editor__side {
+  display: none;
+}
+
+@media (width <= 900px) {
+  .strudel-editor--side-collapsed {
+    grid-template-rows: minmax(0, 1fr);
   }
 }
 
@@ -416,9 +517,9 @@ onBeforeUnmount(() => {
 
 .strudel-editor__tabs {
   display: flex;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-secondary);
-  overflow-x: auto;
 }
 
 .strudel-editor__tab {

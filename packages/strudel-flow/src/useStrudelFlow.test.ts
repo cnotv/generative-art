@@ -53,7 +53,14 @@ describe('useStrudelFlow', () => {
             id: 'chords-1',
             type: 'strudel',
             position: { x: 20, y: 30 },
-            data: { kind: 'chords', root: 'A', chordType: 'm', sound: 'sine' }
+            data: {
+              kind: 'chords',
+              key: 'A',
+              octave: 4,
+              scaleType: 'minor',
+              chordProgression: [0, 5, 3, 4],
+              sound: 'sine'
+            }
           }
         ],
         edges: [],
@@ -67,7 +74,9 @@ describe('useStrudelFlow', () => {
     // Assert
     expect(flow.nodes.value.map((node) => node.id)).toEqual(['chords-1'])
     expect(flow.beatsPerMinute.value).toBe(96)
-    expect(flow.compilation.value.code).toContain('chord("<Am>")')
+    expect(flow.compilation.value.code).toContain(
+      'n("<[0,2,4] [5,7,9] [3,5,7] [4,6,8]>").scale("A4:minor").sound("sine")'
+    )
   })
 
   it('adds nodes with fresh settings and a unique id', () => {
@@ -98,16 +107,65 @@ describe('useStrudelFlow', () => {
   it('updates a node and compiles its new settings', () => {
     // Arrange
     const flow = createFlow()
+    const grid = Array.from({ length: 16 }, () => Array<boolean>(8).fill(false))
+    grid[0][0] = true
+    grid[0][2] = true
 
     // Act
     flow.updateNodeData('pad-starter', {
       kind: 'pad',
-      notes: 'g3 b3 d4',
+      steps: 1,
+      mode: 'arp',
+      octave: 4,
+      key: 'G',
+      scaleType: 'major',
+      grid,
+      columnModifiers: {},
       sound: 'sine'
     })
 
     // Assert
-    expect(flow.compilation.value.code).toContain('note("g3 b3 d4").sound("sine")')
+    expect(flow.compilation.value.code).toContain('n("[0 2]").scale("G4:major").sound("sine")')
+  })
+
+  it('rebuilds the graph from code and keeps the node positions', () => {
+    // Arrange
+    const flow = createFlow()
+    const compiledCode = flow.compilation.value.code
+    const firstPosition = flow.nodes.value[0]?.position
+
+    // Act
+    flow.loadCode(compiledCode)
+
+    // Assert
+    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['pad', 'filter'])
+    expect(flow.nodes.value[0]?.position).toEqual(firstPosition)
+    expect(flow.compilation.value.code).toBe(compiledCode)
+  })
+
+  it('keeps an unrecognized expression as a Code node', () => {
+    // Arrange
+    const flow = createFlow()
+    const source = ['setcpm(120/4)', '$: (', 'note("c3 e3").sound("sine").slow(2)', ')'].join('\n')
+
+    // Act
+    flow.loadCode(source)
+
+    // Assert
+    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['code'])
+    expect(flow.compilation.value.code).toBe(source)
+  })
+
+  it('leaves the graph alone when the code has nothing to parse', () => {
+    // Arrange
+    const flow = createFlow()
+    const nodeIds = flow.nodes.value.map((node) => node.id)
+
+    // Act
+    flow.loadCode('   ')
+
+    // Assert
+    expect(flow.nodes.value.map((node) => node.id)).toEqual(nodeIds)
   })
 
   it('connects a new instrument to the starter filter once', () => {

@@ -1,6 +1,16 @@
 export type StrudelFlowDrumInstrument = 'bd' | 'sd' | 'hh'
 
-export type StrudelFlowNodeKind = 'pad' | 'beats' | 'chords' | 'code' | 'filter' | 'delay' | 'space'
+export type StrudelFlowNodeKind =
+  | 'pad'
+  | 'beats'
+  | 'chords'
+  | 'code'
+  | 'filter'
+  | 'delay'
+  | 'space'
+  | 'level'
+  | 'envelope'
+  | 'scope'
 
 export type StrudelFlowNodeCategory = 'Instruments' | 'Effects'
 
@@ -11,7 +21,13 @@ export type StrudelFlowDrumRow = {
 
 export type StrudelFlowPadData = {
   kind: 'pad'
-  notes: string
+  steps: number
+  mode: 'arp' | 'chord'
+  octave: number
+  key: string
+  scaleType: string
+  grid: boolean[][]
+  columnModifiers: Record<number, string>
   sound: string
 }
 
@@ -22,8 +38,11 @@ export type StrudelFlowBeatsData = {
 
 export type StrudelFlowChordsData = {
   kind: 'chords'
-  root: string
-  chordType: string
+  key: string
+  octave: number
+  scaleType: 'major' | 'minor'
+  chordProgression: number[]
+  chordNotes?: number[][]
   sound: string
 }
 
@@ -49,6 +68,29 @@ export type StrudelFlowSpaceData = {
   kind: 'space'
   room: number
   roomSize: number
+  roomFade: number
+  roomLowPass: number
+  roomDim: number
+}
+
+export type StrudelFlowLevelData = {
+  kind: 'level'
+  gain: number
+  pan: number
+  postgain: number
+}
+
+export type StrudelFlowEnvelopeData = {
+  kind: 'envelope'
+  attack: number
+  decay: number
+  sustain: number
+  release: number
+}
+
+export type StrudelFlowScopeData = {
+  kind: 'scope'
+  scale: number
 }
 
 export type StrudelFlowNodeData =
@@ -59,6 +101,9 @@ export type StrudelFlowNodeData =
   | StrudelFlowFilterData
   | StrudelFlowDelayData
   | StrudelFlowSpaceData
+  | StrudelFlowLevelData
+  | StrudelFlowEnvelopeData
+  | StrudelFlowScopeData
 
 export type StrudelFlowNodePosition = {
   x: number
@@ -70,6 +115,8 @@ export type StrudelFlowNode = {
   type: string
   position: StrudelFlowNodePosition
   data: StrudelFlowNodeData
+  /** Measured by Vue Flow while the canvas is open; never stored in the patch. */
+  dimensions?: { width: number; height: number }
 }
 
 export type StrudelFlowEdge = {

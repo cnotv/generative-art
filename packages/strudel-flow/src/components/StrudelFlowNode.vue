@@ -6,8 +6,11 @@ import StrudelFlowBeatsControls from './controls/StrudelFlowBeatsControls.vue'
 import StrudelFlowChordsControls from './controls/StrudelFlowChordsControls.vue'
 import StrudelFlowCodeControls from './controls/StrudelFlowCodeControls.vue'
 import StrudelFlowDelayControls from './controls/StrudelFlowDelayControls.vue'
+import StrudelFlowEnvelopeControls from './controls/StrudelFlowEnvelopeControls.vue'
 import StrudelFlowFilterControls from './controls/StrudelFlowFilterControls.vue'
+import StrudelFlowLevelControls from './controls/StrudelFlowLevelControls.vue'
 import StrudelFlowPadControls from './controls/StrudelFlowPadControls.vue'
+import StrudelFlowScopeControls from './controls/StrudelFlowScopeControls.vue'
 import StrudelFlowSpaceControls from './controls/StrudelFlowSpaceControls.vue'
 import { isStrudelFlowInstrumentKind } from '../nodeDefaults'
 import { getStrudelFlowNodeDefinition } from '../nodeDefinitions'
@@ -93,7 +96,22 @@ const onRemove = (): void => {
         :data="data"
         @update="onDataUpdate"
       />
-      <StrudelFlowSpaceControls v-else :data="data" @update="onDataUpdate" />
+      <StrudelFlowSpaceControls
+        v-else-if="data.kind === 'space'"
+        :data="data"
+        @update="onDataUpdate"
+      />
+      <StrudelFlowLevelControls
+        v-else-if="data.kind === 'level'"
+        :data="data"
+        @update="onDataUpdate"
+      />
+      <StrudelFlowEnvelopeControls
+        v-else-if="data.kind === 'envelope'"
+        :data="data"
+        @update="onDataUpdate"
+      />
+      <StrudelFlowScopeControls v-else :data="data" @update="onDataUpdate" />
     </div>
     <Handle
       type="source"

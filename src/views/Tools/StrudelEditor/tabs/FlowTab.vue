@@ -9,11 +9,10 @@ import {
 } from '@webgamekit/strudel-flow'
 import { STRUDEL_FLOW_NODE_DEFINITIONS } from '@webgamekit/strudel-flow'
 import { normalizeStrudelFlowBeatsPerMinute } from '@webgamekit/strudel-flow'
-import type { StrudelFlowCompilation, StrudelFlowNodeKind } from '@webgamekit/strudel-flow'
+import type { StrudelFlowNodeKind } from '@webgamekit/strudel-flow'
 
 const props = defineProps<{
   beatsPerMinute: number
-  compilation: StrudelFlowCompilation
 }>()
 
 const emit = defineEmits<{
@@ -74,7 +73,7 @@ const commitTempo = (): void => {
     <h3 class="strudel-flow-tab__heading">flow</h3>
     <p class="strudel-flow-tab__intro">
       Add instrument and effect nodes, connect an output to an effect input, then press Play. The
-      patch writes itself into the code editor.
+      patch writes itself into the code editor on every change.
     </p>
 
     <div class="strudel-flow-tab__tempo">
@@ -121,14 +120,6 @@ const commitTempo = (): void => {
           </Button>
         </li>
       </ul>
-    </section>
-
-    <section class="strudel-flow-tab__group" aria-labelledby="strudel-flow-generated-code">
-      <h4 id="strudel-flow-generated-code" class="strudel-flow-tab__group-title">Generated code</h4>
-      <p v-if="compilation.errorMessage !== null" class="strudel-flow-tab__error" role="alert">
-        {{ compilation.errorMessage }}
-      </p>
-      <pre v-else class="strudel-flow-tab__code"><code>{{ compilation.code }}</code></pre>
     </section>
 
     <Button class="strudel-flow-tab__reset" variant="outline" @click="emit('reset')">
@@ -221,27 +212,6 @@ const commitTempo = (): void => {
 
 .strudel-flow-tab__item-description {
   color: var(--color-muted-foreground);
-}
-
-.strudel-flow-tab__code {
-  max-height: 14rem;
-  margin: 0;
-  padding: var(--spacing-3);
-  overflow: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  white-space: pre;
-}
-
-.strudel-flow-tab__error {
-  margin: 0;
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-destructive);
-  border-radius: var(--radius-md);
-  color: var(--color-destructive);
 }
 
 .strudel-flow-tab__reset {

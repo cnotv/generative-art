@@ -18,7 +18,7 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     kind: 'chords',
     title: 'Chords',
     category: 'Instruments',
-    description: 'A chord voicing on a root and chord type.'
+    description: 'A chord progression with editable scale degrees.'
   },
   {
     kind: 'code',
@@ -42,7 +42,25 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     kind: 'space',
     title: 'Space',
     category: 'Effects',
-    description: 'A room reverb and its size.'
+    description: 'A room reverb with size, fade and damping.'
+  },
+  {
+    kind: 'level',
+    title: 'Level',
+    category: 'Effects',
+    description: 'Gain, stereo pan and postgain.'
+  },
+  {
+    kind: 'envelope',
+    title: 'Envelope',
+    category: 'Effects',
+    description: 'An attack, decay, sustain and release shape.'
+  },
+  {
+    kind: 'scope',
+    title: 'Scope',
+    category: 'Effects',
+    description: 'A waveform scope with a zoom scale.'
   }
 ]
 

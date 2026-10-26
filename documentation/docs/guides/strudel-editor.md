@@ -117,24 +117,32 @@ Strudel's own behaviour. They look smaller on a high-density screen than on a st
 
 The **Code** and **Flow** switch above the editor changes what fills the left side. Choosing Flow
 also opens the flow tab in the player panel; choosing Code puts the code editor back. The player
-tabs keep working in either mode, so hints, patterns and settings stay one click away.
+tabs keep working in either mode, so hints, patterns and settings stay one click away. The panel
+button beside the switch hides the player panel when the graph needs the width; the same button
+brings it back.
 
-Flow replaces typing with a small graph. The palette adds four instruments and three effects:
+Flow replaces typing with a small graph. Add a node from the palette or with the **+** button in
+the canvas; the **+** and a right-click both open the radial menu, split into Instruments and
+Effects. The palette adds four instruments and six effects:
 
-| Node       | Kind       | What it plays                                              |
-| ---------- | ---------- | ---------------------------------------------------------- |
-| **Pad**    | instrument | notes through a synth, with the notes and sound editable   |
-| **Beats**  | instrument | a sixteen-step kick, snare and hi-hat grid                 |
-| **Chords** | instrument | a chord voicing from a root, chord type and sound          |
-| **Code**   | instrument | any Strudel expression, for what the controls do not cover |
-| **Filter** | effect     | `lpf` and `lpq`                                            |
-| **Delay**  | effect     | `delay`, `delaytime` and `delayfeedback`                   |
-| **Space**  | effect     | `room` and `roomsize`                                      |
+| Node         | Kind       | What it plays                                                     |
+| ------------ | ---------- | ----------------------------------------------------------------- |
+| **Pad**      | instrument | an eight-note grid, arpeggio or chord mode, key, scale and octave |
+| **Beats**    | instrument | a sixteen-step kick, snare and hi-hat grid                        |
+| **Chords**   | instrument | a chord progression with preset shapes and editable notes         |
+| **Code**     | instrument | any Strudel expression, for what the controls do not cover        |
+| **Filter**   | effect     | `lpf` and `lpq`                                                   |
+| **Delay**    | effect     | `delay`, `delaytime` and `delayfeedback`                          |
+| **Space**    | effect     | `room`, `roomsize`, `roomfade`, `roomlp` and `roomdim`            |
+| **Level**    | effect     | `gain`, `pan` and `postgain`                                      |
+| **Envelope** | effect     | `attack`, `decay`, `sustain` and `release`                        |
+| **Scope**    | effect     | a waveform and scale, written as `analyze("flow-scope")`          |
 
 Drag a node by its header to arrange the canvas. Connect an output dot to an effect input by
 dragging, or click the output and then the input. The cross on a node, or Delete/Backspace while
 it is selected, removes the node and its cables. An instrument has no input, a pair of nodes
-connects only once, an effect cannot feed an instrument, and a cable cannot close a loop.
+connects only once, an effect cannot feed an instrument, and a cable cannot close a loop. New
+nodes are placed in the first free slot and the canvas frames them.
 
 Each connected group of nodes compiles to one `$: <pattern>` block. A group stacks its
 instruments and then applies its effects in signal order. The **Tempo** field writes
@@ -142,18 +150,20 @@ instruments and then applies its effects in signal order. The **Tempo** field wr
 sound yet, says what to fix instead of writing code, and Play does nothing until it is fixed.
 
 While Flow is open every valid patch is written into the code editor, so the same Play, Update
-and Stop button drives the graph. Switch to Code to read or hand-edit the generated pattern.
-Editing the code that way is a one-way trip: going back to Flow compiles the nodes again, and the
-next graph change replaces those edits. Picking a listed pattern or opening a pattern anchor
-switches back to Code, so the picked code is not overwritten.
+and Stop button drives the graph. Switch to Code to read or hand-edit the pattern: a code edit,
+an applied hint or a picked pattern is parsed back into nodes, so the graph and the code stay in
+sync in both directions. Recognised pad, chord, drum and effect calls keep their controls; an
+expression the parser cannot map becomes a Code node, and an unsupported stack of instruments is
+kept as one Code node so the sound is not lost. Picking a listed pattern or opening a pattern
+anchor switches back to Code, so the picked code is shown in the editor rather than replaced by
+a compiled flow version.
 
 The patch and its tempo are saved in local storage, apart from the code. **Reset patch** brings
 back the starter Pad into Filter at 120 BPM. A graph emptied down to nothing stays empty on the
 next visit rather than silently returning the starter patch.
 
 The graph has one effect chain per connected group, so an effect applies to every instrument
-stacked in that group rather than to one branch alone. Code edited by hand is not turned back
-into nodes.
+stacked in that group rather than to one branch alone.
 
 ## Autocomplete
 
