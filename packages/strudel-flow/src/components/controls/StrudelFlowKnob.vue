@@ -69,7 +69,8 @@ const onInput = (event: Event): void => {
       />
     </span>
     <span class="strudel-flow-knob__value">
-      {{ formattedValue }}<span v-if="unit.length > 0" class="strudel-flow-knob__unit">{{ unit }}</span>
+      {{ formattedValue
+      }}<span v-if="unit.length > 0" class="strudel-flow-knob__unit">{{ unit }}</span>
     </span>
     <span class="strudel-flow-knob__label">{{ label }}</span>
   </label>

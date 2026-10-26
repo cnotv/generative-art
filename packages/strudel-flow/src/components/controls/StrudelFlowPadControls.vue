@@ -36,11 +36,7 @@ const onSoundChange = (event: Event): void => {
     </label>
     <label class="strudel-flow-field">
       <span class="strudel-flow-field__label">Synth</span>
-      <select
-        :value="data.sound"
-        aria-label="Pad synth"
-        @change="onSoundChange"
-      >
+      <select :value="data.sound" aria-label="Pad synth" @change="onSoundChange">
         <option
           v-for="option in STRUDEL_FLOW_SOUND_OPTIONS"
           :key="option.value"

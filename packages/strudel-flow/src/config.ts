@@ -55,14 +55,65 @@ export const STRUDEL_FLOW_CHORD_TYPE_OPTIONS = [
 export const STRUDEL_FLOW_DRUM_ROWS = [
   {
     instrument: 'bd',
-    steps: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false]
+    steps: [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
   },
   {
     instrument: 'sd',
-    steps: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false]
+    steps: [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
   },
   {
     instrument: 'hh',
-    steps: [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false]
+    steps: [
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
   }
 ]

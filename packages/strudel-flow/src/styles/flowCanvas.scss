@@ -3,15 +3,15 @@
 // and a big note grid. Colors come in a light set (base) and a dark set that
 // mirrors the reference screenshot (xyflow.com/strudel-flow).
 .strudel-flow-editor {
-  --sf-canvas: oklch(0.98 0 0);
-  --sf-card: oklch(0.99 0 0);
-  --sf-card-foreground: oklch(0.24 0 0);
-  --sf-muted: oklch(0.95 0 0);
-  --sf-muted-foreground: oklch(0.55 0 0);
-  --sf-accent: oklch(0.43 0.04 41.99);
-  --sf-accent-soft: oklch(0.94 0.06 57);
-  --sf-border: oklch(0.88 0 0);
-  --sf-ring: oklch(0.43 0.04 41.99);
+  --sf-canvas: oklch(98% 0 0deg);
+  --sf-card: oklch(99% 0 0deg);
+  --sf-card-foreground: oklch(24% 0 0deg);
+  --sf-muted: oklch(95% 0 0deg);
+  --sf-muted-foreground: oklch(55% 0 0deg);
+  --sf-accent: oklch(43% 0.04 41.99deg);
+  --sf-accent-soft: oklch(94% 0.06 57deg);
+  --sf-border: oklch(88% 0 0deg);
+  --sf-ring: oklch(43% 0.04 41.99deg);
   --sf-shadow: 0 1px 6px hsl(0deg 0% 0% / 0.07);
 
   width: 100%;
@@ -25,29 +25,29 @@
 
 .dark .strudel-flow-editor,
 [data-theme='dark'] .strudel-flow-editor {
-  --sf-canvas: oklch(0.202 0 0);
-  --sf-card: oklch(0.21 0 0);
-  --sf-card-foreground: oklch(0.95 0 0);
-  --sf-muted: oklch(0.25 0 0);
-  --sf-muted-foreground: oklch(0.77 0 0);
-  --sf-accent: oklch(0.92 0.05 66.17);
-  --sf-accent-soft: oklch(0.92 0.05 66.17 / 0.12);
-  --sf-border: oklch(0.24 0.01 91.75);
-  --sf-ring: oklch(0.92 0.05 66.17);
+  --sf-canvas: oklch(20.2% 0 0deg);
+  --sf-card: oklch(21% 0 0deg);
+  --sf-card-foreground: oklch(95% 0 0deg);
+  --sf-muted: oklch(25% 0 0deg);
+  --sf-muted-foreground: oklch(77% 0 0deg);
+  --sf-accent: oklch(92% 0.05 66.17deg);
+  --sf-accent-soft: oklch(92% 0.05 66.17deg / 0.12);
+  --sf-border: oklch(24% 0.01 91.75deg);
+  --sf-ring: oklch(92% 0.05 66.17deg);
   --sf-shadow: 0 1px 6px hsl(0deg 0% 0% / 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .strudel-flow-editor {
-    --sf-canvas: oklch(0.202 0 0);
-    --sf-card: oklch(0.21 0 0);
-    --sf-card-foreground: oklch(0.95 0 0);
-    --sf-muted: oklch(0.25 0 0);
-    --sf-muted-foreground: oklch(0.77 0 0);
-    --sf-accent: oklch(0.92 0.05 66.17);
-    --sf-accent-soft: oklch(0.92 0.05 66.17 / 0.12);
-    --sf-border: oklch(0.24 0.01 91.75);
-    --sf-ring: oklch(0.92 0.05 66.17);
+    --sf-canvas: oklch(20.2% 0 0deg);
+    --sf-card: oklch(21% 0 0deg);
+    --sf-card-foreground: oklch(95% 0 0deg);
+    --sf-muted: oklch(25% 0 0deg);
+    --sf-muted-foreground: oklch(77% 0 0deg);
+    --sf-accent: oklch(92% 0.05 66.17deg);
+    --sf-accent-soft: oklch(92% 0.05 66.17deg / 0.12);
+    --sf-border: oklch(24% 0.01 91.75deg);
+    --sf-ring: oklch(92% 0.05 66.17deg);
     --sf-shadow: 0 1px 6px hsl(0deg 0% 0% / 0.16);
   }
 }
@@ -233,7 +233,6 @@
 
 .strudel-flow-field .input,
 .strudel-flow-field select {
-  border-color: transparent;
   background: var(--sf-muted);
   color: var(--sf-card-foreground);
   font-size: var(--font-size-base);
