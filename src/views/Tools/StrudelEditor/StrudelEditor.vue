@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
-import { Play, RefreshCw, Square } from 'lucide-vue-next'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from 'vue'
+import { PanelRightClose, PanelRightOpen, Play, RefreshCw, Square } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
+import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { STRUDEL_LICENSE_NOTE } from './config'
+import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
+import { useStrudelFlow } from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
 import { useStrudelHints } from './hints/useStrudelHints'
-import type { StrudelTabId } from './types'
+import type { StrudelEditorMode, StrudelTabId } from './types'
 import HintsTab from './tabs/HintsTab.vue'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
@@ -15,6 +26,12 @@ import ReferenceTab from './tabs/ReferenceTab.vue'
 import ExportTab from './tabs/ExportTab.vue'
 import ConsoleTab from './tabs/ConsoleTab.vue'
 import SettingsTab from './tabs/SettingsTab.vue'
+import FlowTab from './tabs/FlowTab.vue'
+
+// Vue Flow is a large canvas library and only loads when the player opens flow mode.
+const StrudelFlowEditor = defineAsyncComponent(() =>
+  import('@webgamekit/strudel-flow').then((module) => module.StrudelFlowEditor)
+)
 
 const {
   patternCode,
@@ -45,6 +62,75 @@ const {
   loadTranscription
 } = useStrudelEditor()
 
+const {
+  nodes: flowNodes,
+  edges: flowEdges,
+  beatsPerMinute: flowBeatsPerMinute,
+  compilation: flowCompilation,
+  addNode: addFlowNode,
+  updateNodeData: updateFlowNodeData,
+  removeNode: removeFlowNode,
+  connectNodes: connectFlowNodes,
+  setBeatsPerMinute: setFlowBeatsPerMinute,
+  resetPatch: resetFlowPatch,
+  loadCode: loadFlowCode
+} = useStrudelFlow()
+
+const editorMode = ref<StrudelEditorMode>('code')
+const sidePanelCollapsed = ref(false)
+// A flow edit writes the code editor; that echo must not parse itself back into the graph.
+const skipNextCodeParse = ref(false)
+let flowPlaybackTimer: number | null = null
+
+const scheduleFlowPlayback = (): void => {
+  if (flowPlaybackTimer !== null) {
+    window.clearTimeout(flowPlaybackTimer)
+  }
+  flowPlaybackTimer = window.setTimeout(() => {
+    flowPlaybackTimer = null
+    if (editorStatus.value === 'playing') {
+      void playPattern()
+    }
+  }, 300)
+}
+
+/**
+ * Copies a valid flow compilation into the code editor and, when asked, swaps the playing
+ * pattern for it. An invalid patch keeps the last playable code and reports its error instead.
+ * @param play - whether to restart playback after the code changes
+ */
+const syncFlowToCode = (play = false): void => {
+  const compilation = flowCompilation.value
+  if (compilation.errorMessage !== null) {
+    return
+  }
+  if (compilation.code !== patternCode.value) {
+    skipNextCodeParse.value = true
+    updatePatternCode(compilation.code)
+  }
+  if (play) {
+    scheduleFlowPlayback()
+  }
+}
+
+const runFlowAction = (action: () => void): void => {
+  action()
+  void nextTick(() => syncFlowToCode(true))
+}
+
+// Code is the other source of truth: typing, hints and loaded patterns rebuild the graph.
+watch(patternCode, (code) => {
+  if (skipNextCodeParse.value) {
+    skipNextCodeParse.value = false
+    return
+  }
+  loadFlowCode(code)
+})
+
+const flowErrorMessage = computed(() =>
+  editorMode.value === 'flow' ? flowCompilation.value.errorMessage : null
+)
+
 const { musicStyles, pickedStyleId, styleDetection, hints, pickStyle, applyHint } = useStrudelHints(
   patternCode,
   updatePatternCode
@@ -54,11 +140,15 @@ const readAnchoredPatternId = (): string => decodeURIComponent(window.location.h
 
 // Every pattern has its own anchor, so a pattern can be linked to, and Back steps through them.
 const loadAnchoredPattern = (): void => {
-  selectPattern(readAnchoredPatternId())
+  if (selectPattern(readAnchoredPatternId())) {
+    editorMode.value = 'code'
+  }
 }
 
 const onPatternSelected = (patternId: string): void => {
-  selectPattern(patternId)
+  if (selectPattern(patternId)) {
+    editorMode.value = 'code'
+  }
 }
 
 onMounted(() => {
@@ -67,6 +157,9 @@ onMounted(() => {
 })
 
 const onPlayRequested = (): void => {
+  if (flowErrorMessage.value !== null) {
+    return
+  }
   void playPattern()
 }
 
@@ -95,36 +188,105 @@ const onAudioFileChosen = (audioFile: File): void => {
   void transcribeAudioFile(audioFile)
 }
 
+const onEditorModeChange = (mode: string): void => {
+  if (mode === 'flow') {
+    editorMode.value = 'flow'
+    setActiveTab('flow')
+    void nextTick(() => syncFlowToCode())
+    return
+  }
+  editorMode.value = 'code'
+}
+
 const onTabSelected = (tabId: string): void => {
-  setActiveTab(tabId as StrudelTabId)
+  const nextTabId = tabId as StrudelTabId
+  setActiveTab(nextTabId)
+  if (nextTabId === 'flow') {
+    editorMode.value = 'flow'
+    void nextTick(() => syncFlowToCode())
+  }
+}
+
+const onFlowNodeAdded = (kind: Parameters<typeof addFlowNode>[0]): void => {
+  runFlowAction(() => addFlowNode(kind))
+}
+
+const onFlowNodeUpdated = (
+  nodeId: string,
+  data: Parameters<typeof updateFlowNodeData>[1]
+): void => {
+  runFlowAction(() => updateFlowNodeData(nodeId, data))
+}
+
+const onFlowNodeRemoved = (nodeId: string): void => {
+  runFlowAction(() => removeFlowNode(nodeId))
+}
+
+const onFlowNodesConnected = (sourceNodeId: string, targetNodeId: string): void => {
+  runFlowAction(() => {
+    connectFlowNodes(sourceNodeId, targetNodeId)
+  })
+}
+
+const onFlowBeatsPerMinuteChange = (beatsPerMinute: number): void => {
+  runFlowAction(() => setFlowBeatsPerMinute(beatsPerMinute))
+}
+
+const onFlowReset = (): void => {
+  runFlowAction(resetFlowPatch)
 }
 
 // Before unmounting, while the code editor and its canvas are still there to clear.
 onBeforeUnmount(() => {
   window.removeEventListener('hashchange', loadAnchoredPattern)
+  if (flowPlaybackTimer !== null) {
+    window.clearTimeout(flowPlaybackTimer)
+  }
   void stopPattern()
 })
 </script>
 
 <template>
-  <div class="strudel-editor">
+  <div class="strudel-editor" :class="{ 'strudel-editor--side-collapsed': sidePanelCollapsed }">
     <section class="strudel-editor__code" aria-label="Code">
       <header class="strudel-editor__code-header">
-        <p class="strudel-editor__label">Live code pattern</p>
-        <IconButton
-          class="strudel-editor__play"
-          size="md"
-          variant="default"
-          :title="playButtonAction"
-          :aria-label="playButtonAction"
-          @click="onPlayButtonPressed"
-        >
-          <Square v-if="playButtonAction === 'Stop'" aria-hidden="true" />
-          <RefreshCw v-else-if="playButtonAction === 'Update'" aria-hidden="true" />
-          <Play v-else aria-hidden="true" />
-        </IconButton>
+        <p class="strudel-editor__label">
+          {{ editorMode === 'flow' ? 'Flow patch' : 'Live code pattern' }}
+        </p>
+        <div class="strudel-editor__code-actions">
+          <div class="strudel-editor__mode" role="group" aria-label="Editor mode">
+            <ButtonSelector
+              :model-value="editorMode"
+              :options="STRUDEL_FLOW_EDITOR_MODE_OPTIONS"
+              @update:model-value="onEditorModeChange"
+            />
+          </div>
+          <IconButton
+            size="md"
+            variant="ghost"
+            :title="sidePanelCollapsed ? 'Show side panel' : 'Hide side panel'"
+            :aria-label="sidePanelCollapsed ? 'Show side panel' : 'Hide side panel'"
+            @click="sidePanelCollapsed = !sidePanelCollapsed"
+          >
+            <PanelRightOpen v-if="sidePanelCollapsed" aria-hidden="true" />
+            <PanelRightClose v-else aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            class="strudel-editor__play"
+            size="md"
+            variant="default"
+            :title="playButtonAction"
+            :aria-label="playButtonAction"
+            @click="onPlayButtonPressed"
+          >
+            <Square v-if="playButtonAction === 'Stop'" aria-hidden="true" />
+            <RefreshCw v-else-if="playButtonAction === 'Update'" aria-hidden="true" />
+            <Play v-else aria-hidden="true" />
+          </IconButton>
+        </div>
       </header>
       <StrudelCodeEditor
+        v-show="editorMode === 'code'"
         class="strudel-editor__code-editor"
         :code="patternCode"
         @update:code="updatePatternCode"
@@ -132,7 +294,26 @@ onBeforeUnmount(() => {
         @stop="onStopRequested"
         @ready="attachEditor"
       />
-      <p class="strudel-editor__hint">Ctrl+Enter plays the code, Ctrl+. stops it.</p>
+      <div v-if="editorMode === 'flow'" class="strudel-editor__flow">
+        <StrudelFlowEditor
+          v-model:nodes="flowNodes"
+          v-model:edges="flowEdges"
+          @connect="onFlowNodesConnected"
+          @update-node="onFlowNodeUpdated"
+          @remove-node="onFlowNodeRemoved"
+          @add-node="onFlowNodeAdded"
+        />
+      </div>
+      <p v-if="editorMode === 'code'" class="strudel-editor__hint">
+        Ctrl+Enter plays the code, Ctrl+. stops it.
+      </p>
+      <p v-else class="strudel-editor__hint">
+        Drag a node by its header to arrange it; drag from an output dot into an effect input to
+        route it.
+      </p>
+      <p v-if="flowErrorMessage !== null" class="strudel-editor__error" role="alert">
+        {{ flowErrorMessage }}
+      </p>
       <p v-if="editorStatus === 'error'" class="strudel-editor__error" role="alert">
         {{ errorMessage || 'Pattern failed to evaluate.' }}
       </p>
@@ -192,6 +373,13 @@ onBeforeUnmount(() => {
             :log-entries="logEntries"
             @clear="clearLogEntries"
           />
+          <FlowTab
+            v-else-if="activeTab === 'flow'"
+            :beats-per-minute="flowBeatsPerMinute"
+            @add-node="onFlowNodeAdded"
+            @update:beats-per-minute="onFlowBeatsPerMinuteChange"
+            @reset="onFlowReset"
+          />
           <SettingsTab v-else />
         </div>
       </div>
@@ -211,7 +399,7 @@ onBeforeUnmount(() => {
   height: 100dvh;
   padding: var(--nav-height) var(--spacing-4) var(--spacing-4);
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(20rem, 2fr);
+  grid-template-columns: minmax(0, 1fr) clamp(17rem, 24vw, 22rem);
   grid-template-areas: 'code side';
   gap: var(--spacing-4);
 }
@@ -226,6 +414,14 @@ onBeforeUnmount(() => {
 }
 
 .strudel-editor__code-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.strudel-editor__flow {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
@@ -253,6 +449,21 @@ onBeforeUnmount(() => {
 
   .strudel-editor__side {
     overflow-y: visible;
+  }
+}
+
+.strudel-editor--side-collapsed {
+  grid-template-columns: minmax(0, 1fr) 0;
+  gap: 0;
+}
+
+.strudel-editor--side-collapsed .strudel-editor__side {
+  display: none;
+}
+
+@media (width <= 900px) {
+  .strudel-editor--side-collapsed {
+    grid-template-rows: minmax(0, 1fr);
   }
 }
 
@@ -284,6 +495,12 @@ onBeforeUnmount(() => {
   gap: var(--spacing-2);
 }
 
+.strudel-editor__code-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
 .strudel-editor__play {
   border-radius: var(--radius-full);
 }
@@ -300,9 +517,9 @@ onBeforeUnmount(() => {
 
 .strudel-editor__tabs {
   display: flex;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-secondary);
-  overflow-x: auto;
 }
 
 .strudel-editor__tab {
