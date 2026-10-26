@@ -6,6 +6,15 @@ sidebar_position: 16
 
 A node editor that compiles a patch of instrument and effect nodes into Strudel code. It powers the **Flow** tab of the Strudel editor at `/tools/StrudelEditor` and is inspired by [Strudel Flow by xyflow](https://xyflow.com/strudel-flow).
 
+![The flow editor in dark mode: a Pad node connected to a Filter node, with the node palette on the right](/img/strudel-flow/flow-editor-dark.webp)
+
+<video controls muted loop playsinline width="100%">
+  <source src="/video/strudel-flow/flow-editor.webm" type="video/webm" />
+  Adding a Beats node from the palette and turning on steps in its sixteen-step grid.
+</video>
+
+![The same patch in light mode: white cards on a pale canvas](/img/strudel-flow/flow-editor-light.webp)
+
 ## Installation
 
 ```bash
@@ -31,15 +40,15 @@ const { code, errorMessage } = compileStrudelFlow(patch)
 
 ## Nodes
 
-| Kind | Category | What it does |
-| --- | --- | --- |
-| Pad | Instrument | A melodic phrase: notes and a synth |
-| Beats | Instrument | A sixteen-step kick, snare and hi-hat grid |
-| Chords | Instrument | A chord voicing on a root and chord type |
-| Code | Instrument | One custom Strudel expression |
-| Filter | Effect | A low-pass filter (`lpf`) and resonance (`lpq`) |
-| Delay | Effect | Mix, time and feedback |
-| Space | Effect | Room reverb and room size |
+| Kind   | Category   | What it does                                    |
+| ------ | ---------- | ----------------------------------------------- |
+| Pad    | Instrument | A melodic phrase: notes and a synth             |
+| Beats  | Instrument | A sixteen-step kick, snare and hi-hat grid      |
+| Chords | Instrument | A chord voicing on a root and chord type        |
+| Code   | Instrument | One custom Strudel expression                   |
+| Filter | Effect     | A low-pass filter (`lpf`) and resonance (`lpq`) |
+| Delay  | Effect     | Mix, time and feedback                          |
+| Space  | Effect     | Room reverb and room size                       |
 
 Cables only run from an instrument or effect output into an effect input. Self-connections, duplicates, cycles and cables into an instrument are rejected.
 
