@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Plus } from 'lucide-vue-next'
+import { Minus, Plus, VolumeX } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { STRUDEL_STYLE_PICKER_DETECT } from '../config'
 import type {
   StrudelHint,
+  StrudelHintAction,
+  StrudelHintKind,
   StrudelMusicStyle,
   StrudelMusicStyleId,
   StrudelStyleDetection,
@@ -29,6 +31,38 @@ const SOURCE_DESCRIPTIONS: Record<StrudelStyleSource, string> = {
   comment: 'from the first-line comment',
   code: 'guessed from the tempo and sounds. Name it in the first line, or pick one, to be sure'
 }
+
+const ACTION_ICONS: Record<StrudelHintAction, typeof Plus> = {
+  Add: Plus,
+  Mute: VolumeX,
+  Remove: Minus
+}
+
+const MISSING_KINDS: StrudelHintKind[] = ['tempo', 'instrument', 'visual']
+
+const hintsOfKinds = (kinds: StrudelHintKind[]): StrudelHint[] =>
+  props.hints.filter((hint) => kinds.includes(hint.kind))
+
+// Review what is there before adding to it, then fill what the style is missing, then keep
+// going. The missing group always shows, so an empty one can say the pattern is complete.
+const hintSections = computed(() => {
+  const styleLabel = props.detection?.style.label ?? ''
+  return [
+    {
+      id: 'review',
+      title: 'Review what is there',
+      hints: hintsOfKinds(['review']),
+      emptyText: null
+    },
+    {
+      id: 'missing',
+      title: `Missing for ${styleLabel}`,
+      hints: hintsOfKinds(MISSING_KINDS),
+      emptyText: `Nothing missing: this pattern has the tempo, instruments and visuals ${styleLabel} usually has.`
+    },
+    { id: 'ideas', title: 'Keep going', hints: hintsOfKinds(['idea']), emptyText: null }
+  ].filter((section) => section.hints.length > 0 || section.emptyText !== null)
+})
 
 const styleOptions = computed(() => [
   { value: STRUDEL_STYLE_PICKER_DETECT, label: 'Detect from the code' },
@@ -62,28 +96,42 @@ const onStylePicked = (value: string): void => {
     <p v-if="detection === null" class="strudel-hints__empty">
       Name a style in the first line, such as <code>// techno</code>, or pick one above.
     </p>
-    <p v-else-if="hints.length === 0" class="strudel-hints__empty">
-      Nothing missing: this pattern has the tempo, instruments and visuals
-      {{ detection.style.label }} usually has.
-    </p>
-    <ul v-else class="strudel-hints__list">
-      <li v-for="hint in hints" :key="hint.id" class="strudel-hints__item">
-        <div class="strudel-hints__item-text">
-          <p class="strudel-hints__title">{{ hint.title }}</p>
-          <p class="strudel-hints__reason">{{ hint.reason }}</p>
-          <code class="strudel-hints__snippet">{{ hint.snippet }}</code>
-        </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          :aria-label="`Add: ${hint.title}`"
-          @click="emit('apply', hint.id)"
-        >
-          <Plus aria-hidden="true" />
-          Add
-        </Button>
-      </li>
-    </ul>
+    <template v-else>
+      <section
+        v-for="section in hintSections"
+        :key="section.id"
+        class="strudel-hints__section"
+        :aria-labelledby="`strudel-hints-${section.id}`"
+      >
+        <h4 :id="`strudel-hints-${section.id}`" class="strudel-hints__section-title">
+          {{ section.title }}
+        </h4>
+        <p v-if="section.hints.length === 0" class="strudel-hints__empty">
+          {{ section.emptyText }}
+        </p>
+        <ul v-else class="strudel-hints__list">
+          <li v-for="hint in section.hints" :key="hint.id" class="strudel-hints__item">
+            <div class="strudel-hints__item-text">
+              <p class="strudel-hints__title">{{ hint.title }}</p>
+              <p class="strudel-hints__reason">{{ hint.reason }}</p>
+              <code class="strudel-hints__snippet">{{ hint.snippet }}</code>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              :aria-label="`${hint.actionLabel}: ${hint.title}`"
+              @click="emit('apply', hint.id)"
+            >
+              <component :is="ACTION_ICONS[hint.actionLabel]" aria-hidden="true" />
+              {{ hint.actionLabel }}
+            </Button>
+          </li>
+        </ul>
+      </section>
+      <p class="strudel-hints__tip">
+        Happy with it? Save it in the patterns tab, then build a variation on a copy.
+      </p>
+    </template>
   </div>
 </template>
 
@@ -120,6 +168,26 @@ const onStylePicked = (value: string): void => {
 .strudel-hints__title,
 .strudel-hints__reason {
   margin: 0;
+}
+
+.strudel-hints__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.strudel-hints__section-title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+}
+
+.strudel-hints__tip {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
 }
 
 .strudel-hints__list {

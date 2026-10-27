@@ -54,7 +54,7 @@ const collectEngineErrors = (): { engineErrors: string[]; stopCollecting: () => 
 }
 
 // More than any style offers, so a hint that never goes away fails instead of looping forever.
-const MAX_HINTS_APPLIED = 20
+const MAX_HINTS_APPLIED = 60
 
 const countHints = (): number => document.querySelectorAll('.strudel-hints__item').length
 
@@ -415,13 +415,15 @@ describe('StrudelEditor audible playback', () => {
           { timeout: 60000, interval: 250 }
         )
 
-        // Act
+        // Act: the label follows the edit once the editor reports it and the view re-renders,
+        // which can take a moment while other test files load the engine alongside.
         await codeEditor.fill('note("g3 b3").s("triangle")')
-        const labelAfterEdit = readPlayButtonLabel()
+        await vi.waitFor(() => {
+          expect(readPlayButtonLabel()).toBe('Update')
+        })
         await page.getByRole('button', { name: 'Update' }).click()
 
         // Assert
-        expect(labelAfterEdit).toBe('Update')
         await vi.waitFor(() => {
           expect(readPlayButtonLabel()).toBe('Stop')
         })
@@ -811,7 +813,7 @@ describe('StrudelEditor audible playback', () => {
   )
 
   it.each(STRUDEL_MUSIC_STYLES.map((style) => ({ styleId: style.id, keyword: style.keywords[0] })))(
-    'applies every $styleId hint and plays the result with no missing sounds',
+    'applies every $styleId hint and idea and plays the result with no missing sounds',
     { timeout: 90000 },
     async ({ keyword }) => {
       // Arrange
@@ -831,6 +833,7 @@ describe('StrudelEditor audible playback', () => {
         // Assert
         expect(appliedCount).toBeLessThan(MAX_HINTS_APPLIED)
         expect(document.querySelector('.strudel-hints')?.textContent).toContain('Nothing missing')
+        expect(countHints()).toBe(0)
         await vi.waitFor(
           () => {
             expect(readPlayButtonLabel()).toBe('Stop')
@@ -839,6 +842,65 @@ describe('StrudelEditor audible playback', () => {
         )
         await new Promise((resolve) => setTimeout(resolve, PLAYBACK_SETTLE_MS))
         expect(document.querySelector('.strudel-editor__error')).toBeNull()
+        expect(engineErrors).toEqual([])
+      } finally {
+        stopCollecting()
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it(
+    'reviews the layers a style switch leaves behind, then plays what is left',
+    { timeout: 90000 },
+    async () => {
+      // Arrange: a house pattern grown by following hints, then switched to Breakbeat.
+      const grownPattern = [
+        'setcps(124/60/4)',
+        '$: s("bd sd, hh*8")',
+        '$: s("~ cp ~ cp")',
+        '$: note("<c2 c2 eb2 f2>*4").s("sawtooth").lpf(600)',
+        '$: chord("<Cm7 Fm7>").voicing().s("triangle").gain(.4)._pianoroll()',
+        '$: s("perc(3,8)").gain(.5)._scope()._punchcard()',
+        '$: n("0 ~ 4 ~ 7 ~ 4 ~").scale("C:major").s("sine").slow(2).delay(.5)._spiral()._spectrum()',
+        '$: s("breaks125").fit()'
+      ].join('\n')
+      const { engineErrors, stopCollecting } = collectEngineErrors()
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await page.getByRole('textbox', { name: 'Live code pattern' }).fill(grownPattern)
+        await page.getByRole('combobox').click()
+        await page.getByRole('option', { name: 'Breakbeat' }).click()
+
+        // Act
+        const reviewTitles = [
+          ...document.querySelectorAll(
+            '.strudel-hints__section:first-of-type .strudel-hints__title'
+          )
+        ].map((title) => title.textContent)
+        await applyEveryHint()
+        await page.getByRole('button', { name: 'Play' }).click()
+
+        // Assert
+        expect(reviewTitles).toEqual([
+          'Keep one visual on line 6',
+          'Keep one visual on line 7',
+          'Mute the kick, snare and hi-hats on line 2',
+          'Mute the chords on line 5',
+          'Mute the melody on line 7'
+        ])
+        const finalCode = readEditorCode()
+        expect(finalCode).toContain('_$: s("bd sd, hh*8")')
+        expect(finalCode).toContain('$: s("perc(3,8)").gain(.5)._scope()')
+        expect(finalCode).not.toContain('._scope()._punchcard()')
+        await vi.waitFor(
+          () => {
+            expect(readPlayButtonLabel()).toBe('Stop')
+          },
+          { timeout: 60000, interval: 500 }
+        )
+        await new Promise((resolve) => setTimeout(resolve, PLAYBACK_SETTLE_MS))
         expect(engineErrors).toEqual([])
       } finally {
         stopCollecting()

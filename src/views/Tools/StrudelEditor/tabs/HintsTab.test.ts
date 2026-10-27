@@ -12,7 +12,29 @@ const clapHint: StrudelHint = {
   kind: 'instrument',
   title: 'Add a clap on two and four',
   reason: 'A clap on the backbeat is the other half of the house groove.',
-  snippet: 's("~ cp ~ cp")'
+  snippet: 's("~ cp ~ cp")',
+  actionLabel: 'Add',
+  edits: [{ from: 0, to: 0, insert: '$: s("~ cp ~ cp")' }]
+}
+
+const muteHint: StrudelHint = {
+  id: 'review-off-style-3',
+  kind: 'review',
+  title: 'Mute the melody on line 3',
+  reason: "House isn't usually built with melody.",
+  snippet: '_$:',
+  actionLabel: 'Mute',
+  edits: [{ from: 0, to: 0, insert: '_' }]
+}
+
+const breakdownHint: StrudelHint = {
+  id: 'idea-breakdown',
+  kind: 'idea',
+  title: 'Drop the drums every fourth bar on line 2',
+  reason: 'A bar without drums lets the loop breathe.',
+  snippet: '.mask("<1 1 1 0>")',
+  actionLabel: 'Add',
+  edits: [{ from: 0, to: 0, insert: '.mask("<1 1 1 0>")' }]
 }
 
 const mountHintsTab = (detection: StrudelStyleDetection | null, hints: StrudelHint[]) =>
@@ -85,5 +107,36 @@ describe('HintsTab', () => {
 
     // Assert
     expect(wrapper.emitted('pick')).toEqual([[expectedStyleId]])
+  })
+
+  it('groups the hints into review, missing and keep going, each button labelled by its action', () => {
+    // Arrange
+    const hints = [muteHint, clapHint, breakdownHint]
+
+    // Act
+    const wrapper = mountHintsTab({ style: houseStyle, source: 'comment' }, hints)
+
+    // Assert
+    const sections = wrapper.findAll('.strudel-hints__section').map((section) => ({
+      title: section.find('.strudel-hints__section-title').text(),
+      buttons: section.findAll('button').map((button) => button.attributes('aria-label'))
+    }))
+    expect(sections).toEqual([
+      { title: 'Review what is there', buttons: ['Mute: Mute the melody on line 3'] },
+      { title: 'Missing for House', buttons: ['Add: Add a clap on two and four'] },
+      { title: 'Keep going', buttons: ['Add: Drop the drums every fourth bar on line 2'] }
+    ])
+  })
+
+  it('says nothing is missing even while there is still something to review or try', () => {
+    // Arrange
+    const hints = [muteHint, breakdownHint]
+
+    // Act
+    const wrapper = mountHintsTab({ style: houseStyle, source: 'comment' }, hints)
+
+    // Assert
+    expect(wrapper.text()).toContain('Nothing missing')
+    expect(wrapper.findAll('.strudel-hints__item')).toHaveLength(2)
   })
 })

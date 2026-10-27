@@ -45,7 +45,11 @@ export const useStrudelHints = (
   const hints = computed(() =>
     styleDetection.value === null
       ? []
-      : buildStrudelHints({ facts: codeFacts.value, style: styleDetection.value.style })
+      : buildStrudelHints({
+          code: patternCode.value,
+          facts: codeFacts.value,
+          style: styleDetection.value.style
+        })
   )
 
   const pickStyle = (styleId: StrudelMusicStyleId | null): void => {
