@@ -36,6 +36,11 @@ export const STRUDEL_EXAMPLES: StrudelExample[] = [
     code: 'note("c3 [e3 g3] a3 [g3 e3]").s("triangle").lpf(800)'
   },
   {
+    id: 'mario-coin',
+    label: 'Super Mario Coin',
+    code: 'n("<c5 c6>").s("triangle").lpf(2000).release(0.05).gain(0.7).fast(2)'
+  },
+  {
     id: 'sliders-and-scopes',
     label: 'Sliders and scopes',
     code: `// Drag the sliders while it plays; the pianoroll and scope draw under their lines.
