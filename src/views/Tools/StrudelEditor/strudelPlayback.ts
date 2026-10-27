@@ -25,6 +25,7 @@ type StrudelEngine = {
   sampleBankLoader: UnknownCallable
   contextGetter: UnknownCallable
   audioModule: Record<string, unknown>
+  contextSetter: UnknownCallable
   scheduleHandler: unknown
   codeTranspiler: unknown
   scopeModules: unknown[]
@@ -57,6 +58,45 @@ const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
 
 const readCyclesPerSecond = (scheduler: unknown): number =>
   isRecordModule(scheduler) && typeof scheduler.cps === 'number' ? scheduler.cps : DEFAULT_CPS
+// iOS mutes Web Audio while the ring switch is on silent unless the page declares itself a
+// player. Safari 17 added this switch; older browsers have no audioSession and keep the default.
+const requestPlaybackAudioSession = (): void => {
+  const audioSession: unknown = Reflect.get(navigator, 'audioSession')
+  if (isRecordModule(audioSession) && 'type' in audioSession) {
+    Reflect.set(audioSession, 'type', 'playback')
+  }
+}
+
+// Starting a one-sample silent sound is what older iOS needs, beyond resume(), to unlock audio.
+const playSilentSound = (audioContext: AudioContext): void => {
+  const source = audioContext.createBufferSource()
+  Reflect.set(source, 'buffer', audioContext.createBuffer(1, 1, audioContext.sampleRate || 22050))
+  source.connect(audioContext.destination)
+  source.start(0)
+}
+
+// One context for the page, as superdough keeps one: browsers cap how many can be open, so a
+// new one per visit to the editor would eventually play nothing.
+const pageAudio: { context: AudioContext | null } = { context: null }
+
+/**
+ * The audio context Strudel will play through, created on the first Play and resumed on every
+ * one, synchronously while the tap is still being handled. iOS lets a page start audio only
+ * inside the tap, and the engine download that follows outlasts it, which left the context
+ * suspended and silent.
+ * @returns the unlocked context, or null where the browser has no Web Audio
+ */
+const unlockPageAudioContext = (): AudioContext | null => {
+  if (typeof AudioContext === 'undefined') {
+    return null
+  }
+  requestPlaybackAudioSession()
+  const audioContext = pageAudio.context ?? new AudioContext()
+  pageAudio.context = audioContext
+  void audioContext.resume()
+  playSilentSound(audioContext)
+  return audioContext
+}
 
 const toUnknownList = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
 
@@ -124,6 +164,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     sampleBankLoader: toCallable(webaudioModule.samples),
     contextGetter: toCallable(webaudioModule.getAudioContext),
     audioModule: webaudioModule,
+    contextSetter: toCallable(webaudioModule.setAudioContext),
     scheduleHandler: webaudioModule.webaudioOutput,
     codeTranspiler: transpilerModule.transpiler,
     scopeModules: [
@@ -142,7 +183,8 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     audioInitializer,
     synthRegistrar,
     sampleBankLoader,
-    contextGetter
+    contextGetter,
+    contextSetter
   } = engine
   if (
     replFactory === undefined ||
@@ -151,6 +193,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     synthRegistrar === undefined ||
     sampleBankLoader === undefined ||
     contextGetter === undefined ||
+    contextSetter === undefined ||
     typeof engine.scheduleHandler !== 'function' ||
     typeof engine.codeTranspiler !== 'function'
   ) {
@@ -163,7 +206,8 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     audioInitializer,
     synthRegistrar,
     sampleBankLoader,
-    contextGetter
+    contextGetter,
+    contextSetter
   }
 }
 
@@ -214,7 +258,12 @@ const createPlaybackDrawer = async (hooks: StrudelPlaybackHooks) => {
 export const loadDefaultStrudelPlayback = async (
   hooks: StrudelPlaybackHooks
 ): Promise<StrudelPlayback> => {
+  // Before the first await, so it runs inside the tap that pressed Play.
+  const gestureAudioContext = unlockPageAudioContext()
   const engine = await loadStrudelEngine()
+  if (gestureAudioContext !== null) {
+    engine.contextSetter(gestureAudioContext)
+  }
   await engine.audioInitializer()
   engine.synthRegistrar()
   const audioContext: unknown = engine.contextGetter()
@@ -267,6 +316,8 @@ export const loadDefaultStrudelPlayback = async (
 
   return {
     evaluateCode: async (patternCode: string): Promise<StrudelEvaluationResult> => {
+      // Each Play or Update is a tap, and iOS may have suspended the context since the last.
+      void resumeAudioContext(audioContext)
       latestEvaluationError = null
       await evaluateFunction(patternCode)
       return latestEvaluationError === null
