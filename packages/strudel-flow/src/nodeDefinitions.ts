@@ -75,10 +75,10 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     description: 'An attack, decay, sustain and release shape.'
   },
   {
-    kind: 'scope',
-    title: 'Scope',
+    kind: 'visualizer',
+    title: 'Visualizer',
     category: 'Effects',
-    description: 'A waveform scope with a zoom scale.'
+    description: 'A pianoroll, punchcard, scope, spiral, pitch wheel or spectrum of the pattern.'
   },
   {
     kind: 'effect',

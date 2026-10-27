@@ -139,22 +139,22 @@ the beats in one cycle (**B/C**).
 
 ![The starter patch: a Pad played by a Voice through a Filter, with the tempo bar above](/img/strudel-flow/flow-editor-dark.webp)
 
-| Node         | Kind       | What it plays                                                     |
-| ------------ | ---------- | ----------------------------------------------------------------- |
-| **Pad**      | instrument | an eight-note grid, arpeggio or chord mode, key, scale and octave |
-| **Beats**    | instrument | up to eight drum tracks of any sample on up to sixteen steps      |
-| **Chords**   | instrument | a chord progression with preset shapes and editable notes         |
-| **Notes**    | instrument | a `note("…")` line in mini notation                               |
-| **Samples**  | instrument | an `s("…")` line in mini notation                                 |
-| **Code**     | instrument | any Strudel expression, for what the controls do not cover        |
-| **Filter**   | effect     | `lpf` and `lpq`                                                   |
-| **Delay**    | effect     | `delay`, `delaytime` and `delayfeedback`                          |
-| **Space**    | effect     | `room`, `roomsize`, `roomfade`, `roomlp` and `roomdim`            |
-| **Level**    | effect     | `gain`, `pan` and `postgain`                                      |
-| **Envelope** | effect     | `attack`, `decay`, `sustain` and `release`                        |
-| **Scope**    | effect     | a waveform and scale, written as `analyze("flow-scope")`          |
-| **Effect**   | effect     | any other chained call, such as `fast(2)` or `jux(rev)`           |
-| **Voice**    | sound      | the synth or sample bank, written as `sound("…")`                 |
+| Node           | Kind       | What it plays                                                                      |
+| -------------- | ---------- | ---------------------------------------------------------------------------------- |
+| **Pad**        | instrument | an eight-note grid, arpeggio or chord mode, key, scale and octave                  |
+| **Beats**      | instrument | up to eight drum tracks of any sample on up to sixteen steps                       |
+| **Chords**     | instrument | a chord progression with preset shapes and editable notes                          |
+| **Notes**      | instrument | a `note("…")` line in mini notation                                                |
+| **Samples**    | instrument | an `s("…")` line in mini notation                                                  |
+| **Code**       | instrument | any Strudel expression, for what the controls do not cover                         |
+| **Filter**     | effect     | `lpf` and `lpq`                                                                    |
+| **Delay**      | effect     | `delay`, `delaytime` and `delayfeedback`                                           |
+| **Space**      | effect     | `room`, `roomsize`, `roomfade`, `roomlp` and `roomdim`                             |
+| **Level**      | effect     | `gain`, `pan` and `postgain`                                                       |
+| **Envelope**   | effect     | `attack`, `decay`, `sustain` and `release`                                         |
+| **Visualizer** | effect     | a pianoroll, punchcard, scope, spiral, pitch wheel or spectrum, picked from a list |
+| **Effect**     | effect     | any other chained call, such as `fast(2)` or `jux(rev)`                            |
+| **Voice**      | sound      | the synth or sample bank, written as `sound("…")`                                  |
 
 The Beats node has a sample picker on each track, grouped into kicks, snares, hi-hats, claps,
 toms, cymbals and percussion from the loaded kit. Its **Shape** footer sets how many steps play,
@@ -164,6 +164,12 @@ Each track is written as a plain sample line, such as `s("~ cp ~ cp*2")`, so typ
 that reads back as a Beats track too.
 
 ![A Beats node with kick, clap and hi-hat tracks over eight steps, variations shown and the Shape footer open](/img/strudel-flow/beats-node.webp)
+
+All of Strudel's visuals live in one **Visualizer** node. Pick the type from its list, choose
+whether it draws **under the line** (`._punchcard()`) or **behind the code** (`.punchcard()`), and
+optionally give it options such as `{ labels: 1 }`. Any visual call in the code, with or without
+the underscore, reads back as a Visualizer with that type picked. The drawing itself appears in the
+code editor, so switch to Code to watch it.
 
 Each node header has a **…** menu with **View code**, which shows what the node writes, and
 **Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every

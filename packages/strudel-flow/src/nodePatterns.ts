@@ -156,10 +156,16 @@ const generateEnvelopePattern = (
         data.release
       )})`
 
-const generateScopePattern = (
-  _data: Extract<StrudelFlowNodeData, { kind: 'scope' }>,
+const generateVisualizerPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'visualizer' }>,
   input: string
-): string => (input.length === 0 ? '' : `${input}.analyze("flow-scope")`)
+): string => {
+  if (input.length === 0) {
+    return ''
+  }
+  const prefix = data.placement === 'inline' ? '_' : ''
+  return `${input}.${prefix}${data.visual}(${data.options.trim()})`
+}
 
 type PatternGenerators = {
   [Kind in StrudelFlowNodeData['kind']]: (
@@ -181,7 +187,7 @@ const PATTERN_GENERATORS: PatternGenerators = {
   space: generateSpacePattern,
   level: generateLevelPattern,
   envelope: generateEnvelopePattern,
-  scope: generateScopePattern,
+  visualizer: generateVisualizerPattern,
   effect: generateEffectPattern
 }
 

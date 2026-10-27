@@ -29,7 +29,7 @@ describe('FlowTab', () => {
       'Space',
       'Level',
       'Envelope',
-      'Scope',
+      'Visualizer',
       'Effect',
       'Voice'
     ])

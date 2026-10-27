@@ -50,7 +50,7 @@ const NODE_ICONS: Record<StrudelFlowNodeKind, Component> = {
   space: markRaw(Waves),
   level: markRaw(Volume1),
   envelope: markRaw(Activity),
-  scope: markRaw(AudioWaveform),
+  visualizer: markRaw(AudioWaveform),
   effect: markRaw(Wand2)
 }
 

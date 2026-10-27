@@ -9,9 +9,9 @@ import {
   STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE,
   STRUDEL_FLOW_MAX_DRUM_ROWS,
   STRUDEL_FLOW_STEP_COUNT,
+  STRUDEL_FLOW_VISUAL_OPTIONS,
   STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE,
   STRUDEL_FLOW_KEY_OPTIONS,
-  STRUDEL_FLOW_NODE_COLUMN_GAP,
   STRUDEL_FLOW_NODE_START_X,
   STRUDEL_FLOW_NODE_START_Y,
   STRUDEL_FLOW_PAD_MODIFIER_OPTIONS,
@@ -34,7 +34,8 @@ import type {
   StrudelFlowNodeKind,
   StrudelFlowNodePosition,
   StrudelFlowPadData,
-  StrudelFlowPatch
+  StrudelFlowPatch,
+  StrudelFlowVisualName
 } from './types'
 
 type Call = { name: string; argument: string }
@@ -63,8 +64,16 @@ type BuildState = {
 }
 
 const ROW_GAP = 48
+const COLUMN_SPACING = 96
 const DEFAULT_SCALE: Scale = { key: 'C', octave: 3, scaleType: 'major' }
 const REST_TOKEN = '~'
+// Every visual has an inline `_name` and a background `name` call.
+const VISUAL_CALLS = new Map<string, StrudelFlowVisualName>(
+  STRUDEL_FLOW_VISUAL_OPTIONS.map((option) => option.value).flatMap((visual) => [
+    [`_${visual}`, visual],
+    [visual, visual]
+  ])
+)
 const DRUM_TOKEN_PATTERN = /^(\d*[A-Za-z]\w*(?::\d+)?)(![2-4]|\/[2-4]|@[2-4]|\*[2-4])?$/
 const KEY_ALIASES: Record<string, string> = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' }
 const VOICE_CALLS = new Set(['sound', 's'])
@@ -440,8 +449,20 @@ const addEffectCall = (state: EffectChainState, call: Call): EffectChainState =>
       fieldsOnLast: []
     }
   }
-  if (call.name === 'analyze') {
-    return { effects: [...state.effects, createStrudelFlowNodeData('scope')], fieldsOnLast: [] }
+  const visual = VISUAL_CALLS.get(call.name)
+  if (visual !== undefined) {
+    return {
+      effects: [
+        ...state.effects,
+        {
+          kind: 'visualizer',
+          visual,
+          placement: call.name.startsWith('_') ? 'inline' : 'background',
+          options: call.argument
+        }
+      ],
+      fieldsOnLast: []
+    }
   }
   const descriptor = EFFECT_CALLS[call.name]
   const value = readNumber(call.argument)
@@ -619,26 +640,26 @@ const branchHeight = (branch: Branch): number =>
     ...branch.effects.map(heightOf)
   )
 
-type ChainPlacement = { state: BuildState; previousIds: string[] }
+type ChainPlacement = { state: BuildState; previousIds: string[]; nextX: number }
 
-// Places nodes left to right from a column, each fed by the ones before it.
+const widthOf = (data: StrudelFlowNodeData): number => getStrudelFlowNodeSize(data.kind).width
+
+// Places nodes left to right from an x position, each fed by the ones before it, and spaced by
+// their own widths so a wide node such as Beats never sits under its neighbour.
 const placeInRow = (
   placement: ChainPlacement,
   effects: StrudelFlowNodeData[],
-  firstColumn: number,
   y: number
 ): ChainPlacement =>
-  effects.reduce((result, data, effectIndex) => {
-    const placed = placeNode(result.state, data, {
-      x: STRUDEL_FLOW_NODE_START_X + STRUDEL_FLOW_NODE_COLUMN_GAP * (firstColumn + effectIndex),
-      y
-    })
+  effects.reduce((result, data) => {
+    const placed = placeNode(result.state, data, { x: result.nextX, y })
     return {
       state: result.previousIds.reduce(
         (connected, sourceId) => connect(connected, sourceId, placed.nodeId),
         placed.state
       ),
-      previousIds: [placed.nodeId]
+      previousIds: [placed.nodeId],
+      nextX: result.nextX + widthOf(data) + COLUMN_SPACING
     }
   }, placement)
 
@@ -654,7 +675,16 @@ const placeBranch = (state: BuildState, branch: Branch, y: number): ChainPlaceme
     },
     { state, previousIds: [] as string[], y }
   )
-  return placeInRow(placedInstruments, branch.effects, 1, y)
+  const instrumentsWidth = Math.max(0, ...branch.instruments.map(widthOf))
+  return placeInRow(
+    {
+      state: placedInstruments.state,
+      previousIds: placedInstruments.previousIds,
+      nextX: STRUDEL_FLOW_NODE_START_X + instrumentsWidth + COLUMN_SPACING
+    },
+    branch.effects,
+    y
+  )
 }
 
 // One block lays out as a row: its branches stacked in the first columns, then each shared
@@ -666,16 +696,19 @@ const addChain = (state: BuildState, chain: ParsedChain): BuildState => {
       return {
         state: placed.state,
         tails: [...result.tails, ...placed.previousIds],
-        y: result.y + branchHeight(branch)
+        y: result.y + branchHeight(branch),
+        rightEdge: Math.max(result.rightEdge, placed.nextX)
       }
     },
-    { state, tails: [] as string[], y: state.rowTop }
+    { state, tails: [] as string[], y: state.rowTop, rightEdge: STRUDEL_FLOW_NODE_START_X }
   )
-  const sharedColumn = 1 + Math.max(0, ...chain.branches.map((branch) => branch.effects.length))
   const placed = placeInRow(
-    { state: placedBranches.state, previousIds: placedBranches.tails },
+    {
+      state: placedBranches.state,
+      previousIds: placedBranches.tails,
+      nextX: placedBranches.rightEdge
+    },
     chain.effects,
-    sharedColumn,
     state.rowTop
   )
   const sharedHeight = Math.max(0, ...chain.effects.map(heightOf))

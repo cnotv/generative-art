@@ -54,7 +54,7 @@ describe('parseStrudelFlowCode', () => {
     ['space', createStrudelFlowNodeData('space')],
     ['level', createStrudelFlowNodeData('level')],
     ['envelope', createStrudelFlowNodeData('envelope')],
-    ['scope', createStrudelFlowNodeData('scope')]
+    ['visualizer', createStrudelFlowNodeData('visualizer')]
   ])('round-trips a pad through a %s effect', (kind, effect) => {
     // Arrange
     const pad = createNode('pad', createStrudelFlowNodeData('pad'))
@@ -404,5 +404,32 @@ describe('parseStrudelFlowCode', () => {
           }))
         : null
     ).toEqual(tracks)
+  })
+
+  it.each([
+    ['._punchcard()', { visual: 'punchcard', placement: 'inline', options: '' }],
+    [
+      '._scope({ thickness: 2, scale: .5 })',
+      {
+        visual: 'scope',
+        placement: 'inline',
+        options: '{ thickness: 2, scale: .5 }'
+      }
+    ],
+    [
+      '.pianoroll({ labels: 1 })',
+      { visual: 'pianoroll', placement: 'background', options: '{ labels: 1 }' }
+    ],
+    ['._spectrum()', { visual: 'spectrum', placement: 'inline', options: '' }]
+  ])('reads %s as one Visualizer node', (call, visualizer) => {
+    // Arrange
+    const code = `$: note("c3 e3")${call}`
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+
+    // Assert
+    expect(parsed?.nodes[1]?.data).toEqual({ kind: 'visualizer', ...visualizer })
+    expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
   })
 })

@@ -13,7 +13,7 @@ import StrudelFlowFilterControls from './controls/StrudelFlowFilterControls.vue'
 import StrudelFlowLevelControls from './controls/StrudelFlowLevelControls.vue'
 import StrudelFlowPadControls from './controls/StrudelFlowPadControls.vue'
 import StrudelFlowPatternControls from './controls/StrudelFlowPatternControls.vue'
-import StrudelFlowScopeControls from './controls/StrudelFlowScopeControls.vue'
+import StrudelFlowVisualizerControls from './controls/StrudelFlowVisualizerControls.vue'
 import StrudelFlowSpaceControls from './controls/StrudelFlowSpaceControls.vue'
 import StrudelFlowVoiceControls from './controls/StrudelFlowVoiceControls.vue'
 import { isStrudelFlowInstrumentKind } from '../nodeDefaults'
@@ -45,7 +45,7 @@ const NODE_CONTROLS: Record<StrudelFlowNodeKind, Component> = {
   space: markRaw(StrudelFlowSpaceControls),
   level: markRaw(StrudelFlowLevelControls),
   envelope: markRaw(StrudelFlowEnvelopeControls),
-  scope: markRaw(StrudelFlowScopeControls),
+  visualizer: markRaw(StrudelFlowVisualizerControls),
   effect: markRaw(StrudelFlowEffectControls)
 }
 

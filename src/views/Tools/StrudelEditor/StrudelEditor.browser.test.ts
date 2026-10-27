@@ -676,38 +676,38 @@ describe('StrudelEditor audible playback', () => {
     }
   })
 
-  it('draws the scope waveform', { timeout: 60000 }, async () => {
-    // Arrange
-    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+  it(
+    'shows every visual call as a Visualizer node with its type picked',
+    { timeout: 30000 },
+    async () => {
+      // Arrange
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
-    try {
-      await page.getByRole('tab', { name: 'flow' }).click()
-      await page.getByRole('button', { name: 'Reset patch' }).click()
-      await vi.waitFor(
-        () => {
-          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
-        },
-        { timeout: 15000 }
-      )
+      try {
+        await page
+          .getByRole('textbox', { name: 'Live code pattern' })
+          .fill('$: note("c3 e3")._punchcard()._scope()')
 
-      // Act
-      await page.getByRole('button', { name: 'Add Scope node' }).click()
+        // Act
+        await page.getByRole('tab', { name: 'flow' }).click()
 
-      // Assert
-      await vi.waitFor(
-        () => {
-          expect(
-            hasPaintedPixels(
-              document.querySelector<HTMLCanvasElement>('.strudel-flow-scope__canvas')
-            )
-          ).toBe(true)
-        },
-        { timeout: 15000 }
-      )
-    } finally {
-      wrapper.unmount()
+        // Assert
+        await vi.waitFor(
+          () => {
+            const types = [
+              ...document.querySelectorAll<HTMLSelectElement>(
+                '.strudel-flow-node[data-node-kind="visualizer"] select[aria-label="Type"]'
+              )
+            ].map((select) => select.value)
+            expect(types).toEqual(['punchcard', 'scope'])
+          },
+          { timeout: 15000 }
+        )
+      } finally {
+        wrapper.unmount()
+      }
     }
-  })
+  )
 
   it('rebuilds the flow graph when the code changes', { timeout: 30000 }, async () => {
     // Arrange

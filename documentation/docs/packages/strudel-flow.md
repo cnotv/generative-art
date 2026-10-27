@@ -44,22 +44,22 @@ const { code, errorMessage } = compileStrudelFlow(patch)
 
 ## Nodes
 
-| Kind     | Category   | What it does                                                             |
-| -------- | ---------- | ------------------------------------------------------------------------ |
-| Pad      | Instrument | An eight-note grid with an arpeggio or chord mode, key, scale and octave |
-| Beats    | Instrument | Up to eight tracks of any sample, a step count, and per-step variations  |
-| Chords   | Instrument | A four-chord progression with preset shapes and note-level editing       |
-| Notes    | Instrument | A `note("…")` line in mini notation                                      |
-| Samples  | Instrument | An `s("…")` line in mini notation                                        |
-| Code     | Instrument | One custom Strudel expression                                            |
-| Filter   | Effect     | A low-pass filter (`lpf`) and resonance (`lpq`)                          |
-| Delay    | Effect     | Mix, time and feedback                                                   |
-| Space    | Effect     | Room, size, fade, low-pass and dim (`room` … `roomdim`)                  |
-| Level    | Effect     | Gain, stereo pan and postgain                                            |
-| Envelope | Effect     | Attack, decay, sustain and release                                       |
-| Scope    | Effect     | A waveform display scaled by `analyze("flow-scope")` and a scale control |
-| Effect   | Effect     | Any other chained call, its name and argument kept as written            |
-| Voice    | Sound      | The synth or sample bank, as `sound("…")`                                |
+| Kind       | Category   | What it does                                                                                                                   |
+| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Pad        | Instrument | An eight-note grid with an arpeggio or chord mode, key, scale and octave                                                       |
+| Beats      | Instrument | Up to eight tracks of any sample, a step count, and per-step variations                                                        |
+| Chords     | Instrument | A four-chord progression with preset shapes and note-level editing                                                             |
+| Notes      | Instrument | A `note("…")` line in mini notation                                                                                            |
+| Samples    | Instrument | An `s("…")` line in mini notation                                                                                              |
+| Code       | Instrument | One custom Strudel expression                                                                                                  |
+| Filter     | Effect     | A low-pass filter (`lpf`) and resonance (`lpq`)                                                                                |
+| Delay      | Effect     | Mix, time and feedback                                                                                                         |
+| Space      | Effect     | Room, size, fade, low-pass and dim (`room` … `roomdim`)                                                                        |
+| Level      | Effect     | Gain, stereo pan and postgain                                                                                                  |
+| Envelope   | Effect     | Attack, decay, sustain and release                                                                                             |
+| Visualizer | Effect     | One of Strudel's visuals (pianoroll, punchcard, scope, spiral, pitch wheel, spectrum), inline or behind the code, with options |
+| Effect     | Effect     | Any other chained call, its name and argument kept as written                                                                  |
+| Voice      | Sound      | The synth or sample bank, as `sound("…")`                                                                                      |
 
 Every instrument can be muted from its header, which writes `.hush()`. The header's **…** menu shows the code the node writes and removes it.
 

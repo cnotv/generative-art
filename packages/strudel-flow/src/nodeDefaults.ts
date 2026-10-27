@@ -1,8 +1,6 @@
 import {
   STRUDEL_FLOW_DEFAULT_BEATS_STEPS,
   STRUDEL_FLOW_DRUM_ROWS,
-  STRUDEL_FLOW_MAX_SCOPE_SCALE,
-  STRUDEL_FLOW_MIN_SCOPE_SCALE,
   STRUDEL_FLOW_PAD_NOTE_COUNT,
   STRUDEL_FLOW_PAD_STEP_COUNT,
   STRUDEL_FLOW_STEP_COUNT
@@ -21,8 +19,8 @@ import type {
   StrudelFlowNotesData,
   StrudelFlowPadData,
   StrudelFlowSamplesData,
-  StrudelFlowScopeData,
   StrudelFlowSpaceData,
+  StrudelFlowVisualizerData,
   StrudelFlowVoiceData
 } from './types'
 
@@ -141,9 +139,11 @@ export const STRUDEL_FLOW_ENVELOPE_DEFAULTS: StrudelFlowEnvelopeData = {
   release: 0.2
 }
 
-export const STRUDEL_FLOW_SCOPE_DEFAULTS: StrudelFlowScopeData = {
-  kind: 'scope',
-  scale: 0.25
+export const STRUDEL_FLOW_VISUALIZER_DEFAULTS: StrudelFlowVisualizerData = {
+  kind: 'visualizer',
+  visual: 'pianoroll',
+  placement: 'inline',
+  options: ''
 }
 
 /**
@@ -186,7 +186,7 @@ const NODE_DATA_FACTORIES: { [Kind in StrudelFlowNodeKind]: () => StrudelFlowNod
   space: () => ({ ...STRUDEL_FLOW_SPACE_DEFAULTS }),
   level: () => ({ ...STRUDEL_FLOW_LEVEL_DEFAULTS }),
   envelope: () => ({ ...STRUDEL_FLOW_ENVELOPE_DEFAULTS }),
-  scope: () => ({ ...STRUDEL_FLOW_SCOPE_DEFAULTS }),
+  visualizer: () => ({ ...STRUDEL_FLOW_VISUALIZER_DEFAULTS }),
   effect: () => ({ ...STRUDEL_FLOW_EFFECT_DEFAULTS })
 }
 
@@ -214,11 +214,3 @@ export const isStrudelFlowInstrumentKind = (kind: StrudelFlowNodeKind): boolean 
  */
 export const isStrudelFlowEffectKind = (kind: StrudelFlowNodeKind): boolean =>
   !INSTRUMENT_KINDS.includes(kind)
-
-/**
- * The scope scale clamped to the range its knob can draw.
- * @param data - the scope node's settings
- * @returns the scale between the configured minimum and maximum
- */
-export const getStrudelFlowScopeScale = (data: StrudelFlowScopeData): number =>
-  Math.min(STRUDEL_FLOW_MAX_SCOPE_SCALE, Math.max(STRUDEL_FLOW_MIN_SCOPE_SCALE, data.scale))

@@ -185,7 +185,26 @@ describe('generateStrudelFlowNodePattern', () => {
       { kind: 'envelope' as const, attack: 0.1, decay: 0.1, sustain: 0.7, release: 0.2 },
       '.attack(0.1).decay(0.1).sustain(0.7).release(0.2)'
     ],
-    ['scope', { kind: 'scope' as const, scale: 0.25 }, '.analyze("flow-scope")']
+    [
+      'inline visualizer',
+      {
+        kind: 'visualizer' as const,
+        visual: 'punchcard' as const,
+        placement: 'inline' as const,
+        options: ''
+      },
+      '._punchcard()'
+    ],
+    [
+      'background visualizer',
+      {
+        kind: 'visualizer' as const,
+        visual: 'spiral' as const,
+        placement: 'background' as const,
+        options: '{ steady: .96 }'
+      },
+      '.spiral({ steady: .96 })'
+    ]
   ])('chains a %s effect onto its input', (_kind, data, expectedSuffix) => {
     // Arrange
     const input = 's("bd")'

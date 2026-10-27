@@ -291,7 +291,7 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.nodes[1]?.data).not.toHaveProperty('chordNotes')
   })
 
-  it('reads the level, envelope, scope and expanded space effects', () => {
+  it('reads the level, envelope, visualizer and expanded space effects', () => {
     // Arrange
     const storedValue = storePatch({
       nodes: [
@@ -318,9 +318,9 @@ describe('parseStrudelFlowPatch', () => {
           data: { kind: 'envelope', attack: -2, decay: 0.5, sustain: 2, release: 1.5 }
         },
         {
-          id: 'scope',
+          id: 'visualizer',
           position: { x: 0, y: 300 },
-          data: { kind: 'scope', scale: 9 }
+          data: { kind: 'visualizer', visual: 'kaleidoscope', placement: 'background', options: 7 }
         }
       ]
     })
@@ -350,7 +350,12 @@ describe('parseStrudelFlowPatch', () => {
       sustain: 1,
       release: 1.5
     })
-    expect(patch?.nodes[3]?.data).toEqual({ kind: 'scope', scale: 4 })
+    expect(patch?.nodes[3]?.data).toEqual({
+      kind: 'visualizer',
+      visual: 'pianoroll',
+      placement: 'background',
+      options: ''
+    })
   })
 
   it('gives a cable a usable id when its stored one is missing or already taken', () => {

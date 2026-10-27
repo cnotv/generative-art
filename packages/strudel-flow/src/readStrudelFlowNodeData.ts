@@ -6,15 +6,14 @@ import {
   STRUDEL_FLOW_MAX_FILTER_CUTOFF,
   STRUDEL_FLOW_MAX_FILTER_RESONANCE,
   STRUDEL_FLOW_MAX_ROOM_SIZE,
-  STRUDEL_FLOW_MAX_SCOPE_SCALE,
   STRUDEL_FLOW_MIN_FILTER_CUTOFF,
   STRUDEL_FLOW_MIN_FILTER_RESONANCE,
-  STRUDEL_FLOW_MIN_SCOPE_SCALE,
   STRUDEL_FLOW_PAD_MODIFIER_OPTIONS,
   STRUDEL_FLOW_PAD_NOTE_COUNT,
   STRUDEL_FLOW_PAD_STEP_COUNT,
   STRUDEL_FLOW_SCALE_OPTIONS,
-  STRUDEL_FLOW_STEP_COUNT
+  STRUDEL_FLOW_STEP_COUNT,
+  STRUDEL_FLOW_VISUAL_OPTIONS
 } from './config'
 import {
   createDefaultDrumRows,
@@ -30,8 +29,8 @@ import {
   STRUDEL_FLOW_NOTES_DEFAULTS,
   STRUDEL_FLOW_PAD_DEFAULTS,
   STRUDEL_FLOW_SAMPLES_DEFAULTS,
-  STRUDEL_FLOW_SCOPE_DEFAULTS,
   STRUDEL_FLOW_SPACE_DEFAULTS,
+  STRUDEL_FLOW_VISUALIZER_DEFAULTS,
   STRUDEL_FLOW_VOICE_DEFAULTS
 } from './nodeDefaults'
 import {
@@ -61,7 +60,7 @@ const NODE_KINDS: StrudelFlowNodeKind[] = [
   'space',
   'level',
   'envelope',
-  'scope',
+  'visualizer',
   'effect'
 ]
 
@@ -291,14 +290,13 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
     sustain: readStoredNumber(raw.sustain, STRUDEL_FLOW_ENVELOPE_DEFAULTS.sustain, 0, 1),
     release: readStoredNumber(raw.release, STRUDEL_FLOW_ENVELOPE_DEFAULTS.release, 0, 2)
   }),
-  scope: (raw) => ({
-    kind: 'scope',
-    scale: readStoredNumber(
-      raw.scale,
-      STRUDEL_FLOW_SCOPE_DEFAULTS.scale,
-      STRUDEL_FLOW_MIN_SCOPE_SCALE,
-      STRUDEL_FLOW_MAX_SCOPE_SCALE
-    )
+  visualizer: (raw) => ({
+    kind: 'visualizer',
+    visual:
+      STRUDEL_FLOW_VISUAL_OPTIONS.find((option) => option.value === raw.visual)?.value ??
+      STRUDEL_FLOW_VISUALIZER_DEFAULTS.visual,
+    placement: raw.placement === 'background' ? 'background' : 'inline',
+    options: readStoredString(raw.options, '')
   }),
   effect: (raw) => ({
     kind: 'effect',

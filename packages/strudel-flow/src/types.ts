@@ -13,7 +13,7 @@ export type StrudelFlowNodeKind =
   | 'space'
   | 'level'
   | 'envelope'
-  | 'scope'
+  | 'visualizer'
   | 'effect'
 
 export type StrudelFlowNodeCategory = 'Instruments' | 'Effects' | 'Sounds'
@@ -131,9 +131,21 @@ export type StrudelFlowEnvelopeData = {
   release: number
 }
 
-export type StrudelFlowScopeData = {
-  kind: 'scope'
-  scale: number
+export type StrudelFlowVisualName =
+  | 'pianoroll'
+  | 'punchcard'
+  | 'scope'
+  | 'spiral'
+  | 'pitchwheel'
+  | 'spectrum'
+
+/** One of Strudel's visuals: `._name()` draws under the line, `.name()` behind the code. */
+export type StrudelFlowVisualizerData = {
+  kind: 'visualizer'
+  visual: StrudelFlowVisualName
+  placement: 'inline' | 'background'
+  /** The call's argument as written, such as `{ labels: 1 }`, or empty. */
+  options: string
 }
 
 export type StrudelFlowNodeData =
@@ -149,7 +161,7 @@ export type StrudelFlowNodeData =
   | StrudelFlowSpaceData
   | StrudelFlowLevelData
   | StrudelFlowEnvelopeData
-  | StrudelFlowScopeData
+  | StrudelFlowVisualizerData
   | StrudelFlowEffectData
 
 export type StrudelFlowNodePosition = {

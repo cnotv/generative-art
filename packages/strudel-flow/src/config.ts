@@ -1,3 +1,5 @@
+import type { StrudelFlowVisualName } from './types'
+
 export const STRUDEL_FLOW_PATCH_STORAGE_KEY = 'strudel-flow-patch'
 
 /** The editor this package follows: its node set, controls, layout and look. */
@@ -40,8 +42,20 @@ export const STRUDEL_FLOW_MAX_FILTER_CUTOFF = 20000
 export const STRUDEL_FLOW_MIN_FILTER_RESONANCE = 0.1
 export const STRUDEL_FLOW_MAX_FILTER_RESONANCE = 20
 export const STRUDEL_FLOW_MAX_ROOM_SIZE = 20
-export const STRUDEL_FLOW_MIN_SCOPE_SCALE = 0.1
-export const STRUDEL_FLOW_MAX_SCOPE_SCALE = 4
+
+export const STRUDEL_FLOW_VISUAL_OPTIONS: { value: StrudelFlowVisualName; label: string }[] = [
+  { value: 'pianoroll', label: 'Pianoroll' },
+  { value: 'punchcard', label: 'Punchcard' },
+  { value: 'scope', label: 'Scope' },
+  { value: 'spiral', label: 'Spiral' },
+  { value: 'pitchwheel', label: 'Pitch wheel' },
+  { value: 'spectrum', label: 'Spectrum' }
+]
+
+export const STRUDEL_FLOW_VISUAL_PLACEMENT_OPTIONS = [
+  { value: 'inline', label: 'Under the line' },
+  { value: 'background', label: 'Behind the code' }
+]
 
 export const STRUDEL_FLOW_EDITOR_MODE_OPTIONS = [
   { value: 'code', label: 'Code' },
