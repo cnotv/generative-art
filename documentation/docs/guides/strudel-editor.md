@@ -35,6 +35,10 @@ flow tab:
 - **flow**: build a pattern from instrument and effect nodes (below)
 
 Audio starts on the first Play press, since browsers only allow sound after a user gesture.
+iOS is stricter: audio has to start inside the tap itself, and the engine download that follows
+outlasts it. So `strudelPlayback.ts` creates and resumes the page's one AudioContext before
+anything downloads, hands it to Strudel, and resumes it again on every Play or Update. It also
+asks for iOS's playback audio session, so an iPhone plays with the ring switch on silent.
 Patterns run on the Strudel engine (`@strudel/core`, `@strudel/mini`, `@strudel/transpiler`,
 `@strudel/webaudio`, `@strudel/tonal`, `@strudel/draw`), loaded lazily so the rest of the app
 never pays for it. Press the stop button to hush the output; leaving the view stops it too. A
