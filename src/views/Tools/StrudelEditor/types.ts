@@ -22,9 +22,23 @@ export type StrudelEvaluationResult = {
   errorMessage?: string
 }
 
+export type StrudelExportOptions = {
+  startCycle: number
+  endCycle: number
+  sampleRate: number
+  fileName: string
+}
+
+export type StrudelExportStatus = 'idle' | 'rendering' | 'done' | 'error'
+
 export type StrudelPlayback = {
   evaluateCode: (patternCode: string) => Promise<StrudelEvaluationResult>
   stopPlayback: () => Promise<void>
+  /** Renders the cycles offline and downloads them as a WAV file. */
+  renderToWav: (
+    patternCode: string,
+    exportOptions: StrudelExportOptions
+  ) => Promise<StrudelEvaluationResult>
 }
 
 /** What the transpiler found in the evaluated code, in Strudel's own untyped shapes. */
@@ -238,6 +252,7 @@ export type StrudelTabId =
   | 'welcome'
   | 'patterns'
   | 'import'
+  | 'midi'
   | 'reference'
   | 'export'
   | 'console'
@@ -308,6 +323,22 @@ export type StrudelTranscriptionState = {
   transcriptionResult: Ref<TranscriptionResult | null>
   transcribedCode: Ref<string>
   transcriptionError: Ref<string>
-  transcribeAudioFile: (audioFile: File) => Promise<void>
+  transcribeFile: (chosenFile: File) => Promise<void>
   loadTranscription: () => void
+}
+
+export type MidiDeviceStatus = 'idle' | 'connecting' | 'ready' | 'unsupported' | 'denied'
+
+export type MidiDevicesState = {
+  midiDeviceStatus: Ref<MidiDeviceStatus>
+  midiInputNames: Ref<string[]>
+  midiOutputNames: Ref<string[]>
+  connectMidiDevices: () => Promise<void>
+}
+
+export type MidiSnippet = {
+  id: string
+  title: string
+  description: string
+  code: string
 }

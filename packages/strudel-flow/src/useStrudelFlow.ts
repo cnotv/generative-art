@@ -1,5 +1,4 @@
 import { computed, ref, watch } from 'vue'
-import type { ComputedRef, Ref } from 'vue'
 import { readStorage, writeStorage } from './storage'
 import { compileStrudelFlow } from './compileStrudelFlow'
 import { STRUDEL_FLOW_PATCH_STORAGE_KEY } from './config'
@@ -9,31 +8,16 @@ import { findStrudelFlowNodePosition } from './layout'
 import { createStrudelFlowNodeData } from './nodeDefaults'
 import { parseStrudelFlowPatch } from './patchStorage'
 import { parseStrudelFlowCode } from './parseStrudelFlowCode'
-import { normalizeStrudelFlowBeatsPerMinute } from './tempo'
+import { normalizeStrudelFlowBeatsPerCycle, normalizeStrudelFlowBeatsPerMinute } from './tempo'
 import type {
   StrudelFlowCompilation,
   StrudelFlowEdge,
   StrudelFlowNode,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
-  StrudelFlowPatch
+  StrudelFlowPatch,
+  StrudelFlowState
 } from './types'
-
-export type StrudelFlowState = {
-  nodes: Ref<StrudelFlowNode[]>
-  edges: Ref<StrudelFlowEdge[]>
-  beatsPerMinute: Ref<number>
-  compilation: ComputedRef<StrudelFlowCompilation>
-  addNode: (kind: StrudelFlowNodeKind) => void
-  updateNodeData: (nodeId: string, data: StrudelFlowNodeData) => void
-  removeNode: (nodeId: string) => void
-  /** Adds a cable when the same connection rules the canvas uses allow it. */
-  connectNodes: (sourceNodeId: string, targetNodeId: string) => boolean
-  setBeatsPerMinute: (beatsPerMinute: number) => void
-  resetPatch: () => void
-  /** Rebuilds the graph from code, reusing node positions where it can. */
-  loadCode: (code: string) => void
-}
 
 const readInitialPatch = (): StrudelFlowPatch =>
   parseStrudelFlowPatch(readStorage(STRUDEL_FLOW_PATCH_STORAGE_KEY)) ??
@@ -46,19 +30,15 @@ const nextNodeId = (kind: StrudelFlowNodeKind, nodes: StrudelFlowNode[], index: 
 
 // The canvas adds layout details to the nodes and edges it is given. Only the patch itself is
 // worth storing, so a saved graph stays small and free of canvas internals.
-const toStoredPatch = (
-  nodes: StrudelFlowNode[],
-  edges: StrudelFlowEdge[],
-  beatsPerMinute: number
-): StrudelFlowPatch => ({
-  nodes: nodes.map((node) => ({
+const toStoredPatch = (patch: StrudelFlowPatch): StrudelFlowPatch => ({
+  ...patch,
+  nodes: patch.nodes.map((node) => ({
     id: node.id,
     type: node.type,
     position: { x: node.position.x, y: node.position.y },
     data: node.data
   })),
-  edges: edges.map((edge) => ({ id: edge.id, source: edge.source, target: edge.target })),
-  beatsPerMinute
+  edges: patch.edges.map((edge) => ({ id: edge.id, source: edge.source, target: edge.target }))
 })
 
 /**
@@ -72,14 +52,26 @@ export const useStrudelFlow = (): StrudelFlowState => {
   const nodes = ref<StrudelFlowNode[]>(initialPatch.nodes)
   const edges = ref<StrudelFlowEdge[]>(initialPatch.edges)
   const beatsPerMinute = ref(initialPatch.beatsPerMinute)
+  const beatsPerCycle = ref(initialPatch.beatsPerCycle)
+  const setup = ref(initialPatch.setup)
 
-  const compilation = computed<StrudelFlowCompilation>(() =>
-    compileStrudelFlow({
-      nodes: nodes.value,
-      edges: edges.value,
-      beatsPerMinute: beatsPerMinute.value
-    })
-  )
+  const currentPatch = (): StrudelFlowPatch => ({
+    nodes: nodes.value,
+    edges: edges.value,
+    beatsPerMinute: beatsPerMinute.value,
+    beatsPerCycle: beatsPerCycle.value,
+    setup: setup.value
+  })
+
+  const applyPatch = (patch: StrudelFlowPatch): void => {
+    nodes.value = patch.nodes
+    edges.value = patch.edges
+    beatsPerMinute.value = patch.beatsPerMinute
+    beatsPerCycle.value = patch.beatsPerCycle
+    setup.value = patch.setup
+  }
+
+  const compilation = computed<StrudelFlowCompilation>(() => compileStrudelFlow(currentPatch()))
 
   const addNode = (kind: StrudelFlowNodeKind): void => {
     nodes.value = [
@@ -121,30 +113,27 @@ export const useStrudelFlow = (): StrudelFlowState => {
     beatsPerMinute.value = normalizeStrudelFlowBeatsPerMinute(nextBeatsPerMinute)
   }
 
-  const resetPatch = (): void => {
-    const defaultPatch = createDefaultStrudelFlowPatch()
-    nodes.value = defaultPatch.nodes
-    edges.value = defaultPatch.edges
-    beatsPerMinute.value = defaultPatch.beatsPerMinute
+  const setBeatsPerCycle = (nextBeatsPerCycle: number): void => {
+    beatsPerCycle.value = normalizeStrudelFlowBeatsPerCycle(nextBeatsPerCycle)
   }
 
-  const loadCode = (code: string): void => {
+  const resetPatch = (): void => {
+    applyPatch(createDefaultStrudelFlowPatch())
+  }
+
+  const loadCode = (code: string): boolean => {
     const patch = parseStrudelFlowCode(code, nodes.value)
     if (patch === null) {
-      return
+      return false
     }
-    nodes.value = patch.nodes
-    edges.value = patch.edges
-    beatsPerMinute.value = patch.beatsPerMinute
+    applyPatch(patch)
+    return true
   }
 
   watch(
-    [nodes, edges, beatsPerMinute],
+    [nodes, edges, beatsPerMinute, beatsPerCycle, setup],
     () => {
-      writeStorage(
-        STRUDEL_FLOW_PATCH_STORAGE_KEY,
-        JSON.stringify(toStoredPatch(nodes.value, edges.value, beatsPerMinute.value))
-      )
+      writeStorage(STRUDEL_FLOW_PATCH_STORAGE_KEY, JSON.stringify(toStoredPatch(currentPatch())))
     },
     { deep: true }
   )
@@ -153,12 +142,14 @@ export const useStrudelFlow = (): StrudelFlowState => {
     nodes,
     edges,
     beatsPerMinute,
+    beatsPerCycle,
     compilation,
     addNode,
     updateNodeData,
     removeNode,
     connectNodes,
     setBeatsPerMinute,
+    setBeatsPerCycle,
     resetPatch,
     loadCode
   }

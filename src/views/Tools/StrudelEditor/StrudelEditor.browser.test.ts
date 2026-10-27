@@ -482,8 +482,9 @@ describe('StrudelEditor audible playback', () => {
       const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
       try {
-        // Act: open flow, add Beats, and connect it to the starter Filter by clicking its handles.
+        // Act: open flow on the starter patch, add Beats, and connect it to the Filter.
         await page.getByRole('tab', { name: 'flow' }).click()
+        await page.getByRole('button', { name: 'Reset patch' }).click()
         await vi.waitFor(
           () => {
             expect(
@@ -515,7 +516,7 @@ describe('StrudelEditor audible playback', () => {
         await userEvent.click(beatsOutput)
         await userEvent.click(filterInput)
 
-        // Assert: both instruments reach the editor as one stacked, filtered pattern.
+        // Assert: one stacked block; only the pad goes through the voice, both through the filter.
         await vi.waitFor(
           () => {
             const blocks = readEditorCode()
@@ -523,10 +524,10 @@ describe('StrudelEditor audible playback', () => {
               .filter((line) => line.startsWith('$:'))
             expect(blocks).toHaveLength(1)
             expect(blocks[0]).toContain(
-              'n("[0 4] [2] [4] [2] [0]").scale("C3:major").sound("triangle")'
+              'stack(n("[7] [5] [3] [1] [3] [2] [6] [3]").scale("C3:major").sound("triangle"), '
             )
-            expect(blocks[0]).toContain('s("bd")')
-            expect(blocks[0]).toContain('.lpf(1500)')
+            expect(blocks[0]).toContain('s("bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~")')
+            expect(blocks[0]).toContain(').lpf(1500)')
           },
           { timeout: 15000 }
         )
@@ -553,6 +554,7 @@ describe('StrudelEditor audible playback', () => {
 
     try {
       await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
         () => {
           expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
@@ -560,7 +562,7 @@ describe('StrudelEditor audible playback', () => {
         { timeout: 15000 }
       )
       const cell = document.querySelector<HTMLButtonElement>(
-        '.strudel-flow-node[data-node-kind="pad"] button[aria-label="Note 8, step 1"]'
+        '.strudel-flow-node[data-node-kind="pad"] button[aria-label="Note 1, step 1"]'
       )
       expect(cell).not.toBeNull()
       if (cell === null) {
@@ -573,7 +575,7 @@ describe('StrudelEditor audible playback', () => {
       // Assert
       await vi.waitFor(
         () => {
-          expect(readEditorCode()).toContain('n("[0 4 7] [2] [4] [2] [0]")')
+          expect(readEditorCode()).toContain('n("[0 7] [5] [3] [1] [3] [2] [6] [3]")')
         },
         { timeout: 15000 }
       )
@@ -589,6 +591,7 @@ describe('StrudelEditor audible playback', () => {
 
     try {
       await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
         () => {
           expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
@@ -634,6 +637,7 @@ describe('StrudelEditor audible playback', () => {
 
     try {
       await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
         () => {
           expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
@@ -674,37 +678,38 @@ describe('StrudelEditor audible playback', () => {
     }
   })
 
-  it('draws the scope waveform', { timeout: 60000 }, async () => {
-    // Arrange
-    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+  it(
+    'shows every visual call as a Visualizer node with its type picked',
+    { timeout: 30000 },
+    async () => {
+      // Arrange
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
-    try {
-      await page.getByRole('tab', { name: 'flow' }).click()
-      await vi.waitFor(
-        () => {
-          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
-        },
-        { timeout: 15000 }
-      )
+      try {
+        await page
+          .getByRole('textbox', { name: 'Live code pattern' })
+          .fill('$: note("c3 e3")._punchcard()._scope()')
 
-      // Act
-      await page.getByRole('button', { name: 'Add Scope node' }).click()
+        // Act
+        await page.getByRole('tab', { name: 'flow' }).click()
 
-      // Assert
-      await vi.waitFor(
-        () => {
-          expect(
-            hasPaintedPixels(
-              document.querySelector<HTMLCanvasElement>('.strudel-flow-scope__canvas')
-            )
-          ).toBe(true)
-        },
-        { timeout: 15000 }
-      )
-    } finally {
-      wrapper.unmount()
+        // Assert
+        await vi.waitFor(
+          () => {
+            const types = [
+              ...document.querySelectorAll<HTMLSelectElement>(
+                '.strudel-flow-node[data-node-kind="visualizer"] select[aria-label="Type"]'
+              )
+            ].map((select) => select.value)
+            expect(types).toEqual(['punchcard', 'scope'])
+          },
+          { timeout: 15000 }
+        )
+      } finally {
+        wrapper.unmount()
+      }
     }
-  })
+  )
 
   it('rebuilds the flow graph when the code changes', { timeout: 30000 }, async () => {
     // Arrange
@@ -715,7 +720,7 @@ describe('StrudelEditor audible playback', () => {
       await page
         .getByRole('textbox', { name: 'Live code pattern' })
         .fill(
-          'setcpm(120/4)\n$: n("[0 2] [4]").scale("A4:minor").sound("sine")\n$: n("<[0,2,4] [5,7,9]>").scale("C3:major").sound("sawtooth")'
+          'setcpm(120/4)\n$: n("[0 2] [4]").scale("A4:minor").sound("sine")\n$: note("c3 e3").lpf(800).fast(2)'
         )
       await page.getByRole('tab', { name: 'flow' }).click()
 
@@ -725,7 +730,7 @@ describe('StrudelEditor audible playback', () => {
           const kinds = [...document.querySelectorAll<HTMLElement>('.strudel-flow-node')].map(
             (node) => node.dataset.nodeKind
           )
-          expect(kinds.sort()).toEqual(['chords', 'pad'])
+          expect(kinds.sort()).toEqual(['effect', 'filter', 'notes', 'pad', 'voice'])
         },
         { timeout: 15000 }
       )

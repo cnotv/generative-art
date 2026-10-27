@@ -1,5 +1,7 @@
 import type {
+  DrumSound,
   StrudelExample,
+  StrudelExportOptions,
   StrudelInstrumentRole,
   StrudelMusicStyle,
   StrudelPatternIdea,
@@ -35,6 +37,11 @@ export const STRUDEL_EXAMPLES: StrudelExample[] = [
     id: 'soft-melody',
     label: 'Soft melody',
     code: 'note("c3 [e3 g3] a3 [g3 e3]").s("triangle").lpf(800)'
+  },
+  {
+    id: 'coin',
+    label: 'Coin',
+    code: 'note("b5 e6@3 ~@4").s("square").decay(.4).sustain(0).gain(.4).fast(2)'
   },
   {
     id: 'sliders-and-scopes',
@@ -343,11 +350,30 @@ export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
  */
 export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'
 
+/** Strudel's own tempo before a pattern sets one: one cycle every two seconds. */
+export const DEFAULT_CPS = 0.5
+
+export const EXPORT_DEFAULT_OPTIONS: StrudelExportOptions = {
+  startCycle: 0,
+  endCycle: 4,
+  sampleRate: 48000,
+  fileName: ''
+}
+export const EXPORT_SAMPLE_RATE_OPTIONS = [
+  { value: '44100', label: '44.1 kHz' },
+  { value: '48000', label: '48 kHz' },
+  { value: '96000', label: '96 kHz' }
+]
+
+/** How long typing or a canvas edit settles before the code and the graph follow each other. */
+export const FLOW_SYNC_DELAY_MS = 300
+
 export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'hints', label: 'hints' },
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
   { id: 'import', label: 'import' },
+  { id: 'midi', label: 'midi' },
   { id: 'reference', label: 'reference' },
   { id: 'export', label: 'export' },
   { id: 'console', label: 'console' },
@@ -359,7 +385,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
 export const TRANSCRIPTION_SAMPLE_RATE = 22050
 export const TRANSCRIPTION_MAX_SECONDS = 90
 export const TRANSCRIPTION_MAX_BARS = 64
-export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac'
+export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.mid,.midi'
 
 export const ONSET_FRAME_SIZE = 1024
 export const ONSET_HOP_SIZE = 512
@@ -374,6 +400,20 @@ export const TEMPO_MAX_BPM = 180
 /** Centre of the log-tempo prior that breaks ties between related tempos. */
 export const TEMPO_PRIOR_CENTER_BPM = 120
 export const TEMPO_PRIOR_WIDTH_OCTAVES = 1
+
+export const MIDI_DEFAULT_BEATS_PER_MINUTE = 120
+/** General MIDI percussion keys folded onto the three drums the transcription writes. */
+export const MIDI_DRUM_SOUNDS: Record<number, DrumSound> = {
+  35: 'bd',
+  36: 'bd',
+  37: 'sd',
+  38: 'sd',
+  39: 'sd',
+  40: 'sd',
+  42: 'hh',
+  44: 'hh',
+  46: 'hh'
+}
 
 export const STEPS_PER_BEAT = 4
 export const STEPS_PER_BAR = 16

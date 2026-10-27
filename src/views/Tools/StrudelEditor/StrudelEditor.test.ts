@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import StrudelEditor from './StrudelEditor.vue'
 import { ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_SAVED_CODE_STORAGE_KEY } from './config'
 import type { StrudelCodeMirrorOptions } from './types'
@@ -145,13 +145,14 @@ describe('StrudelEditor view', () => {
     const tabButtons = wrapper.findAll('.strudel-editor__tab')
 
     // Assert
-    expect(tabButtons.length).toBe(9)
+    expect(tabButtons.length).toBe(10)
     const tabLabels = tabButtons.map((tab) => tab.text())
     expect(tabLabels).toEqual([
       'hints',
       'welcome',
       'patterns',
       'import',
+      'midi',
       'reference',
       'export',
       'console',
@@ -296,6 +297,31 @@ describe('StrudelEditor view', () => {
     expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
+  it('links every tab to its own anchor', async () => {
+    // Arrange / Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    const links = wrapper.findAll('.strudel-editor__tab').map((tab) => tab.attributes('href'))
+    expect(links).toContain('#midi')
+    expect(links).toContain('#export')
+  })
+
+  it.each([
+    ['#midi', 'midi'],
+    ['#export', 'export']
+  ])('opens the tab named by the anchor %s', async (hash, tabLabel) => {
+    // Arrange
+    window.history.replaceState(null, '', `${window.location.pathname}${hash}`)
+
+    // Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    expect(wrapper.find('.strudel-editor__tab--active').text()).toBe(tabLabel)
+    expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
+  })
+
   it('switches to the console tab', async () => {
     // Arrange
     const wrapper = await mountEditorView()
@@ -310,28 +336,28 @@ describe('StrudelEditor view', () => {
     expect(wrapper.find('.strudel-console').exists()).toBe(true)
   })
 
-  it('opens flow mode from the flow tab, writes the compiled patch and toggles back', async () => {
+  it('opens flow mode on the code as it is and writes the code once the patch changes', async () => {
     // Arrange
     const wrapper = await mountEditorView()
+    const originalCode = readEditorCode(wrapper)
 
     // Act
     await clickTab(wrapper, 'flow')
     await vi.waitFor(() => {
       expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
     })
-    const generatedCode = readEditorCode(wrapper)
+    const codeOnOpen = readEditorCode(wrapper)
+    await wrapper.find('button[aria-label="Add Notes node"]').trigger('click')
+    await flushPromises()
+    const codeAfterAdd = readEditorCode(wrapper)
     await clickMode(wrapper, 'Code')
 
     // Assert
-    expect(wrapper.find('.strudel-flow-tab__code').exists()).toBe(false)
-    expect(generatedCode).toBe(
-      [
-        'setcpm(120/4)',
-        '$: n("[0 4] [2] [4] [2] [0]").scale("C3:major").sound("triangle").lpf(1500).lpq(1)'
-      ].join('\n')
-    )
+    expect(codeOnOpen).toBe(originalCode)
+    expect(codeAfterAdd).toContain('$: s("bd sd, hh*8")')
+    expect(codeAfterAdd).toContain('$: note("c3 [e3 g3] a3 [g3 e3]")')
     expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(false)
-    expect(readEditorCode(wrapper)).toBe(generatedCode)
+    expect(readEditorCode(wrapper)).toBe(codeAfterAdd)
   })
 
   it('rebuilds the graph from code and keeps the same code when flow mode opens', async () => {
@@ -353,21 +379,7 @@ describe('StrudelEditor view', () => {
 
   it('shows a flow error in the main editor area instead of the side panel', async () => {
     // Arrange
-    localStorage.setItem(
-      'strudel-flow-patch',
-      JSON.stringify({
-        nodes: [
-          {
-            id: 'filter-only',
-            type: 'strudel',
-            position: { x: 0, y: 0 },
-            data: { kind: 'filter', cutoff: 1200, resonance: 2 }
-          }
-        ],
-        edges: [],
-        beatsPerMinute: 120
-      })
-    )
+    localStorage.setItem(STRUDEL_SAVED_CODE_STORAGE_KEY, '')
     const wrapper = await mountEditorView()
 
     // Act

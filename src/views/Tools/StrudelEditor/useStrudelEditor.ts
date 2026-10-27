@@ -9,11 +9,14 @@ import {
   STRUDEL_TABS
 } from './config'
 import { useSavedPatterns } from './useSavedPatterns'
+import { useStrudelExport } from './useStrudelExport'
 import { useStrudelLog } from './useStrudelLog'
 import type {
   StrudelEditorHandle,
   StrudelEditorStatus,
   StrudelExample,
+  StrudelExportOptions,
+  StrudelExportStatus,
   StrudelLogEntry,
   StrudelPlayback,
   StrudelPlaybackHooks,
@@ -23,7 +26,7 @@ import type {
   TranscriptionRunner
 } from './types'
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
-import { runTranscriptionInWorker } from './transcription/runTranscription'
+import { runTranscription } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 
 /**
@@ -79,6 +82,10 @@ type StrudelEditorState = StrudelTranscriptionState & {
   updatePatternCode: (nextCode: string) => void
   playPattern: () => Promise<void>
   stopPattern: () => Promise<void>
+  exportStatus: Ref<StrudelExportStatus>
+  exportError: Ref<string>
+  /** Renders the code on screen offline and downloads it as a WAV file. */
+  exportPattern: (exportOptions: StrudelExportOptions) => Promise<void>
   setActiveTab: (tabId: StrudelTabId) => void
   clearLogEntries: () => void
   attachEditor: (editorHandle: StrudelEditorHandle | null) => void
@@ -177,6 +184,13 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     appendLog('Stopped')
   }
 
+  const strudelExport = useStrudelExport({
+    loadPlayback: () => loadCachedPlayback(playbackReference, playbackLoader, playbackHooks),
+    patternCode,
+    editorStatus,
+    appendLog
+  })
+
   // Loading another pattern over one that plays stops it, so only the code on screen sounds.
   const loadPatternCode = (nextCode: string): void => {
     if (editorStatus.value === 'playing') {
@@ -227,7 +241,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   }
 
   const transcription = useStrudelTranscription({
-    runner: editorOptions?.transcriptionRunner ?? runTranscriptionInWorker,
+    runner: editorOptions?.transcriptionRunner ?? runTranscription,
     applyCode: loadPatternCode,
     appendLog
   })
@@ -260,6 +274,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     updatePatternCode,
     playPattern,
     stopPattern,
+    ...strudelExport,
     setActiveTab,
     clearLogEntries,
     attachEditor,
