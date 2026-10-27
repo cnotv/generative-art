@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { nextTick } from 'vue'
 import {
-  DEFAULT_SAMPLE_BANK,
   DEFAULT_STRUDEL_EXAMPLE_ID,
+  STRUDEL_BANK_ALIASES_URL,
+  STRUDEL_SAMPLE_BANKS,
   STRUDEL_SAVED_CODE_STORAGE_KEY,
   STRUDEL_SAVED_PATTERNS_STORAGE_KEY,
   ELECTRO_TUNES,
@@ -28,6 +29,7 @@ const {
   mockAudioInitializer,
   mockSynthRegistrar,
   mockSampleBankLoader,
+  mockBankAliasLoader,
   mockContextGetter,
   mockContextSetter,
   mockResumeFunction,
@@ -62,6 +64,7 @@ const {
     mockAudioInitializer: vi.fn(),
     mockSynthRegistrar: vi.fn(),
     mockSampleBankLoader: vi.fn(),
+    mockBankAliasLoader: vi.fn(),
     mockContextGetter: vi.fn(),
     mockContextSetter: vi.fn(),
     mockResumeFunction: vi.fn(),
@@ -81,6 +84,7 @@ vi.mock('@strudel/webaudio', () => ({
   initAudio: mockAudioInitializer,
   registerSynthSounds: mockSynthRegistrar,
   samples: mockSampleBankLoader,
+  aliasBank: mockBankAliasLoader,
   getAudioContext: mockContextGetter,
   setAudioContext: mockContextSetter,
   webaudioOutput: mockScheduleHandler
@@ -352,10 +356,42 @@ describe('loadDefaultStrudelPlayback', () => {
     await playback.evaluateCode('s("bd sd")')
 
     // Assert
-    expect(mockSampleBankLoader).toHaveBeenCalledWith(DEFAULT_SAMPLE_BANK)
+    expect(mockSampleBankLoader).toHaveBeenCalledWith('github:tidalcycles/dirt-samples', undefined)
     const bankLoadOrder = mockSampleBankLoader.mock.invocationCallOrder[0] ?? 0
     const evaluateOrder = mockEvaluateFunction.mock.invocationCallOrder[0] ?? 0
     expect(bankLoadOrder).toBeLessThan(evaluateOrder)
+  })
+
+  it('loads every strudel.cc bank, then the drum machine aliases', async () => {
+    // Arrange
+    const playbackLoader = loadDefaultStrudelPlayback
+
+    // Act
+    await playbackLoader(buildPlaybackHooks())
+
+    // Assert
+    const loadedManifests = mockSampleBankLoader.mock.calls.map(([manifestUrl]) => manifestUrl)
+    expect(loadedManifests).toEqual(STRUDEL_SAMPLE_BANKS.map(({ manifestUrl }) => manifestUrl))
+    expect(mockSampleBankLoader).toHaveBeenCalledWith(
+      'https://strudel.b-cdn.net/piano.json',
+      'https://strudel.b-cdn.net/piano/'
+    )
+    expect(mockBankAliasLoader).toHaveBeenCalledWith(STRUDEL_BANK_ALIASES_URL)
+    const lastBankOrder = Math.max(...mockSampleBankLoader.mock.invocationCallOrder)
+    const aliasOrder = mockBankAliasLoader.mock.invocationCallOrder[0] ?? 0
+    expect(lastBankOrder).toBeLessThan(aliasOrder)
+  })
+
+  it('still plays when one sample bank fails to load', async () => {
+    // Arrange
+    mockSampleBankLoader.mockRejectedValueOnce(new Error('error loading manifest'))
+
+    // Act
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+    const evaluationResult = await playback.evaluateCode('s("bd sd")')
+
+    // Assert
+    expect(evaluationResult).toEqual({ success: true })
   })
 
   it('puts slider() and the draw functions in the evaluation scope', async () => {

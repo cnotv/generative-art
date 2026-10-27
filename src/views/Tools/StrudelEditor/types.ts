@@ -6,6 +6,12 @@ export type StrudelExample = {
   code: string
 }
 
+/** A sample manifest Strudel's `samples()` loads, with the folder its files are served from. */
+export type StrudelSampleBank = {
+  manifestUrl: string
+  baseUrl?: string
+}
+
 /** A pattern the player saved under a name, kept in local storage. */
 export type StrudelSavedPattern = {
   name: string

@@ -3,6 +3,7 @@ import type {
   StrudelInstrumentRole,
   StrudelMusicStyle,
   StrudelPatternIdea,
+  StrudelSampleBank,
   StrudelTabId,
   StrudelVisualName,
   TranscriptionStage
@@ -338,10 +339,41 @@ export const STRUDEL_SAVED_PATTERN_ID_PREFIX = 'saved-'
 export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
 
 /**
- * Classic TR-909 style kit the shipped examples play. Loaded once before the first
- * evaluation, or every trigger fails with "sound not found".
+ * dirt-samples, which the shipped examples play, plus every bank strudel.cc preloads, so code
+ * copied from there finds its piano, VCSL instruments and drum machines. Loaded once before
+ * the first evaluation, or every trigger fails with "sound not found". The CDN folders are the
+ * ones strudel.cc reads from, faster than the GitHub folders the manifests name.
  */
-export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'
+export const STRUDEL_SAMPLE_BANKS: StrudelSampleBank[] = [
+  { manifestUrl: 'github:tidalcycles/dirt-samples' },
+  {
+    manifestUrl: 'https://strudel.b-cdn.net/piano.json',
+    baseUrl: 'https://strudel.b-cdn.net/piano/'
+  },
+  {
+    manifestUrl: 'https://strudel.b-cdn.net/vcsl.json',
+    baseUrl: 'https://strudel.b-cdn.net/VCSL/'
+  },
+  {
+    manifestUrl: 'https://strudel.b-cdn.net/tidal-drum-machines.json',
+    baseUrl: 'https://strudel.b-cdn.net/tidal-drum-machines/machines/'
+  },
+  {
+    manifestUrl: 'https://strudel.b-cdn.net/uzu-drumkit.json',
+    baseUrl: 'https://strudel.b-cdn.net/uzu-drumkit/'
+  },
+  {
+    manifestUrl: 'https://strudel.b-cdn.net/uzu-wavetables.json',
+    baseUrl: 'https://strudel.b-cdn.net/uzu-wavetables/'
+  },
+  {
+    manifestUrl: 'https://strudel.b-cdn.net/mridangam.json',
+    baseUrl: 'https://strudel.b-cdn.net/mrid/'
+  }
+]
+
+/** Short names such as `.bank("TR909")` for the drum machines, applied once they are loaded. */
+export const STRUDEL_BANK_ALIASES_URL = 'https://strudel.b-cdn.net/tidal-drum-machines-alias.json'
 
 export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'hints', label: 'hints' },

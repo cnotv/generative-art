@@ -1,4 +1,9 @@
-import { DEFAULT_SAMPLE_BANK, STRUDEL_DRAW_TIME, STRUDEL_NO_DRAW_TIME } from './config'
+import {
+  STRUDEL_BANK_ALIASES_URL,
+  STRUDEL_DRAW_TIME,
+  STRUDEL_NO_DRAW_TIME,
+  STRUDEL_SAMPLE_BANKS
+} from './config'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
@@ -21,6 +26,7 @@ type StrudelEngine = {
   audioInitializer: UnknownCallable
   synthRegistrar: UnknownCallable
   sampleBankLoader: UnknownCallable
+  bankAliasLoader: UnknownCallable
   contextGetter: UnknownCallable
   contextSetter: UnknownCallable
   scheduleHandler: unknown
@@ -155,6 +161,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     audioInitializer: toCallable(webaudioModule.initAudio),
     synthRegistrar: toCallable(webaudioModule.registerSynthSounds),
     sampleBankLoader: toCallable(webaudioModule.samples),
+    bankAliasLoader: toCallable(webaudioModule.aliasBank),
     contextGetter: toCallable(webaudioModule.getAudioContext),
     contextSetter: toCallable(webaudioModule.setAudioContext),
     scheduleHandler: webaudioModule.webaudioOutput,
@@ -174,6 +181,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     audioInitializer,
     synthRegistrar,
     sampleBankLoader,
+    bankAliasLoader,
     contextGetter,
     contextSetter
   } = engine
@@ -183,6 +191,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     audioInitializer === undefined ||
     synthRegistrar === undefined ||
     sampleBankLoader === undefined ||
+    bankAliasLoader === undefined ||
     contextGetter === undefined ||
     contextSetter === undefined ||
     typeof engine.scheduleHandler !== 'function' ||
@@ -197,9 +206,24 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     audioInitializer,
     synthRegistrar,
     sampleBankLoader,
+    bankAliasLoader,
     contextGetter,
     contextSetter
   }
+}
+
+/**
+ * Registers every sample bank, then the drum machine aliases, which only rename banks already
+ * registered. A bank that fails to load is left out rather than keeping the editor silent.
+ * @param engine - the loaded Strudel modules
+ */
+const loadSampleBanks = async (engine: StrudelEngine): Promise<void> => {
+  await Promise.allSettled(
+    STRUDEL_SAMPLE_BANKS.map(({ manifestUrl, baseUrl }) =>
+      engine.sampleBankLoader(manifestUrl, baseUrl)
+    )
+  )
+  await Promise.allSettled([engine.bankAliasLoader(STRUDEL_BANK_ALIASES_URL)])
 }
 
 /**
@@ -259,7 +283,7 @@ export const loadDefaultStrudelPlayback = async (
   engine.synthRegistrar()
   const audioContext: unknown = await engine.contextGetter()
   await resumeAudioContext(audioContext)
-  await engine.sampleBankLoader(DEFAULT_SAMPLE_BANK)
+  await loadSampleBanks(engine)
   await engine.scopeInitializer(...engine.scopeModules)
   const drawer = await createPlaybackDrawer(hooks)
   const cleanupVisuals = await createVisualsCleanup(hooks)

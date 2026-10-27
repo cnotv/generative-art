@@ -14,6 +14,10 @@ edit the code, and press the play button above the editor.
 - The code is saved to the browser's local storage as you type, so a refresh or a later visit
   opens where you left off. An address naming a pattern opens that pattern instead, and picking
   one replaces the saved code.
+- The first Play loads the same sounds strudel.cc does: dirt-samples, the piano, the VCSL
+  instruments, the tidal drum machines with their short names (`.bank("TR909")`), the uzu
+  drum kit and wavetables, and mridangam. Code copied from strudel.cc plays unchanged, except
+  for General MIDI soundfonts (`gm_*`), which are not loaded.
 
 A panel opens on the hints tab, followed by six of the strudel.cc tabs, an import tab and the
 flow tab:
