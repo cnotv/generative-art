@@ -29,6 +29,7 @@ const {
   mockSynthRegistrar,
   mockSampleBankLoader,
   mockContextGetter,
+  mockContextSetter,
   mockResumeFunction,
   mockScheduleHandler,
   mockCodeTranspiler,
@@ -62,6 +63,7 @@ const {
     mockSynthRegistrar: vi.fn(),
     mockSampleBankLoader: vi.fn(),
     mockContextGetter: vi.fn(),
+    mockContextSetter: vi.fn(),
     mockResumeFunction: vi.fn(),
     mockScheduleHandler: vi.fn(),
     mockCodeTranspiler: vi.fn(),
@@ -80,6 +82,7 @@ vi.mock('@strudel/webaudio', () => ({
   registerSynthSounds: mockSynthRegistrar,
   samples: mockSampleBankLoader,
   getAudioContext: mockContextGetter,
+  setAudioContext: mockContextSetter,
   webaudioOutput: mockScheduleHandler
 }))
 vi.mock('@strudel/tonal', () => ({}))
@@ -94,6 +97,23 @@ vi.mock('@strudel/codemirror', () => ({
   slider: mockSlider,
   sliderWithID: mockSliderWithId
 }))
+
+type GestureAudioContext = {
+  resume: ReturnType<typeof vi.fn>
+  createBuffer: ReturnType<typeof vi.fn>
+  createBufferSource: ReturnType<typeof vi.fn>
+  destination: object
+}
+
+// jsdom has no Web Audio, so the context the loader creates in the tap is a recording stand-in.
+const createAudioContextStub = (createdContexts: GestureAudioContext[]) =>
+  function AudioContextStub(this: GestureAudioContext) {
+    this.resume = vi.fn(async () => undefined)
+    this.createBuffer = vi.fn(() => ({}))
+    this.createBufferSource = vi.fn(() => ({ connect: vi.fn(), start: vi.fn() }))
+    this.destination = {}
+    createdContexts.push(this)
+  }
 
 const buildPlaybackHooks = (): StrudelPlaybackHooks => ({
   onEvaluated: vi.fn(),
@@ -220,6 +240,82 @@ describe('loadDefaultStrudelPlayback', () => {
     expect(mockAudioInitializer).toHaveBeenCalledTimes(1)
     expect(mockSynthRegistrar).toHaveBeenCalledTimes(1)
     expect(mockResumeFunction).toHaveBeenCalledTimes(1)
+  })
+
+  it('creates and resumes the audio context in the tap itself, before the engine downloads', async () => {
+    // Arrange: iOS only lets audio start inside the tap, which is over once the loader awaits.
+    const gestureContexts: GestureAudioContext[] = []
+    vi.stubGlobal('AudioContext', createAudioContextStub(gestureContexts))
+
+    try {
+      // Act
+      const loading = loadDefaultStrudelPlayback(buildPlaybackHooks())
+      const resumedBeforeFirstAwait = gestureContexts.map(
+        (context) => context.resume.mock.calls.length
+      )
+      await loading
+
+      // Assert
+      expect(resumedBeforeFirstAwait).toEqual([1])
+      expect(mockContextSetter).toHaveBeenCalledWith(gestureContexts[0])
+      expect(mockContextSetter.mock.invocationCallOrder[0]).toBeLessThan(
+        mockAudioInitializer.mock.invocationCallOrder[0] ?? 0
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps one audio context for the page, unlocking it again on a later load', async () => {
+    // Arrange: browsers cap how many contexts can be open, so a new one per visit would go silent.
+    const gestureContexts: GestureAudioContext[] = []
+    vi.stubGlobal('AudioContext', createAudioContextStub(gestureContexts))
+
+    try {
+      // Act
+      await loadDefaultStrudelPlayback(buildPlaybackHooks())
+      await loadDefaultStrudelPlayback(buildPlaybackHooks())
+
+      // Assert
+      const [firstContext, secondContext] = mockContextSetter.mock.calls.map(([context]) => context)
+      expect(secondContext).toBe(firstContext)
+      expect(gestureContexts.length).toBeLessThanOrEqual(1)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('asks iOS to play through the silent switch', async () => {
+    // Arrange
+    const audioSession = { type: 'auto' }
+    Object.defineProperty(navigator, 'audioSession', { value: audioSession, configurable: true })
+    vi.stubGlobal('AudioContext', createAudioContextStub([]))
+
+    try {
+      // Act
+      await loadDefaultStrudelPlayback(buildPlaybackHooks())
+
+      // Assert
+      expect(audioSession.type).toBe('playback')
+    } finally {
+      Reflect.deleteProperty(navigator, 'audioSession')
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('resumes the audio context on every evaluation, in case iOS suspended it', async () => {
+    // Arrange
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+    mockResumeFunction.mockClear()
+
+    // Act
+    await playback.evaluateCode('s("bd sd")')
+
+    // Assert
+    expect(mockResumeFunction).toHaveBeenCalledTimes(1)
+    expect(mockResumeFunction.mock.invocationCallOrder[0]).toBeLessThan(
+      mockEvaluateFunction.mock.invocationCallOrder[0] ?? 0
+    )
   })
 
   it('reads pattern time from the audio context clock', async () => {
