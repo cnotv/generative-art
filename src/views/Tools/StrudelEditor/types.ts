@@ -187,20 +187,64 @@ export type StrudelCodeFacts = {
   tempo: StrudelCodeTempo | null
   instrumentRoles: StrudelInstrumentRole[]
   visualNames: StrudelVisualName[]
-  /** The top-level statements that make sound, `$:` blocks and plain expressions alike. */
-  patternStatements: StrudelCodeRange[]
+  /** The top-level statements that make sound, `$:` blocks and plain expressions alike, muted blocks left out. */
+  patternStatements: StrudelPatternStatement[]
   usesPatternBlocks: boolean
 }
 
-export type StrudelHintKind = 'tempo' | 'instrument' | 'visual'
+/** A top-level statement that makes sound, with what it alone plays and draws. */
+export type StrudelPatternStatement = StrudelCodeRange & {
+  /** The line the statement starts on, counting from 1. */
+  line: number
+  /** A `$:` block, which can be muted on its own, rather than the code's single pattern. */
+  isBlock: boolean
+  instrumentRoles: StrudelInstrumentRole[]
+  visualNames: StrudelVisualName[]
+  /** Each visual call chained on it, from its dot to its closing parenthesis. */
+  visualCalls: StrudelCodeRange[]
+  callNames: string[]
+}
+
+/** A variation a layer can take, chained onto the first layer playing one of its roles. */
+export type StrudelPatternIdea = {
+  id: string
+  title: string
+  reason: string
+  snippet: string
+  /** The call that shows a layer already has this variation. */
+  callName: string
+  targetRoles: StrudelInstrumentRole[]
+}
+
+/** What every hint is built from: the code, what was read from it, and its style. */
+export type StrudelHintContext = {
+  code: string
+  facts: StrudelCodeFacts
+  style: StrudelMusicStyle
+}
+
+export type StrudelCodeEdit = {
+  from: number
+  to: number
+  insert: string
+}
+
+/** Review what is there, fill what the style is missing, or keep going with an idea. */
+export type StrudelHintKind = 'review' | 'tempo' | 'instrument' | 'visual' | 'idea'
+
+/** What a hint's button does: add code, mute a layer with `_$:`, or remove code. */
+export type StrudelHintAction = 'Add' | 'Mute' | 'Remove'
 
 export type StrudelHint = {
   id: string
   kind: StrudelHintKind
   title: string
   reason: string
-  /** The code the Add button inserts. */
+  /** The code the hint shows. */
   snippet: string
+  actionLabel: StrudelHintAction
+  /** What the button changes, worked out from the code the hint was built from. */
+  edits: StrudelCodeEdit[]
 }
 
 export type StrudelTabId =

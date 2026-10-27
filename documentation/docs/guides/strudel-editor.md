@@ -51,11 +51,18 @@ pattern that fails to evaluate shows its error under the editor instead of playi
 
 ## Hints
 
-The hints tab names the pattern's style and lists what the code is missing for it. Each hint
-says why it matters for that style, shows the code it adds, and has an **Add** button that writes
-that code in. The list follows the code as you type.
+The hints tab names the pattern's style and goes through the code in three groups, each hint
+saying why it matters and showing the code it changes:
 
-![The hints tab for a pattern whose first line reads "deep house groove": a tempo, four instruments and two visuals to add](/img/strudel-editor/hints-tab.webp)
+- **Review what is there**: layers to mute or visuals to remove, so the hints don't only ever
+  add.
+- **Missing for** the style: the tempo, instruments and visuals it is usually built with.
+- **Keep going**: variations to take a finished pattern further.
+
+Each hint's button (**Add**, **Mute** or **Remove**) makes the change. The list follows the code
+as you type.
+
+![The hints tab for a breakbeat pattern: layers to review, and ideas to keep going](/img/strudel-editor/hints-tab.webp)
 
 The style comes from the first of these that names one, and the tab says which:
 
@@ -68,20 +75,32 @@ breakbeat. Each has a usual tempo range, the instruments it is built from, and t
 suit it. The table is `STRUDEL_MUSIC_STYLES` in the editor's `config.ts`, and nothing is sent
 anywhere.
 
-| Hint           | When it shows                                             | What Add writes                                                            |
-| -------------- | --------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Tempo**      | no `setcps` or `setcpm`, or one outside the style's range | `setcps(<bpm>/60/4)`, replacing the tempo set or under the header comments |
-| **Instrument** | none of the code's sounds or calls plays that part        | a new `$:` block with the layer                                            |
-| **Visual**     | the code has a pattern but doesn't draw that visual yet   | `._punchcard()` or similar, chained onto the last pattern                  |
+| Hint           | When it shows                                                  | What its button does                                                           |
+| -------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Review**     | a line draws more than one visual                              | removes all but the first, which would otherwise draw over each other          |
+|                | a `$:` block plays only instruments the style isn't built with | mutes it as `_$:`, which keeps it in the code; delete the `_` to bring it back |
+|                | a `$:` block plays only parts an earlier layer already plays   | mutes it the same way                                                          |
+| **Tempo**      | no `setcps` or `setcpm`, or one outside the style's range      | `setcps(<bpm>/60/4)`, replacing the tempo set or under the header comments     |
+| **Instrument** | none of the code's sounds or calls plays that part             | a new `$:` block with the layer                                                |
+| **Visual**     | the style suits it, and a layer it fits draws nothing yet      | `._punchcard()` or similar, chained onto that layer                            |
+| **Keep going** | a layer it suits doesn't have it yet; three at a time          | `.mask("<1 1 1 0>")` or similar, chained onto that layer                       |
+
+Each visual goes on the layer it suits: a punchcard on the drums, a pianoroll on the melody or
+chords, a scope on the bass. A layer that already draws something is never offered a second
+visual, so no two draw over each other. The ideas are a breakdown every fourth bar, a filter
+sweep, a phrase turned round, drum fills, swing, stereo spread and an echo; their table is
+`STRUDEL_PATTERN_IDEAS`. To keep a version you like, save it in the patterns tab and build a
+variation on a copy.
 
 Instruments are read from sound names in strings (`bd` is a kick, `hh` a hi-hat, `jvbass` a bass),
 from notes (octave 2 and below is bass, above is melody), and from calls (`chord` and `voicing`
 are chords, `scale` a melody). Words in comments name the style but never an instrument, so
-`// bass and hats` counts as neither.
+`// bass and hats` counts as neither. A muted block counts as nothing.
 
 Strudel plays only the `$:` blocks once any exists, so the first instrument added to a plain
-pattern turns that pattern into a block too, and both keep playing. Every snippet uses only the
-sounds the editor loads and Strudel's built-in synths.
+pattern turns that pattern into a block too, and both keep playing. Only `$:` blocks can be muted
+on their own, so a single plain pattern is never reviewed. Every snippet uses only the sounds the
+editor loads and Strudel's built-in synths.
 
 ## The code editor
 
