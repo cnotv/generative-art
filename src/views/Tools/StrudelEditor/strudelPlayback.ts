@@ -1,7 +1,9 @@
-import { DEFAULT_SAMPLE_BANK, STRUDEL_DRAW_TIME, STRUDEL_NO_DRAW_TIME } from './config'
+import { DEFAULT_CPS, DEFAULT_SAMPLE_BANK, STRUDEL_DRAW_TIME, STRUDEL_NO_DRAW_TIME } from './config'
+import { downloadWavFile, renderStrudelPatternToWav } from './strudelOfflineRender'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
+  StrudelExportOptions,
   StrudelPlayback,
   StrudelPlaybackHooks
 } from './types'
@@ -22,6 +24,7 @@ type StrudelEngine = {
   synthRegistrar: UnknownCallable
   sampleBankLoader: UnknownCallable
   contextGetter: UnknownCallable
+  audioModule: Record<string, unknown>
   scheduleHandler: unknown
   codeTranspiler: unknown
   scopeModules: unknown[]
@@ -51,6 +54,9 @@ const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
   }
   await resumeFunction.call(audioContext)
 }
+
+const readCyclesPerSecond = (scheduler: unknown): number =>
+  isRecordModule(scheduler) && typeof scheduler.cps === 'number' ? scheduler.cps : DEFAULT_CPS
 
 const toUnknownList = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
 
@@ -98,7 +104,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     import('@strudel/tonal'),
     import('@strudel/transpiler'),
     import('@strudel/draw'),
-    import('@strudel/midi')
+    import('@strudel/midi/midi.mjs')
   ])
   // Importing the editor module registers _pianoroll, _scope and the other inline widgets
   // with the transpiler, and supplies the sliderWithID that slider() is rewritten into.
@@ -117,6 +123,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     synthRegistrar: toCallable(webaudioModule.registerSynthSounds),
     sampleBankLoader: toCallable(webaudioModule.samples),
     contextGetter: toCallable(webaudioModule.getAudioContext),
+    audioModule: webaudioModule,
     scheduleHandler: webaudioModule.webaudioOutput,
     codeTranspiler: transpilerModule.transpiler,
     scopeModules: [
@@ -210,7 +217,7 @@ export const loadDefaultStrudelPlayback = async (
   const engine = await loadStrudelEngine()
   await engine.audioInitializer()
   engine.synthRegistrar()
-  const audioContext: unknown = await engine.contextGetter()
+  const audioContext: unknown = engine.contextGetter()
   await resumeAudioContext(audioContext)
   await engine.sampleBankLoader(DEFAULT_SAMPLE_BANK)
   await engine.scopeInitializer(...engine.scopeModules)
@@ -268,6 +275,29 @@ export const loadDefaultStrudelPlayback = async (
     },
     stopPlayback: async (): Promise<void> => {
       await stopFunction()
+    },
+    renderToWav: async (
+      patternCode: string,
+      exportOptions: StrudelExportOptions
+    ): Promise<StrudelEvaluationResult> => {
+      await stopFunction()
+      latestEvaluationError = null
+      const pattern: unknown = await evaluateFunction(patternCode, false)
+      if (latestEvaluationError !== null || pattern === undefined) {
+        return { success: false, errorMessage: describeError(latestEvaluationError) }
+      }
+      try {
+        const wavFile = await renderStrudelPatternToWav(
+          engine.audioModule,
+          pattern,
+          readCyclesPerSecond(replScheduler),
+          exportOptions
+        )
+        downloadWavFile(wavFile, exportOptions.fileName)
+        return { success: true }
+      } catch (error) {
+        return { success: false, errorMessage: describeError(error) }
+      }
     }
   }
 }

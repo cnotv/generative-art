@@ -11,24 +11,27 @@ import type {
   StrudelFlowDelayData,
   StrudelFlowDrumInstrument,
   StrudelFlowDrumRow,
+  StrudelFlowEffectData,
   StrudelFlowEnvelopeData,
   StrudelFlowFilterData,
   StrudelFlowLevelData,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
+  StrudelFlowNotesData,
   StrudelFlowPadData,
+  StrudelFlowSamplesData,
   StrudelFlowScopeData,
-  StrudelFlowSpaceData
+  StrudelFlowSpaceData,
+  StrudelFlowVoiceData
 } from './types'
 
-const INSTRUMENT_KINDS: StrudelFlowNodeKind[] = ['pad', 'beats', 'chords', 'code']
-const EFFECT_KINDS: StrudelFlowNodeKind[] = [
-  'filter',
-  'delay',
-  'space',
-  'level',
-  'envelope',
-  'scope'
+const INSTRUMENT_KINDS: StrudelFlowNodeKind[] = [
+  'pad',
+  'beats',
+  'chords',
+  'notes',
+  'samples',
+  'code'
 ]
 
 /** A label shown on a drum row and in the step grid, by its Strudel sound name. */
@@ -38,14 +41,16 @@ export const STRUDEL_FLOW_DRUM_LABELS: Record<StrudelFlowDrumRow['instrument'], 
   hh: 'Hi-hat'
 }
 
-/** The pad pattern the node opens with: a rising arpeggio over five steps. */
+/** The pad pattern the node opens with: an arpeggio rising and falling over eight steps. */
 const STARTER_PAD_NOTES: [step: number, note: number][] = [
-  [0, 0],
-  [0, 4],
-  [1, 2],
-  [2, 4],
-  [3, 2],
-  [4, 0]
+  [0, 7],
+  [1, 5],
+  [2, 3],
+  [3, 1],
+  [4, 3],
+  [5, 2],
+  [6, 6],
+  [7, 3]
 ]
 const STARTER_PAD_CELLS = new Set(STARTER_PAD_NOTES.map(([step, note]) => `${step}:${note}`))
 
@@ -62,14 +67,13 @@ export const createDefaultPadGrid = (): boolean[][] =>
 
 export const STRUDEL_FLOW_PAD_DEFAULTS: StrudelFlowPadData = {
   kind: 'pad',
-  steps: 5,
+  steps: 8,
   mode: 'arp',
   octave: 3,
   key: 'C',
   scaleType: 'major',
   grid: createDefaultPadGrid(),
-  columnModifiers: {},
-  sound: 'triangle'
+  columnModifiers: {}
 }
 
 export const STRUDEL_FLOW_CHORDS_DEFAULTS: StrudelFlowChordsData = {
@@ -77,13 +81,33 @@ export const STRUDEL_FLOW_CHORDS_DEFAULTS: StrudelFlowChordsData = {
   key: 'C',
   octave: 4,
   scaleType: 'major',
-  chordProgression: [0, 5, 3, 4],
-  sound: 'sawtooth'
+  chordProgression: [0, 5, 3, 4]
+}
+
+export const STRUDEL_FLOW_NOTES_DEFAULTS: StrudelFlowNotesData = {
+  kind: 'notes',
+  pattern: 'c3 [e3 g3] a3 [g3 e3]'
+}
+
+export const STRUDEL_FLOW_SAMPLES_DEFAULTS: StrudelFlowSamplesData = {
+  kind: 'samples',
+  pattern: 'bd*2 [~ sd] bd sd'
 }
 
 export const STRUDEL_FLOW_CODE_DEFAULTS: StrudelFlowCodeData = {
   kind: 'code',
-  code: 'n("<[0,2,4,6] [5,7,9,11]>").scale("C3:major").sound("triangle").slow(2)'
+  code: 'n("<[0,2,4,6] [5,7,9,11]>").scale("C3:major").slow(2)'
+}
+
+export const STRUDEL_FLOW_VOICE_DEFAULTS: StrudelFlowVoiceData = {
+  kind: 'voice',
+  sound: 'triangle'
+}
+
+export const STRUDEL_FLOW_EFFECT_DEFAULTS: StrudelFlowEffectData = {
+  kind: 'effect',
+  method: 'fast',
+  argument: '2'
 }
 
 export const STRUDEL_FLOW_FILTER_DEFAULTS: StrudelFlowFilterData = {
@@ -138,43 +162,30 @@ export const createDefaultDrumRows = (): StrudelFlowDrumRow[] =>
     steps: [...row.steps]
   }))
 
+const NODE_DATA_FACTORIES: { [Kind in StrudelFlowNodeKind]: () => StrudelFlowNodeData } = {
+  pad: () => ({ ...STRUDEL_FLOW_PAD_DEFAULTS, grid: createDefaultPadGrid(), columnModifiers: {} }),
+  beats: () => ({ kind: 'beats', rows: createDefaultDrumRows() }),
+  chords: () => ({ ...STRUDEL_FLOW_CHORDS_DEFAULTS, chordProgression: [0, 5, 3, 4] }),
+  notes: () => ({ ...STRUDEL_FLOW_NOTES_DEFAULTS }),
+  samples: () => ({ ...STRUDEL_FLOW_SAMPLES_DEFAULTS }),
+  code: () => ({ ...STRUDEL_FLOW_CODE_DEFAULTS }),
+  voice: () => ({ ...STRUDEL_FLOW_VOICE_DEFAULTS }),
+  filter: () => ({ ...STRUDEL_FLOW_FILTER_DEFAULTS }),
+  delay: () => ({ ...STRUDEL_FLOW_DELAY_DEFAULTS }),
+  space: () => ({ ...STRUDEL_FLOW_SPACE_DEFAULTS }),
+  level: () => ({ ...STRUDEL_FLOW_LEVEL_DEFAULTS }),
+  envelope: () => ({ ...STRUDEL_FLOW_ENVELOPE_DEFAULTS }),
+  scope: () => ({ ...STRUDEL_FLOW_SCOPE_DEFAULTS }),
+  effect: () => ({ ...STRUDEL_FLOW_EFFECT_DEFAULTS })
+}
+
 /**
  * The settings a node of this kind starts with.
  * @param kind - the node kind
  * @returns fresh node data, including arrays that are safe to edit in place
  */
-// The switch is one branch per node kind; splitting it would only hide that shape.
-// eslint-disable-next-line complexity
-export const createStrudelFlowNodeData = (kind: StrudelFlowNodeKind): StrudelFlowNodeData => {
-  switch (kind) {
-    case 'pad':
-      return {
-        ...STRUDEL_FLOW_PAD_DEFAULTS,
-        grid: createDefaultPadGrid(),
-        columnModifiers: {}
-      }
-    case 'beats':
-      return { kind, rows: createDefaultDrumRows() }
-    case 'chords':
-      return { ...STRUDEL_FLOW_CHORDS_DEFAULTS, chordProgression: [0, 5, 3, 4] }
-    case 'code':
-      return { ...STRUDEL_FLOW_CODE_DEFAULTS }
-    case 'filter':
-      return { ...STRUDEL_FLOW_FILTER_DEFAULTS }
-    case 'delay':
-      return { ...STRUDEL_FLOW_DELAY_DEFAULTS }
-    case 'space':
-      return { ...STRUDEL_FLOW_SPACE_DEFAULTS }
-    case 'level':
-      return { ...STRUDEL_FLOW_LEVEL_DEFAULTS }
-    case 'envelope':
-      return { ...STRUDEL_FLOW_ENVELOPE_DEFAULTS }
-    case 'scope':
-      return { ...STRUDEL_FLOW_SCOPE_DEFAULTS }
-    default:
-      throw new Error(`Unsupported node kind: ${kind}`)
-  }
-}
+export const createStrudelFlowNodeData = (kind: StrudelFlowNodeKind): StrudelFlowNodeData =>
+  NODE_DATA_FACTORIES[kind]()
 
 /**
  * Whether a node kind starts a pattern rather than transforming one.
@@ -185,12 +196,13 @@ export const isStrudelFlowInstrumentKind = (kind: StrudelFlowNodeKind): boolean 
   INSTRUMENT_KINDS.includes(kind)
 
 /**
- * Whether a node kind transforms an incoming pattern.
+ * Whether a node kind transforms an incoming pattern. Sounds count: a voice reshapes the notes
+ * it is given rather than starting a pattern.
  * @param kind - the node kind
- * @returns true for an effect
+ * @returns true for an effect or a sound
  */
 export const isStrudelFlowEffectKind = (kind: StrudelFlowNodeKind): boolean =>
-  EFFECT_KINDS.includes(kind)
+  !INSTRUMENT_KINDS.includes(kind)
 
 /**
  * The scope scale clamped to the range its knob can draw.

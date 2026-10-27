@@ -10,7 +10,6 @@ import type { StrudelFlowPadData } from '../../types'
 import StrudelFlowAccordion from './StrudelFlowAccordion.vue'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 import StrudelFlowStepper from './StrudelFlowStepper.vue'
-import StrudelFlowVoiceControls from './StrudelFlowVoiceControls.vue'
 
 const props = defineProps<{
   data: StrudelFlowPadData
@@ -149,7 +148,6 @@ const onModifierChange = (stepIndex: number, event: Event): void => {
           </div>
         </div>
       </div>
-      <StrudelFlowVoiceControls :sound="data.sound" @update:sound="update({ sound: $event })" />
     </StrudelFlowAccordion>
   </div>
 </template>

@@ -6,7 +6,7 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     kind: 'pad',
     title: 'Pad',
     category: 'Instruments',
-    description: 'A melodic phrase with its own synth.'
+    description: 'An eight-step note grid on a key and scale.'
   },
   {
     kind: 'beats',
@@ -21,10 +21,28 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     description: 'A chord progression with editable scale degrees.'
   },
   {
+    kind: 'notes',
+    title: 'Notes',
+    category: 'Instruments',
+    description: 'A note line in mini notation, such as c3 [e3 g3].'
+  },
+  {
+    kind: 'samples',
+    title: 'Samples',
+    category: 'Instruments',
+    description: 'A sample line in mini notation, such as bd*2 sd.'
+  },
+  {
     kind: 'code',
     title: 'Code',
     category: 'Instruments',
     description: 'One custom Strudel expression.'
+  },
+  {
+    kind: 'voice',
+    title: 'Voice',
+    category: 'Sounds',
+    description: 'The synth or sample bank that plays the notes.'
   },
   {
     kind: 'filter',
@@ -61,6 +79,12 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     title: 'Scope',
     category: 'Effects',
     description: 'A waveform scope with a zoom scale.'
+  },
+  {
+    kind: 'effect',
+    title: 'Effect',
+    category: 'Effects',
+    description: 'Any other Strudel call, such as fast(2) or jux(rev).'
   }
 ]
 

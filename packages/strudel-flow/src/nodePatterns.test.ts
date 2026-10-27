@@ -16,7 +16,6 @@ const defaultPad = (overrides: Partial<StrudelFlowPadData> = {}): StrudelFlowPad
   scaleType: 'major',
   grid: makePadGrid({ 0: [0, 4], 1: [2], 2: [4], 3: [2], 4: [0] }),
   columnModifiers: {},
-  sound: 'triangle',
   ...overrides
 })
 
@@ -45,8 +44,7 @@ describe('generateStrudelFlowNodePattern', () => {
       octave: 4,
       scaleType: 'major' as const,
       chordProgression: [0, 5],
-      chordNotes: [[], []],
-      sound: 'sawtooth'
+      chordNotes: [[], []]
     }
     const silentBeats = {
       kind: 'beats' as const,
@@ -64,16 +62,15 @@ describe('generateStrudelFlowNodePattern', () => {
     expect(beatsPattern).toBe('')
   })
 
-  it('writes a pad arpeggio and a chord progression with their voice', () => {
+  it('writes a pad arpeggio and a chord progression', () => {
     // Arrange
-    const pad = defaultPad({ sound: 'sine', steps: 2, grid: makePadGrid({ 0: [0, 2], 1: [4] }) })
+    const pad = defaultPad({ steps: 2, grid: makePadGrid({ 0: [0, 2], 1: [4] }) })
     const chords = {
       kind: 'chords' as const,
       key: 'D',
       octave: 4,
       scaleType: 'minor' as const,
-      chordProgression: [0, 5],
-      sound: 'square'
+      chordProgression: [0, 5]
     }
 
     // Act
@@ -81,8 +78,8 @@ describe('generateStrudelFlowNodePattern', () => {
     const chordsPattern = generateStrudelFlowNodePattern(chords, '')
 
     // Assert
-    expect(padPattern).toBe('n("[0 2] [4]").scale("C3:major").sound("sine")')
-    expect(chordsPattern).toBe('n("<[0,2,4] [5,7,9]>").scale("D4:minor").sound("square")')
+    expect(padPattern).toBe('n("[0 2] [4]").scale("C3:major")')
+    expect(chordsPattern).toBe('n("<[0,2,4] [5,7,9]>").scale("D4:minor")')
   })
 
   it('writes chord mode and step modifiers into a pad pattern', () => {
@@ -98,7 +95,7 @@ describe('generateStrudelFlowNodePattern', () => {
     const pattern = generateStrudelFlowNodePattern(pad, '')
 
     // Assert
-    expect(pattern).toBe('n("[0, 2, 4]*2 [7] [1]!3").scale("C3:major").sound("triangle")')
+    expect(pattern).toBe('n("[0, 2, 4]*2 [7] [1]!3").scale("C3:major")')
   })
 
   it('writes hand-edited chord tones instead of a generated triad', () => {
@@ -109,15 +106,14 @@ describe('generateStrudelFlowNodePattern', () => {
       octave: 4,
       scaleType: 'major' as const,
       chordProgression: [0],
-      chordNotes: [[0, 3, 7]],
-      sound: 'sine'
+      chordNotes: [[0, 3, 7]]
     }
 
     // Act
     const pattern = generateStrudelFlowNodePattern(chords, '')
 
     // Assert
-    expect(pattern).toBe('n("<[0,3,7]>").scale("C4:major").sound("sine")')
+    expect(pattern).toBe('n("<[0,3,7]>").scale("C4:major")')
   })
 
   it('writes one drum row as a struct and several as a stack', () => {
@@ -152,7 +148,7 @@ describe('generateStrudelFlowNodePattern', () => {
     const pattern = generateStrudelFlowNodePattern(code, '')
 
     // Assert
-    expect(pattern).toBe('(\nn("0 2 4").scale("C3:major")\n)')
+    expect(pattern).toBe('(n("0 2 4").scale("C3:major"))')
   })
 
   it.each([

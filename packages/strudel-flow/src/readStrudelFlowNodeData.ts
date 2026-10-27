@@ -12,7 +12,6 @@ import {
   STRUDEL_FLOW_PAD_NOTE_COUNT,
   STRUDEL_FLOW_PAD_STEP_COUNT,
   STRUDEL_FLOW_SCALE_OPTIONS,
-  STRUDEL_FLOW_SOUND_OPTIONS,
   STRUDEL_FLOW_STEP_COUNT
 } from './config'
 import {
@@ -21,12 +20,16 @@ import {
   STRUDEL_FLOW_CHORDS_DEFAULTS,
   STRUDEL_FLOW_CODE_DEFAULTS,
   STRUDEL_FLOW_DELAY_DEFAULTS,
+  STRUDEL_FLOW_EFFECT_DEFAULTS,
   STRUDEL_FLOW_ENVELOPE_DEFAULTS,
   STRUDEL_FLOW_FILTER_DEFAULTS,
   STRUDEL_FLOW_LEVEL_DEFAULTS,
+  STRUDEL_FLOW_NOTES_DEFAULTS,
   STRUDEL_FLOW_PAD_DEFAULTS,
+  STRUDEL_FLOW_SAMPLES_DEFAULTS,
   STRUDEL_FLOW_SCOPE_DEFAULTS,
-  STRUDEL_FLOW_SPACE_DEFAULTS
+  STRUDEL_FLOW_SPACE_DEFAULTS,
+  STRUDEL_FLOW_VOICE_DEFAULTS
 } from './nodeDefaults'
 import {
   isStoredRecord,
@@ -47,13 +50,17 @@ const NODE_KINDS: StrudelFlowNodeKind[] = [
   'pad',
   'beats',
   'chords',
+  'notes',
+  'samples',
   'code',
+  'voice',
   'filter',
   'delay',
   'space',
   'level',
   'envelope',
-  'scope'
+  'scope',
+  'effect'
 ]
 
 const DRUM_INSTRUMENTS: StrudelFlowDrumInstrument[] = ['bd', 'sd', 'hh']
@@ -159,7 +166,11 @@ const readChordNotes = (value: unknown): number[][] | undefined => {
 export const isStrudelFlowNodeKind = (value: unknown): value is StrudelFlowNodeKind =>
   typeof value === 'string' && NODE_KINDS.some((kind) => kind === value)
 
+const readMuted = (raw: Record<string, unknown>): { muted?: boolean } =>
+  raw.muted === true ? { muted: true } : {}
+
 const readPad = (raw: Record<string, unknown>): StrudelFlowPadData => ({
+  ...readMuted(raw),
   kind: 'pad',
   steps: readInteger(raw.steps, STRUDEL_FLOW_PAD_DEFAULTS.steps, 1, STRUDEL_FLOW_PAD_STEP_COUNT),
   mode: readStoredChoice(
@@ -175,13 +186,13 @@ const readPad = (raw: Record<string, unknown>): StrudelFlowPadData => ({
     STRUDEL_FLOW_PAD_DEFAULTS.scaleType
   ),
   grid: readPadGrid(raw.grid),
-  columnModifiers: readPadColumnModifiers(raw.columnModifiers),
-  sound: readStoredChoice(STRUDEL_FLOW_SOUND_OPTIONS, raw.sound, STRUDEL_FLOW_PAD_DEFAULTS.sound)
+  columnModifiers: readPadColumnModifiers(raw.columnModifiers)
 })
 
 const readChords = (raw: Record<string, unknown>): StrudelFlowChordsData => {
   const chordNotes = readChordNotes(raw.chordNotes)
   return {
+    ...readMuted(raw),
     kind: 'chords',
     key: readStoredChoice(STRUDEL_FLOW_KEY_OPTIONS, raw.key, STRUDEL_FLOW_CHORDS_DEFAULTS.key),
     octave: readInteger(raw.octave, STRUDEL_FLOW_CHORDS_DEFAULTS.octave, 1, 8),
@@ -191,13 +202,101 @@ const readChords = (raw: Record<string, unknown>): StrudelFlowChordsData => {
       STRUDEL_FLOW_CHORDS_DEFAULTS.scaleType
     ) as StrudelFlowChordsData['scaleType'],
     chordProgression: readChordProgression(raw.chordProgression),
-    ...(chordNotes === undefined ? {} : { chordNotes }),
-    sound: readStoredChoice(
-      STRUDEL_FLOW_SOUND_OPTIONS,
-      raw.sound,
-      STRUDEL_FLOW_CHORDS_DEFAULTS.sound
-    )
+    ...(chordNotes === undefined ? {} : { chordNotes })
   }
+}
+
+type NodeDataReader = (raw: Record<string, unknown>) => StrudelFlowNodeData
+
+const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
+  pad: readPad,
+  beats: (raw) => ({ ...readMuted(raw), kind: 'beats', rows: readDrumRows(raw.rows) }),
+  chords: readChords,
+  notes: (raw) => ({
+    ...readMuted(raw),
+    kind: 'notes',
+    pattern: readStoredString(raw.pattern, STRUDEL_FLOW_NOTES_DEFAULTS.pattern)
+  }),
+  samples: (raw) => ({
+    ...readMuted(raw),
+    kind: 'samples',
+    pattern: readStoredString(raw.pattern, STRUDEL_FLOW_SAMPLES_DEFAULTS.pattern)
+  }),
+  code: (raw) => ({
+    ...readMuted(raw),
+    kind: 'code',
+    code: readStoredString(raw.code, STRUDEL_FLOW_CODE_DEFAULTS.code)
+  }),
+  voice: (raw) => ({
+    kind: 'voice',
+    sound: readStoredString(raw.sound, STRUDEL_FLOW_VOICE_DEFAULTS.sound)
+  }),
+  filter: (raw) => ({
+    kind: 'filter',
+    cutoff: readStoredNumber(
+      raw.cutoff,
+      STRUDEL_FLOW_FILTER_DEFAULTS.cutoff,
+      STRUDEL_FLOW_MIN_FILTER_CUTOFF,
+      STRUDEL_FLOW_MAX_FILTER_CUTOFF
+    ),
+    resonance: readStoredNumber(
+      raw.resonance,
+      STRUDEL_FLOW_FILTER_DEFAULTS.resonance,
+      STRUDEL_FLOW_MIN_FILTER_RESONANCE,
+      STRUDEL_FLOW_MAX_FILTER_RESONANCE
+    )
+  }),
+  delay: (raw) => ({
+    kind: 'delay',
+    mix: readStoredNumber(raw.mix, STRUDEL_FLOW_DELAY_DEFAULTS.mix, 0, 1),
+    time: readStoredNumber(raw.time, STRUDEL_FLOW_DELAY_DEFAULTS.time, 0, 1),
+    feedback: readStoredNumber(raw.feedback, STRUDEL_FLOW_DELAY_DEFAULTS.feedback, 0, 1)
+  }),
+  space: (raw) => ({
+    kind: 'space',
+    room: readStoredNumber(raw.room, STRUDEL_FLOW_SPACE_DEFAULTS.room, 0, 1),
+    roomSize: readStoredNumber(
+      raw.roomSize,
+      STRUDEL_FLOW_SPACE_DEFAULTS.roomSize,
+      0,
+      STRUDEL_FLOW_MAX_ROOM_SIZE
+    ),
+    roomFade: readStoredNumber(raw.roomFade, STRUDEL_FLOW_SPACE_DEFAULTS.roomFade, 0, 10),
+    roomLowPass: readStoredNumber(
+      raw.roomLowPass,
+      STRUDEL_FLOW_SPACE_DEFAULTS.roomLowPass,
+      0,
+      20000
+    ),
+    roomDim: readStoredNumber(raw.roomDim, STRUDEL_FLOW_SPACE_DEFAULTS.roomDim, 0, 20000)
+  }),
+  level: (raw) => ({
+    kind: 'level',
+    gain: readStoredNumber(raw.gain, STRUDEL_FLOW_LEVEL_DEFAULTS.gain, 0, 2),
+    pan: readStoredNumber(raw.pan, STRUDEL_FLOW_LEVEL_DEFAULTS.pan, 0, 1),
+    postgain: readStoredNumber(raw.postgain, STRUDEL_FLOW_LEVEL_DEFAULTS.postgain, 0, 2)
+  }),
+  envelope: (raw) => ({
+    kind: 'envelope',
+    attack: readStoredNumber(raw.attack, STRUDEL_FLOW_ENVELOPE_DEFAULTS.attack, 0, 2),
+    decay: readStoredNumber(raw.decay, STRUDEL_FLOW_ENVELOPE_DEFAULTS.decay, 0, 2),
+    sustain: readStoredNumber(raw.sustain, STRUDEL_FLOW_ENVELOPE_DEFAULTS.sustain, 0, 1),
+    release: readStoredNumber(raw.release, STRUDEL_FLOW_ENVELOPE_DEFAULTS.release, 0, 2)
+  }),
+  scope: (raw) => ({
+    kind: 'scope',
+    scale: readStoredNumber(
+      raw.scale,
+      STRUDEL_FLOW_SCOPE_DEFAULTS.scale,
+      STRUDEL_FLOW_MIN_SCOPE_SCALE,
+      STRUDEL_FLOW_MAX_SCOPE_SCALE
+    )
+  }),
+  effect: (raw) => ({
+    kind: 'effect',
+    method: readStoredString(raw.method, STRUDEL_FLOW_EFFECT_DEFAULTS.method),
+    argument: readStoredString(raw.argument, STRUDEL_FLOW_EFFECT_DEFAULTS.argument)
+  })
 }
 
 /**
@@ -210,87 +309,4 @@ const readChords = (raw: Record<string, unknown>): StrudelFlowChordsData => {
 export const readStrudelFlowNodeData = (
   kind: StrudelFlowNodeKind,
   rawData: unknown
-  // The switch is one branch per node kind; splitting it would only hide that shape.
-  // eslint-disable-next-line complexity
-): StrudelFlowNodeData => {
-  const raw = isStoredRecord(rawData) ? rawData : {}
-  switch (kind) {
-    case 'pad':
-      return readPad(raw)
-    case 'beats':
-      return { kind, rows: readDrumRows(raw.rows) }
-    case 'chords':
-      return readChords(raw)
-    case 'code':
-      return { kind, code: readStoredString(raw.code, STRUDEL_FLOW_CODE_DEFAULTS.code) }
-    case 'filter':
-      return {
-        kind,
-        cutoff: readStoredNumber(
-          raw.cutoff,
-          STRUDEL_FLOW_FILTER_DEFAULTS.cutoff,
-          STRUDEL_FLOW_MIN_FILTER_CUTOFF,
-          STRUDEL_FLOW_MAX_FILTER_CUTOFF
-        ),
-        resonance: readStoredNumber(
-          raw.resonance,
-          STRUDEL_FLOW_FILTER_DEFAULTS.resonance,
-          STRUDEL_FLOW_MIN_FILTER_RESONANCE,
-          STRUDEL_FLOW_MAX_FILTER_RESONANCE
-        )
-      }
-    case 'delay':
-      return {
-        kind,
-        mix: readStoredNumber(raw.mix, STRUDEL_FLOW_DELAY_DEFAULTS.mix, 0, 1),
-        time: readStoredNumber(raw.time, STRUDEL_FLOW_DELAY_DEFAULTS.time, 0, 1),
-        feedback: readStoredNumber(raw.feedback, STRUDEL_FLOW_DELAY_DEFAULTS.feedback, 0, 1)
-      }
-    case 'space':
-      return {
-        kind,
-        room: readStoredNumber(raw.room, STRUDEL_FLOW_SPACE_DEFAULTS.room, 0, 1),
-        roomSize: readStoredNumber(
-          raw.roomSize,
-          STRUDEL_FLOW_SPACE_DEFAULTS.roomSize,
-          0,
-          STRUDEL_FLOW_MAX_ROOM_SIZE
-        ),
-        roomFade: readStoredNumber(raw.roomFade, STRUDEL_FLOW_SPACE_DEFAULTS.roomFade, 0, 10),
-        roomLowPass: readStoredNumber(
-          raw.roomLowPass,
-          STRUDEL_FLOW_SPACE_DEFAULTS.roomLowPass,
-          0,
-          20000
-        ),
-        roomDim: readStoredNumber(raw.roomDim, STRUDEL_FLOW_SPACE_DEFAULTS.roomDim, 0, 20000)
-      }
-    case 'level':
-      return {
-        kind,
-        gain: readStoredNumber(raw.gain, STRUDEL_FLOW_LEVEL_DEFAULTS.gain, 0, 2),
-        pan: readStoredNumber(raw.pan, STRUDEL_FLOW_LEVEL_DEFAULTS.pan, 0, 1),
-        postgain: readStoredNumber(raw.postgain, STRUDEL_FLOW_LEVEL_DEFAULTS.postgain, 0, 2)
-      }
-    case 'envelope':
-      return {
-        kind,
-        attack: readStoredNumber(raw.attack, STRUDEL_FLOW_ENVELOPE_DEFAULTS.attack, 0, 2),
-        decay: readStoredNumber(raw.decay, STRUDEL_FLOW_ENVELOPE_DEFAULTS.decay, 0, 2),
-        sustain: readStoredNumber(raw.sustain, STRUDEL_FLOW_ENVELOPE_DEFAULTS.sustain, 0, 1),
-        release: readStoredNumber(raw.release, STRUDEL_FLOW_ENVELOPE_DEFAULTS.release, 0, 2)
-      }
-    case 'scope':
-      return {
-        kind,
-        scale: readStoredNumber(
-          raw.scale,
-          STRUDEL_FLOW_SCOPE_DEFAULTS.scale,
-          STRUDEL_FLOW_MIN_SCOPE_SCALE,
-          STRUDEL_FLOW_MAX_SCOPE_SCALE
-        )
-      }
-    default:
-      throw new Error(`Unsupported node kind: ${kind}`)
-  }
-}
+): StrudelFlowNodeData => NODE_DATA_READERS[kind](isStoredRecord(rawData) ? rawData : {})

@@ -53,10 +53,17 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
   plugins: [vue(), wasm(), ...(useHttps ? [basicSsl()] : [])],
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      ...packageAliases
-    },
+    alias: [
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+      ...Object.entries(packageAliases).map(([find, replacement]) => ({ find, replacement })),
+      // @strudel/midi's source reaches superdough through a monorepo-only relative path.
+      {
+        find: /^\.\.\/superdough\/helpers\.mjs$/,
+        replacement: fileURLToPath(
+          new URL('./src/views/Tools/StrudelEditor/strudelMidiScheduling.ts', import.meta.url)
+        )
+      }
+    ],
     dedupe: ['three']
   },
   css: {
@@ -86,7 +93,8 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr']
+    // @strudel/midi stays out of pre-bundling so the alias above can reach its relative import.
+    exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr', '@strudel/midi']
   },
   server: {
     allowedHosts

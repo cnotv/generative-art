@@ -3,6 +3,16 @@ export const STRUDEL_FLOW_PATCH_STORAGE_KEY = 'strudel-flow-patch'
 export const STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE = 120
 export const STRUDEL_FLOW_MIN_BEATS_PER_MINUTE = 1
 export const STRUDEL_FLOW_MAX_BEATS_PER_MINUTE = 300
+export const STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE = 4
+export const STRUDEL_FLOW_BEATS_PER_CYCLE_OPTIONS = [
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4' },
+  { value: '5', label: '5' },
+  { value: '6', label: '6' },
+  { value: '7', label: '7' },
+  { value: '8', label: '8' }
+]
 export const STRUDEL_FLOW_STEP_COUNT = 16
 export const STRUDEL_FLOW_PAD_STEP_COUNT = 16
 export const STRUDEL_FLOW_PAD_NOTE_COUNT = 8

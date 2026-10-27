@@ -16,7 +16,7 @@ let animationFrame = 0
 
 const drawWaveform = (time: number): void => {
   const element = canvas.value
-  const context = element?.getContext('2d')
+  const context = element?.getContext('2d') ?? null
   if (element === null || context === null) {
     return
   }
@@ -33,18 +33,15 @@ const drawWaveform = (time: number): void => {
   context.lineCap = 'round'
   context.beginPath()
   const amplitude = height * 0.04 * (0.5 + props.data.scale)
-  // Canvas drawing is inherently sequential; a loop reads clearer than a mapped range here.
-  // eslint-disable-next-line functional/no-loop-statements
-  for (let x = 0; x <= width; x += 2) {
+  const points = Array.from({ length: Math.floor(width / 2) + 1 }, (_, index) => {
+    const x = index * 2
     const phase = (x / width) * Math.PI * 8 + time / 600
     const envelope = Math.sin((x / width) * Math.PI)
-    const y = height / 2 + Math.sin(phase) * amplitude * envelope
-    if (x === 0) {
-      context.moveTo(x, y)
-    } else {
-      context.lineTo(x, y)
-    }
-  }
+    return { x, y: height / 2 + Math.sin(phase) * amplitude * envelope }
+  })
+  points.forEach((point, index) =>
+    index === 0 ? context.moveTo(point.x, point.y) : context.lineTo(point.x, point.y)
+  )
   context.stroke()
 }
 

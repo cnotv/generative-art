@@ -140,15 +140,13 @@
   cursor: grab;
 }
 
-.strudel-flow-node__title-group {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: var(--spacing-2);
-  min-width: 0;
+.strudel-flow-node__header {
+  position: relative;
 }
 
 .strudel-flow-node__title {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   overflow: hidden;
   font-size: var(--font-size-xs); /* 11px */
@@ -159,19 +157,94 @@
   white-space: nowrap;
 }
 
-.strudel-flow-node__remove {
-  color: var(--sf-muted-foreground);
-}
-
-.strudel-flow-node .strudel-flow-node__remove.btn--icon {
+/* Header icon buttons: the reference's mute toggle and options menu. */
+.strudel-flow-node__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--sf-muted-foreground);
+  cursor: pointer;
 }
 
-.strudel-flow-node__remove:hover,
-.strudel-flow-node__remove:focus-visible {
+.strudel-flow-node__action svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.strudel-flow-node__action:hover,
+.strudel-flow-node__action:focus-visible,
+.strudel-flow-node__action[aria-expanded='true'] {
   background: var(--sf-muted);
   color: var(--sf-card-foreground);
+}
+
+.strudel-flow-node__menu {
+  position: absolute;
+  top: 2.5rem;
+  right: var(--spacing-3);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 9rem;
+  padding: var(--spacing-1);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--radius-md);
+  background: var(--sf-card);
+  box-shadow: var(--sf-shadow);
+  cursor: default;
+}
+
+.strudel-flow-node__menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sf-card-foreground);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.strudel-flow-node__menu-item svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.strudel-flow-node__menu-item:hover,
+.strudel-flow-node__menu-item:focus-visible {
+  background: var(--sf-muted);
+}
+
+.strudel-flow-node__menu-item--danger {
+  color: var(--color-destructive);
+}
+
+.strudel-flow-node__code {
+  margin: 0 var(--spacing-3) var(--spacing-2);
+  padding: var(--spacing-2);
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--sf-muted);
+  color: var(--sf-card-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+  user-select: text;
+}
+
+.strudel-flow-node--muted .strudel-flow-node__body {
+  opacity: 0.45;
 }
 
 /* Node body (the inner rounded card). */
@@ -569,8 +642,22 @@
   width: 26rem;
 }
 
-.strudel-flow-node[data-node-kind='scope'] {
+.strudel-flow-node[data-node-kind='scope'],
+.strudel-flow-node[data-node-kind='voice'],
+.strudel-flow-node[data-node-kind='filter'],
+.strudel-flow-node[data-node-kind='effect'] {
   width: 20rem;
+}
+
+.strudel-flow-node[data-node-kind='notes'],
+.strudel-flow-node[data-node-kind='samples'] {
+  width: 24rem;
+}
+
+.strudel-flow-effect {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-2);
 }
 
 .strudel-flow-node[data-node-kind='level'],
@@ -1299,4 +1386,76 @@
 .strudel-flow-radial__close svg {
   width: 1rem;
   height: 1rem;
+}
+
+/* The tempo bar floats over the top of the canvas, as the reference's transport does. */
+.strudel-flow-toolbar {
+  position: absolute;
+  top: var(--spacing-4);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--radius-lg);
+  background: var(--sf-card);
+  box-shadow: var(--sf-shadow);
+  color: var(--sf-card-foreground);
+  transform: translateX(-50%);
+}
+
+.strudel-flow-toolbar__field {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-1);
+}
+
+.strudel-flow-toolbar__tempo {
+  width: 3.5ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-lg);
+  appearance: textfield;
+}
+
+.strudel-flow-toolbar__tempo::-webkit-inner-spin-button,
+.strudel-flow-toolbar__tempo::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.strudel-flow-toolbar__unit {
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.08em;
+}
+
+.strudel-flow-toolbar__cycle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.strudel-flow-toolbar__cycle select {
+  padding: 0 1.25rem 0 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  appearance: none;
+  cursor: pointer;
+}
+
+.strudel-flow-toolbar__cycle svg {
+  position: absolute;
+  right: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  pointer-events: none;
 }

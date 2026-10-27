@@ -1,6 +1,7 @@
 import type {
   DrumSound,
   StrudelExample,
+  StrudelExportOptions,
   StrudelInstrumentRole,
   StrudelMusicStyle,
   StrudelTabId,
@@ -347,6 +348,24 @@ export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
  * evaluation, or every trigger fails with "sound not found".
  */
 export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'
+
+/** Strudel's own tempo before a pattern sets one: one cycle every two seconds. */
+export const DEFAULT_CPS = 0.5
+
+export const EXPORT_DEFAULT_OPTIONS: StrudelExportOptions = {
+  startCycle: 0,
+  endCycle: 4,
+  sampleRate: 48000,
+  fileName: ''
+}
+export const EXPORT_SAMPLE_RATE_OPTIONS = [
+  { value: '44100', label: '44.1 kHz' },
+  { value: '48000', label: '48 kHz' },
+  { value: '96000', label: '96 kHz' }
+]
+
+/** How long typing or a canvas edit settles before the code and the graph follow each other. */
+export const FLOW_SYNC_DELAY_MS = 300
 
 export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'hints', label: 'hints' },

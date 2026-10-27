@@ -1,47 +1,71 @@
-/* eslint-disable functional/immutable-data, functional/no-loop-statements --
- * Parsing is a stateful scan: blocks, nodes, edges and effect fields are accumulated. */
 import {
+  isStrudelCodeSyntaxValid,
+  isWrappedInParentheses,
+  splitStatements,
+  splitTopLevel,
+  stripLineComments
+} from './codeScanner'
+import {
+  STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE,
   STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE,
   STRUDEL_FLOW_KEY_OPTIONS,
   STRUDEL_FLOW_NODE_COLUMN_GAP,
+  STRUDEL_FLOW_NODE_START_X,
+  STRUDEL_FLOW_NODE_START_Y,
   STRUDEL_FLOW_PAD_MODIFIER_OPTIONS,
   STRUDEL_FLOW_SCALE_OPTIONS
 } from './config'
-import { findStrudelFlowNodePosition } from './layout'
-import { createStrudelFlowNodeData } from './nodeDefaults'
-import { normalizeStrudelFlowBeatsPerMinute } from './tempo'
+import { getStrudelFlowNodeSize } from './layout'
+import { createStrudelFlowNodeData, isStrudelFlowInstrumentKind } from './nodeDefaults'
+import { normalizeStrudelFlowBeatsPerCycle, normalizeStrudelFlowBeatsPerMinute } from './tempo'
 import type {
   StrudelFlowChordsData,
   StrudelFlowDrumRow,
+  StrudelFlowEdge,
   StrudelFlowNode,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
+  StrudelFlowNodePosition,
   StrudelFlowPadData,
   StrudelFlowPatch
 } from './types'
 
-type EffectKind = 'filter' | 'delay' | 'space' | 'level' | 'envelope' | 'scope'
+type Call = { name: string; argument: string }
 
-type EffectValueField =
-  | 'cutoff'
-  | 'resonance'
-  | 'mix'
-  | 'time'
-  | 'feedback'
-  | 'room'
-  | 'roomSize'
-  | 'roomFade'
-  | 'roomLowPass'
-  | 'roomDim'
-  | 'gain'
-  | 'pan'
-  | 'postgain'
-  | 'attack'
-  | 'decay'
-  | 'sustain'
-  | 'release'
+type Scale = Pick<StrudelFlowPadData, 'key' | 'octave' | 'scaleType'>
 
-const EFFECT_CALLS: Record<string, { kind: EffectKind; field?: EffectValueField }> = {
+/** Instruments with the effects only they pass through, as one element of a `stack(...)`. */
+type Branch = { instruments: StrudelFlowNodeData[]; effects: StrudelFlowNodeData[] }
+
+/** Branches, then the effects every branch shares. */
+type ParsedChain = { branches: Branch[]; effects: StrudelFlowNodeData[] }
+
+type Tempo = { beatsPerMinute: number; beatsPerCycle: number }
+
+type EffectKind = 'filter' | 'delay' | 'space' | 'level' | 'envelope'
+
+type EffectCall = { kind: EffectKind; field: string }
+
+type EffectChainState = { effects: StrudelFlowNodeData[]; fieldsOnLast: string[] }
+
+type BuildState = {
+  nodes: StrudelFlowNode[]
+  edges: StrudelFlowEdge[]
+  reusable: StrudelFlowNode[]
+  rowTop: number
+}
+
+const ROW_GAP = 48
+const DEFAULT_SCALE: Scale = { key: 'C', octave: 3, scaleType: 'major' }
+const DRUM_INSTRUMENTS = ['bd', 'sd', 'hh']
+const KEY_ALIASES: Record<string, string> = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' }
+const VOICE_CALLS = new Set(['sound', 's'])
+const SAMPLE_HEADS = new Set(['s', 'sound'])
+const LABEL_PATTERN = /^(_?\$|[A-Z_a-z]\w*)\s*:(?!:)\s*/
+const SETUP_PATTERN = /^(const|let|var|function|async|await|import|class)\b/
+const TEMPO_PATTERN = /^setc(pm|ps)\s*\(([^)]*)\)$/
+
+const EFFECT_CALLS: Record<string, EffectCall> = {
   lpf: { kind: 'filter', field: 'cutoff' },
   lpq: { kind: 'filter', field: 'resonance' },
   delay: { kind: 'delay', field: 'mix' },
@@ -58,101 +82,43 @@ const EFFECT_CALLS: Record<string, { kind: EffectKind; field?: EffectValueField 
   attack: { kind: 'envelope', field: 'attack' },
   decay: { kind: 'envelope', field: 'decay' },
   sustain: { kind: 'envelope', field: 'sustain' },
-  release: { kind: 'envelope', field: 'release' },
-  analyze: { kind: 'scope' }
+  release: { kind: 'envelope', field: 'release' }
 }
 
-type ParsedBlock =
-  | { kind: 'instrument'; data: StrudelFlowNodeData; effects: StrudelFlowNodeData[] }
-  | { kind: 'code'; code: string }
+const isStringLiteral = (value: string): boolean => /^(["'`])[\S\s]*\1$/.test(value.trim())
 
 const readStringLiteral = (literal: string): string => {
-  if (literal.startsWith('"')) {
+  const trimmed = literal.trim()
+  if (trimmed.startsWith('"')) {
     try {
-      return JSON.parse(literal) as string
+      const parsed: unknown = JSON.parse(trimmed)
+      return typeof parsed === 'string' ? parsed : trimmed.slice(1, -1)
     } catch {
-      return literal.slice(1, -1)
+      return trimmed.slice(1, -1)
     }
   }
-  return literal.slice(1, -1).replace(/\\'/g, "'")
+  return trimmed.slice(1, -1).replace(/\\'/g, "'")
 }
 
-const readArgument = (segment: string): { name: string; argument: string } | null => {
-  const match = /^\s*([$A-Z_a-z][\w$]*)\s*\(\s*([\S\s]*?)\s*\)\s*$/.exec(segment)
-  return match === null ? null : { name: match[1], argument: match[2] }
+const readCall = (segment: string): Call | null => {
+  const match = /^\s*([$A-Z_a-z][\w$]*)\s*\(([\S\s]*)\)\s*$/.exec(segment)
+  return match === null ? null : { name: match[1], argument: match[2].trim() }
 }
 
-// The scanner tracks quotes, escapes, nesting and the separator in one pass.
-// eslint-disable-next-line complexity
-const splitTopLevel = (value: string, separator: string): string[] => {
-  const parts: string[] = []
-  let current = ''
-  let quote = ''
-  let escaped = false
-  let depth = 0
-  for (const character of value) {
-    if (escaped) {
-      current += character
-      escaped = false
-      continue
-    }
-    if (character === '\\' && quote.length > 0) {
-      current += character
-      escaped = true
-      continue
-    }
-    if (quote.length > 0) {
-      current += character
-      if (character === quote) {
-        quote = ''
-      }
-      continue
-    }
-    if (character === '"' || character === "'") {
-      quote = character
-      current += character
-      continue
-    }
-    if (character === '(' || character === '[' || character === '{') {
-      depth += 1
-      current += character
-      continue
-    }
-    if (character === ')' || character === ']' || character === '}') {
-      depth -= 1
-      current += character
-      continue
-    }
-    if (character === separator && depth === 0) {
-      if (current.trim().length > 0) {
-        parts.push(current.trim())
-      }
-      current = ''
-      continue
-    }
-    current += character
-  }
-  if (current.trim().length > 0) {
-    parts.push(current.trim())
-  }
-  return parts
+const readNumber = (argument: string): number | null => {
+  const value = Number(argument.trim())
+  return argument.trim().length > 0 && Number.isFinite(value) ? value : null
 }
 
-const splitChain = (expression: string): string[] => splitTopLevel(expression, '.')
+const unwrapParentheses = (expression: string): string | null =>
+  isWrappedInParentheses(expression) ? expression.slice(1, -1).trim() : null
 
-const readScale = (scale: string): Pick<StrudelFlowPadData, 'key' | 'octave' | 'scaleType'> => {
+const readScale = (scale: string): Scale => {
   const match = /^([A-G][#b]?)(-?\d+):(.+)$/.exec(scale)
   if (match === null) {
-    return { key: 'C', octave: 3, scaleType: 'major' }
+    return DEFAULT_SCALE
   }
-  const keyAliases: Record<string, string> = {
-    Db: 'C#',
-    Eb: 'D#',
-    Gb: 'F#',
-    Ab: 'G#',
-    Bb: 'A#'
-  }
-  const key = keyAliases[match[1]] ?? match[1]
+  const key = KEY_ALIASES[match[1]] ?? match[1]
   return {
     key: STRUDEL_FLOW_KEY_OPTIONS.some((option) => option.value === key) ? key : 'C',
     octave: Math.min(8, Math.max(1, Number(match[2]))),
@@ -170,337 +136,502 @@ const readPadStep = (step: string): { notes: number[]; modifier: string } | null
   const notes = match[1]
     .split(/[\s,]+/)
     .filter((note) => note.length > 0 && note !== '~')
-    .map((note) => Number(note))
+    .map(Number)
   if (notes.some((note) => !Number.isInteger(note) || note < 0 || note > 7)) {
     return null
   }
-  const modifier =
-    match[2] !== undefined &&
-    STRUDEL_FLOW_PAD_MODIFIER_OPTIONS.some((option) => option.value === match[2])
-      ? match[2]
-      : ''
+  const modifier = STRUDEL_FLOW_PAD_MODIFIER_OPTIONS.some((option) => option.value === match[2])
+    ? (match[2] ?? '')
+    : ''
   return { notes, modifier }
 }
 
-const readPad = (
-  pattern: string,
-  scale: ReturnType<typeof readScale>,
-  sound: string
-): StrudelFlowPadData | null => {
-  const steps = splitTopLevel(pattern, ' ').flatMap((step) => {
-    const parsedStep = readPadStep(step)
-    return parsedStep === null ? [] : [parsedStep]
-  })
-  if (steps.length === 0 || steps.length > 16) {
+const readPad = (pattern: string, scale: Scale): StrudelFlowPadData | null => {
+  const stepTexts = splitTopLevel(pattern, ' ')
+  const steps = stepTexts.map(readPadStep)
+  if (steps.length === 0 || steps.length > 16 || steps.some((step) => step === null)) {
     return null
   }
-  const grid = Array.from({ length: 16 }, () => Array<boolean>(8).fill(false))
-  const columnModifiers: Record<number, string> = {}
-  steps.forEach((step, stepIndex) => {
-    step.notes.forEach((note) => {
-      grid[stepIndex][note] = true
-    })
-    if (step.modifier.length > 0) {
-      columnModifiers[stepIndex] = step.modifier
-    }
-  })
+  const parsedSteps = steps.filter((step): step is NonNullable<typeof step> => step !== null)
   return {
     kind: 'pad',
-    steps: steps.length,
+    steps: parsedSteps.length,
     mode: pattern.includes(',') ? 'chord' : 'arp',
-    octave: scale.octave,
-    key: scale.key,
-    scaleType: scale.scaleType,
-    grid,
-    columnModifiers,
-    sound
+    ...scale,
+    grid: Array.from({ length: 16 }, (_, stepIndex) =>
+      Array.from(
+        { length: 8 },
+        (_, noteIndex) => parsedSteps[stepIndex]?.notes.includes(noteIndex) ?? false
+      )
+    ),
+    columnModifiers: Object.fromEntries(
+      parsedSteps.flatMap((step, stepIndex) =>
+        step.modifier.length > 0 ? [[stepIndex, step.modifier]] : []
+      )
+    )
   }
 }
 
-const readChords = (
-  pattern: string,
-  scale: ReturnType<typeof readScale>,
-  sound: string
-): StrudelFlowChordsData | null => {
+const readChordStep = (chord: string): number[] | null => {
+  if (chord === '~') {
+    return []
+  }
+  const match = /^\[([^\]]*)]$/.exec(chord)
+  if (match === null) {
+    return null
+  }
+  const notes = splitTopLevel(match[1], ',').map(Number)
+  return notes.every((note) => Number.isInteger(note) && note >= 0 && note < 28) ? notes : null
+}
+
+const readChords = (pattern: string, scale: Scale): StrudelFlowChordsData | null => {
   if (!pattern.startsWith('<') || !pattern.endsWith('>')) {
     return null
   }
-  const chordSteps = splitTopLevel(pattern.slice(1, -1), ' ')
-  if (chordSteps.length === 0 || chordSteps.length > 16) {
+  const chords = splitTopLevel(pattern.slice(1, -1), ' ').map(readChordStep)
+  if (chords.length === 0 || chords.length > 16 || chords.some((chord) => chord === null)) {
     return null
   }
-  const chords = chordSteps.flatMap((chord) => {
-    if (chord === '~') {
-      return [[]]
-    }
-    const match = /^\[([^\]]*)]$/.exec(chord)
-    if (match === null) {
-      return []
-    }
-    const notes = splitTopLevel(match[1], ',').map((note) => Number(note))
-    return notes.every((note) => Number.isInteger(note) && note >= 0 && note < 28) ? [notes] : []
-  })
-  if (chords.length !== chordSteps.length) {
-    return null
-  }
-  const progression = chords.map((chord) => (chord[0] ?? 0) % 7)
-  const expectedChords = progression.map((root) => [root, root + 2, root + 4])
-  const manual = chords.some((chord, index) => chord.join(',') !== expectedChords[index]?.join(','))
+  const parsedChords = chords.filter((chord): chord is number[] => chord !== null)
+  const progression = parsedChords.map((chord) => (chord[0] ?? 0) % 7)
+  const isHandEdited = parsedChords.some(
+    (chord, index) =>
+      chord.join(',') !== [0, 2, 4].map((step) => step + progression[index]).join(',')
+  )
   return {
     kind: 'chords',
     key: scale.key,
-    octave: scale.octave >= 1 ? scale.octave : 4,
+    octave: scale.octave,
     scaleType: scale.scaleType === 'minor' ? 'minor' : 'major',
     chordProgression: progression,
-    ...(manual ? { chordNotes: chords } : {}),
-    sound
+    ...(isHandEdited ? { chordNotes: parsedChords } : {})
   }
 }
 
-const readDrumRowFromCalls = (
-  head: { name: string; argument: string },
-  calls: string[]
-): StrudelFlowDrumRow | null => {
-  if (head.name !== 's') {
+const readDrumRow = (head: Call, structCall: Call | undefined): StrudelFlowDrumRow | null => {
+  if (!SAMPLE_HEADS.has(head.name) || structCall === undefined || !isStringLiteral(head.argument)) {
     return null
   }
   const instrument = readStringLiteral(head.argument)
-  if (!['bd', 'sd', 'hh'].includes(instrument)) {
+  const steps = readStringLiteral(structCall.argument).split(/\s+/)
+  if (!DRUM_INSTRUMENTS.includes(instrument) || steps.length !== 16) {
     return null
   }
-  const structCall = calls
-    .slice(1)
-    .map(readArgument)
-    .find((call) => call?.name === 'struct')
-  if (structCall === undefined || structCall === null) {
-    return null
+  return {
+    instrument: instrument === 'bd' || instrument === 'sd' ? instrument : 'hh',
+    steps: steps.map((step) => step === '1')
   }
-  const steps = readStringLiteral(structCall.argument)
-    .split(/\s+/)
-    .map((step) => step === '1')
-  return steps.length === 16
-    ? { instrument: instrument as StrudelFlowDrumRow['instrument'], steps }
+}
+
+// A stack element that is exactly one drum row, `s("bd").struct("1 ~ ...")`.
+const readStackedDrumRow = (expression: string): StrudelFlowDrumRow | null => {
+  const calls = splitTopLevel(expression, '.').map(readCall)
+  const [head, structCall] = calls
+  return calls.length === 2 && head !== null && structCall?.name === 'struct'
+    ? readDrumRow(head, structCall)
     : null
 }
 
-const readDrumRow = (expression: string): StrudelFlowDrumRow | null => {
-  const calls = splitChain(expression)
-  const head = calls[0] === undefined ? null : readArgument(calls[0])
-  return head === null ? null : readDrumRowFromCalls(head, calls)
+const stripParentheses = (expression: string): string => {
+  const inner = unwrapParentheses(expression.trim())
+  return inner === null ? expression.trim() : stripParentheses(inner)
 }
 
-const readBeats = (
-  head: { name: string; argument: string },
-  calls: string[]
-): StrudelFlowNodeData | null => {
-  if (head.name === 's') {
-    const row = readDrumRowFromCalls(head, calls)
-    return row === null ? null : { kind: 'beats', rows: [row] }
+// Stored without its outer parentheses: compiling adds them back, so they never pile up.
+const codeInstrument = (code: string): StrudelFlowNodeData => ({
+  kind: 'code',
+  code: stripParentheses(code)
+})
+
+const withMuted = (data: StrudelFlowNodeData, muted: boolean): StrudelFlowNodeData =>
+  muted && isStrudelFlowInstrumentKind(data.kind) ? Object.assign({}, data, { muted: true }) : data
+
+const instrumentBranch = (instrument: StrudelFlowNodeData): Branch => ({
+  instruments: [instrument],
+  effects: []
+})
+
+// An element with effects of its own keeps them on its branch; a nested stack with shared
+// effects has no flat shape here, so it stays one Code instrument.
+const readStackElement = (element: string): Branch[] => {
+  const chain = readChain(element)
+  if (chain.effects.length === 0) {
+    return chain.branches
   }
-  if (head.name !== 'stack') {
-    return null
-  }
-  const expressions = splitTopLevel(head.argument, ',')
-  const rows = expressions.flatMap((expression) => {
-    const row = readDrumRow(expression)
-    return row === null ? [] : [row]
-  })
-  return rows.length > 0 && rows.length === expressions.length ? { kind: 'beats', rows } : null
+  const [onlyBranch] = chain.branches
+  return chain.branches.length === 1 && onlyBranch !== undefined
+    ? [{ ...onlyBranch, effects: [...onlyBranch.effects, ...chain.effects] }]
+    : [instrumentBranch(codeInstrument(element))]
 }
 
-const readNumberArgument = (argument: string): number | null => {
-  const value = Number(argument.trim())
-  return Number.isFinite(value) ? value : null
+const muteBranches = (branches: Branch[], muted: boolean): Branch[] =>
+  branches.map((branch) => ({
+    ...branch,
+    instruments: branch.instruments.map((instrument) => withMuted(instrument, muted))
+  }))
+
+const readStack = (argument: string): Branch[] => {
+  const elements = splitTopLevel(argument, ',')
+  const drumRows = elements.map(readStackedDrumRow)
+  if (drumRows.length > 0 && drumRows.every((row) => row !== null)) {
+    return [
+      instrumentBranch({
+        kind: 'beats',
+        rows: drumRows.filter((row): row is StrudelFlowDrumRow => row !== null)
+      })
+    ]
+  }
+  return elements.flatMap(readStackElement)
 }
 
-const applyEffectCall = (
-  effects: StrudelFlowNodeData[],
-  name: string,
-  argument: string
-): boolean => {
-  const descriptor = EFFECT_CALLS[name]
-  if (descriptor === undefined) {
-    return false
-  }
-  const number = readNumberArgument(argument)
-  if (descriptor.field !== undefined && number === null) {
-    return false
-  }
-  const previous = effects.at(-1)
-  const effect =
-    previous?.kind === descriptor.kind ? previous : createStrudelFlowNodeData(descriptor.kind)
-  if (effect !== previous) {
-    effects.push(effect)
-  }
-  if (descriptor.field !== undefined) {
-    const fields = effect as unknown as Partial<Record<EffectValueField, number>>
-    fields[descriptor.field] = number as number
-  }
-  return true
-}
-
-const unwrapCode = (expression: string): string => {
-  if (!expression.startsWith('(') || !expression.endsWith(')')) {
-    return expression
-  }
-  const inner = expression.slice(1, -1).trim()
-  return inner.length > 0 ? inner : expression
-}
-
-const readInstrument = (
-  head: { name: string; argument: string },
-  calls: string[],
-  scale: ReturnType<typeof readScale>,
-  sound: string
-): StrudelFlowNodeData | null => {
-  const beats = readBeats(head, calls)
-  if (beats !== null) {
-    return beats
-  }
-  if (head.name !== 'n') {
+const readNotesHead = (head: Call, calls: Call[]): StrudelFlowNodeData | null => {
+  const scaleCall = calls.find((call) => call.name === 'scale')
+  if (head.name !== 'n' || scaleCall === undefined || !isStringLiteral(head.argument)) {
     return null
   }
   const pattern = readStringLiteral(head.argument)
-  if (pattern.startsWith('<')) {
-    return readChords(pattern, scale, sound)
-  }
-  return readPad(pattern, scale, sound)
+  const scale = readScale(readStringLiteral(scaleCall.argument))
+  return pattern.startsWith('<') ? readChords(pattern, scale) : readPad(pattern, scale)
 }
 
-const parseBlock = (block: string): ParsedBlock => {
-  const expression = block.trim().replace(/;+\s*$/, '')
-  if (expression.length === 0) {
-    return { kind: 'code', code: '' }
+const readMiniNotationHead = (head: Call): StrudelFlowNodeData | null => {
+  if (!isStringLiteral(head.argument)) {
+    return null
   }
-  const calls = splitChain(expression)
-  const head = calls[0] === undefined ? null : readArgument(calls[0])
+  if (head.name === 'note') {
+    return { kind: 'notes', pattern: readStringLiteral(head.argument) }
+  }
+  return SAMPLE_HEADS.has(head.name)
+    ? { kind: 'samples', pattern: readStringLiteral(head.argument) }
+    : null
+}
+
+const withoutFirst = (calls: Call[], name: string): Call[] => {
+  const index = calls.findIndex((call) => call.name === name)
+  return index === -1 ? calls : [...calls.slice(0, index), ...calls.slice(index + 1)]
+}
+
+// Reads the head of a chain into instruments, and says which chained calls it used up.
+const readHead = (headText: string, calls: Call[]): { branches: Branch[]; remaining: Call[] } => {
+  const head = readCall(headText)
   if (head === null) {
-    return { kind: 'code', code: unwrapCode(expression) }
+    return { branches: [instrumentBranch(codeInstrument(headText))], remaining: calls }
   }
-  const effects: StrudelFlowNodeData[] = []
-  let sound = 'triangle'
-  let scale: ReturnType<typeof readScale> = { key: 'C', octave: 3, scaleType: 'major' }
-  for (const call of calls.slice(1)) {
-    const parsedCall = readArgument(call)
-    if (parsedCall === null) {
-      return { kind: 'code', code: unwrapCode(expression) }
-    }
-    if (parsedCall.name === 'sound') {
-      sound = readStringLiteral(parsedCall.argument)
-      continue
-    }
-    if (parsedCall.name === 'scale') {
-      scale = readScale(readStringLiteral(parsedCall.argument))
-      continue
-    }
-    if (!applyEffectCall(effects, parsedCall.name, parsedCall.argument)) {
-      return { kind: 'code', code: unwrapCode(expression) }
+  const structCall = calls.find((call) => call.name === 'struct')
+  const drumRow = readDrumRow(head, structCall)
+  if (drumRow !== null) {
+    return {
+      branches: [instrumentBranch({ kind: 'beats', rows: [drumRow] })],
+      remaining: withoutFirst(calls, 'struct')
     }
   }
-  const data = readInstrument(head, calls, scale, sound)
-  return data === null
-    ? { kind: 'code', code: unwrapCode(expression) }
-    : { kind: 'instrument', data, effects }
+  const scaled = readNotesHead(head, calls)
+  if (scaled !== null) {
+    return { branches: [instrumentBranch(scaled)], remaining: withoutFirst(calls, 'scale') }
+  }
+  if (head.name === 'stack') {
+    return { branches: readStack(head.argument), remaining: calls }
+  }
+  const miniNotation = readMiniNotationHead(head)
+  return {
+    branches: [instrumentBranch(miniNotation ?? codeInstrument(headText))],
+    remaining: calls
+  }
 }
 
-const readTempo = (code: string): number => {
-  const match = /setcpm\(\s*([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)/.exec(code)
-  if (match === null) {
-    return STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE
-  }
-  const cyclesPerMinute = Number(match[1]) / (match[2] === undefined ? 1 : Number(match[2]))
-  return normalizeStrudelFlowBeatsPerMinute(cyclesPerMinute * 4)
-}
+const setEffectField = (
+  effect: StrudelFlowNodeData,
+  field: string,
+  value: number
+): StrudelFlowNodeData => Object.assign({}, effect, { [field]: value })
 
-const splitBlocks = (code: string): string[] => {
-  const withoutTempo = code.replace(/setcpm\([^)]*\)/g, '')
-  const parts = withoutTempo.split(/^\s*\$\s*:\s*/m)
-  const blocks = parts.length > 1 ? parts.slice(1) : parts
-  return blocks
-    .map((block) => block.trim().replace(/;+\s*$/, ''))
-    .filter((block) => block.length > 0)
-}
-
-const createNodeId = (
-  kind: StrudelFlowNodeKind,
-  usedIds: Set<string>,
-  counters: Map<string, number>
-): string => {
-  let index = counters.get(kind) ?? 1
-  while (usedIds.has(`${kind}-${index}`)) {
-    index += 1
+// Consecutive calls of one effect, such as `.lpf(800).lpq(4)`, share a node until a field
+// repeats; a call with a pattern or a slider for its argument keeps that argument verbatim.
+const addEffectCall = (state: EffectChainState, call: Call): EffectChainState => {
+  if (VOICE_CALLS.has(call.name) && isStringLiteral(call.argument)) {
+    return {
+      effects: [...state.effects, { kind: 'voice', sound: readStringLiteral(call.argument) }],
+      fieldsOnLast: []
+    }
   }
-  counters.set(kind, index + 1)
-  usedIds.add(`${kind}-${index}`)
-  return `${kind}-${index}`
+  if (call.name === 'analyze') {
+    return { effects: [...state.effects, createStrudelFlowNodeData('scope')], fieldsOnLast: [] }
+  }
+  const descriptor = EFFECT_CALLS[call.name]
+  const value = readNumber(call.argument)
+  if (descriptor === undefined || value === null) {
+    return {
+      effects: [...state.effects, { kind: 'effect', method: call.name, argument: call.argument }],
+      fieldsOnLast: []
+    }
+  }
+  const last = state.effects.at(-1)
+  if (last?.kind === descriptor.kind && !state.fieldsOnLast.includes(descriptor.field)) {
+    return {
+      effects: [...state.effects.slice(0, -1), setEffectField(last, descriptor.field, value)],
+      fieldsOnLast: [...state.fieldsOnLast, descriptor.field]
+    }
+  }
+  return {
+    effects: [
+      ...state.effects,
+      setEffectField(createStrudelFlowNodeData(descriptor.kind), descriptor.field, value)
+    ],
+    fieldsOnLast: [descriptor.field]
+  }
 }
 
 /**
- * Rebuilds a flow patch from Strudel code. The parser understands the code this editor
- * writes, plus hand-written variants of the same calls; anything else is kept verbatim in a
- * Code node so its sound is never lost.
- * @param code - the code editor's current pattern
- * @param existingNodes - nodes whose positions should be reused
- * @returns the parsed patch, or null when the code has nothing to show
+ * Reads one pattern expression into its instrument branches and the effects after them. Every
+ * chained call becomes a node: a dedicated one when the editor has it, a generic Effect node
+ * otherwise, and a head it cannot read stays a Code instrument.
+ * @param expression - one pattern, such as `note("c e").lpf(800).fast(2)`
+ * @returns the branches and the shared effects in signal order
+ */
+const readChain = (expression: string): ParsedChain => {
+  const segments = splitTopLevel(expression, '.')
+  const inner = segments.length > 0 ? unwrapParentheses(segments[0]) : null
+  if (inner !== null) {
+    const innerChain = readChain(inner)
+    const outerChain = readChain(['silence', ...segments.slice(1)].join('.'))
+    return {
+      branches: innerChain.branches,
+      effects: [...innerChain.effects, ...outerChain.effects]
+    }
+  }
+  const calls = segments.slice(1).map(readCall)
+  if (segments.length === 0 || calls.some((call) => call === null)) {
+    return { branches: [instrumentBranch(codeInstrument(expression))], effects: [] }
+  }
+  const chainedCalls = calls.filter((call): call is Call => call !== null)
+  const muted = chainedCalls.some((call) => call.name === 'hush')
+  const head = readHead(
+    segments[0],
+    chainedCalls.filter((call) => call.name !== 'hush')
+  )
+  return {
+    branches: muteBranches(head.branches, muted),
+    effects: head.remaining.reduce(addEffectCall, { effects: [], fieldsOnLast: [] }).effects
+  }
+}
+
+const readTempoValue = (argument: string): number[] =>
+  argument.split('/').map((part) => Number(part.trim()))
+
+const readTempo = (statement: string): Tempo | null => {
+  const match = TEMPO_PATTERN.exec(statement)
+  if (match === null) {
+    return null
+  }
+  const values = readTempoValue(match[2])
+  if (values.some((value) => !Number.isFinite(value) || value <= 0)) {
+    return null
+  }
+  if (match[1] === 'pm' && values.length === 2) {
+    return {
+      beatsPerMinute: normalizeStrudelFlowBeatsPerMinute(values[0]),
+      beatsPerCycle: normalizeStrudelFlowBeatsPerCycle(values[1])
+    }
+  }
+  const quotient = values.slice(1).reduce((result, divisor) => result / divisor, values[0])
+  const cyclesPerMinute = match[1] === 'pm' ? quotient : quotient * 60
+  return {
+    beatsPerMinute: normalizeStrudelFlowBeatsPerMinute(
+      cyclesPerMinute * STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE
+    ),
+    beatsPerCycle: STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE
+  }
+}
+
+type Program = {
+  blocks: { expression: string; muted: boolean }[]
+  setup: string[]
+  tempo: Tempo
+}
+
+// Strudel plays every labelled block; without one, it plays the program's last expression.
+const readProgram = (code: string): Program => {
+  const statements = splitStatements(stripLineComments(code))
+  const tempo = statements.map(readTempo).find((value): value is Tempo => value !== null) ?? {
+    beatsPerMinute: STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE,
+    beatsPerCycle: STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE
+  }
+  const others = statements.filter((statement) => readTempo(statement) === null)
+  const labelled = others.filter((statement) => LABEL_PATTERN.test(statement))
+  if (labelled.length > 0) {
+    return {
+      blocks: labelled.map((statement) => ({
+        expression: statement.replace(LABEL_PATTERN, ''),
+        muted: statement.startsWith('_')
+      })),
+      setup: others.filter((statement) => !LABEL_PATTERN.test(statement)),
+      tempo
+    }
+  }
+  const last = others.at(-1)
+  const lastIsPattern = last !== undefined && !SETUP_PATTERN.test(last)
+  return {
+    blocks: lastIsPattern ? [{ expression: last, muted: false }] : [],
+    setup: lastIsPattern ? others.slice(0, -1) : others,
+    tempo
+  }
+}
+
+const takeReusable = (
+  state: BuildState,
+  kind: StrudelFlowNodeKind
+): { position: StrudelFlowNodePosition | null; reusable: StrudelFlowNode[] } => {
+  const index = state.reusable.findIndex((node) => node.data.kind === kind)
+  return index === -1
+    ? { position: null, reusable: state.reusable }
+    : {
+        position: state.reusable[index].position,
+        reusable: [...state.reusable.slice(0, index), ...state.reusable.slice(index + 1)]
+      }
+}
+
+const nextNodeId = (kind: StrudelFlowNodeKind, nodes: StrudelFlowNode[]): string => {
+  const usedIds = new Set(nodes.map((node) => node.id))
+  const index =
+    Array.from({ length: nodes.length + 1 }, (_, offset) => offset + 1).find(
+      (candidate) => !usedIds.has(`${kind}-${candidate}`)
+    ) ?? nodes.length + 1
+  return `${kind}-${index}`
+}
+
+const placeNode = (
+  state: BuildState,
+  data: StrudelFlowNodeData,
+  fallbackPosition: StrudelFlowNodePosition
+): { state: BuildState; nodeId: string } => {
+  const reused = takeReusable(state, data.kind)
+  const nodeId = nextNodeId(data.kind, state.nodes)
+  return {
+    nodeId,
+    state: {
+      ...state,
+      reusable: reused.reusable,
+      nodes: [
+        ...state.nodes,
+        { id: nodeId, type: 'strudel', position: reused.position ?? fallbackPosition, data }
+      ]
+    }
+  }
+}
+
+const connect = (state: BuildState, source: string, target: string): BuildState => ({
+  ...state,
+  edges: [...state.edges, { id: `${source}-${target}`, source, target }]
+})
+
+const heightOf = (data: StrudelFlowNodeData): number =>
+  getStrudelFlowNodeSize(data.kind).height + ROW_GAP
+
+const branchHeight = (branch: Branch): number =>
+  Math.max(
+    branch.instruments.reduce((height, data) => height + heightOf(data), 0),
+    ...branch.effects.map(heightOf)
+  )
+
+type ChainPlacement = { state: BuildState; previousIds: string[] }
+
+// Places nodes left to right from a column, each fed by the ones before it.
+const placeInRow = (
+  placement: ChainPlacement,
+  effects: StrudelFlowNodeData[],
+  firstColumn: number,
+  y: number
+): ChainPlacement =>
+  effects.reduce((result, data, effectIndex) => {
+    const placed = placeNode(result.state, data, {
+      x: STRUDEL_FLOW_NODE_START_X + STRUDEL_FLOW_NODE_COLUMN_GAP * (firstColumn + effectIndex),
+      y
+    })
+    return {
+      state: result.previousIds.reduce(
+        (connected, sourceId) => connect(connected, sourceId, placed.nodeId),
+        placed.state
+      ),
+      previousIds: [placed.nodeId]
+    }
+  }, placement)
+
+const placeBranch = (state: BuildState, branch: Branch, y: number): ChainPlacement => {
+  const placedInstruments = branch.instruments.reduce(
+    (result, data) => {
+      const placed = placeNode(result.state, data, { x: STRUDEL_FLOW_NODE_START_X, y: result.y })
+      return {
+        state: placed.state,
+        previousIds: [...result.previousIds, placed.nodeId],
+        y: result.y + heightOf(data)
+      }
+    },
+    { state, previousIds: [] as string[], y }
+  )
+  return placeInRow(placedInstruments, branch.effects, 1, y)
+}
+
+// One block lays out as a row: its branches stacked in the first columns, then each shared
+// effect one column further right, so the cables read left to right in signal order.
+const addChain = (state: BuildState, chain: ParsedChain): BuildState => {
+  const placedBranches = chain.branches.reduce(
+    (result, branch) => {
+      const placed = placeBranch(result.state, branch, result.y)
+      return {
+        state: placed.state,
+        tails: [...result.tails, ...placed.previousIds],
+        y: result.y + branchHeight(branch)
+      }
+    },
+    { state, tails: [] as string[], y: state.rowTop }
+  )
+  const sharedColumn = 1 + Math.max(0, ...chain.branches.map((branch) => branch.effects.length))
+  const placed = placeInRow(
+    { state: placedBranches.state, previousIds: placedBranches.tails },
+    chain.effects,
+    sharedColumn,
+    state.rowTop
+  )
+  const sharedHeight = Math.max(0, ...chain.effects.map(heightOf))
+  return {
+    ...placed.state,
+    rowTop: Math.max(placedBranches.y, state.rowTop + sharedHeight)
+  }
+}
+
+/**
+ * Rebuilds a flow patch from Strudel code, so whatever the code editor holds also shows as a
+ * graph. Recognised calls become their dedicated nodes, any other chained call a generic Effect
+ * node, an unreadable pattern head a Code node, and statements that are not patterns stay in
+ * the patch's setup, so compiling the result never loses a sound.
+ * @param code - the code editor's current program
+ * @param existingNodes - nodes whose positions should be reused, matched by kind in order
+ * @returns the parsed patch, or null while the code has a syntax error
  */
 export const parseStrudelFlowCode = (
   code: string,
   existingNodes: StrudelFlowNode[] = []
 ): StrudelFlowPatch | null => {
-  const blocks = splitBlocks(code)
-  if (blocks.length === 0) {
+  if (!isStrudelCodeSyntaxValid(code)) {
     return null
   }
-  const parsedBlocks = blocks
-    .map(parseBlock)
-    .filter((block) => block.kind === 'instrument' || block.code.length > 0)
-  if (parsedBlocks.length === 0) {
-    return null
-  }
-  const existingByKind = new Map<StrudelFlowNodeKind, StrudelFlowNode[]>()
-  existingNodes.forEach((node) => {
-    const kindNodes = existingByKind.get(node.data.kind) ?? []
-    existingByKind.set(node.data.kind, [...kindNodes, node])
-  })
-  const usedIds = new Set<string>()
-  const counters = new Map<string, number>()
-  const nodes: StrudelFlowNode[] = []
-  const edges: StrudelFlowPatch['edges'] = []
-
-  parsedBlocks.forEach((block) => {
-    if (block.kind === 'code') {
-      const data = { kind: 'code' as const, code: block.code }
-      const reused = existingByKind.get('code')?.shift()
-      nodes.push({
-        id: createNodeId('code', usedIds, counters),
-        type: 'strudel',
-        position: reused?.position ?? findStrudelFlowNodePosition(nodes, 'code'),
-        data
-      })
-      return
-    }
-    const reusedInstrument = existingByKind.get(block.data.kind)?.shift()
-    const position =
-      reusedInstrument?.position ?? findStrudelFlowNodePosition(nodes, block.data.kind)
-    const instrumentId = createNodeId(block.data.kind, usedIds, counters)
-    nodes.push({ id: instrumentId, type: 'strudel', position, data: block.data })
-    let sourceId = instrumentId
-    block.effects.forEach((effect, effectIndex) => {
-      const reusedEffect = existingByKind.get(effect.kind)?.shift()
-      const effectPosition = reusedEffect?.position ?? {
-        x: position.x + STRUDEL_FLOW_NODE_COLUMN_GAP * (effectIndex + 1),
-        y: position.y
-      }
-      const effectId = createNodeId(effect.kind, usedIds, counters)
-      nodes.push({ id: effectId, type: 'strudel', position: effectPosition, data: effect })
-      edges.push({ id: `${sourceId}-${effectId}`, source: sourceId, target: effectId })
-      sourceId = effectId
+  const program = readProgram(code)
+  const built = program.blocks
+    .map((block) => {
+      const chain = readChain(block.expression)
+      return { ...chain, branches: muteBranches(chain.branches, block.muted) }
     })
-  })
-
+    .reduce(addChain, {
+      nodes: [],
+      edges: [],
+      reusable: existingNodes,
+      rowTop: STRUDEL_FLOW_NODE_START_Y
+    })
   return {
-    nodes,
-    edges,
-    beatsPerMinute: readTempo(code)
+    nodes: built.nodes,
+    edges: built.edges,
+    beatsPerMinute: program.tempo.beatsPerMinute,
+    beatsPerCycle: program.tempo.beatsPerCycle,
+    setup: program.setup.join('\n')
   }
 }

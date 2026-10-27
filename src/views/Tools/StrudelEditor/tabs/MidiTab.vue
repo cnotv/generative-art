@@ -149,6 +149,7 @@ const onConnect = (): void => {
   color: var(--color-foreground);
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 </style>

@@ -22,9 +22,23 @@ export type StrudelEvaluationResult = {
   errorMessage?: string
 }
 
+export type StrudelExportOptions = {
+  startCycle: number
+  endCycle: number
+  sampleRate: number
+  fileName: string
+}
+
+export type StrudelExportStatus = 'idle' | 'rendering' | 'done' | 'error'
+
 export type StrudelPlayback = {
   evaluateCode: (patternCode: string) => Promise<StrudelEvaluationResult>
   stopPlayback: () => Promise<void>
+  /** Renders the cycles offline and downloads them as a WAV file. */
+  renderToWav: (
+    patternCode: string,
+    exportOptions: StrudelExportOptions
+  ) => Promise<StrudelEvaluationResult>
 }
 
 /** What the transpiler found in the evaluated code, in Strudel's own untyped shapes. */
