@@ -361,17 +361,7 @@ onBeforeUnmount(() => {
             @file="onFileChosen"
             @load="loadTranscription"
           />
-          <MidiTab
-            v-else-if="activeTab === 'midi'"
-            :status="transcriptionStatus"
-            :progress="transcriptionProgress"
-            :result="transcriptionResult"
-            :code="transcribedCode"
-            :error-message="transcriptionError"
-            @file="onFileChosen"
-            @load="loadTranscription"
-            @code="updatePatternCode"
-          />
+          <MidiTab v-else-if="activeTab === 'midi'" @code="updatePatternCode" />
           <ReferenceTab v-else-if="activeTab === 'reference'" />
           <ExportTab
             v-else-if="activeTab === 'export'"

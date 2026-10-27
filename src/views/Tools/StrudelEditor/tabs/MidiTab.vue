@@ -1,22 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Button from '@/components/ui/button/Button.vue'
-import TranscriptionPanel from '../TranscriptionPanel.vue'
-import { MIDI_ACCEPTED_TYPES } from '../config'
 import { createMidiSnippets, useMidiDevices } from '../useMidiDevices'
-import type { TranscriptionProgress, TranscriptionResult, TranscriptionStatus } from '../types'
-
-const props = defineProps<{
-  status: TranscriptionStatus
-  progress: TranscriptionProgress | null
-  result: TranscriptionResult | null
-  code: string
-  errorMessage: string
-}>()
 
 const emit = defineEmits<{
-  file: [chosenFile: File]
-  load: []
   code: [patternCode: string]
 }>()
 
@@ -41,19 +28,11 @@ const onConnect = (): void => {
 
 <template>
   <section class="strudel-midi">
-    <h3 class="strudel-midi__heading">MIDI file</h3>
     <p class="strudel-midi__intro">
-      Load a .mid file: its drums, lowest notes and chords are read onto a sixteen-step grid and
-      written out as code.
+      To turn a .mid file into a pattern, drop it on the
+      <a class="strudel-midi__link" href="#import">import tab</a>
+      instead.
     </p>
-    <TranscriptionPanel
-      v-bind="props"
-      :accept="MIDI_ACCEPTED_TYPES"
-      drop-label="Drop a MIDI file here, or click to browse"
-      @file="emit('file', $event)"
-      @load="emit('load')"
-    />
-
     <h3 class="strudel-midi__heading">MIDI devices</h3>
     <p v-if="midiDeviceStatus !== 'ready'" class="strudel-midi__intro">
       {{ DEVICE_STATUS_MESSAGES[midiDeviceStatus] }}
@@ -98,6 +77,10 @@ const onConnect = (): void => {
   margin: 0;
   font-size: var(--font-size-md);
   font-weight: 600;
+  color: var(--color-foreground);
+}
+
+.strudel-midi__link {
   color: var(--color-foreground);
 }
 

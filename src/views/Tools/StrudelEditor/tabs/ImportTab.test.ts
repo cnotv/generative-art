@@ -26,7 +26,7 @@ const mountTab = (overrides: Partial<InstanceType<typeof ImportTab>['$props']> =
   })
 
 describe('ImportTab', () => {
-  it('offers a drop zone for audio files', () => {
+  it('offers a drop zone for audio and MIDI files', () => {
     // Arrange
     const wrapper = mountTab()
 
@@ -35,6 +35,7 @@ describe('ImportTab', () => {
 
     // Assert
     expect(fileInput.attributes('accept')).toContain('.mp3')
+    expect(fileInput.attributes('accept')).toContain('.mid')
     expect(wrapper.text()).toContain('Drop an MP3')
   })
 
@@ -62,7 +63,7 @@ describe('ImportTab', () => {
     const wrapper = mountTab({ status: 'working', progress })
 
     // Act
-    const stage = wrapper.find('.strudel-transcription__stage')
+    const stage = wrapper.find('.strudel-import__stage')
 
     // Assert
     expect(stage.text()).toBe(expectedLabel)
@@ -79,10 +80,10 @@ describe('ImportTab', () => {
       ?.trigger('click')
 
     // Assert
-    const summary = wrapper.find('.strudel-transcription__summary').text()
+    const summary = wrapper.find('.strudel-import__summary').text()
     expect(summary).toContain('126 BPM')
     expect(summary).toContain('Am F')
-    expect(wrapper.find('.strudel-transcription__code').text()).toBe('setcps(126/60/4)')
+    expect(wrapper.find('.strudel-import__code').text()).toBe('setcps(126/60/4)')
     expect(wrapper.emitted('load')).toHaveLength(1)
   })
 

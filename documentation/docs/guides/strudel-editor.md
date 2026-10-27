@@ -27,8 +27,8 @@ flow tab:
   pattern can open in a new tab. The name field at the top saves the code in the editor under
   that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under
   a name already used replaces it, and its cross deletes it.
-- **import**: turn an MP3 or other audio file into a pattern (below)
-- **midi**: turn a MIDI file into a pattern, and play or drive MIDI devices (below)
+- **import**: turn an MP3, other audio or a MIDI file into a pattern (below)
+- **midi**: play or drive MIDI devices (below)
 - **reference**: function quick list
 - **export**: render the code offline to a WAV file (below)
 - **console**: evaluation log
@@ -271,8 +271,8 @@ is assembled from parts rather than strudel.cc's ready-made one is in
 
 ## Turning a MIDI file into a pattern
 
-The **midi** tab takes a `.mid` file the same way: drop it or click to browse. Notes are read
-straight from the file instead of heard, so the result is exact rather than a sketch:
+Drop a `.mid` file on the same **import** tab. Notes are read straight from the file instead of
+heard, so the result is exact rather than a sketch:
 
 | Layer  | Read as                                                                            |
 | ------ | ---------------------------------------------------------------------------------- |
@@ -284,9 +284,11 @@ The tempo is the file's first tempo, and notes are placed by their ticks, so a t
 the file never shifts them off the grid. Up to 64 bars are read. **Load into editor** replaces the
 code, as with audio.
 
-![The midi tab after loading a two-bar file, with the device snippets below](/img/strudel-editor/midi-tab.webp)
+## MIDI devices
 
-Below the file drop, **Connect MIDI devices** asks the browser for Web MIDI access and lists the
+![The midi tab with its Connect MIDI devices button and the three device snippets](/img/strudel-editor/midi-tab.webp)
+
+On the **midi** tab, **Connect MIDI devices** asks the browser for Web MIDI access and lists the
 inputs and outputs it finds, following devices as they are plugged in. Three snippets load
 straight into the editor, already naming the first device found:
 

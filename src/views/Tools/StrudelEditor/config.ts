@@ -384,7 +384,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
 export const TRANSCRIPTION_SAMPLE_RATE = 22050
 export const TRANSCRIPTION_MAX_SECONDS = 90
 export const TRANSCRIPTION_MAX_BARS = 64
-export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac'
+export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.mid,.midi'
 
 export const ONSET_FRAME_SIZE = 1024
 export const ONSET_HOP_SIZE = 512
@@ -400,7 +400,6 @@ export const TEMPO_MAX_BPM = 180
 export const TEMPO_PRIOR_CENTER_BPM = 120
 export const TEMPO_PRIOR_WIDTH_OCTAVES = 1
 
-export const MIDI_ACCEPTED_TYPES = '.mid,.midi,audio/midi,audio/x-midi'
 export const MIDI_DEFAULT_BEATS_PER_MINUTE = 120
 /** General MIDI percussion keys folded onto the three drums the transcription writes. */
 export const MIDI_DRUM_SOUNDS: Record<number, DrumSound> = {
