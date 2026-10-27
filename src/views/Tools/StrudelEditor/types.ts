@@ -194,6 +194,7 @@ export type StrudelTabId =
   | 'welcome'
   | 'patterns'
   | 'import'
+  | 'midi'
   | 'reference'
   | 'export'
   | 'console'

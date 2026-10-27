@@ -347,6 +347,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
   { id: 'import', label: 'import' },
+  { id: 'midi', label: 'midi' },
   { id: 'reference', label: 'reference' },
   { id: 'export', label: 'export' },
   { id: 'console', label: 'console' },
@@ -358,7 +359,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
 export const TRANSCRIPTION_SAMPLE_RATE = 22050
 export const TRANSCRIPTION_MAX_SECONDS = 90
 export const TRANSCRIPTION_MAX_BARS = 64
-export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac'
+export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.mid'
 
 export const ONSET_FRAME_SIZE = 1024
 export const ONSET_HOP_SIZE = 512

@@ -21,6 +21,7 @@ import HintsTab from './tabs/HintsTab.vue'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
 import ImportTab from './tabs/ImportTab.vue'
+import MidiTab from './tabs/MidiTab.vue'
 import StrudelCodeEditor from './StrudelCodeEditor.vue'
 import ReferenceTab from './tabs/ReferenceTab.vue'
 import ExportTab from './tabs/ExportTab.vue'
@@ -184,7 +185,7 @@ const onPlayButtonPressed = (): void => {
   onPlayRequested()
 }
 
-const onAudioFileChosen = (audioFile: File): void => {
+const onFileChosen = (audioFile: File): void => {
   void transcribeAudioFile(audioFile)
 }
 
@@ -363,9 +364,10 @@ onBeforeUnmount(() => {
             :result="transcriptionResult"
             :code="transcribedCode"
             :error-message="transcriptionError"
-            @file="onAudioFileChosen"
+            @file="onFileChosen"
             @load="loadTranscription"
           />
+          <MidiTab v-else-if="activeTab === 'midi'" />
           <ReferenceTab v-else-if="activeTab === 'reference'" />
           <ExportTab v-else-if="activeTab === 'export'" />
           <ConsoleTab

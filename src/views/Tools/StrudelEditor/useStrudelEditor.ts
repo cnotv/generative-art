@@ -24,6 +24,7 @@ import type {
 } from './types'
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
 import { runTranscriptionInWorker } from './transcription/runTranscription'
+import { runMidiTranscription } from './transcription/runMidiTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 
 /**
@@ -226,8 +227,15 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     patternCode.value = nextCode
   }
 
+  const transcriptionRunner = async (file: File, onProgress: (p: { stage: string; fraction: number }) => void) => {
+    if (file.name.toLowerCase().endsWith('.mid')) {
+      return runMidiTranscription(file, onProgress)
+    }
+    return (editorOptions?.transcriptionRunner ?? runTranscriptionInWorker)(file, onProgress)
+  }
+
   const transcription = useStrudelTranscription({
-    runner: editorOptions?.transcriptionRunner ?? runTranscriptionInWorker,
+    runner: transcriptionRunner,
     applyCode: loadPatternCode,
     appendLog
   })
