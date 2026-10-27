@@ -21,6 +21,7 @@ import HintsTab from './tabs/HintsTab.vue'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
 import ImportTab from './tabs/ImportTab.vue'
+import MidiTab from './tabs/MidiTab.vue'
 import StrudelCodeEditor from './StrudelCodeEditor.vue'
 import ReferenceTab from './tabs/ReferenceTab.vue'
 import ExportTab from './tabs/ExportTab.vue'
@@ -58,7 +59,7 @@ const {
   transcriptionResult,
   transcribedCode,
   transcriptionError,
-  transcribeAudioFile,
+  transcribeFile,
   loadTranscription
 } = useStrudelEditor()
 
@@ -184,8 +185,8 @@ const onPlayButtonPressed = (): void => {
   onPlayRequested()
 }
 
-const onAudioFileChosen = (audioFile: File): void => {
-  void transcribeAudioFile(audioFile)
+const onFileChosen = (chosenFile: File): void => {
+  void transcribeFile(chosenFile)
 }
 
 const onEditorModeChange = (mode: string): void => {
@@ -363,8 +364,19 @@ onBeforeUnmount(() => {
             :result="transcriptionResult"
             :code="transcribedCode"
             :error-message="transcriptionError"
-            @file="onAudioFileChosen"
+            @file="onFileChosen"
             @load="loadTranscription"
+          />
+          <MidiTab
+            v-else-if="activeTab === 'midi'"
+            :status="transcriptionStatus"
+            :progress="transcriptionProgress"
+            :result="transcriptionResult"
+            :code="transcribedCode"
+            :error-message="transcriptionError"
+            @file="onFileChosen"
+            @load="loadTranscription"
+            @code="updatePatternCode"
           />
           <ReferenceTab v-else-if="activeTab === 'reference'" />
           <ExportTab v-else-if="activeTab === 'export'" />

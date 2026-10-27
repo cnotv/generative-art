@@ -145,13 +145,14 @@ describe('StrudelEditor view', () => {
     const tabButtons = wrapper.findAll('.strudel-editor__tab')
 
     // Assert
-    expect(tabButtons.length).toBe(9)
+    expect(tabButtons.length).toBe(10)
     const tabLabels = tabButtons.map((tab) => tab.text())
     expect(tabLabels).toEqual([
       'hints',
       'welcome',
       'patterns',
       'import',
+      'midi',
       'reference',
       'export',
       'console',

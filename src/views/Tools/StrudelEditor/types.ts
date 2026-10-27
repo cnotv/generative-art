@@ -194,6 +194,7 @@ export type StrudelTabId =
   | 'welcome'
   | 'patterns'
   | 'import'
+  | 'midi'
   | 'reference'
   | 'export'
   | 'console'
@@ -264,6 +265,22 @@ export type StrudelTranscriptionState = {
   transcriptionResult: Ref<TranscriptionResult | null>
   transcribedCode: Ref<string>
   transcriptionError: Ref<string>
-  transcribeAudioFile: (audioFile: File) => Promise<void>
+  transcribeFile: (chosenFile: File) => Promise<void>
   loadTranscription: () => void
+}
+
+export type MidiDeviceStatus = 'idle' | 'connecting' | 'ready' | 'unsupported' | 'denied'
+
+export type MidiDevicesState = {
+  midiDeviceStatus: Ref<MidiDeviceStatus>
+  midiInputNames: Ref<string[]>
+  midiOutputNames: Ref<string[]>
+  connectMidiDevices: () => Promise<void>
+}
+
+export type MidiSnippet = {
+  id: string
+  title: string
+  description: string
+  code: string
 }

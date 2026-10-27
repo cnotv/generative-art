@@ -1,4 +1,5 @@
 import type {
+  DrumSound,
   StrudelExample,
   StrudelInstrumentRole,
   StrudelMusicStyle,
@@ -34,6 +35,11 @@ export const STRUDEL_EXAMPLES: StrudelExample[] = [
     id: 'soft-melody',
     label: 'Soft melody',
     code: 'note("c3 [e3 g3] a3 [g3 e3]").s("triangle").lpf(800)'
+  },
+  {
+    id: 'coin',
+    label: 'Coin',
+    code: 'note("b5 e6@3 ~@4").s("square").decay(.4).sustain(0).gain(.4).fast(2)'
   },
   {
     id: 'sliders-and-scopes',
@@ -347,6 +353,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
   { id: 'import', label: 'import' },
+  { id: 'midi', label: 'midi' },
   { id: 'reference', label: 'reference' },
   { id: 'export', label: 'export' },
   { id: 'console', label: 'console' },
@@ -373,6 +380,21 @@ export const TEMPO_MAX_BPM = 180
 /** Centre of the log-tempo prior that breaks ties between related tempos. */
 export const TEMPO_PRIOR_CENTER_BPM = 120
 export const TEMPO_PRIOR_WIDTH_OCTAVES = 1
+
+export const MIDI_ACCEPTED_TYPES = '.mid,.midi,audio/midi,audio/x-midi'
+export const MIDI_DEFAULT_BEATS_PER_MINUTE = 120
+/** General MIDI percussion keys folded onto the three drums the transcription writes. */
+export const MIDI_DRUM_SOUNDS: Record<number, DrumSound> = {
+  35: 'bd',
+  36: 'bd',
+  37: 'sd',
+  38: 'sd',
+  39: 'sd',
+  40: 'sd',
+  42: 'hh',
+  44: 'hh',
+  46: 'hh'
+}
 
 export const STEPS_PER_BEAT = 4
 export const STEPS_PER_BAR = 16

@@ -89,14 +89,16 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     webaudioModule,
     tonalModule,
     transpilerModule,
-    drawModule
+    drawModule,
+    midiModule
   ]: unknown[] = await Promise.all([
     import('@strudel/core'),
     import('@strudel/mini'),
     import('@strudel/webaudio'),
     import('@strudel/tonal'),
     import('@strudel/transpiler'),
-    import('@strudel/draw')
+    import('@strudel/draw'),
+    import('@strudel/midi')
   ])
   // Importing the editor module registers _pianoroll, _scope and the other inline widgets
   // with the transpiler, and supplies the sliderWithID that slider() is rewritten into.
@@ -123,6 +125,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
       tonalModule,
       coreModule,
       drawModule,
+      midiModule,
       { slider, sliderWithID }
     ]
   }

@@ -23,7 +23,7 @@ import type {
   TranscriptionRunner
 } from './types'
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
-import { runTranscriptionInWorker } from './transcription/runTranscription'
+import { runTranscription } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 
 /**
@@ -227,7 +227,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   }
 
   const transcription = useStrudelTranscription({
-    runner: editorOptions?.transcriptionRunner ?? runTranscriptionInWorker,
+    runner: editorOptions?.transcriptionRunner ?? runTranscription,
     applyCode: loadPatternCode,
     appendLog
   })

@@ -83,6 +83,7 @@ vi.mock('@strudel/webaudio', () => ({
   webaudioOutput: mockScheduleHandler
 }))
 vi.mock('@strudel/tonal', () => ({}))
+vi.mock('@strudel/midi', () => ({}))
 vi.mock('@strudel/transpiler', () => ({
   transpiler: mockCodeTranspiler
 }))
@@ -836,6 +837,7 @@ describe('useStrudelEditor', () => {
       'welcome',
       'patterns',
       'import',
+      'midi',
       'reference',
       'export',
       'console',
@@ -883,6 +885,7 @@ describe('STRUDEL_TABS', () => {
       'welcome',
       'patterns',
       'import',
+      'midi',
       'reference',
       'export',
       'console',
@@ -1006,13 +1009,13 @@ describe('useStrudelEditor transcription', () => {
       beatsPerMinute: 100,
       bars: [{ steps: [{ drums: ['bd'], bassNote: null }], chord: null }]
     })
-    const { patternCode, editorStatus, transcribeAudioFile, loadTranscription } = useStrudelEditor({
+    const { patternCode, editorStatus, transcribeFile, loadTranscription } = useStrudelEditor({
       transcriptionRunner
     })
     editorStatus.value = 'error'
 
     // Act
-    await transcribeAudioFile(new File(['audio'], 'beat.mp3'))
+    await transcribeFile(new File(['audio'], 'beat.mp3'))
     loadTranscription()
 
     // Assert
