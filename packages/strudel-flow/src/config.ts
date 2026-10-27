@@ -1,5 +1,15 @@
 export const STRUDEL_FLOW_PATCH_STORAGE_KEY = 'strudel-flow-patch'
 
+/** The editor this package follows: its node set, controls, layout and look. */
+export const STRUDEL_FLOW_REFERENCE = {
+  name: 'Strudel Flow',
+  url: 'https://xyflow.com/strudel-flow',
+  author: 'xyflow',
+  authorUrl: 'https://xyflow.com',
+  sourceUrl: 'https://github.com/xyflow/strudel-flow',
+  license: 'AGPL-3.0'
+}
+
 export const STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE = 120
 export const STRUDEL_FLOW_MIN_BEATS_PER_MINUTE = 1
 export const STRUDEL_FLOW_MAX_BEATS_PER_MINUTE = 300

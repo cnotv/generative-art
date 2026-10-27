@@ -66,4 +66,19 @@ describe('FlowTab', () => {
     // Assert
     expect(wrapper.emitted('reset')).toHaveLength(1)
   })
+
+  it('credits Strudel Flow by xyflow with links to the app, its makers and its source', () => {
+    // Arrange / Act
+    const wrapper = mountFlowTab()
+
+    // Assert
+    const links = wrapper
+      .findAll('.strudel-flow-tab__credit a')
+      .map((link) => link.attributes('href'))
+    expect(links).toEqual([
+      'https://xyflow.com/strudel-flow',
+      'https://xyflow.com',
+      'https://github.com/xyflow/strudel-flow'
+    ])
+  })
 })

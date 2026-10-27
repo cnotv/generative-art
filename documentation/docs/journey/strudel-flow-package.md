@@ -6,7 +6,9 @@ sidebar_position: 1
 
 The Strudel editor's flow tab moved from `src/views/Tools/StrudelEditor/flow/` into a new
 workspace package, `@webgamekit/strudel-flow`, and its visuals were ported to match
-[Strudel Flow by xyflow](https://xyflow.com/strudel-flow) rather than adapted from the
+[Strudel Flow](https://xyflow.com/strudel-flow) by [xyflow](https://xyflow.com), the makers of React
+Flow, whose source is [xyflow/strudel-flow](https://github.com/xyflow/strudel-flow) under AGPL-3.0,
+rather than adapted from the
 existing editor cards.
 
 ## Why a package, and why Vue

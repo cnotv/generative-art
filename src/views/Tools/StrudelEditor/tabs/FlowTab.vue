@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Plus, RotateCcw } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { STRUDEL_FLOW_NODE_DEFINITIONS } from '@webgamekit/strudel-flow'
+import { STRUDEL_FLOW_NODE_DEFINITIONS, STRUDEL_FLOW_REFERENCE } from '@webgamekit/strudel-flow'
 import type { StrudelFlowNodeCategory, StrudelFlowNodeKind } from '@webgamekit/strudel-flow'
 
 const emit = defineEmits<{
@@ -64,10 +64,34 @@ const nodeGroups = NODE_CATEGORIES.map((category) => ({
       <RotateCcw aria-hidden="true" />
       Reset patch
     </Button>
+
+    <p class="strudel-flow-tab__credit">
+      The flow editor follows the nodes, controls and look of
+      <a :href="STRUDEL_FLOW_REFERENCE.url" target="_blank" rel="noopener">
+        {{ STRUDEL_FLOW_REFERENCE.name }}
+      </a>
+      by
+      <a :href="STRUDEL_FLOW_REFERENCE.authorUrl" target="_blank" rel="noopener">
+        {{ STRUDEL_FLOW_REFERENCE.author }}
+      </a>
+      who also make React Flow. Its source is on
+      <a :href="STRUDEL_FLOW_REFERENCE.sourceUrl" target="_blank" rel="noopener">GitHub</a>
+      under {{ STRUDEL_FLOW_REFERENCE.license }}.
+    </p>
   </div>
 </template>
 
 <style scoped>
+.strudel-flow-tab__credit {
+  margin: 0;
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-sm);
+}
+
+.strudel-flow-tab__credit a {
+  color: var(--color-foreground);
+}
+
 .strudel-flow-tab {
   display: flex;
   flex-direction: column;

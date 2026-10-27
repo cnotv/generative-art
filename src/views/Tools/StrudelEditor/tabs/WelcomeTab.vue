@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { STRUDEL_FLOW_REFERENCE } from '@webgamekit/strudel-flow'
+</script>
 
 <template>
   <div class="strudel-welcome">
@@ -23,6 +25,19 @@
     <p class="strudel-welcome__text">
       Strudel is a JavaScript port of TidalCycles, a live coding language for music. Free and
       open-source under AGPL-3.0-or-later.
+    </p>
+    <p class="strudel-welcome__text">
+      The Flow mode follows the nodes, controls and look of
+      <a :href="STRUDEL_FLOW_REFERENCE.url" target="_blank" rel="noopener">
+        {{ STRUDEL_FLOW_REFERENCE.name }}
+      </a>
+      by
+      <a :href="STRUDEL_FLOW_REFERENCE.authorUrl" target="_blank" rel="noopener">
+        {{ STRUDEL_FLOW_REFERENCE.author }}
+      </a>
+      who also make React Flow. Its source is on
+      <a :href="STRUDEL_FLOW_REFERENCE.sourceUrl" target="_blank" rel="noopener">GitHub</a>
+      under {{ STRUDEL_FLOW_REFERENCE.license }}.
     </p>
   </div>
 </template>

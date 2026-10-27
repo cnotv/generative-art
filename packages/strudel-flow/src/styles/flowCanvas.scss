@@ -1483,3 +1483,24 @@
   height: 0.875rem;
   pointer-events: none;
 }
+
+/* Credit to the editor this one follows, in the corner Vue Flow leaves free. */
+.strudel-flow-credit {
+  position: absolute;
+  right: var(--spacing-3);
+  bottom: var(--spacing-2);
+  z-index: 5;
+  margin: 0;
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
+}
+
+.strudel-flow-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.strudel-flow-credit a:hover {
+  color: var(--sf-card-foreground);
+}

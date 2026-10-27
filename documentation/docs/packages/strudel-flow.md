@@ -4,7 +4,7 @@ sidebar_position: 16
 
 # Package: @webgamekit/strudel-flow
 
-A node editor that compiles a patch of instrument and effect nodes into Strudel code. It powers the **Flow** tab of the Strudel editor at `/tools/StrudelEditor` and is inspired by [Strudel Flow by xyflow](https://xyflow.com/strudel-flow).
+A node editor that compiles a patch of instrument and effect nodes into Strudel code. It powers the **Flow** tab of the Strudel editor at `/tools/StrudelEditor` and follows [Strudel Flow](https://xyflow.com/strudel-flow) by [xyflow](https://xyflow.com), the makers of React Flow.
 
 ![The starter patch in dark mode: a Pad played by a Voice through a Filter, with the tempo bar above](/img/strudel-flow/flow-editor-dark.webp)
 
@@ -99,6 +99,12 @@ flow.loadCode('$: note("c3 e3").sound("sawtooth").lpf(800).fast(2)')
 ```
 
 The app parses the code whenever typing pauses, and compiles the graph back into the editor after a canvas edit. The hook itself never touches the DOM or the player.
+
+## Credits
+
+The node set, the controls, the radial menu, the tempo bar and the visual language all follow [Strudel Flow](https://xyflow.com/strudel-flow) by [xyflow](https://xyflow.com), a visual music sequencer built with React Flow and Strudel. Its source is [xyflow/strudel-flow](https://github.com/xyflow/strudel-flow), licensed AGPL-3.0. This package rebuilds it in Vue for this repo's editor, and it plays through the Strudel engine, itself AGPL-3.0-or-later.
+
+`STRUDEL_FLOW_REFERENCE` in the package config holds those links, and `StrudelFlowEditor` shows a credit in the corner of the canvas that links to them; the Strudel editor's flow and welcome tabs credit it too.
 
 ## Export
 

@@ -130,7 +130,9 @@ tabs keep working in either mode, so hints, patterns and settings stay one click
 button beside the switch hides the player panel when the graph needs the width; the same button
 brings it back.
 
-Flow replaces typing with a small graph, styled after xyflow's Strudel Flow. Add a node from the
+Flow replaces typing with a small graph, after [Strudel Flow](https://xyflow.com/strudel-flow) by
+[xyflow](https://xyflow.com), the makers of React Flow: its node set, controls, radial menu and look
+follow theirs. Add a node from the
 palette or with the **+** button in the canvas; the **+** and a right-click both open the radial
 menu, split into Instruments, Effects and Sounds. A bar over the canvas sets the tempo in BPM and
 the beats in one cycle (**B/C**).
@@ -295,6 +297,11 @@ a 16-bit stereo WAV. Choose the start and end cycle and the sample rate; the fil
 the date. Playback stops while it renders, and Play works again as soon as the file is saved.
 Why the editor renders through its own path rather than Strudel's `renderPatternAudio` is in
 [Strudel's published builds and their audio clocks](../journey/strudel-published-builds.md).
+
+The flow editor follows [Strudel Flow](https://xyflow.com/strudel-flow) by
+[xyflow](https://xyflow.com), whose source is on
+[GitHub](https://github.com/xyflow/strudel-flow) under AGPL-3.0. The canvas, the flow tab and the
+welcome tab each link back to it.
 
 The electro tunes are ported from [strudel.cc](https://strudel.cc/) repl tunes by Felix Roos
 under CC BY-NC-SA 4.0.
