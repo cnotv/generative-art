@@ -17,6 +17,32 @@ const MINI_NOTATION_REST = '~'
 export const formatStrudelFlowNumber = (value: number): number =>
   Number.isFinite(value) ? Math.round(value * 100) / 100 : 0
 
+/**
+ * A knob's value written as the reference editor shows it: thousands as "1.65k" or "10.0k", whole numbers
+ * from a hundred up, and otherwise one or two decimals, such as "1.0" or "0.25".
+ * @param value - the control value
+ * @returns the short label under the knob
+ */
+export const formatStrudelFlowKnobValue = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return '0.0'
+  }
+  if (Math.abs(value) >= 10000) {
+    return `${(value / 1000).toFixed(1)}k`
+  }
+  if (Math.abs(value) >= 1000) {
+    return `${(value / 1000).toFixed(2)}k`
+  }
+  if (Math.abs(value) >= 100) {
+    return value.toFixed(0)
+  }
+  if (Math.abs(value) >= 10) {
+    return value.toFixed(1)
+  }
+  const twoDecimals = value.toFixed(2)
+  return twoDecimals.endsWith('0') ? twoDecimals.slice(0, -1) : twoDecimals
+}
+
 const padStep = (
   row: boolean[] | undefined,
   stepIndex: number,

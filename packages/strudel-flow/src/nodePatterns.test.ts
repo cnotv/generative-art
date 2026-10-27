@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createStrudelFlowDrumRow } from './nodeDefaults'
-import { formatStrudelFlowNumber, generateStrudelFlowNodePattern } from './nodePatterns'
+import {
+  formatStrudelFlowKnobValue,
+  formatStrudelFlowNumber,
+  generateStrudelFlowNodePattern
+} from './nodePatterns'
 import type { StrudelFlowPadData } from './types'
 
 const makePadGrid = (notesByStep: Record<number, number[]> = {}): boolean[][] =>
@@ -32,6 +36,25 @@ describe('formatStrudelFlowNumber', () => {
 
     // Assert
     expect(formattedValue).toBe(expectedValue)
+  })
+})
+
+describe('formatStrudelFlowKnobValue', () => {
+  it.each([
+    [1650, '1.65k'],
+    [20000, '20.0k'],
+    [440, '440'],
+    [12.34, '12.3'],
+    [1, '1.0'],
+    [0.25, '0.25'],
+    [0.5, '0.5'],
+    [Number.NaN, '0.0']
+  ])('writes %s as %s', (value, expected) => {
+    // Arrange / Act
+    const label = formatStrudelFlowKnobValue(value)
+
+    // Assert
+    expect(label).toBe(expected)
   })
 })
 

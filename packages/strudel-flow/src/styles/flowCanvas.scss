@@ -430,54 +430,49 @@
 
 .strudel-flow-knob__dial {
   position: relative;
-  display: grid;
-  width: 5rem; /* size-20 */
-  height: 5rem;
+  display: block;
+  width: 5.5rem;
+  height: 5.5rem;
   border-radius: var(--radius-full);
-  background: var(--sf-card);
-  box-shadow: inset 0 0 0 1px var(--sf-border);
-  place-items: center;
 }
 
 .strudel-flow-knob__dial:focus-within {
-  box-shadow:
-    inset 0 0 0 1px var(--sf-border),
-    0 0 0 2px var(--sf-ring);
+  box-shadow: 0 0 0 2px var(--sf-ring);
 }
 
-.strudel-flow-knob__arc {
-  position: absolute;
-  inset: 0;
+.strudel-flow-knob__graphic {
+  display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
-.strudel-flow-knob__arc circle {
+/* The full sweep in a quiet grey, filled in the accent up to the value. */
+.strudel-flow-knob__track,
+.strudel-flow-knob__fill {
   fill: none;
-  stroke: var(--sf-accent);
   stroke-linecap: round;
-  stroke-width: 3;
+  stroke-width: 4;
+}
+
+.strudel-flow-knob__track {
+  stroke: color-mix(in srgb, var(--sf-muted-foreground) 30%, transparent);
+}
+
+.strudel-flow-knob__fill {
+  stroke: var(--sf-accent);
 }
 
 .strudel-flow-knob__face {
-  position: relative;
-  width: 3.5rem; /* size-14 */
-  height: 3.5rem;
-  border: 1px solid color-mix(in srgb, var(--sf-accent) 12%, transparent);
-  border-radius: var(--radius-full);
-  background: var(--sf-secondary, var(--sf-muted));
+  fill: color-mix(in srgb, var(--sf-accent) 20%, var(--sf-canvas));
+  stroke: color-mix(in srgb, var(--sf-accent) 12%, transparent);
+  stroke-width: 1;
 }
 
 .strudel-flow-knob__indicator {
-  position: absolute;
-  top: 12%;
-  left: 50%;
-  width: 1.5px;
-  height: 38%;
-  border-radius: var(--radius-full);
-  background: var(--sf-accent);
-  transform-origin: 50% 100%;
+  stroke: var(--sf-accent);
+  stroke-linecap: round;
+  stroke-width: 3;
 }
 
 .strudel-flow-knob__input {
@@ -491,17 +486,11 @@
 }
 
 .strudel-flow-knob__value {
+  margin-top: var(--spacing-2);
   font-family: var(--font-mono);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: 600;
   line-height: 1;
-}
-
-.strudel-flow-knob__unit {
-  margin-left: 0.125rem;
-  color: var(--sf-muted-foreground);
-  font-size: var(--font-size-xs);
-  font-weight: 500;
 }
 
 .strudel-flow-knob__label {
