@@ -28,6 +28,7 @@ const {
   mockScopeInitializer,
   mockAudioInitializer,
   mockSynthRegistrar,
+  mockSoundfontRegistrar,
   mockSampleBankLoader,
   mockBankAliasLoader,
   mockContextGetter,
@@ -63,6 +64,7 @@ const {
     mockScopeInitializer: vi.fn(),
     mockAudioInitializer: vi.fn(),
     mockSynthRegistrar: vi.fn(),
+    mockSoundfontRegistrar: vi.fn(),
     mockSampleBankLoader: vi.fn(),
     mockBankAliasLoader: vi.fn(),
     mockContextGetter: vi.fn(),
@@ -88,6 +90,9 @@ vi.mock('@strudel/webaudio', () => ({
   getAudioContext: mockContextGetter,
   setAudioContext: mockContextSetter,
   webaudioOutput: mockScheduleHandler
+}))
+vi.mock('@strudel/soundfonts', () => ({
+  registerSoundfonts: mockSoundfontRegistrar
 }))
 vi.mock('@strudel/tonal', () => ({}))
 vi.mock('@strudel/transpiler', () => ({
@@ -380,6 +385,21 @@ describe('loadDefaultStrudelPlayback', () => {
     const lastBankOrder = Math.max(...mockSampleBankLoader.mock.invocationCallOrder)
     const aliasOrder = mockBankAliasLoader.mock.invocationCallOrder[0] ?? 0
     expect(lastBankOrder).toBeLessThan(aliasOrder)
+  })
+
+  it('registers the General MIDI soundfonts before anything can evaluate', async () => {
+    // Arrange
+    const playbackLoader = loadDefaultStrudelPlayback
+
+    // Act
+    const playback = await playbackLoader(buildPlaybackHooks())
+    await playback.evaluateCode('note("c4").s("gm_piano")')
+
+    // Assert
+    const registerOrder = mockSoundfontRegistrar.mock.invocationCallOrder[0] ?? 0
+    const evaluateOrder = mockEvaluateFunction.mock.invocationCallOrder[0] ?? 0
+    expect(registerOrder).toBeGreaterThan(0)
+    expect(registerOrder).toBeLessThan(evaluateOrder)
   })
 
   it('still plays when one sample bank fails to load', async () => {

@@ -25,6 +25,7 @@ type StrudelEngine = {
   scopeInitializer: UnknownCallable
   audioInitializer: UnknownCallable
   synthRegistrar: UnknownCallable
+  soundfontRegistrar: UnknownCallable
   sampleBankLoader: UnknownCallable
   bankAliasLoader: UnknownCallable
   contextGetter: UnknownCallable
@@ -40,6 +41,14 @@ const isRecordModule = (moduleValue: unknown): moduleValue is Record<string, unk
 const toCallable = (callableValue: unknown): UnknownCallable | undefined =>
   // Strudel ships untyped JS, so the shape is checked before calling.
   typeof callableValue === 'function' ? (callableValue as UnknownCallable) : undefined
+
+const requireCallable = (callableValue: unknown): UnknownCallable => {
+  const callable = toCallable(callableValue)
+  if (callable === undefined) {
+    throw new Error('Strudel modules failed to load')
+  }
+  return callable
+}
 
 const readAudioTime = (audioContext: unknown): number => {
   if (isRecordModule(audioContext) && typeof audioContext.currentTime === 'number') {
@@ -136,14 +145,16 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     webaudioModule,
     tonalModule,
     transpilerModule,
-    drawModule
+    drawModule,
+    soundfontsModule
   ]: unknown[] = await Promise.all([
     import('@strudel/core'),
     import('@strudel/mini'),
     import('@strudel/webaudio'),
     import('@strudel/tonal'),
     import('@strudel/transpiler'),
-    import('@strudel/draw')
+    import('@strudel/draw'),
+    import('@strudel/soundfonts')
   ])
   // Importing the editor module registers _pianoroll, _scope and the other inline widgets
   // with the transpiler, and supplies the sliderWithID that slider() is rewritten into.
@@ -151,19 +162,27 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
   if (
     !isRecordModule(coreModule) ||
     !isRecordModule(webaudioModule) ||
-    !isRecordModule(transpilerModule)
+    !isRecordModule(transpilerModule) ||
+    !isRecordModule(soundfontsModule)
   ) {
     throw new Error('Strudel modules failed to load')
   }
-  const engine = {
-    replFactory: toCallable(coreModule.repl),
-    scopeInitializer: toCallable(coreModule.evalScope),
-    audioInitializer: toCallable(webaudioModule.initAudio),
-    synthRegistrar: toCallable(webaudioModule.registerSynthSounds),
-    sampleBankLoader: toCallable(webaudioModule.samples),
-    bankAliasLoader: toCallable(webaudioModule.aliasBank),
-    contextGetter: toCallable(webaudioModule.getAudioContext),
-    contextSetter: toCallable(webaudioModule.setAudioContext),
+  if (
+    typeof webaudioModule.webaudioOutput !== 'function' ||
+    typeof transpilerModule.transpiler !== 'function'
+  ) {
+    throw new Error('Strudel modules failed to load')
+  }
+  return {
+    replFactory: requireCallable(coreModule.repl),
+    scopeInitializer: requireCallable(coreModule.evalScope),
+    audioInitializer: requireCallable(webaudioModule.initAudio),
+    synthRegistrar: requireCallable(webaudioModule.registerSynthSounds),
+    soundfontRegistrar: requireCallable(soundfontsModule.registerSoundfonts),
+    sampleBankLoader: requireCallable(webaudioModule.samples),
+    bankAliasLoader: requireCallable(webaudioModule.aliasBank),
+    contextGetter: requireCallable(webaudioModule.getAudioContext),
+    contextSetter: requireCallable(webaudioModule.setAudioContext),
     scheduleHandler: webaudioModule.webaudioOutput,
     codeTranspiler: transpilerModule.transpiler,
     scopeModules: [
@@ -174,41 +193,6 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
       drawModule,
       { slider, sliderWithID }
     ]
-  }
-  const {
-    replFactory,
-    scopeInitializer,
-    audioInitializer,
-    synthRegistrar,
-    sampleBankLoader,
-    bankAliasLoader,
-    contextGetter,
-    contextSetter
-  } = engine
-  if (
-    replFactory === undefined ||
-    scopeInitializer === undefined ||
-    audioInitializer === undefined ||
-    synthRegistrar === undefined ||
-    sampleBankLoader === undefined ||
-    bankAliasLoader === undefined ||
-    contextGetter === undefined ||
-    contextSetter === undefined ||
-    typeof engine.scheduleHandler !== 'function' ||
-    typeof engine.codeTranspiler !== 'function'
-  ) {
-    throw new Error('Strudel modules failed to load')
-  }
-  return {
-    ...engine,
-    replFactory,
-    scopeInitializer,
-    audioInitializer,
-    synthRegistrar,
-    sampleBankLoader,
-    bankAliasLoader,
-    contextGetter,
-    contextSetter
   }
 }
 
@@ -281,6 +265,7 @@ export const loadDefaultStrudelPlayback = async (
   }
   await engine.audioInitializer()
   engine.synthRegistrar()
+  engine.soundfontRegistrar()
   const audioContext: unknown = await engine.contextGetter()
   await resumeAudioContext(audioContext)
   await loadSampleBanks(engine)

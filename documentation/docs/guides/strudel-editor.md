@@ -16,8 +16,8 @@ edit the code, and press the play button above the editor.
   one replaces the saved code.
 - The first Play loads the same sounds strudel.cc does: dirt-samples, the piano, the VCSL
   instruments, the tidal drum machines with their short names (`.bank("TR909")`), the uzu
-  drum kit and wavetables, and mridangam. Code copied from strudel.cc plays unchanged, except
-  for General MIDI soundfonts (`gm_*`), which are not loaded.
+  drum kit and wavetables, mridangam, and the General MIDI soundfonts (`gm_piano`,
+  `gm_acoustic_bass` and the rest), so code copied from strudel.cc plays unchanged.
 
 A panel opens on the hints tab, followed by six of the strudel.cc tabs, an import tab and the
 flow tab:
