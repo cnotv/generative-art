@@ -146,11 +146,21 @@ const { musicStyles, pickedStyleId, styleDetection, hints, pickStyle, applyHint 
   updatePatternCode
 )
 
-const readAnchoredPatternId = (): string => decodeURIComponent(window.location.hash.slice(1))
+const readAnchor = (): string => decodeURIComponent(window.location.hash.slice(1))
 
-// Every pattern has its own anchor, so a pattern can be linked to, and Back steps through them.
-const loadAnchoredPattern = (): void => {
-  if (selectPattern(readAnchoredPatternId())) {
+const findTab = (anchor: string): StrudelTabId | undefined =>
+  tabList.find((tab) => tab.id === anchor)?.id
+
+// Every tab and every pattern has its own anchor, so either can be linked to, and Back steps
+// through them. Tab ids never collide with pattern ids, which saved patterns prefix.
+const loadAnchor = (): void => {
+  const anchor = readAnchor()
+  const tabId = findTab(anchor)
+  if (tabId !== undefined) {
+    onTabSelected(tabId)
+    return
+  }
+  if (selectPattern(anchor)) {
     editorMode.value = 'code'
   }
 }
@@ -162,8 +172,8 @@ const onPatternSelected = (patternId: string): void => {
 }
 
 onMounted(() => {
-  loadAnchoredPattern()
-  window.addEventListener('hashchange', loadAnchoredPattern)
+  loadAnchor()
+  window.addEventListener('hashchange', loadAnchor)
 })
 
 const onPlayRequested = (): void => {
@@ -207,10 +217,9 @@ const onEditorModeChange = (mode: string): void => {
   setActiveTab('flow')
 }
 
-const onTabSelected = (tabId: string): void => {
-  const nextTabId = tabId as StrudelTabId
-  setActiveTab(nextTabId)
-  if (nextTabId === 'flow') {
+const onTabSelected = (tabId: StrudelTabId): void => {
+  setActiveTab(tabId)
+  if (tabId === 'flow') {
     openFlowMode()
   }
 }
@@ -221,7 +230,7 @@ const onFlowNodesConnected = (sourceNodeId: string, targetNodeId: string): void 
 
 // Before unmounting, while the code editor and its canvas are still there to clear.
 onBeforeUnmount(() => {
-  window.removeEventListener('hashchange', loadAnchoredPattern)
+  window.removeEventListener('hashchange', loadAnchor)
   flowPlaybackTimer = clearTimer(flowPlaybackTimer)
   codeParseTimer = clearTimer(codeParseTimer)
   void stopPattern()
@@ -308,18 +317,18 @@ onBeforeUnmount(() => {
     <section class="strudel-editor__side" aria-label="Player">
       <div class="strudel-editor__panel">
         <div class="strudel-editor__tabs" role="tablist">
-          <button
+          <a
             v-for="tab in tabList"
             :key="tab.id"
             class="strudel-editor__tab"
             :class="{ 'strudel-editor__tab--active': activeTab === tab.id }"
             role="tab"
             :aria-selected="activeTab === tab.id"
-            type="button"
+            :href="`#${tab.id}`"
             @click="onTabSelected(tab.id)"
           >
             {{ tab.label }}
-          </button>
+          </a>
         </div>
         <div class="strudel-editor__panel-content">
           <HintsTab
@@ -524,6 +533,7 @@ onBeforeUnmount(() => {
 
 .strudel-editor__tab {
   padding: var(--spacing-2) var(--spacing-3);
+  text-decoration: none;
   border: none;
   background: transparent;
   color: var(--color-muted-foreground);

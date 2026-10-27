@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { compileStrudelFlow } from './compileStrudelFlow'
 import { createDefaultStrudelFlowPatch } from './defaultPatch'
-import { createStrudelFlowNodeData } from './nodeDefaults'
+import { createStrudelFlowDrumRow, createStrudelFlowNodeData } from './nodeDefaults'
 import { generateStrudelFlowNodePattern } from './nodePatterns'
 import { parseStrudelFlowCode } from './parseStrudelFlowCode'
 import type { StrudelFlowEdge, StrudelFlowNode, StrudelFlowNodeData } from './types'
@@ -154,14 +154,17 @@ describe('parseStrudelFlowCode', () => {
     expect(compileStrudelFlow(parsed!)).toEqual(original)
   })
 
-  it('round-trips a two-row beat as a stack', () => {
+  it('round-trips a beat with any samples, a step count and variations', () => {
     // Arrange
     const beats = createNode('beats', {
       kind: 'beats',
+      steps: 8,
       rows: [
-        { instrument: 'bd', steps: [true, ...Array<boolean>(15).fill(false)] },
-        { instrument: 'sd', steps: [false, ...Array<boolean>(15).fill(true)] }
-      ]
+        createStrudelFlowDrumRow('clubkick', [0, 4]),
+        { ...createStrudelFlowDrumRow('cp', [2, 6]), modifiers: { 6: '!2' } },
+        createStrudelFlowDrumRow('808oh', [1, 3, 5, 7])
+      ],
+      showModifiers: true
     })
 
     // Act
@@ -246,12 +249,14 @@ describe('parseStrudelFlowCode', () => {
   it.each([
     ['note("c3 e3").s("sawtooth").lpf(800).fast(2)', ['notes', 'voice', 'filter', 'effect']],
     ['s("bd*2 [~ sd]")', ['samples']],
-    ['stack(note("c3"), s("hh*4")).room(.5)', ['notes', 'samples', 'space']],
+    ['stack(note("c3"), s("hh*4")).room(.5)', ['notes', 'beats', 'space']],
+    ['s("hh*8 [~ sd]")', ['samples']],
+    ['s("bd(3,8)")', ['samples']],
     ['$: s("bd").struct("1 ~ ~ ~ 1 ~ ~ ~ 1 ~ ~ ~ 1 ~ ~ ~")', ['beats']],
     ['$: note("c3").lpf(slider(800, 200, 4000))', ['notes', 'effect']],
     ['$: "c3 e3".note().jux(rev)', ['code', 'effect', 'effect']],
     ['$: note("c3")\n  // a comment between calls\n  .gain(.5)', ['notes', 'level']],
-    ['$: note("c3")\n$: s("bd")', ['notes', 'samples']]
+    ['$: note("c3")\n$: s("bd")', ['notes', 'beats']]
   ])('maps %s onto nodes', (code, kinds) => {
     // Arrange / Act
     const parsed = parseStrudelFlowCode(code)
@@ -279,7 +284,7 @@ describe('parseStrudelFlowCode', () => {
 
   it('wires every stacked instrument into the shared effects in signal order', () => {
     // Arrange
-    const code = '$: stack(note("c3"), s("hh*4")).room(.5).gain(.8)'
+    const code = '$: stack(note("c3"), s("bd*2 [~ sd]")).room(.5).gain(.8)'
 
     // Act
     const parsed = parseStrudelFlowCode(code)
@@ -348,7 +353,7 @@ describe('parseStrudelFlowCode', () => {
 
   it('reads a stacked branch with its own effects back onto that branch alone', () => {
     // Arrange
-    const code = '$: stack(note("c3").sound("sawtooth"), s("bd")).room(0.5)'
+    const code = '$: stack(note("c3").sound("sawtooth"), s("bd*2 [~ sd]")).room(0.5)'
 
     // Act
     const parsed = parseStrudelFlowCode(code)
@@ -360,7 +365,44 @@ describe('parseStrudelFlowCode', () => {
       'samples-1>space-1'
     ])
     expect(compileStrudelFlow(parsed!).code).toContain(
-      '$: stack(note("c3").sound("sawtooth"), s("bd")).room(0.5)'
+      '$: stack(note("c3").sound("sawtooth"), s("bd*2 [~ sd]")).room(0.5)'
     )
+  })
+
+  it.each([
+    ['s("~ cp ~ cp")', 4, [{ sound: 'cp', hits: [1, 3] }]],
+    [
+      's("bd [bd,cp] ~ cp:2*2")',
+      4,
+      [
+        { sound: 'bd', hits: [0, 1] },
+        { sound: 'cp', hits: [1] },
+        { sound: 'cp:2', hits: [3] }
+      ]
+    ],
+    [
+      'stack(s("bd ~ ~ ~"), s("~ ~ cp ~"))',
+      4,
+      [
+        { sound: 'bd', hits: [0] },
+        { sound: 'cp', hits: [2] }
+      ]
+    ]
+  ])('reads the sample line %s as Beats tracks', (code, steps, tracks) => {
+    // Arrange / Act
+    const parsed = parseStrudelFlowCode(`$: ${code}`)
+    const beats = parsed?.nodes[0]?.data
+
+    // Assert
+    expect(parsed?.nodes).toHaveLength(1)
+    expect(beats?.kind === 'beats' ? beats.steps : null).toBe(steps)
+    expect(
+      beats?.kind === 'beats'
+        ? beats.rows.map((row) => ({
+            sound: row.sound,
+            hits: row.steps.flatMap((isHit, step) => (isHit ? [step] : []))
+          }))
+        : null
+    ).toEqual(tracks)
   })
 })

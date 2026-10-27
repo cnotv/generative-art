@@ -99,68 +99,51 @@ export const STRUDEL_FLOW_PAD_MODIFIER_OPTIONS = [
   { value: '*4', label: '*4' }
 ]
 
+export const STRUDEL_FLOW_MAX_DRUM_ROWS = 8
+export const STRUDEL_FLOW_DEFAULT_BEATS_STEPS = 16
+
+/** The starter beat: four on the floor, a backbeat snare and eighth-note hats. */
 export const STRUDEL_FLOW_DRUM_ROWS = [
+  { sound: 'bd', hits: [0, 4, 8, 12] },
+  { sound: 'sd', hits: [4, 12] },
+  { sound: 'hh', hits: [0, 2, 4, 6, 8, 10, 12, 14] }
+]
+
+/** Sounds a new track takes, in order, skipping any the node already uses. */
+export const STRUDEL_FLOW_NEW_DRUM_SOUNDS = ['bd', 'sd', 'hh', 'cp', 'ho', 'lt', 'mt', 'cr']
+
+/** Drum and percussion banks from the dirt-samples kit the editor loads, by family. */
+export const STRUDEL_FLOW_DRUM_SOUND_GROUPS = [
   {
-    instrument: 'bd',
-    steps: [
-      true,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false
-    ]
+    label: 'Kicks',
+    sounds: ['bd', '808bd', 'clubkick', 'hardkick', 'kicklinn', 'popkick', 'reverbkick']
   },
   {
-    instrument: 'sd',
-    steps: [
-      false,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      true,
-      false,
-      false,
-      false
+    label: 'Snares',
+    sounds: [
+      'sd',
+      'sn',
+      '808sd',
+      'dr',
+      'dr2',
+      'dr55',
+      'dr_few',
+      'drum',
+      'drumtraks',
+      'electro1',
+      'gretsch',
+      'hardcore',
+      'house',
+      'ifdrums',
+      'jungle'
     ]
   },
+  { label: 'Hi-hats', sounds: ['hh', 'hh27', 'linnhats', 'hc', 'ho', 'oc', '808hc', '808oh'] },
+  { label: 'Claps', sounds: ['cp', 'realclaps', 'hand', 'clak'] },
+  { label: 'Toms', sounds: ['lt', 'mt', 'ht', '808lt', '808mt', '808ht', '808lc', '808mc'] },
+  { label: 'Cymbals', sounds: ['cr', '808cy', 'cb', 'rm', 'rs'] },
   {
-    instrument: 'hh',
-    steps: [
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false
-    ]
+    label: 'Percussion',
+    sounds: ['perc', 'tabla', 'tok', 'tink', 'click', 'stomp', 'glasstap', 'can', 'bottle']
   }
 ]

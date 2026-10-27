@@ -524,7 +524,7 @@ describe('StrudelEditor audible playback', () => {
             expect(blocks[0]).toContain(
               'stack(n("[7] [5] [3] [1] [3] [2] [6] [3]").scale("C3:major").sound("triangle"), '
             )
-            expect(blocks[0]).toContain('s("bd")')
+            expect(blocks[0]).toContain('s("bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~")')
             expect(blocks[0]).toContain(').lpf(1500)')
           },
           { timeout: 15000 }

@@ -1,5 +1,7 @@
 import {
   STRUDEL_FLOW_CHORD_SCALE_OPTIONS,
+  STRUDEL_FLOW_DEFAULT_BEATS_STEPS,
+  STRUDEL_FLOW_MAX_DRUM_ROWS,
   STRUDEL_FLOW_KEY_OPTIONS,
   STRUDEL_FLOW_MAX_FILTER_CUTOFF,
   STRUDEL_FLOW_MAX_FILTER_RESONANCE,
@@ -17,6 +19,7 @@ import {
 import {
   createDefaultDrumRows,
   createDefaultPadGrid,
+  createStrudelFlowDrumRow,
   STRUDEL_FLOW_CHORDS_DEFAULTS,
   STRUDEL_FLOW_CODE_DEFAULTS,
   STRUDEL_FLOW_DELAY_DEFAULTS,
@@ -39,7 +42,6 @@ import {
 } from './readStoredValue'
 import type {
   StrudelFlowChordsData,
-  StrudelFlowDrumInstrument,
   StrudelFlowDrumRow,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
@@ -63,8 +65,6 @@ const NODE_KINDS: StrudelFlowNodeKind[] = [
   'effect'
 ]
 
-const DRUM_INSTRUMENTS: StrudelFlowDrumInstrument[] = ['bd', 'sd', 'hh']
-
 const readSteps = (value: unknown, fallback: boolean[]): boolean[] =>
   Array.isArray(value) &&
   value.length === STRUDEL_FLOW_STEP_COUNT &&
@@ -72,26 +72,47 @@ const readSteps = (value: unknown, fallback: boolean[]): boolean[] =>
     ? value
     : fallback
 
-const isDrumInstrument = (value: unknown): value is StrudelFlowDrumInstrument =>
-  typeof value === 'string' && DRUM_INSTRUMENTS.some((instrument) => instrument === value)
+const isModifier = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  value.length > 0 &&
+  STRUDEL_FLOW_PAD_MODIFIER_OPTIONS.some((option) => option.value === value)
+
+const readStepModifiers = (value: unknown): Record<number, string> =>
+  isStoredRecord(value)
+    ? Object.fromEntries(
+        Object.entries(value).flatMap(([key, modifier]) => {
+          const stepIndex = Number(key)
+          return Number.isInteger(stepIndex) &&
+            stepIndex >= 0 &&
+            stepIndex < STRUDEL_FLOW_STEP_COUNT &&
+            isModifier(modifier)
+            ? [[stepIndex, modifier]]
+            : []
+        })
+      )
+    : {}
+
+const readDrumRow = (value: unknown): StrudelFlowDrumRow | null => {
+  if (!isStoredRecord(value)) {
+    return null
+  }
+  // Patches saved before tracks took any sample named the sound `instrument`.
+  const sound = readStoredString(value.sound ?? value.instrument, '').trim()
+  return sound.length === 0
+    ? null
+    : {
+        sound,
+        steps: readSteps(value.steps, createStrudelFlowDrumRow(sound).steps),
+        modifiers: readStepModifiers(value.modifiers)
+      }
+}
 
 const readDrumRows = (value: unknown): StrudelFlowDrumRow[] => {
-  const fallbackRows = createDefaultDrumRows()
-  if (!Array.isArray(value)) {
-    return fallbackRows
-  }
-  return fallbackRows.map((fallbackRow) => {
-    const rawRow = value.find(
-      (row): row is Record<string, unknown> =>
-        isStoredRecord(row) &&
-        isDrumInstrument(row.instrument) &&
-        row.instrument === fallbackRow.instrument
-    )
-    return {
-      instrument: fallbackRow.instrument,
-      steps: readSteps(rawRow?.steps, fallbackRow.steps)
-    }
-  })
+  const rows = (Array.isArray(value) ? value : [])
+    .map(readDrumRow)
+    .filter((row): row is StrudelFlowDrumRow => row !== null)
+    .slice(0, STRUDEL_FLOW_MAX_DRUM_ROWS)
+  return rows.length > 0 ? rows : createDefaultDrumRows()
 }
 
 const readInteger = (value: unknown, fallback: number, minimum: number, maximum: number): number =>
@@ -108,25 +129,6 @@ const readPadGrid = (value: unknown): boolean[][] => {
       Array.isArray(rawRow) ? rawRow[noteIndex] === true : false
     )
   })
-}
-
-const readPadColumnModifiers = (value: unknown): Record<number, string> => {
-  if (!isStoredRecord(value)) {
-    return {}
-  }
-  return Object.fromEntries(
-    Object.entries(value).flatMap(([key, rawModifier]) => {
-      const stepIndex = Number(key)
-      const valid =
-        Number.isInteger(stepIndex) &&
-        stepIndex >= 0 &&
-        stepIndex < STRUDEL_FLOW_PAD_STEP_COUNT &&
-        typeof rawModifier === 'string' &&
-        rawModifier.length > 0 &&
-        STRUDEL_FLOW_PAD_MODIFIER_OPTIONS.some((option) => option.value === rawModifier)
-      return valid ? ([[stepIndex, rawModifier]] as const) : []
-    })
-  ) as Record<number, string>
 }
 
 const readChordProgression = (value: unknown): number[] => {
@@ -186,7 +188,7 @@ const readPad = (raw: Record<string, unknown>): StrudelFlowPadData => ({
     STRUDEL_FLOW_PAD_DEFAULTS.scaleType
   ),
   grid: readPadGrid(raw.grid),
-  columnModifiers: readPadColumnModifiers(raw.columnModifiers)
+  columnModifiers: readStepModifiers(raw.columnModifiers)
 })
 
 const readChords = (raw: Record<string, unknown>): StrudelFlowChordsData => {
@@ -210,7 +212,13 @@ type NodeDataReader = (raw: Record<string, unknown>) => StrudelFlowNodeData
 
 const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
   pad: readPad,
-  beats: (raw) => ({ ...readMuted(raw), kind: 'beats', rows: readDrumRows(raw.rows) }),
+  beats: (raw) => ({
+    ...readMuted(raw),
+    kind: 'beats',
+    steps: readInteger(raw.steps, STRUDEL_FLOW_DEFAULT_BEATS_STEPS, 1, STRUDEL_FLOW_STEP_COUNT),
+    rows: readDrumRows(raw.rows),
+    showModifiers: raw.showModifiers === true
+  }),
   chords: readChords,
   notes: (raw) => ({
     ...readMuted(raw),

@@ -336,56 +336,76 @@
   box-shadow: 0 0 0 2px var(--sf-ring);
 }
 
-/* Beats step grid (large reference cells: w-12 h-10). */
-.strudel-flow-steps {
+/* Beats: a sample picker per track beside its step cells, as in the reference. */
+.strudel-flow-beats {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
 }
 
-.strudel-flow-steps__row {
+.strudel-flow-beats__tracks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--sf-muted) 40%, transparent);
+}
+
+.strudel-flow-beats__track {
   display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: start;
   gap: var(--spacing-2);
 }
 
-.strudel-flow-steps__cells {
+.strudel-flow-beats__steps {
   display: grid;
-  grid-template-columns: repeat(16, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(var(--beats-steps), minmax(0, 1fr));
+  gap: var(--spacing-1);
 }
 
-.strudel-flow-steps__cell {
-  height: 2.5rem; /* h-10 */
+.strudel-flow-field__label--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* On/off switch (reference: a pill with a dark thumb). */
+.strudel-flow-switch {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
   padding: 0;
-  border: 1px solid hsl(0deg 0% 100% / 5%);
-  border-radius: var(--radius-md);
+  border: 0;
+  border-radius: var(--radius-full);
   background: var(--sf-muted);
   cursor: pointer;
-  transition:
-    background-color 150ms ease-out,
-    transform 150ms ease-out;
 }
 
-.strudel-flow-steps__cell:hover {
-  background: color-mix(in srgb, var(--sf-muted-foreground) 0.3, transparent);
-}
-
-.strudel-flow-steps__cell:active {
-  transform: scale(0.95);
-}
-
-.strudel-flow-steps__cell--active {
-  border-color: hsl(0deg 0% 100% / 5%);
+.strudel-flow-switch[aria-checked='true'] {
   background: var(--sf-accent);
 }
 
-.strudel-flow-steps__cell--active:hover {
-  background: color-mix(in srgb, var(--sf-accent) 0.85, transparent);
+.strudel-flow-switch__thumb {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-full);
+  background: var(--sf-card);
+  transition: transform 150ms ease-out;
 }
 
-.strudel-flow-steps__cell:focus-visible {
+.strudel-flow-switch[aria-checked='true'] .strudel-flow-switch__thumb {
+  transform: translateX(1.25rem);
+}
+
+.strudel-flow-switch:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--sf-ring);
 }
@@ -640,6 +660,10 @@
 
 .strudel-flow-node[data-node-kind='chords'] {
   width: 26rem;
+}
+
+.strudel-flow-node[data-node-kind='beats'] {
+  width: 44rem;
 }
 
 .strudel-flow-node[data-node-kind='scope'],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { compileStrudelFlow } from './compileStrudelFlow'
-import { createStrudelFlowNodeData } from './nodeDefaults'
+import { createStrudelFlowDrumRow, createStrudelFlowNodeData } from './nodeDefaults'
 import type {
   StrudelFlowEdge,
   StrudelFlowNode,
@@ -80,7 +80,7 @@ describe('compileStrudelFlow', () => {
     expect(compilation.errorMessage).toBeNull()
     expect(compilation.code).toContain('$: stack(')
     expect(compilation.code).toContain(STARTER_PAD)
-    expect(compilation.code).toContain('s("bd").struct(')
+    expect(compilation.code).toContain('s("bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~")')
     expect(compilation.code).toContain(').lpf(1500).lpq(1)')
   })
 
@@ -132,11 +132,9 @@ describe('compileStrudelFlow', () => {
     // Arrange
     const beats = createNode('beats', {
       kind: 'beats',
-      rows: [
-        { instrument: 'bd', steps: Array(16).fill(false) },
-        { instrument: 'sd', steps: Array(16).fill(false) },
-        { instrument: 'hh', steps: Array(16).fill(false) }
-      ]
+      steps: 16,
+      rows: ['bd', 'sd', 'hh'].map((sound) => createStrudelFlowDrumRow(sound)),
+      showModifiers: false
     })
 
     // Act

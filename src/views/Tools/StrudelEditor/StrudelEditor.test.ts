@@ -297,6 +297,31 @@ describe('StrudelEditor view', () => {
     expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
+  it('links every tab to its own anchor', async () => {
+    // Arrange / Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    const links = wrapper.findAll('.strudel-editor__tab').map((tab) => tab.attributes('href'))
+    expect(links).toContain('#midi')
+    expect(links).toContain('#export')
+  })
+
+  it.each([
+    ['#midi', 'midi'],
+    ['#export', 'export']
+  ])('opens the tab named by the anchor %s', async (hash, tabLabel) => {
+    // Arrange
+    window.history.replaceState(null, '', `${window.location.pathname}${hash}`)
+
+    // Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    expect(wrapper.find('.strudel-editor__tab--active').text()).toBe(tabLabel)
+    expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
+  })
+
   it('switches to the console tab', async () => {
     // Arrange
     const wrapper = await mountEditorView()

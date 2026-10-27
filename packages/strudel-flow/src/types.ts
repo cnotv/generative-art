@@ -1,7 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
 
-export type StrudelFlowDrumInstrument = 'bd' | 'sd' | 'hh'
-
 export type StrudelFlowNodeKind =
   | 'pad'
   | 'beats'
@@ -25,9 +23,16 @@ export type StrudelFlowMuteFlag = {
   muted?: boolean
 }
 
+/** One Beats track: a sample name, its sixteen step switches, and per-step variations. */
 export type StrudelFlowDrumRow = {
-  instrument: StrudelFlowDrumInstrument
+  sound: string
   steps: boolean[]
+  modifiers: Record<number, string>
+}
+
+export type StrudelFlowSoundGroup = {
+  label: string
+  sounds: string[]
 }
 
 export type StrudelFlowPadData = StrudelFlowMuteFlag & {
@@ -43,7 +48,11 @@ export type StrudelFlowPadData = StrudelFlowMuteFlag & {
 
 export type StrudelFlowBeatsData = StrudelFlowMuteFlag & {
   kind: 'beats'
+  /** How many of the sixteen steps play. */
+  steps: number
   rows: StrudelFlowDrumRow[]
+  /** Whether the variation picker under each step is shown. */
+  showModifiers: boolean
 }
 
 export type StrudelFlowChordsData = StrudelFlowMuteFlag & {

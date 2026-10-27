@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createStrudelFlowDrumRow } from './nodeDefaults'
 import { formatStrudelFlowNumber, generateStrudelFlowNodePattern } from './nodePatterns'
 import type { StrudelFlowPadData } from './types'
 
@@ -48,7 +49,9 @@ describe('generateStrudelFlowNodePattern', () => {
     }
     const silentBeats = {
       kind: 'beats' as const,
-      rows: [{ instrument: 'bd' as const, steps: Array(16).fill(false) as boolean[] }]
+      steps: 16,
+      rows: [createStrudelFlowDrumRow('bd')],
+      showModifiers: false
     }
 
     // Act
@@ -116,28 +119,26 @@ describe('generateStrudelFlowNodePattern', () => {
     expect(pattern).toBe('n("<[0,3,7]>").scale("C4:major")')
   })
 
-  it('writes one drum row as a struct and several as a stack', () => {
+  it('writes each track as a sample line over its steps, stacked when there are several', () => {
     // Arrange
-    const onlyKick = {
+    const onlyClap = {
       kind: 'beats' as const,
-      rows: [{ instrument: 'bd' as const, steps: [true, ...Array(15).fill(false)] as boolean[] }]
+      steps: 4,
+      rows: [{ ...createStrudelFlowDrumRow('cp', [1, 3]), modifiers: { 3: '*2' } }],
+      showModifiers: true
     }
-    const kickAndSnare = {
-      kind: 'beats' as const,
-      rows: [
-        ...onlyKick.rows,
-        { instrument: 'sd' as const, steps: [false, ...Array(15).fill(true)] as boolean[] }
-      ]
+    const clapAndKick = {
+      ...onlyClap,
+      rows: [...onlyClap.rows, createStrudelFlowDrumRow('bd', [0, 2, 12])]
     }
 
     // Act
-    const oneRowPattern = generateStrudelFlowNodePattern(onlyKick, '')
-    const twoRowPattern = generateStrudelFlowNodePattern(kickAndSnare, '')
+    const oneTrack = generateStrudelFlowNodePattern(onlyClap, '')
+    const twoTracks = generateStrudelFlowNodePattern(clapAndKick, '')
 
     // Assert
-    expect(oneRowPattern).toBe('s("bd").struct("1 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~")')
-    expect(twoRowPattern).toContain('stack(')
-    expect(twoRowPattern).toContain('s("sd").struct("~ 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1")')
+    expect(oneTrack).toBe('s("~ cp ~ cp*2")')
+    expect(twoTracks).toBe('stack(s("~ cp ~ cp*2"), s("bd ~ bd ~"))')
   })
 
   it('wraps a custom expression and drops a trailing semicolon', () => {

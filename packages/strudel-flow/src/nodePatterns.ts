@@ -7,7 +7,6 @@ import type {
   StrudelFlowPadData
 } from './types'
 
-const MINI_NOTATION_HIT = '1'
 const MINI_NOTATION_REST = '~'
 
 /**
@@ -45,16 +44,22 @@ const generatePadPattern = (data: StrudelFlowPadData): string => {
   return `n(${JSON.stringify(stepPatterns.join(' '))}).scale(${JSON.stringify(scale)})`
 }
 
-const generateDrumRowPattern = (row: StrudelFlowDrumRow): string => {
-  if (!row.steps.some((step) => step)) {
+// A track is one sample line, `s("cp ~ cp*2 ~")`: the sample on a hit, a rest otherwise.
+const generateDrumRowPattern = (row: StrudelFlowDrumRow, stepCount: number): string => {
+  const playedSteps = row.steps.slice(0, stepCount)
+  if (!playedSteps.some((step) => step)) {
     return ''
   }
-  const steps = row.steps.map((step) => (step ? MINI_NOTATION_HIT : MINI_NOTATION_REST)).join(' ')
-  return `s(${JSON.stringify(row.instrument)}).struct(${JSON.stringify(steps)})`
+  const tokens = playedSteps.map((isHit, stepIndex) =>
+    isHit ? `${row.sound}${row.modifiers[stepIndex] ?? ''}` : MINI_NOTATION_REST
+  )
+  return `s(${JSON.stringify(tokens.join(' '))})`
 }
 
 const generateBeatsPattern = (data: StrudelFlowBeatsData): string => {
-  const rowPatterns = data.rows.map(generateDrumRowPattern).filter((pattern) => pattern.length > 0)
+  const rowPatterns = data.rows
+    .map((row) => generateDrumRowPattern(row, data.steps))
+    .filter((pattern) => pattern.length > 0)
   if (rowPatterns.length === 0) {
     return ''
   }

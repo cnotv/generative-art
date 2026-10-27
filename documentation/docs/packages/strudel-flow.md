@@ -47,7 +47,7 @@ const { code, errorMessage } = compileStrudelFlow(patch)
 | Kind     | Category   | What it does                                                             |
 | -------- | ---------- | ------------------------------------------------------------------------ |
 | Pad      | Instrument | An eight-note grid with an arpeggio or chord mode, key, scale and octave |
-| Beats    | Instrument | A sixteen-step kick, snare and hi-hat grid                               |
+| Beats    | Instrument | Up to eight tracks of any sample, a step count, and per-step variations  |
 | Chords   | Instrument | A four-chord progression with preset shapes and note-level editing       |
 | Notes    | Instrument | A `note("…")` line in mini notation                                      |
 | Samples  | Instrument | An `s("…")` line in mini notation                                        |
@@ -88,7 +88,7 @@ const { nodes, edges, beatsPerMinute, compilation, addNode, connectNodes } = use
 
 ## Code round trip
 
-The flow editor is not a separate format: any code maps onto a graph. `parseStrudelFlowCode(code, existingNodes)` reads it block by block. Calls with a dedicated node get it, any other chained call becomes an Effect node, `note("…")` and `s("…")` heads become Notes and Samples, `stack(...)` splits into its instruments with their own branch effects, and a head nothing reads becomes a Code node. Statements that are not patterns, such as `samples(...)` or `const cc = await midin(...)`, go to `setup`. It returns `null` while the code has a syntax error, and `loadCode` then leaves the graph alone and returns `false`.
+The flow editor is not a separate format: any code maps onto a graph. `parseStrudelFlowCode(code, existingNodes)` reads it block by block. Calls with a dedicated node get it, any other chained call becomes an Effect node, a flat sample line such as `s("~ cp ~ cp")` becomes Beats tracks, `note("…")` becomes Notes, richer sample lines become Samples, `stack(...)` splits into its instruments with their own branch effects, and a head nothing reads becomes a Code node. Statements that are not patterns, such as `samples(...)` or `const cc = await midin(...)`, go to `setup`. It returns `null` while the code has a syntax error, and `loadCode` then leaves the graph alone and returns `false`.
 
 ```typescript
 import { useStrudelFlow } from '@webgamekit/strudel-flow'

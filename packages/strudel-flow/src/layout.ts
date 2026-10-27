@@ -16,7 +16,7 @@ import type {
 const DEFAULT_NODE_SIZE: NodeSize = { width: 448, height: 300 }
 const NODE_SIZES: Record<StrudelFlowNodeKind, NodeSize> = {
   pad: { width: 448, height: 540 },
-  beats: { width: 448, height: 300 },
+  beats: { width: 704, height: 320 },
   chords: { width: 416, height: 520 },
   notes: { width: 384, height: 200 },
   samples: { width: 384, height: 200 },

@@ -1,15 +1,16 @@
 import {
+  STRUDEL_FLOW_DEFAULT_BEATS_STEPS,
   STRUDEL_FLOW_DRUM_ROWS,
   STRUDEL_FLOW_MAX_SCOPE_SCALE,
   STRUDEL_FLOW_MIN_SCOPE_SCALE,
   STRUDEL_FLOW_PAD_NOTE_COUNT,
-  STRUDEL_FLOW_PAD_STEP_COUNT
+  STRUDEL_FLOW_PAD_STEP_COUNT,
+  STRUDEL_FLOW_STEP_COUNT
 } from './config'
 import type {
   StrudelFlowChordsData,
   StrudelFlowCodeData,
   StrudelFlowDelayData,
-  StrudelFlowDrumInstrument,
   StrudelFlowDrumRow,
   StrudelFlowEffectData,
   StrudelFlowEnvelopeData,
@@ -33,13 +34,6 @@ const INSTRUMENT_KINDS: StrudelFlowNodeKind[] = [
   'samples',
   'code'
 ]
-
-/** A label shown on a drum row and in the step grid, by its Strudel sound name. */
-export const STRUDEL_FLOW_DRUM_LABELS: Record<StrudelFlowDrumRow['instrument'], string> = {
-  bd: 'Kick',
-  sd: 'Snare',
-  hh: 'Hi-hat'
-}
 
 /** The pad pattern the node opens with: an arpeggio rising and falling over eight steps. */
 const STARTER_PAD_NOTES: [step: number, note: number][] = [
@@ -153,18 +147,35 @@ export const STRUDEL_FLOW_SCOPE_DEFAULTS: StrudelFlowScopeData = {
 }
 
 /**
+ * A silent Beats track for one sample.
+ * @param sound - the sample name, such as "cp"
+ * @param hits - the steps that play, none by default
+ * @returns a track with all sixteen steps and no variations
+ */
+export const createStrudelFlowDrumRow = (
+  sound: string,
+  hits: number[] = []
+): StrudelFlowDrumRow => ({
+  sound,
+  steps: Array.from({ length: STRUDEL_FLOW_STEP_COUNT }, (_, step) => hits.includes(step)),
+  modifiers: {}
+})
+
+/**
  * Copies the starter drum grid so two Beats nodes never share the same step arrays.
  * @returns a fresh set of drum rows with all sixteen steps
  */
 export const createDefaultDrumRows = (): StrudelFlowDrumRow[] =>
-  STRUDEL_FLOW_DRUM_ROWS.map((row) => ({
-    instrument: row.instrument as StrudelFlowDrumInstrument,
-    steps: [...row.steps]
-  }))
+  STRUDEL_FLOW_DRUM_ROWS.map((row) => createStrudelFlowDrumRow(row.sound, row.hits))
 
 const NODE_DATA_FACTORIES: { [Kind in StrudelFlowNodeKind]: () => StrudelFlowNodeData } = {
   pad: () => ({ ...STRUDEL_FLOW_PAD_DEFAULTS, grid: createDefaultPadGrid(), columnModifiers: {} }),
-  beats: () => ({ kind: 'beats', rows: createDefaultDrumRows() }),
+  beats: () => ({
+    kind: 'beats',
+    steps: STRUDEL_FLOW_DEFAULT_BEATS_STEPS,
+    rows: createDefaultDrumRows(),
+    showModifiers: false
+  }),
   chords: () => ({ ...STRUDEL_FLOW_CHORDS_DEFAULTS, chordProgression: [0, 5, 3, 4] }),
   notes: () => ({ ...STRUDEL_FLOW_NOTES_DEFAULTS }),
   samples: () => ({ ...STRUDEL_FLOW_SAMPLES_DEFAULTS }),

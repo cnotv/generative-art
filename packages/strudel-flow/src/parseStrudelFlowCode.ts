@@ -7,6 +7,8 @@ import {
 } from './codeScanner'
 import {
   STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE,
+  STRUDEL_FLOW_MAX_DRUM_ROWS,
+  STRUDEL_FLOW_STEP_COUNT,
   STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE,
   STRUDEL_FLOW_KEY_OPTIONS,
   STRUDEL_FLOW_NODE_COLUMN_GAP,
@@ -16,9 +18,14 @@ import {
   STRUDEL_FLOW_SCALE_OPTIONS
 } from './config'
 import { getStrudelFlowNodeSize } from './layout'
-import { createStrudelFlowNodeData, isStrudelFlowInstrumentKind } from './nodeDefaults'
+import {
+  createStrudelFlowDrumRow,
+  createStrudelFlowNodeData,
+  isStrudelFlowInstrumentKind
+} from './nodeDefaults'
 import { normalizeStrudelFlowBeatsPerCycle, normalizeStrudelFlowBeatsPerMinute } from './tempo'
 import type {
+  StrudelFlowBeatsData,
   StrudelFlowChordsData,
   StrudelFlowDrumRow,
   StrudelFlowEdge,
@@ -57,7 +64,8 @@ type BuildState = {
 
 const ROW_GAP = 48
 const DEFAULT_SCALE: Scale = { key: 'C', octave: 3, scaleType: 'major' }
-const DRUM_INSTRUMENTS = ['bd', 'sd', 'hh']
+const REST_TOKEN = '~'
+const DRUM_TOKEN_PATTERN = /^(\d*[A-Za-z]\w*(?::\d+)?)(![2-4]|\/[2-4]|@[2-4]|\*[2-4])?$/
 const KEY_ALIASES: Record<string, string> = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' }
 const VOICE_CALLS = new Set(['sound', 's'])
 const SAMPLE_HEADS = new Set(['s', 'sound'])
@@ -208,29 +216,115 @@ const readChords = (pattern: string, scale: Scale): StrudelFlowChordsData | null
   }
 }
 
-const readDrumRow = (head: Call, structCall: Call | undefined): StrudelFlowDrumRow | null => {
+type DrumHit = { sound: string; modifier: string }
+
+const toBeats = (rows: StrudelFlowDrumRow[], steps: number): StrudelFlowBeatsData => ({
+  kind: 'beats',
+  steps,
+  rows,
+  showModifiers: rows.some((row) => Object.keys(row.modifiers).length > 0)
+})
+
+// One step of a flat sample line: a rest, a sample with an optional variation, or several
+// samples hit together as `[bd,hh]`.
+const readDrumStep = (token: string): DrumHit[] | null => {
+  if (token === REST_TOKEN) {
+    return []
+  }
+  const together = /^\[([^\]]+)]$/.exec(token)
+  const hits = (together === null ? [token] : together[1].split(',')).map((part) =>
+    DRUM_TOKEN_PATTERN.exec(part.trim())
+  )
+  return hits.every((hit) => hit !== null)
+    ? hits.map((hit) => ({ sound: hit?.[1] ?? '', modifier: hit?.[2] ?? '' }))
+    : null
+}
+
+/**
+ * A flat sample line, `s("bd ~ cp*2 ~")`, as one Beats track per sample. Anything richer, such
+ * as sub-sequences, alternation or euclidean rhythms, is left to a Samples node.
+ * @param head - the `s(...)` or `sound(...)` call
+ * @returns the beats, or null when the line is not a plain step sequence
+ */
+const readDrumLine = (head: Call): StrudelFlowBeatsData | null => {
+  if (!SAMPLE_HEADS.has(head.name) || !isStringLiteral(head.argument)) {
+    return null
+  }
+  const tokens = readStringLiteral(head.argument).trim().split(/\s+/)
+  const steps = tokens.map(readDrumStep)
+  if (tokens.length > STRUDEL_FLOW_STEP_COUNT || steps.some((step) => step === null)) {
+    return null
+  }
+  const hitsByStep = steps.map((step) => step ?? [])
+  const sounds = [...new Set(hitsByStep.flat().map((hit) => hit.sound))]
+  if (sounds.length === 0 || sounds.length > STRUDEL_FLOW_MAX_DRUM_ROWS) {
+    return null
+  }
+  return toBeats(
+    sounds.map((sound) => ({
+      ...createStrudelFlowDrumRow(sound),
+      steps: Array.from({ length: STRUDEL_FLOW_STEP_COUNT }, (_, stepIndex) =>
+        (hitsByStep[stepIndex] ?? []).some((hit) => hit.sound === sound)
+      ),
+      modifiers: Object.fromEntries(
+        hitsByStep.flatMap((hits, stepIndex) =>
+          hits
+            .filter((hit) => hit.sound === sound && hit.modifier.length > 0)
+            .map((hit) => [stepIndex, hit.modifier])
+        )
+      )
+    })),
+    tokens.length
+  )
+}
+
+// The older shape the editor wrote, `s("bd").struct("1 ~ ...")`, still reads as a track.
+const readStructDrumRow = (
+  head: Call,
+  structCall: Call | undefined
+): StrudelFlowBeatsData | null => {
   if (!SAMPLE_HEADS.has(head.name) || structCall === undefined || !isStringLiteral(head.argument)) {
     return null
   }
-  const instrument = readStringLiteral(head.argument)
+  const sound = readStringLiteral(head.argument)
   const steps = readStringLiteral(structCall.argument).split(/\s+/)
-  if (!DRUM_INSTRUMENTS.includes(instrument) || steps.length !== 16) {
+  if (!DRUM_TOKEN_PATTERN.test(sound) || steps.length > STRUDEL_FLOW_STEP_COUNT) {
     return null
   }
-  return {
-    instrument: instrument === 'bd' || instrument === 'sd' ? instrument : 'hh',
-    steps: steps.map((step) => step === '1')
-  }
+  const hits = steps.flatMap((step, stepIndex) => (step === '1' ? [stepIndex] : []))
+  return toBeats([createStrudelFlowDrumRow(sound, hits)], steps.length)
 }
 
-// A stack element that is exactly one drum row, `s("bd").struct("1 ~ ...")`.
-const readStackedDrumRow = (expression: string): StrudelFlowDrumRow | null => {
-  const calls = splitTopLevel(expression, '.').map(readCall)
-  const [head, structCall] = calls
-  return calls.length === 2 && head !== null && structCall?.name === 'struct'
-    ? readDrumRow(head, structCall)
+const singleBeats = (branch: Branch): StrudelFlowBeatsData | null => {
+  const [instrument] = branch.instruments
+  return branch.instruments.length === 1 &&
+    branch.effects.length === 0 &&
+    instrument?.kind === 'beats' &&
+    instrument.muted !== true
+    ? instrument
     : null
 }
+
+// Neighbouring tracks of the same length in one stack are one Beats node, which is what a
+// Beats node with several tracks compiles to.
+const mergeBeatsBranches = (branches: Branch[]): Branch[] =>
+  branches.reduce<Branch[]>((merged, branch) => {
+    const previous = merged.at(-1)
+    const previousBeats = previous === undefined ? null : singleBeats(previous)
+    const beats = singleBeats(branch)
+    if (
+      previousBeats === null ||
+      beats === null ||
+      previousBeats.steps !== beats.steps ||
+      previousBeats.rows.length + beats.rows.length > STRUDEL_FLOW_MAX_DRUM_ROWS
+    ) {
+      return [...merged, branch]
+    }
+    return [
+      ...merged.slice(0, -1),
+      instrumentBranch(toBeats([...previousBeats.rows, ...beats.rows], beats.steps))
+    ]
+  }, [])
 
 const stripParentheses = (expression: string): string => {
   const inner = unwrapParentheses(expression.trim())
@@ -270,19 +364,8 @@ const muteBranches = (branches: Branch[], muted: boolean): Branch[] =>
     instruments: branch.instruments.map((instrument) => withMuted(instrument, muted))
   }))
 
-const readStack = (argument: string): Branch[] => {
-  const elements = splitTopLevel(argument, ',')
-  const drumRows = elements.map(readStackedDrumRow)
-  if (drumRows.length > 0 && drumRows.every((row) => row !== null)) {
-    return [
-      instrumentBranch({
-        kind: 'beats',
-        rows: drumRows.filter((row): row is StrudelFlowDrumRow => row !== null)
-      })
-    ]
-  }
-  return elements.flatMap(readStackElement)
-}
+const readStack = (argument: string): Branch[] =>
+  mergeBeatsBranches(splitTopLevel(argument, ',').flatMap(readStackElement))
 
 const readNotesHead = (head: Call, calls: Call[]): StrudelFlowNodeData | null => {
   const scaleCall = calls.find((call) => call.name === 'scale')
@@ -317,13 +400,12 @@ const readHead = (headText: string, calls: Call[]): { branches: Branch[]; remain
   if (head === null) {
     return { branches: [instrumentBranch(codeInstrument(headText))], remaining: calls }
   }
-  const structCall = calls.find((call) => call.name === 'struct')
-  const drumRow = readDrumRow(head, structCall)
-  if (drumRow !== null) {
-    return {
-      branches: [instrumentBranch({ kind: 'beats', rows: [drumRow] })],
-      remaining: withoutFirst(calls, 'struct')
-    }
+  const structBeats = readStructDrumRow(
+    head,
+    calls.find((call) => call.name === 'struct')
+  )
+  if (structBeats !== null) {
+    return { branches: [instrumentBranch(structBeats)], remaining: withoutFirst(calls, 'struct') }
   }
   const scaled = readNotesHead(head, calls)
   if (scaled !== null) {
@@ -331,6 +413,10 @@ const readHead = (headText: string, calls: Call[]): { branches: Branch[]; remain
   }
   if (head.name === 'stack') {
     return { branches: readStack(head.argument), remaining: calls }
+  }
+  const drumLine = readDrumLine(head)
+  if (drumLine !== null) {
+    return { branches: [instrumentBranch(drumLine)], remaining: calls }
   }
   const miniNotation = readMiniNotationHead(head)
   return {

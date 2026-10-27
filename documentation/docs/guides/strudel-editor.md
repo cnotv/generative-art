@@ -35,6 +35,10 @@ flow tab:
 - **settings**: theme and panel position
 - **flow**: build a pattern from instrument and effect nodes (below)
 
+Every tab has its own anchor, so `/tools/StrudelEditor#midi` opens on the midi tab and
+`#flow` opens the flow canvas. Tabs and patterns share the anchor: a name that is a tab opens it,
+anything else loads the pattern it names.
+
 Audio starts on the first Play press, since browsers only allow sound after a user gesture.
 iOS is stricter: audio has to start inside the tap itself, and the engine download that follows
 outlasts it. So `strudelPlayback.ts` creates and resumes the page's one AudioContext before
@@ -136,7 +140,7 @@ the beats in one cycle (**B/C**).
 | Node         | Kind       | What it plays                                                     |
 | ------------ | ---------- | ----------------------------------------------------------------- |
 | **Pad**      | instrument | an eight-note grid, arpeggio or chord mode, key, scale and octave |
-| **Beats**    | instrument | a sixteen-step kick, snare and hi-hat grid                        |
+| **Beats**    | instrument | up to eight drum tracks of any sample on up to sixteen steps      |
 | **Chords**   | instrument | a chord progression with preset shapes and editable notes         |
 | **Notes**    | instrument | a `note("…")` line in mini notation                               |
 | **Samples**  | instrument | an `s("…")` line in mini notation                                 |
@@ -149,6 +153,15 @@ the beats in one cycle (**B/C**).
 | **Scope**    | effect     | a waveform and scale, written as `analyze("flow-scope")`          |
 | **Effect**   | effect     | any other chained call, such as `fast(2)` or `jux(rev)`           |
 | **Voice**    | sound      | the synth or sample bank, written as `sound("…")`                 |
+
+The Beats node has a sample picker on each track, grouped into kicks, snares, hi-hats, claps,
+toms, cymbals and percussion from the loaded kit. Its **Shape** footer sets how many steps play,
+how many tracks there are, and whether the variation picker shows under each step: `*2` repeats a
+hit within its step, `!2` repeats the step, `@2` stretches it and `/2` plays it every other cycle.
+Each track is written as a plain sample line, such as `s("~ cp ~ cp*2")`, so typing a line like
+that reads back as a Beats track too.
+
+![A Beats node with kick, clap and hi-hat tracks over eight steps, variations shown and the Shape footer open](/img/strudel-flow/beats-node.webp)
 
 Each node header has a **…** menu with **View code**, which shows what the node writes, and
 **Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
@@ -169,8 +182,10 @@ The code is the source of truth, and the graph always shows it:
 - **Typing** rebuilds the graph each time the code pauses on something that parses as
   JavaScript; while it has a syntax error the graph keeps its last good state.
 - **Every chained call becomes a node.** Calls with a dedicated node get it, any other call becomes
-  an Effect node with its arguments kept verbatim, `note("…")` and `s("…")` heads become Notes and
-  Samples, and a `stack(...)` splits into its instruments. A head nothing reads, such as
+  an Effect node with its arguments kept verbatim, and a `stack(...)` splits into its instruments.
+  A flat sample line of up to sixteen steps, such as `s("bd ~ [bd,cp] ~")`, becomes Beats tracks;
+  a richer one, with sub-sequences or euclidean rhythms, becomes a Samples node, and `note("…")`
+  becomes Notes. A head nothing reads, such as
   `n(run(8))`, becomes a Code node.
 - Statements that are not patterns, such as `samples('…')` or `const cc = await midin('…')`, are
   kept as setup lines and written back above the blocks. Without any `$:` block, the last

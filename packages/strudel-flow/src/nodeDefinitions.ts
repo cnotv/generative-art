@@ -12,7 +12,7 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     kind: 'beats',
     title: 'Beats',
     category: 'Instruments',
-    description: 'A sixteen-step kick, snare and hi-hat grid.'
+    description: 'Drum tracks of any sample, such as cp or 808bd, on a step grid.'
   },
   {
     kind: 'chords',
