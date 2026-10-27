@@ -2,6 +2,7 @@ import type {
   StrudelExample,
   StrudelInstrumentRole,
   StrudelMusicStyle,
+  StrudelPatternIdea,
   StrudelTabId,
   StrudelVisualName,
   TranscriptionStage
@@ -768,6 +769,95 @@ export const STRUDEL_VISUAL_REASONS: Record<StrudelVisualName, string> = {
   spiral: 'A spiral turns the notes into a slowly winding shape that suits long, calm pieces.',
   pitchwheel: 'A pitch wheel shows the notes as points around a circle of pitch.'
 }
+
+/**
+ * The layers each visual suits, most suitable first. A visual goes on the first layer playing
+ * one of these that draws nothing yet, since two visuals on one pattern draw over each other.
+ */
+export const STRUDEL_VISUAL_TARGET_ROLES: Record<StrudelVisualName, StrudelInstrumentRole[]> = {
+  punchcard: ['kick', 'snare', 'clap', 'hihat', 'percussion', 'breaks'],
+  pianoroll: ['melody', 'chords', 'bass'],
+  scope: ['bass', 'melody', 'chords'],
+  spectrum: ['chords', 'melody', 'bass', 'breaks', 'kick', 'snare', 'hihat', 'clap', 'percussion'],
+  spiral: ['melody', 'chords'],
+  pitchwheel: ['melody', 'chords', 'bass']
+}
+
+/** How each instrument is named in a hint's sentence. */
+export const STRUDEL_INSTRUMENT_ROLE_LABELS: Record<StrudelInstrumentRole, string> = {
+  kick: 'kick',
+  snare: 'snare',
+  clap: 'clap',
+  hihat: 'hi-hats',
+  percussion: 'percussion',
+  breaks: 'sampled break',
+  bass: 'bass',
+  chords: 'chords',
+  melody: 'melody'
+}
+
+/** Ways to keep a finished pattern moving, tried in this order. */
+export const STRUDEL_PATTERN_IDEAS: StrudelPatternIdea[] = [
+  {
+    id: 'breakdown',
+    title: 'Drop the drums every fourth bar',
+    reason: 'A bar without drums now and then lets the loop breathe, and the return hits harder.',
+    snippet: '.mask("<1 1 1 0>")',
+    callName: 'mask',
+    targetRoles: ['kick', 'breaks', 'snare', 'hihat']
+  },
+  {
+    id: 'filter-sweep',
+    title: 'Sweep the filter',
+    reason:
+      'A filter opening and closing over eight bars builds tension without a single new note.',
+    snippet: '.lpf(sine.range(300, 3000).slow(8))',
+    callName: 'sine',
+    targetRoles: ['bass', 'chords', 'melody']
+  },
+  {
+    id: 'phrase-answer',
+    title: 'Turn the phrase round every fourth bar',
+    reason: 'Reversing the last of every four bars answers the phrase instead of repeating it.',
+    snippet: '.lastOf(4, (x) => x.rev())',
+    callName: 'lastOf',
+    targetRoles: ['melody', 'chords']
+  },
+  {
+    id: 'drum-fills',
+    title: 'Add drum fills',
+    reason: 'Doubling a few hits at random keeps a repeating beat from sounding like a loop.',
+    snippet: '.sometimesBy(.2, (x) => x.ply(2))',
+    callName: 'sometimesBy',
+    targetRoles: ['hihat', 'snare', 'percussion', 'clap', 'kick']
+  },
+  {
+    id: 'swing',
+    title: 'Swing the hi-hats',
+    reason: 'Pushing every other hat a little late gives a straight groove some shuffle.',
+    snippet: '.swingBy(1/3, 4)',
+    callName: 'swingBy',
+    targetRoles: ['hihat']
+  },
+  {
+    id: 'stereo',
+    title: 'Spread it across the speakers',
+    reason: 'A reversed copy in the other ear makes a layer wide without making it louder.',
+    snippet: '.jux(rev)',
+    callName: 'jux',
+    targetRoles: ['percussion', 'melody', 'clap']
+  },
+  {
+    id: 'echo',
+    title: 'Add an echo',
+    reason: 'An echo fills the gaps between hits and ties the layers together.',
+    snippet: '.delay(.4)',
+    callName: 'delay',
+    targetRoles: ['chords', 'clap', 'melody']
+  }
+]
+/** How many ideas the hints tab shows at once, so the next step stays easy to pick. */
+export const STRUDEL_PATTERN_IDEA_LIMIT = 3
 
 /** Sound names, as written in a pattern's strings, and the instrument each one plays. */
 export const STRUDEL_INSTRUMENT_SOUND_NAMES: Record<StrudelInstrumentRole, string[]> = {

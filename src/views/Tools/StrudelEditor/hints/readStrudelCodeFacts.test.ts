@@ -115,4 +115,24 @@ describe('readStrudelCodeFacts', () => {
     // Assert
     expect(patternCode.slice(0, facts.headerEnd)).toBe(expectedHeader)
   })
+
+  it('reads the instruments and visuals of each pattern statement on its own', () => {
+    // Arrange
+    const patternCode =
+      'setcps(124/60/4)\n$: s("bd sd, hh*8")\n$: chord("<Cm7>").voicing()._pianoroll()'
+
+    // Act
+    const facts = readStrudelCodeFacts(patternCode)
+
+    // Assert
+    expect(
+      facts.patternStatements.map(({ instrumentRoles, visualNames }) => ({
+        instrumentRoles,
+        visualNames
+      }))
+    ).toEqual([
+      { instrumentRoles: ['kick', 'snare', 'hihat'], visualNames: [] },
+      { instrumentRoles: ['chords'], visualNames: ['pianoroll'] }
+    ])
+  })
 })

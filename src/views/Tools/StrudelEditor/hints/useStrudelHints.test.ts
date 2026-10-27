@@ -59,4 +59,26 @@ describe('useStrudelHints', () => {
     // Assert
     expect(patternCode.value).toBe('// techno\ns("bd*4")')
   })
+
+  it('puts the punchcard on the drums when the chords already draw a pianoroll', () => {
+    // Arrange
+    const { patternCode, applyHint } = setUp(
+      [
+        'setcps(124/60/4)',
+        '$: s("bd sd, hh*8")',
+        '$: s("~ cp ~ cp")',
+        '$: note("<c2 c2 eb2 f2>*4").s("sawtooth").lpf(600)',
+        '$: chord("<Cm7 Fm7>").voicing().s("triangle").gain(.4)._pianoroll()'
+      ].join('\n')
+    )
+
+    // Act
+    applyHint('visual-punchcard')
+
+    // Assert
+    expect(patternCode.value.split('\n').slice(1, 3)).toEqual([
+      '$: s("bd sd, hh*8")._punchcard()',
+      '$: s("~ cp ~ cp")'
+    ])
+  })
 })

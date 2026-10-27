@@ -12,6 +12,7 @@ import type {
   StrudelCodeRange,
   StrudelCodeTempo,
   StrudelInstrumentRole,
+  StrudelPatternStatement,
   StrudelVisualName
 } from '../types'
 
@@ -144,10 +145,52 @@ const readVisualNames = (callNames: string[]): StrudelVisualName[] => [
   )
 ]
 
+const callNamesOf = (code: string, nodes: ParsedNode[]): string[] =>
+  nodes.filter((node) => NAME_NODE_NAMES.has(node.name)).map((node) => textOf(code, node))
+
+// `x._scope()` parses as a call of a member: the range runs from the dot to the closing parenthesis.
+const readVisualCalls = (code: string, nodes: ParsedNode[]): StrudelCodeRange[] =>
+  nodes
+    .filter(
+      (node) =>
+        node.name === 'PropertyName' &&
+        Object.hasOwn(STRUDEL_VISUAL_CALL_NAMES, textOf(code, node)) &&
+        node.parent?.name === 'MemberExpression' &&
+        node.parent.parent?.name === 'CallExpression' &&
+        node.prevSibling?.name === '.'
+    )
+    .map((node) => ({
+      from: node.prevSibling?.from ?? node.from,
+      to: node.parent?.parent?.to ?? node.to
+    }))
+
+const readPatternStatement = (code: string, statement: ParsedNode): StrudelPatternStatement => {
+  const statementNodes = descendantsOf(statement)
+  const callNames = callNamesOf(code, statementNodes)
+  return {
+    from: statement.from,
+    to: expressionEnd(statement),
+    line: code.slice(0, statement.from).split('\n').length,
+    isBlock: statement.name === 'LabeledStatement',
+    instrumentRoles: readInstrumentRoles(soundTokensOf(code, statementNodes), callNames),
+    visualNames: readVisualNames(callNames),
+    visualCalls: readVisualCalls(code, statementNodes),
+    callNames
+  }
+}
+
+// Strudel mutes a block whose label starts or ends with an underscore, as in `_$:`.
+const isMutedBlock = (code: string, statement: ParsedNode): boolean => {
+  const label = statement.name === 'LabeledStatement' ? statement.firstChild : null
+  const labelText = label === null ? '' : textOf(code, label)
+  return labelText.startsWith('_') || labelText.endsWith('_')
+}
+
 /**
  * Reads what the hints need from a pattern's code: its first-line comment, its tempo, the
  * instruments its sounds and calls point to, the visuals it draws and where its patterns are.
- * Comments are left out of everything but the style, so a comment naming a sound adds nothing.
+ * Comments are left out of everything but the style, so a comment naming a sound adds nothing,
+ * and a muted block plays nothing, so it counts for nothing either.
  * @param code - the pattern's code
  * @returns the facts read from its syntax tree
  */
@@ -157,21 +200,19 @@ export const readStrudelCodeFacts = (code: string): StrudelCodeFacts => {
   const statements = topLevelNodes.filter(
     (node) => node.name === 'ExpressionStatement' || node.name === 'LabeledStatement'
   )
-  const patternStatements: StrudelCodeRange[] = statements
-    .filter((statement) => !isSetupStatement(code, statement))
-    .map((statement) => ({ from: statement.from, to: expressionEnd(statement) }))
-  const allNodes = descendantsOf(topNode)
-  const callNames = allNodes
-    .filter((node) => NAME_NODE_NAMES.has(node.name))
-    .map((node) => textOf(code, node))
+  const patternStatements = statements
+    .filter((statement) => !isSetupStatement(code, statement) && !isMutedBlock(code, statement))
+    .map((statement) => readPatternStatement(code, statement))
   return {
     firstLineComment: readFirstLineComment(code, topLevelNodes),
     headerEnd: readHeaderEnd(topLevelNodes),
     tempo:
       statements.map((statement) => readTempo(code, statement)).find((tempo) => tempo !== null) ??
       null,
-    instrumentRoles: readInstrumentRoles(soundTokensOf(code, allNodes), callNames),
-    visualNames: readVisualNames(callNames),
+    instrumentRoles: [
+      ...new Set(patternStatements.flatMap((statement) => statement.instrumentRoles))
+    ],
+    visualNames: [...new Set(patternStatements.flatMap((statement) => statement.visualNames))],
     patternStatements,
     usesPatternBlocks: statements.some((statement) => statement.name === 'LabeledStatement')
   }
