@@ -105,10 +105,9 @@ A PR body links to these homes; a section growing into an explanation belongs in
 - **Dev server:** `pnpm dev --port 5317 --strictPort`, served at `http://localhost:5317`
 - **Routes:** `/<dir-lowercase>/<ViewBaseName>` from the view tree, e.g. `/games/GoombaRunner`
 - **Verify notes:** `documentation/docs/guides/visual-verification-with-screenshots.md`
-- **Checks:** `pnpm lint`, `pnpm lint:css`, `pnpm test:unit`
+- **Checks:** `pnpm lint`, `pnpm lint:css`, `pnpm test:unit`; **Security:** `pnpm audit --prod`, no threat model
 - **Docs home:** `documentation/docs/`, homes above; **Docs build:** `pnpm docs:build`
 - **Preview deploys:** the `deploy/netlify` check's `targetUrl`, with the view's route appended
-- **Security:** `pnpm audit --prod`; no threat model yet
 - **Scoped rules and local skills:** `.claude/rules/` and `.claude/skills/`, indexed below
 
 ### Done checklist
@@ -142,7 +141,8 @@ and `security-audit`, come from agent-base's `workflow` plugin, which `.claude/s
 installs in every session, local or cloud. Never copy them into `.claude/skills/`, where both
 would load under two names. That folder holds only this repository's own skills:
 
-| Skill        | Use when                                                   |
-| ------------ | ---------------------------------------------------------- |
-| `perf-check` | a 3D scene or asset changed, or something is reported slow |
-| `sync-docs`  | you changed a file that a tutorial documents               |
+| Skill           | Use when                                                        |
+| --------------- | --------------------------------------------------------------- |
+| `perf-check`    | a 3D scene or asset changed, or something is reported slow      |
+| `sync-docs`     | you changed a file that a tutorial documents                    |
+| `strudel-sound` | asked for music or a sound, or to save a pattern as WAV or MIDI |

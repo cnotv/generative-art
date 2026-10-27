@@ -1,7 +1,16 @@
-import { DEFAULT_SAMPLE_BANK, STRUDEL_DRAW_TIME, STRUDEL_NO_DRAW_TIME } from './config'
+import { downloadDataUrl } from '@/utils/downloadDataUrl'
+import {
+  DEFAULT_SAMPLE_BANK,
+  STRUDEL_DEFAULT_CYCLES_PER_SECOND,
+  STRUDEL_DRAW_TIME,
+  STRUDEL_EXPORT_MAX_POLYPHONY,
+  STRUDEL_NO_DRAW_TIME
+} from './config'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
+  StrudelExportRequest,
+  StrudelNoteEvent,
   StrudelPlayback,
   StrudelPlaybackHooks
 } from './types'
@@ -23,6 +32,7 @@ type StrudelEngine = {
   sampleBankLoader: UnknownCallable
   contextGetter: UnknownCallable
   contextSetter: UnknownCallable
+  audioRenderer: UnknownCallable
   scheduleHandler: unknown
   codeTranspiler: unknown
   scopeModules: unknown[]
@@ -157,6 +167,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     sampleBankLoader: toCallable(webaudioModule.samples),
     contextGetter: toCallable(webaudioModule.getAudioContext),
     contextSetter: toCallable(webaudioModule.setAudioContext),
+    audioRenderer: toCallable(webaudioModule.renderPatternAudio),
     scheduleHandler: webaudioModule.webaudioOutput,
     codeTranspiler: transpilerModule.transpiler,
     scopeModules: [
@@ -175,7 +186,8 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     synthRegistrar,
     sampleBankLoader,
     contextGetter,
-    contextSetter
+    contextSetter,
+    audioRenderer
   } = engine
   if (
     replFactory === undefined ||
@@ -185,6 +197,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     sampleBankLoader === undefined ||
     contextGetter === undefined ||
     contextSetter === undefined ||
+    audioRenderer === undefined ||
     typeof engine.scheduleHandler !== 'function' ||
     typeof engine.codeTranspiler !== 'function'
   ) {
@@ -198,8 +211,55 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     synthRegistrar,
     sampleBankLoader,
     contextGetter,
-    contextSetter
+    contextSetter,
+    audioRenderer
   }
+}
+
+const readCyclesPerSecond = (scheduler: unknown): number =>
+  isRecordModule(scheduler) && typeof scheduler.cps === 'number'
+    ? scheduler.cps
+    : STRUDEL_DEFAULT_CYCLES_PER_SECOND
+
+const toNoteEvent = (hap: unknown): StrudelNoteEvent[] => {
+  if (!isRecordModule(hap) || !isRecordModule(hap.whole) || !isRecordModule(hap.value)) {
+    return []
+  }
+  const hasOnset = toCallable(hap.hasOnset)
+  return hasOnset?.call(hap) === true
+    ? [
+        {
+          beginCycle: Number(hap.whole.begin),
+          durationCycles: Number(hap.duration),
+          value: hap.value
+        }
+      ]
+    : []
+}
+
+/**
+ * The events that start inside the requested cycles, the same ones the WAV render plays.
+ * @param pattern - the evaluated Strudel pattern
+ * @param request - the cycles to read
+ * @param cyclesPerSecond - the pattern's speed, which `cpm`-relative functions read
+ * @returns each event's start, length and control values
+ */
+const readNoteEvents = (
+  pattern: Record<string, unknown>,
+  request: StrudelExportRequest,
+  cyclesPerSecond: number
+): StrudelNoteEvent[] => {
+  const queryArc = toCallable(pattern.queryArc)
+  const haps = queryArc?.call(pattern, request.beginCycle, request.endCycle, {
+    _cps: cyclesPerSecond
+  })
+  return toUnknownList(haps).flatMap(toNoteEvent)
+}
+
+const saveFile = (fileContents: Blob, fileName: string): void => {
+  const fileUrl = URL.createObjectURL(fileContents)
+  downloadDataUrl(fileUrl, fileName)
+  URL.revokeObjectURL(fileUrl)
 }
 
 /**
@@ -257,7 +317,8 @@ export const loadDefaultStrudelPlayback = async (
   }
   await engine.audioInitializer()
   engine.synthRegistrar()
-  const audioContext: unknown = await engine.contextGetter()
+  // A WAV render closes the context it finds, so playback moves to a new one after each.
+  let audioContext: unknown = await engine.contextGetter()
   await resumeAudioContext(audioContext)
   await engine.sampleBankLoader(DEFAULT_SAMPLE_BANK)
   await engine.scopeInitializer(...engine.scopeModules)
@@ -317,6 +378,46 @@ export const loadDefaultStrudelPlayback = async (
     },
     stopPlayback: async (): Promise<void> => {
       await stopFunction()
+    },
+    exportPattern: async (
+      patternCode: string,
+      request: StrudelExportRequest
+    ): Promise<StrudelEvaluationResult> => {
+      await stopFunction()
+      latestEvaluationError = null
+      const pattern: unknown = await evaluateFunction(patternCode, false)
+      if (latestEvaluationError !== null || !isRecordModule(pattern)) {
+        return { success: false, errorMessage: describeError(latestEvaluationError) }
+      }
+      const cyclesPerSecond = readCyclesPerSecond(replScheduler)
+      if (request.format === 'midi') {
+        const { buildPatternMidi } = await import('./patternMidi')
+        const midiBytes = buildPatternMidi(readNoteEvents(pattern, request, cyclesPerSecond), {
+          beginCycle: request.beginCycle,
+          cyclesPerSecond
+        })
+        saveFile(new Blob([midiBytes], { type: 'audio/midi' }), `${request.fileName}.mid`)
+        return { success: true }
+      }
+      try {
+        await engine.audioRenderer(
+          pattern,
+          cyclesPerSecond,
+          request.beginCycle,
+          request.endCycle,
+          request.sampleRate,
+          STRUDEL_EXPORT_MAX_POLYPHONY,
+          false,
+          request.fileName
+        )
+      } finally {
+        const playbackContext = new AudioContext()
+        pageAudio.context = playbackContext
+        engine.contextSetter(playbackContext)
+        await engine.audioInitializer()
+        audioContext = playbackContext
+      }
+      return { success: true }
     }
   }
 }

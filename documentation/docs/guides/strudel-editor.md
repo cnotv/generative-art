@@ -29,7 +29,7 @@ flow tab:
   a name already used replaces it, and its cross deletes it.
 - **import**: turn an MP3 or other audio file into a pattern (below)
 - **reference**: function quick list
-- **export**: WAV export settings
+- **export**: save the pattern as a WAV or MIDI file (below)
 - **console**: evaluation log
 - **settings**: theme and panel position
 - **flow**: build a pattern from instrument and effect nodes (below)
@@ -224,6 +224,36 @@ fails the unit tests. To regenerate it:
 ```sh
 pnpm vitest run src/views/Tools/StrudelEditor/codeEditor/strudelDocumentation.test.ts -u
 ```
+
+## Saving a pattern as WAV or MIDI
+
+The **export** tab renders the code in the editor to a file, from a start cycle up to an end
+cycle. Playback stops first, and nothing plays aloud while it renders.
+
+![The export tab with MIDI picked](/img/strudel-editor/export-tab.webp)
+
+| Format | Holds                          | Pick it for                                               |
+| ------ | ------------------------------ | --------------------------------------------------------- |
+| WAV    | the sound, exactly as it plays | a sound effect, a loop or a track to play as it is        |
+| MIDI   | the notes and their timing     | a melody to edit in a DAW, play on a synth or feed a game |
+
+WAV goes through Strudel's own offline renderer (`renderPatternAudio`), so samples, synths and
+effects all come out as they sound. MIDI is built from the pattern's events in the same cycles:
+one track per sound, at the pattern's tempo with four beats to a cycle. Pitched events keep
+their `note`, `n` with a `scale`, or `freq`; drum samples with a General MIDI equivalent (`bd`,
+`sd`, `hh`, `oh`, `cp` and the rest of `STRUDEL_DRUM_MIDI_NOTES` in `config.ts`) land on the
+drum channel. Other samples carry no note and are left out. Effects never reach a MIDI file.
+
+`scripts/strudel-export.mjs` does the same from the command line, against a running dev server,
+in a muted headless browser:
+
+```sh
+node scripts/strudel-export.mjs groove.strudel --out groove.wav --end 8
+node scripts/strudel-export.mjs groove.strudel --out groove.mid --url http://localhost:5317
+```
+
+The format follows the extension; `--begin`, `--end` and `--rate` set the cycles and the WAV
+sample rate.
 
 ## Turning an MP3 into a pattern
 

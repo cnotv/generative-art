@@ -343,6 +343,42 @@ export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
  */
 export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'
 
+/** General MIDI percussion keys for the drum sample names Strudel's banks share. */
+export const STRUDEL_DRUM_MIDI_NOTES: Record<string, number> = {
+  bd: 36,
+  rim: 37,
+  sd: 38,
+  cp: 39,
+  lt: 41,
+  hh: 42,
+  mt: 45,
+  oh: 46,
+  ht: 48,
+  cr: 49,
+  rd: 51,
+  cb: 56,
+  sh: 70
+}
+/** MIDI channel 10, counted from zero as files store it, is percussion in General MIDI. */
+export const MIDI_DRUM_CHANNEL = 9
+/** Strudel counts a cycle as one bar of four beats, which `setcpm(bpm / 4)` assumes too. */
+export const STRUDEL_BEATS_PER_CYCLE = 4
+export const STRUDEL_EXPORT_DEFAULT_VELOCITY = 0.8
+/** Strudel's speed until the code calls `setcps` or `setcpm`: one bar every two seconds. */
+export const STRUDEL_DEFAULT_CYCLES_PER_SECOND = 0.5
+/** superdough's own default, passed explicitly because it parses a missing value as NaN. */
+export const STRUDEL_EXPORT_MAX_POLYPHONY = 128
+export const STRUDEL_EXPORT_DEFAULT_FILE_NAME = 'strudel-pattern'
+export const STRUDEL_EXPORT_FORMAT_OPTIONS = [
+  { value: 'wav', label: 'WAV' },
+  { value: 'midi', label: 'MIDI' }
+]
+export const STRUDEL_EXPORT_SAMPLE_RATE_OPTIONS = [
+  { value: '44100', label: '44.1 kHz' },
+  { value: '48000', label: '48 kHz' },
+  { value: '96000', label: '96 kHz' }
+]
+
 export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'hints', label: 'hints' },
   { id: 'welcome', label: 'welcome' },

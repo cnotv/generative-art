@@ -22,9 +22,43 @@ export type StrudelEvaluationResult = {
   errorMessage?: string
 }
 
+export type StrudelExportFormat = 'wav' | 'midi'
+
+export type StrudelExportStatus = 'idle' | 'exporting' | 'error'
+
+/** What the export tab asks for: a file of the cycles from `beginCycle` up to `endCycle`. */
+export type StrudelExportRequest = {
+  format: StrudelExportFormat
+  beginCycle: number
+  endCycle: number
+  /** Only WAV uses it; a MIDI file holds notes, not samples. */
+  sampleRate: number
+  /** Without the extension, which the format adds. */
+  fileName: string
+}
+
+export type StrudelExportState = {
+  exportStatus: Ref<StrudelExportStatus>
+  exportErrorMessage: Ref<string>
+  /** Saves the code on screen as a WAV or MIDI file; playback stops first. */
+  exportPattern: (request: StrudelExportRequest) => Promise<void>
+}
+
+/** One sounding event of a pattern, read off Strudel's untyped hap. */
+export type StrudelNoteEvent = {
+  beginCycle: number
+  durationCycles: number
+  value: Record<string, unknown>
+}
+
 export type StrudelPlayback = {
   evaluateCode: (patternCode: string) => Promise<StrudelEvaluationResult>
   stopPlayback: () => Promise<void>
+  /** Renders the code to a downloaded file, without playing it aloud. */
+  exportPattern: (
+    patternCode: string,
+    request: StrudelExportRequest
+  ) => Promise<StrudelEvaluationResult>
 }
 
 /** What the transpiler found in the evaluated code, in Strudel's own untyped shapes. */

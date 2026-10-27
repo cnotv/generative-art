@@ -83,7 +83,8 @@ vi.mock('@strudel/webaudio', () => ({
   samples: mockSampleBankLoader,
   getAudioContext: mockContextGetter,
   setAudioContext: mockContextSetter,
-  webaudioOutput: mockScheduleHandler
+  webaudioOutput: mockScheduleHandler,
+  renderPatternAudio: vi.fn()
 }))
 vi.mock('@strudel/tonal', () => ({}))
 vi.mock('@strudel/transpiler', () => ({
@@ -143,7 +144,8 @@ const buildExampleList = (): StrudelExample[] => [
 
 const buildSuccessfulPlayback = (): StrudelPlayback => ({
   evaluateCode: vi.fn(async () => ({ success: true })),
-  stopPlayback: vi.fn(async () => {})
+  stopPlayback: vi.fn(async () => {}),
+  exportPattern: vi.fn(async () => ({ success: true }))
 })
 
 describe('findStrudelExample', () => {
@@ -765,11 +767,60 @@ describe('useStrudelEditor', () => {
     expect(editorStatus.value).toBe('error')
   })
 
+  const exportRequest = {
+    format: 'midi' as const,
+    beginCycle: 0,
+    endCycle: 4,
+    sampleRate: 48000,
+    fileName: 'groove'
+  }
+
+  it('stops playback, then exports the code on screen', async () => {
+    // Arrange
+    const playback = buildSuccessfulPlayback()
+    const { playPattern, exportPattern, editorStatus, exportStatus, patternCode } =
+      useStrudelEditor({
+        initialExamples: buildExampleList(),
+        playbackLoader: async () => playback
+      })
+    await playPattern()
+
+    // Act
+    await exportPattern(exportRequest)
+
+    // Assert
+    expect(playback.stopPlayback).toHaveBeenCalled()
+    expect(editorStatus.value).toBe('idle')
+    expect(playback.exportPattern).toHaveBeenCalledWith(patternCode.value, exportRequest)
+    expect(exportStatus.value).toBe('idle')
+  })
+
+  it('reports a failed export without touching playback state', async () => {
+    // Arrange
+    const playback: StrudelPlayback = {
+      ...buildSuccessfulPlayback(),
+      exportPattern: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' }))
+    }
+    const { exportPattern, exportStatus, exportErrorMessage, editorStatus } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+
+    // Act
+    await exportPattern(exportRequest)
+
+    // Assert
+    expect(exportStatus.value).toBe('error')
+    expect(exportErrorMessage.value).toBe('bad pattern')
+    expect(editorStatus.value).toBe('idle')
+  })
+
   it('reports evaluation failures instead of playing', async () => {
     // Arrange
     const failingPlayback: StrudelPlayback = {
       evaluateCode: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' })),
-      stopPlayback: vi.fn(async () => {})
+      stopPlayback: vi.fn(async () => {}),
+      exportPattern: vi.fn(async () => ({ success: true }))
     }
     const { playPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -824,7 +875,8 @@ describe('useStrudelEditor', () => {
       evaluateCode: vi.fn(async () => ({ success: true })),
       stopPlayback: vi.fn(async () => {
         throw new Error('stop failed')
-      })
+      }),
+      exportPattern: vi.fn(async () => ({ success: true }))
     }
     const { playPattern, stopPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),

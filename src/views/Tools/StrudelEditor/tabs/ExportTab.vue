@@ -1,85 +1,104 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
+import {
+  STRUDEL_EXPORT_DEFAULT_FILE_NAME,
+  STRUDEL_EXPORT_FORMAT_OPTIONS,
+  STRUDEL_EXPORT_SAMPLE_RATE_OPTIONS
+} from '../config'
+import type { StrudelExportFormat, StrudelExportRequest, StrudelExportStatus } from '../types'
 
+defineProps<{
+  status: StrudelExportStatus
+  errorMessage: string
+}>()
+
+const emit = defineEmits<{
+  export: [request: StrudelExportRequest]
+}>()
+
+const format = ref<StrudelExportFormat>('wav')
 const fileName = ref('')
-const startCycle = ref(0)
+const beginCycle = ref(0)
 const endCycle = ref(4)
-const sampleRate = ref(48000)
-const isExporting = ref(false)
-const exportProgress = ref(0)
+const sampleRate = ref('48000')
 
-const canExport = () => !isExporting.value && endCycle.value > startCycle.value
+const hasValidCycles = computed(
+  () => Number.isFinite(beginCycle.value) && endCycle.value > beginCycle.value
+)
 
-const onExport = async (): Promise<void> => {
-  if (!canExport()) {
-    return
-  }
-  isExporting.value = true
-  exportProgress.value = 0
-  const interval = setInterval(() => {
-    exportProgress.value = Math.min(exportProgress.value + 10, 90)
-  }, 200)
-  try {
-    // WAV export via OfflineAudioContext - would render pattern offline
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    exportProgress.value = 100
-  } finally {
-    clearInterval(interval)
-    setTimeout(() => {
-      isExporting.value = false
-      exportProgress.value = 0
-    }, 500)
-  }
+const onFormatChange = (nextFormat: string): void => {
+  format.value = nextFormat === 'midi' ? 'midi' : 'wav'
+}
+
+const onExport = (): void => {
+  emit('export', {
+    format: format.value,
+    beginCycle: beginCycle.value,
+    endCycle: endCycle.value,
+    sampleRate: Number(sampleRate.value),
+    fileName: fileName.value.trim() || STRUDEL_EXPORT_DEFAULT_FILE_NAME
+  })
 }
 </script>
 
 <template>
   <div class="strudel-export">
+    <p class="strudel-export__intro">
+      WAV is the sound as it plays. MIDI is its notes, for a DAW or a synth; drum samples become
+      General MIDI drums, other samples are left out.
+    </p>
+    <div class="strudel-export__field" role="group" aria-label="Format">
+      <ButtonSelector
+        :model-value="format"
+        :options="STRUDEL_EXPORT_FORMAT_OPTIONS"
+        @update:model-value="onFormatChange"
+      />
+    </div>
     <div class="strudel-export__field">
       <label class="strudel-export__label" for="export-filename">File name</label>
-      <input
+      <Input
         id="export-filename"
         v-model="fileName"
-        class="strudel-export__input"
-        type="text"
-        :placeholder="isExporting ? '' : 'Leave empty for default'"
+        :placeholder="STRUDEL_EXPORT_DEFAULT_FILE_NAME"
       />
     </div>
     <div class="strudel-export__row">
       <div class="strudel-export__field">
         <label class="strudel-export__label" for="export-start">Start cycle</label>
-        <input
+        <Input
           id="export-start"
-          v-model.number="startCycle"
-          class="strudel-export__input"
           type="number"
-          min="0"
+          :step="1"
+          :model-value="beginCycle"
+          @update:model-value="beginCycle = Number($event)"
         />
       </div>
       <div class="strudel-export__field">
         <label class="strudel-export__label" for="export-end">End cycle</label>
-        <input
+        <Input
           id="export-end"
-          v-model.number="endCycle"
-          class="strudel-export__input"
           type="number"
-          :min="startCycle + 1"
+          :step="1"
+          :model-value="endCycle"
+          @update:model-value="endCycle = Number($event)"
         />
       </div>
     </div>
-    <div class="strudel-export__field">
-      <label class="strudel-export__label" for="export-rate">Sample rate</label>
-      <select id="export-rate" v-model.number="sampleRate" class="strudel-export__select">
-        <option :value="44100">44100 Hz</option>
-        <option :value="48000">48000 Hz</option>
-        <option :value="96000">96000 Hz</option>
-      </select>
+    <div
+      v-if="format === 'wav'"
+      class="strudel-export__field"
+      role="group"
+      aria-label="Sample rate"
+    >
+      <ButtonSelector v-model="sampleRate" :options="STRUDEL_EXPORT_SAMPLE_RATE_OPTIONS" />
     </div>
-    <button class="strudel-export__button" :disabled="!canExport()" type="button" @click="onExport">
-      <template v-if="isExporting">Exporting... {{ exportProgress }}%</template>
-      <template v-else>Export to WAV</template>
-    </button>
-    <p v-if="isExporting" class="strudel-export__status">Rendering offline...</p>
+    <Button size="sm" :disabled="status === 'exporting' || !hasValidCycles" @click="onExport">
+      {{ status === 'exporting' ? 'Exporting...' : `Export ${format === 'midi' ? 'MIDI' : 'WAV'}` }}
+    </Button>
+    <p v-if="status === 'error'" class="strudel-export__error" role="alert">{{ errorMessage }}</p>
   </div>
 </template>
 
@@ -89,6 +108,12 @@ const onExport = async (): Promise<void> => {
   flex-direction: column;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
+}
+
+.strudel-export__intro {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
 }
 
 .strudel-export__field {
@@ -112,37 +137,9 @@ const onExport = async (): Promise<void> => {
   color: var(--color-muted-foreground);
 }
 
-.strudel-export__input,
-.strudel-export__select {
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-md);
-  box-sizing: border-box;
-}
-
-.strudel-export__button {
-  padding: var(--spacing-2) var(--spacing-4);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  font-size: var(--font-size-md);
-  cursor: pointer;
-  margin-top: var(--spacing-2);
-}
-
-.strudel-export__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.strudel-export__status {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
+.strudel-export__error {
   margin: 0;
-  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-destructive);
 }
 </style>

@@ -59,7 +59,10 @@ const {
   transcribedCode,
   transcriptionError,
   transcribeAudioFile,
-  loadTranscription
+  loadTranscription,
+  exportStatus,
+  exportErrorMessage,
+  exportPattern
 } = useStrudelEditor()
 
 const {
@@ -367,7 +370,12 @@ onBeforeUnmount(() => {
             @load="loadTranscription"
           />
           <ReferenceTab v-else-if="activeTab === 'reference'" />
-          <ExportTab v-else-if="activeTab === 'export'" />
+          <ExportTab
+            v-else-if="activeTab === 'export'"
+            :status="exportStatus"
+            :error-message="exportErrorMessage"
+            @export="exportPattern"
+          />
           <ConsoleTab
             v-else-if="activeTab === 'console'"
             :log-entries="logEntries"

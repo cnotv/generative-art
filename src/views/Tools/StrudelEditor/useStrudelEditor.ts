@@ -13,6 +13,7 @@ import { useStrudelLog } from './useStrudelLog'
 import type {
   StrudelEditorHandle,
   StrudelEditorStatus,
+  StrudelExportState,
   StrudelExample,
   StrudelLogEntry,
   StrudelPlayback,
@@ -25,6 +26,7 @@ import type {
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
 import { runTranscriptionInWorker } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
+import { useStrudelExport } from './useStrudelExport'
 
 /**
  * Example with the given id.
@@ -55,34 +57,35 @@ type StrudelEditorOptions = {
   transcriptionRunner?: TranscriptionRunner
 }
 
-type StrudelEditorState = StrudelTranscriptionState & {
-  selectedExampleId: Ref<string>
-  patternCode: Ref<string>
-  editorStatus: Ref<StrudelEditorStatus>
-  /** True while a pattern plays and the code on screen has changed since it started. */
-  hasUnplayedChanges: ComputedRef<boolean>
-  errorMessage: Ref<string>
-  examples: StrudelExample[]
-  electroTunes: StrudelExample[]
-  logEntries: Ref<StrudelLogEntry[]>
-  activeTab: Ref<StrudelTabId>
-  tabList: { id: StrudelTabId; label: string }[]
-  selectExample: (exampleId: string) => void
-  selectElectroTune: (tuneId: string) => void
-  /** Loads the example or tune with this id; false when neither has it. */
-  selectPattern: (patternId: string) => boolean
-  /** The patterns saved under a name, newest first, as the patterns tab lists them. */
-  savedPatterns: ComputedRef<StrudelExample[]>
-  /** Saves the code on screen under a name, replacing a save with the same anchor. */
-  savePattern: (name: string) => void
-  deleteSavedPattern: (savedPatternId: string) => void
-  updatePatternCode: (nextCode: string) => void
-  playPattern: () => Promise<void>
-  stopPattern: () => Promise<void>
-  setActiveTab: (tabId: StrudelTabId) => void
-  clearLogEntries: () => void
-  attachEditor: (editorHandle: StrudelEditorHandle | null) => void
-}
+type StrudelEditorState = StrudelTranscriptionState &
+  StrudelExportState & {
+    selectedExampleId: Ref<string>
+    patternCode: Ref<string>
+    editorStatus: Ref<StrudelEditorStatus>
+    /** True while a pattern plays and the code on screen has changed since it started. */
+    hasUnplayedChanges: ComputedRef<boolean>
+    errorMessage: Ref<string>
+    examples: StrudelExample[]
+    electroTunes: StrudelExample[]
+    logEntries: Ref<StrudelLogEntry[]>
+    activeTab: Ref<StrudelTabId>
+    tabList: { id: StrudelTabId; label: string }[]
+    selectExample: (exampleId: string) => void
+    selectElectroTune: (tuneId: string) => void
+    /** Loads the example or tune with this id; false when neither has it. */
+    selectPattern: (patternId: string) => boolean
+    /** The patterns saved under a name, newest first, as the patterns tab lists them. */
+    savedPatterns: ComputedRef<StrudelExample[]>
+    /** Saves the code on screen under a name, replacing a save with the same anchor. */
+    savePattern: (name: string) => void
+    deleteSavedPattern: (savedPatternId: string) => void
+    updatePatternCode: (nextCode: string) => void
+    playPattern: () => Promise<void>
+    stopPattern: () => Promise<void>
+    setActiveTab: (tabId: StrudelTabId) => void
+    clearLogEntries: () => void
+    attachEditor: (editorHandle: StrudelEditorHandle | null) => void
+  }
 
 const loadCachedPlayback = async (
   playbackReference: Ref<StrudelPlayback | null>,
@@ -263,6 +266,13 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     setActiveTab,
     clearLogEntries,
     attachEditor,
+    ...useStrudelExport({
+      loadPlayback: () => loadCachedPlayback(playbackReference, playbackLoader, playbackHooks),
+      readPatternCode: () => patternCode.value,
+      stopPlayingPattern: () =>
+        editorStatus.value === 'playing' ? stopPattern() : Promise.resolve(),
+      appendLog
+    }),
     ...transcription
   }
 }
