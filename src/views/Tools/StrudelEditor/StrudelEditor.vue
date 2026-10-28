@@ -51,10 +51,13 @@ const {
   attachEditor,
   transcriptionStatus,
   transcriptionProgress,
-  transcriptionResult,
+  importedTranscriptions,
   transcribedCode,
+  transcriptionWarnings,
   transcriptionError,
-  transcribeFile,
+  transcribeFiles,
+  removeTranscription,
+  addTranscription,
   exportStatus,
   exportError,
   exportPattern,
@@ -226,8 +229,8 @@ const onPlayButtonPressed = (): void => {
   onPlayRequested()
 }
 
-const onFileChosen = (chosenFile: File): void => {
-  void transcribeFile(chosenFile)
+const onFilesChosen = (chosenFiles: File[]): void => {
+  void transcribeFiles(chosenFiles)
 }
 
 const onEditorModeChange = (mode: string): void => {
@@ -385,11 +388,14 @@ onBeforeUnmount(() => {
             v-else-if="activeTab === 'import'"
             :status="transcriptionStatus"
             :progress="transcriptionProgress"
-            :result="transcriptionResult"
+            :transcriptions="importedTranscriptions"
             :code="transcribedCode"
+            :warnings="transcriptionWarnings"
             :error-message="transcriptionError"
-            @file="onFileChosen"
+            @files="onFilesChosen"
             @load="loadTranscription"
+            @add="addTranscription"
+            @remove="removeTranscription"
           />
           <MidiTab v-else-if="activeTab === 'midi'" @code="updatePatternCode" />
           <ReferenceTab v-else-if="activeTab === 'reference'" />

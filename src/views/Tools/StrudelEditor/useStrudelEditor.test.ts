@@ -1187,13 +1187,13 @@ describe('useStrudelEditor transcription', () => {
       beatsPerMinute: 100,
       bars: [{ steps: [{ drums: ['bd'], bassNote: null }], chord: null }]
     })
-    const { patternCode, editorStatus, transcribeFile, loadTranscription } = useStrudelEditor({
+    const { patternCode, editorStatus, transcribeFiles, loadTranscription } = useStrudelEditor({
       transcriptionRunner
     })
     editorStatus.value = 'error'
 
     // Act
-    await transcribeFile(new File(['audio'], 'beat.mp3'))
+    await transcribeFiles([new File(['audio'], 'beat.mp3')])
     loadTranscription()
 
     // Assert

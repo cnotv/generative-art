@@ -1,5 +1,6 @@
 import { computed, ref, shallowRef, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
+import { appendStrudelFlowBlocks } from '@webgamekit/strudel-flow'
 import { readStorage, writeStorage } from '@/utils/storage'
 import {
   DEFAULT_STRUDEL_EXAMPLE_ID,
@@ -107,6 +108,19 @@ const loadCachedPlayback = async (
   return playback
 }
 
+// Playback outlives any one editor instance, so it reaches the editor through this ref.
+const createPlaybackHooks = (
+  editorHandle: Ref<StrudelEditorHandle | null>
+): StrudelPlaybackHooks => ({
+  onEvaluated: (meta) => editorHandle.value?.applyEvaluation(meta),
+  onFrame: (activeHaps, time) => editorHandle.value?.highlight(activeHaps, time),
+  onStopped: () => {
+    editorHandle.value?.clearHighlights()
+    editorHandle.value?.clearVisuals()
+  },
+  getDrawContext: () => editorHandle.value?.getDrawContext() ?? null
+})
+
 /**
  * Editor state: the selected example, the code, playback, the console log, the active tab
  * and audio transcription.
@@ -137,16 +151,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   )
   const editorHandle = shallowRef<StrudelEditorHandle | null>(null)
 
-  // Playback outlives any one editor instance, so it reaches the editor through this ref.
-  const playbackHooks: StrudelPlaybackHooks = {
-    onEvaluated: (meta) => editorHandle.value?.applyEvaluation(meta),
-    onFrame: (activeHaps, time) => editorHandle.value?.highlight(activeHaps, time),
-    onStopped: () => {
-      editorHandle.value?.clearHighlights()
-      editorHandle.value?.clearVisuals()
-    },
-    getDrawContext: () => editorHandle.value?.getDrawContext() ?? null
-  }
+  const playbackHooks = createPlaybackHooks(editorHandle)
 
   const playPattern = async (): Promise<void> => {
     errorMessage.value = ''
@@ -246,6 +251,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
   const transcription = useStrudelTranscription({
     runner: editorOptions?.transcriptionRunner ?? runTranscription,
     applyCode: loadPatternCode,
+    appendCode: (blocks) => updatePatternCode(appendStrudelFlowBlocks(patternCode.value, blocks)),
     appendLog
   })
 
