@@ -1,12 +1,11 @@
 import {
   TAB_BEAM_BEATS,
   TAB_BEATS_PER_BAR,
-  TAB_OPEN_STRINGS,
   TAB_STEM_NOTE_REACH_RATIO,
   TAB_TRIPLET_DENOMINATOR,
   TAB_TRIPLET_NUMERATOR
 } from '../../config'
-import type { TabBarSpan, TabEvent, TabGlyph, TabInstrument, TabStem } from '../../types'
+import type { TabBarSpan, TabEvent, TabGlyph, TabStem } from '../../types'
 import { midiNoteToName } from '../pitch'
 import { groupRuns } from './imageProbes'
 
@@ -29,11 +28,9 @@ const stemBeats = (stem: TabStem): number =>
     ? (TAB_BEAM_BEATS[stem.beams] * TAB_TRIPLET_NUMERATOR) / TAB_TRIPLET_DENOMINATOR
     : TAB_BEAM_BEATS[stem.beams]
 
-const noteNamesOf = (glyphs: TabGlyph[], instrument: TabInstrument): string[] =>
+const noteNamesOf = (glyphs: TabGlyph[], openStrings: number[]): string[] =>
   glyphs.flatMap((glyph) =>
-    glyph.fret === null
-      ? []
-      : [midiNoteToName(TAB_OPEN_STRINGS[instrument][glyph.lineIndex] + glyph.fret)]
+    glyph.fret === null ? [] : [midiNoteToName(openStrings[glyph.lineIndex] + glyph.fret)]
   )
 
 // Notes with no stem above them, such as a held whole note, grouped by column. They get no
@@ -71,13 +68,13 @@ const shareLeftoverBeats = (drafts: DraftEvent[]): DraftEvent[] => {
 }
 
 // A stem with no number under it is the end of a tie: the previous note just rings on.
-const mergeTies = (drafts: DraftEvent[], instrument: TabInstrument): TabEvent[] =>
+const mergeTies = (drafts: DraftEvent[], openStrings: number[]): TabEvent[] =>
   drafts.reduce<TabEvent[]>((events, draft) => {
     const beats = draft.beats ?? 0
     const previous = events.at(-1)
     return draft.glyphs.length === 0 && previous !== undefined
       ? [...events.slice(0, -1), { ...previous, beats: previous.beats + beats }]
-      : [...events, { notes: noteNamesOf(draft.glyphs, instrument), beats }]
+      : [...events, { notes: noteNamesOf(draft.glyphs, openStrings), beats }]
   }, [])
 
 /**
@@ -87,7 +84,7 @@ const mergeTies = (drafts: DraftEvent[], instrument: TabInstrument): TabEvent[] 
  * @param stems - the stems of the whole staff
  * @param glyphs - the fret numbers of the whole staff
  * @param options - the string set to name notes by and the staff's line gap
- * @param options.instrument - bass or guitar
+ * @param options.openStrings - the MIDI note of each open string, from the top line down
  * @param options.gap - the staff's line gap in pixels
  * @returns the events and how well they fill the bar
  */
@@ -95,7 +92,7 @@ export const readBar = (
   span: TabBarSpan,
   stems: TabStem[],
   glyphs: TabGlyph[],
-  options: { instrument: TabInstrument; gap: number }
+  options: { openStrings: number[]; gap: number }
 ): BarReading => {
   const inBar = (x: number): boolean => x >= span.startX && x < span.endX
   const barStems = stems.filter((stem) => inBar(stem.x))
@@ -107,7 +104,7 @@ export const readBar = (
       ...stemlessDrafts(barGlyphs, barStems, reach)
     ].toSorted((first, second) => first.x - second.x)
   )
-  const events = mergeTies(drafts, options.instrument)
+  const events = mergeTies(drafts, options.openStrings)
   const beatsWritten = events.reduce((total, event) => total + event.beats, 0)
   const shortBy = TAB_BEATS_PER_BAR - beatsWritten
   return {

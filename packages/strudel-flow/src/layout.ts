@@ -18,7 +18,7 @@ const NODE_SIZES: Record<StrudelFlowNodeKind, NodeSize> = {
   pad: { width: 448, height: 540 },
   beats: { width: 704, height: 320 },
   chords: { width: 416, height: 520 },
-  notes: { width: 384, height: 200 },
+  notes: { width: 384, height: 440 },
   samples: { width: 384, height: 260 },
   code: { width: 448, height: 300 },
   voice: { width: 320, height: 240 },

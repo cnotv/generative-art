@@ -251,7 +251,7 @@ describe('compileStrudelFlow', () => {
 
   it('plays a voice, a generic effect and a sample line in signal order', () => {
     // Arrange
-    const notes = createNode('notes', { kind: 'notes', pattern: 'c3 e3' })
+    const notes = createNode('notes', { kind: 'notes', pattern: 'c3 e3', notation: 'auto' })
     const voice = createNode('voice', { kind: 'voice', sound: 'sawtooth' })
     const effect = createNode('effect', {
       kind: 'effect',
@@ -275,7 +275,12 @@ describe('compileStrudelFlow', () => {
     [[true, true], '_$: stack(note("c3"), s("bd"))']
   ])('mutes instruments %o as %s', ([notesMuted, samplesMuted], expectedBlock) => {
     // Arrange
-    const notes = createNode('notes', { kind: 'notes', pattern: 'c3', muted: notesMuted })
+    const notes = createNode('notes', {
+      kind: 'notes',
+      pattern: 'c3',
+      notation: 'auto',
+      muted: notesMuted
+    })
     const samples = createNode('samples', { kind: 'samples', pattern: 'bd', muted: samplesMuted })
     const filter = createNode('filter', defaultData('filter'))
 
@@ -291,7 +296,7 @@ describe('compileStrudelFlow', () => {
 
   it('keeps an effect on the branch of the only instrument that feeds it', () => {
     // Arrange
-    const notes = createNode('notes', { kind: 'notes', pattern: 'c3' })
+    const notes = createNode('notes', { kind: 'notes', pattern: 'c3', notation: 'auto' })
     const voice = createNode('voice', { kind: 'voice', sound: 'triangle' })
     const samples = createNode('samples', { kind: 'samples', pattern: 'bd' })
     const filter = createNode('filter', defaultData('filter'))
@@ -313,6 +318,7 @@ describe('compileStrudelFlow', () => {
     const notes = createNode('notes', {
       kind: 'notes',
       pattern: 'c3',
+      notation: 'auto',
       muted: true,
       calls: [{ method: 'mask', argument: '"1 0"' }]
     })
@@ -336,13 +342,13 @@ describe('getStrudelFlowVisualizerWidgetIds', () => {
   it('names the canvas each inline visual draws on, counted per visual in code order', () => {
     // Arrange
     const nodes = [
-      createNode('notes', { kind: 'notes', pattern: 'c3' }),
+      createNode('notes', { kind: 'notes', pattern: 'c3', notation: 'auto' }),
       createNode('samples', { kind: 'samples', pattern: 'bd' }),
       visualizer('notesScope', 'scope', 'inline'),
       visualizer('samplesScope', 'scope', 'inline'),
       visualizer('sharedRoll', 'pianoroll', 'inline'),
       visualizer('behind', 'scope', 'background'),
-      createNode('bass', { kind: 'notes', pattern: 'c2' }),
+      createNode('bass', { kind: 'notes', pattern: 'c2', notation: 'auto' }),
       visualizer('bassScope', 'scope', 'inline')
     ]
     const edges = [

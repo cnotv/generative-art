@@ -205,7 +205,7 @@ the beats in one cycle (**B/C**).
 | **Pad**        | instrument | an eight-note grid, arpeggio or chord mode, key, scale and octave                  |
 | **Beats**      | instrument | up to eight drum tracks of any sample on up to sixteen steps                       |
 | **Chords**     | instrument | a chord progression with preset shapes and editable notes                          |
-| **Notes**      | instrument | a `note("…")` line in mini notation                                                |
+| **Notes**      | instrument | a `note("…")` line in mini notation, drawn as a tab, sheet music or note names     |
 | **Samples**    | instrument | an `s("…")` line in mini notation                                                  |
 | **Code**       | instrument | any Strudel expression, for what the controls do not cover                         |
 | **Filter**     | effect     | `lpf` and `lpq`                                                                    |
@@ -216,6 +216,30 @@ the beats in one cycle (**B/C**).
 | **Visualizer** | effect     | a pianoroll, punchcard, scope, spiral, pitch wheel or spectrum, picked from a list |
 | **Effect**     | effect     | chained calls with no single node to sit on, such as after a whole `stack(...)`    |
 | **Voice**      | sound      | the synth or sample bank, written as `sound("…")`                                  |
+
+A Notes node draws its notes so they read as music. **Auto** picks the notation
+from the sound the notes play: a bass sound gets a four string bass tab, a guitar a six string
+guitar tab, a piano, keys or organ sheet music on a treble and a bass staff, and any other sound a
+list of note names with their lengths. **Piano roll** is there to pick by hand. The **Notation** picker on the node overrides it, one node at a time, and its Auto
+entry says what it chose. While a notation is drawn the mini notation text is hidden; the
+**Mini notation** switch on the node shows it under the drawing, for editing, and the node remembers
+the switch. Picking **Mini notation** as the notation shows the text alone. A tab places each note on the string that moves the hand least from the
+last one, within 24 frets, and draws the rhythm under the staff the way the tab import reads it,
+so a tab screenshot imported and shown again looks like the page it came from. A staff wider than
+the node scrolls inside it. Why it works this way is in
+[Drawing a Notes node as a tab](../journey/strudel-notes-notation.md).
+
+| Bass tab                                                               | Guitar tab                                                         |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| ![Bass tab of an imported line](/img/strudel-flow/notes-bass-tab.webp) | ![Guitar tab with chords](/img/strudel-flow/notes-guitar-tab.webp) |
+
+| Piano sheet                                                              | Piano roll                                                             |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| ![Piano part on a grand staff](/img/strudel-flow/notes-piano-sheet.webp) | ![Piano roll of a piano part](/img/strudel-flow/notes-piano-roll.webp) |
+
+| Note names                                                                |
+| ------------------------------------------------------------------------- |
+| ![Note names of a sawtooth line](/img/strudel-flow/notes-note-names.webp) |
 
 The Beats node has a sample picker on each track, grouped into kicks, snares, hi-hats, claps,
 toms, cymbals and percussion from the loaded kit. Its **Shape** footer sets how many steps play,

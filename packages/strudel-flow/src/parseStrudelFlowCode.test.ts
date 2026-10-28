@@ -32,6 +32,17 @@ const roundTrip = (nodes: StrudelFlowNode[], edges: StrudelFlowEdge[] = []) => {
 }
 
 describe('parseStrudelFlowCode', () => {
+  it('keeps the notation picked on a Notes node when the code is read again', () => {
+    // Arrange
+    const nodes = [createNode('notes-1', { kind: 'notes', pattern: 'c3 e3', notation: 'piano' })]
+
+    // Act
+    const parsed = parseStrudelFlowCode('note("c3 g3")', nodes)
+
+    // Assert
+    expect(parsed?.nodes[0]?.data).toEqual({ kind: 'notes', pattern: 'c3 g3', notation: 'piano' })
+  })
+
   it('round-trips the starter patch and reuses its node positions', () => {
     // Arrange
     const patch = createDefaultStrudelFlowPatch()
@@ -278,6 +289,7 @@ describe('parseStrudelFlowCode', () => {
       {
         kind: 'notes',
         pattern: 'c3',
+        notation: 'auto',
         calls: [{ method: 'lpf', argument: 'slider(800, 200, 4000)' }]
       },
       {
@@ -398,6 +410,7 @@ describe('parseStrudelFlowCode', () => {
     expect(parsed?.nodes[0]?.data).toEqual({
       kind: 'notes',
       pattern: 'c3',
+      notation: 'auto',
       ...(muted ? { muted: true } : {})
     })
   })

@@ -13,12 +13,15 @@ import StrudelFlowToolbar from './StrudelFlowToolbar.vue'
 import { getStrudelFlowVisualizerWidgetIds } from '../compileStrudelFlow'
 import { STRUDEL_FLOW_REFERENCE } from '../config'
 import { STRUDEL_FLOW_VISUALIZER_WIDGET_IDS } from './visualizerWidgetIdsKey'
+import { STRUDEL_FLOW_NOTATION_CONTEXT } from './notation/notationContextKey'
+import { findStrudelFlowNotesSound } from '../notationPick'
 import { canUseStrudelFlowConnection } from '../connections'
 import type {
   StrudelFlowEdge,
   StrudelFlowNode as StrudelFlowNodeType,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
+  StrudelFlowNoteReader,
   StrudelFlowSampleGroup
 } from '../types'
 
@@ -31,6 +34,8 @@ const props = defineProps<{
   sampleGroups?: StrudelFlowSampleGroup[]
   /** Every synth and instrument the host can play, for the Voice node to pick from. */
   voiceGroups?: StrudelFlowSampleGroup[]
+  /** Reads a Notes node's pattern into bars, for its notation; without it only the text shows. */
+  noteReader?: StrudelFlowNoteReader
 }>()
 
 const emit = defineEmits<{
@@ -49,6 +54,15 @@ const DEFAULT_EDGE_OPTIONS = { type: 'default' }
 provide(
   STRUDEL_FLOW_VISUALIZER_WIDGET_IDS,
   computed(() => getStrudelFlowVisualizerWidgetIds(props.nodes, props.edges))
+)
+
+provide(
+  STRUDEL_FLOW_NOTATION_CONTEXT,
+  computed(() => ({
+    readNoteBars: props.noteReader ?? null,
+    beatsPerCycle: props.beatsPerCycle,
+    soundOf: (nodeId: string) => findStrudelFlowNotesSound(nodeId, props.nodes, props.edges)
+  }))
 )
 
 const radialMenu = ref<{ open: () => void } | null>(null)

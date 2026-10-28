@@ -1,3 +1,4 @@
+import { STRUDEL_FLOW_OPEN_STRINGS } from '@webgamekit/strudel-flow'
 import { TRANSCRIPTION_SAMPLE_RATE } from '../config'
 import type {
   TabImageRequest,
@@ -69,7 +70,10 @@ export const isImageFile = (chosenFile: File): boolean =>
 export const runTabTranscription: TranscriptionRunner = async (imageFile, onProgress) => {
   onProgress({ stage: 'decoding', fraction: 0 })
   const { decodeImageFile } = await import('./tab/decodeImageFile')
-  const request: TabImageRequest = await decodeImageFile(imageFile)
+  const request: TabImageRequest = {
+    ...(await decodeImageFile(imageFile)),
+    openStrings: STRUDEL_FLOW_OPEN_STRINGS
+  }
   const { default: TabWorker } = await import('./tab/readTab.worker?worker')
   const worker = new TabWorker()
   const outcome = resultFromWorker(worker, onProgress)

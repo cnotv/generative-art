@@ -3,7 +3,7 @@ import {
   TAB_BEATS_PER_BAR,
   TAB_INSTRUMENT_BY_LINE_COUNT
 } from '../../config'
-import type { TabImage, TabTranscription } from '../../types'
+import type { TabImage, TabOpenStrings, TabTranscription } from '../../types'
 import { findBarSpans } from './barLines'
 import { findFretGlyphs } from './fretGlyphs'
 import { readBar, type BarReading } from './readBar'
@@ -32,9 +32,10 @@ const warningsFor = (readings: BarReading[]): string[] => {
  * Reads a tab screenshot: the staves, their bars, the fret numbers and the rhythm row under
  * each staff, and turns them into notes with lengths. Plain image processing, no model.
  * @param image - the tab image
+ * @param openStrings - the tunings to name notes by, per instrument
  * @returns the bars of notes, or an error when no staff is found
  */
-export const readTab = (image: TabImage): TabTranscription => {
+export const readTab = (image: TabImage, openStrings: TabOpenStrings): TabTranscription => {
   const systems = findStaffSystems(image)
   if (systems.length === 0) {
     throw new Error('No four or six line tab staff was found in the image')
@@ -45,7 +46,7 @@ export const readTab = (image: TabImage): TabTranscription => {
     const glyphs = findFretGlyphs(image, system)
     const gap = lineGapOf(system)
     return findBarSpans(image, system).map((span) =>
-      readBar(span, stems, glyphs, { instrument, gap })
+      readBar(span, stems, glyphs, { openStrings: openStrings[instrument], gap })
     )
   })
   return {

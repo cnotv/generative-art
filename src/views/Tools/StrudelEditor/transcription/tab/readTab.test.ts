@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { STRUDEL_FLOW_OPEN_STRINGS } from '@webgamekit/strudel-flow'
 import { readTab } from './readTab'
 import { loadSampleTabImage } from './sampleTabImage'
 import { drawQuarterNoteTab } from './syntheticTab'
@@ -12,7 +13,7 @@ describe('readTab on the sample bass tab', () => {
     const image = await loadSampleTabImage()
 
     // Act
-    const tab = readTab(image)
+    const tab = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(tab.instrument).toBe('bass')
@@ -24,7 +25,7 @@ describe('readTab on the sample bass tab', () => {
     const image = await loadSampleTabImage()
 
     // Act
-    const tab = readTab(image)
+    const tab = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(tab.bars.map(beatsOf).every((beats) => Math.abs(beats - 4) < 0.01)).toBe(true)
@@ -35,7 +36,7 @@ describe('readTab on the sample bass tab', () => {
     const image = await loadSampleTabImage()
 
     // Act
-    const [firstBar] = readTab(image).bars
+    const [firstBar] = readTab(image, STRUDEL_FLOW_OPEN_STRINGS).bars
 
     // Assert
     expect(firstBar.map((event) => event.notes)).toEqual([
@@ -57,7 +58,7 @@ describe('readTab on the sample bass tab', () => {
     const image = await loadSampleTabImage()
 
     // Act
-    const { warnings } = readTab(image)
+    const { warnings } = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(warnings).toEqual(['1 fret numbers could not be read and were skipped'])
@@ -70,7 +71,7 @@ describe('tempo', () => {
     const image = await loadSampleTabImage()
 
     // Act
-    const { beatsPerMinute } = readTab(image)
+    const { beatsPerMinute } = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(beatsPerMinute).toBe(96)
@@ -81,7 +82,7 @@ describe('tempo', () => {
     const image = drawQuarterNoteTab(6, [[{ lineIndex: 0, fret: 3 }]], 142)
 
     // Act
-    const { beatsPerMinute } = readTab(image)
+    const { beatsPerMinute } = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(beatsPerMinute).toBe(142)
@@ -92,7 +93,7 @@ describe('tempo', () => {
     const image = drawQuarterNoteTab(6, [[{ lineIndex: 0, fret: 3 }]])
 
     // Act
-    const { beatsPerMinute } = readTab(image)
+    const { beatsPerMinute } = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(beatsPerMinute).toBe(120)
@@ -113,7 +114,7 @@ describe('readTab on a synthetic guitar tab', () => {
     ])
 
     // Act
-    const tab = readTab(image)
+    const tab = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(tab.instrument).toBe('guitar')
@@ -130,7 +131,7 @@ describe('readTab on a synthetic guitar tab', () => {
     const image = drawQuarterNoteTab(5, [])
 
     // Act
-    const read = (): unknown => readTab(image)
+    const read = (): unknown => readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
 
     // Assert
     expect(read).toThrow('No four or six line tab staff')

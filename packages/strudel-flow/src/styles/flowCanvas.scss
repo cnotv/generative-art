@@ -527,6 +527,127 @@
   box-shadow: 0 0 0 2px var(--sf-ring);
 }
 
+/* A Notes node's notation: lines and ties faint, numbers and rhythm marks at full ink, and
+   anything wider than the node scrolls inside it. */
+.strudel-flow-tab-staff,
+.strudel-flow-sheet,
+.strudel-flow-piano-roll,
+.strudel-flow-note-names {
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  background: var(--sf-muted);
+}
+
+.strudel-flow-piano-roll {
+  max-height: 10rem;
+  overflow-y: auto;
+}
+
+.strudel-flow-sheet svg,
+.strudel-flow-tab-staff svg,
+.strudel-flow-piano-roll svg {
+  display: block;
+}
+
+.strudel-flow-tab-staff__string line,
+.strudel-flow-tab-staff__bar-line,
+.strudel-flow-tab-staff__tie {
+  stroke: color-mix(in srgb, var(--sf-muted-foreground) 70%, transparent);
+}
+
+.strudel-flow-tab-staff__stem,
+.strudel-flow-tab-staff__beam,
+.strudel-flow-tab-staff__bracket {
+  stroke: var(--sf-card-foreground);
+}
+
+.strudel-flow-tab-staff__rest {
+  fill: color-mix(in srgb, var(--sf-muted-foreground) 70%, transparent);
+}
+
+.strudel-flow-tab-staff__fret,
+.strudel-flow-tab-staff__bracket-label {
+  fill: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__line,
+.strudel-flow-sheet__bar-line,
+.strudel-flow-sheet__ledger {
+  stroke: color-mix(in srgb, var(--sf-muted-foreground) 70%, transparent);
+}
+
+.strudel-flow-sheet__stem,
+.strudel-flow-sheet__flag,
+.strudel-flow-sheet__tie,
+.strudel-flow-sheet__bracket,
+.strudel-flow-sheet__rest {
+  fill: none;
+  stroke: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__rest--solid,
+.strudel-flow-sheet__head,
+.strudel-flow-sheet__dot,
+.strudel-flow-sheet__clef,
+.strudel-flow-sheet__accidental,
+.strudel-flow-sheet__bracket-label {
+  fill: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__head {
+  stroke: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__head--open {
+  fill: none;
+}
+
+.strudel-flow-piano-roll__black-key {
+  fill: color-mix(in srgb, var(--sf-muted-foreground) 12%, transparent);
+}
+
+.strudel-flow-piano-roll__bar-line {
+  stroke: var(--sf-border);
+}
+
+.strudel-flow-piano-roll__label {
+  fill: var(--sf-muted-foreground);
+  font-size: 7px;
+}
+
+.strudel-flow-piano-roll__note {
+  fill: var(--sf-accent);
+}
+
+.strudel-flow-note-names {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  max-height: 10rem;
+  margin: 0;
+  padding: var(--spacing-2);
+  overflow-y: auto;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.strudel-flow-note-names__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1) var(--spacing-2);
+}
+
+.strudel-flow-note-names__bar-number {
+  min-width: 1.5rem;
+  color: var(--sf-muted-foreground);
+}
+
+.strudel-flow-note-names__length {
+  color: var(--sf-muted-foreground);
+}
+
 /* Generated-code preview and reset button keep using the app's Button/Input. */
 .strudel-flow-tab {
   display: flex;
