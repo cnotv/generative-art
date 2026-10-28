@@ -7,7 +7,7 @@ import {
   STRUDEL_DRUM_MIDI_NOTES,
   STRUDEL_EXPORT_DEFAULT_VELOCITY
 } from './config'
-import type { StrudelNoteEvent } from './types'
+import type { StrudelScheduledHap } from './types'
 
 type MidiNote = {
   trackName: string
@@ -20,6 +20,9 @@ type MidiNote = {
 const DRUM_TRACK_NAME = 'drums'
 const SECONDS_PER_MINUTE = 60
 const MIDI_CHANNEL_COUNT = 16
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
 
 const readNumber = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined
@@ -53,16 +56,17 @@ const toVelocity = (value: Record<string, unknown>): number => {
 
 const toMidiNote =
   (beginCycle: number, cyclesPerSecond: number) =>
-  (event: StrudelNoteEvent): MidiNote[] => {
-    const key = resolveKey(event.value)
-    return key === undefined
+  (event: StrudelScheduledHap): MidiNote[] => {
+    const value = isRecord(event.value) ? event.value : undefined
+    const key = value === undefined ? undefined : resolveKey(value)
+    return key === undefined || value === undefined
       ? []
       : [
           {
             ...key,
             time: (event.beginCycle - beginCycle) / cyclesPerSecond,
             duration: event.durationCycles / cyclesPerSecond,
-            velocity: toVelocity(event.value)
+            velocity: toVelocity(value)
           }
         ]
   }
@@ -83,7 +87,7 @@ const groupByTrack = (notes: MidiNote[]): Map<string, MidiNote[]> =>
  * @returns the file's bytes
  */
 export const buildPatternMidi = (
-  events: StrudelNoteEvent[],
+  events: StrudelScheduledHap[],
   timing: { beginCycle: number; cyclesPerSecond: number }
 ): Uint8Array => {
   const midi = new Midi()

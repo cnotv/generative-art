@@ -1,4 +1,5 @@
 import {
+  STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE,
   STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE,
   STRUDEL_FLOW_MAX_BEATS_PER_MINUTE,
   STRUDEL_FLOW_MAX_NODE_COORDINATE,
@@ -7,7 +8,7 @@ import {
 import { canConnectStrudelFlowNodes } from './connections'
 import { isStrudelFlowNodeKind, readStrudelFlowNodeData } from './readStrudelFlowNodeData'
 import { isStoredRecord, readStoredNumber, readStoredString } from './readStoredValue'
-import { normalizeStrudelFlowBeatsPerMinute } from './tempo'
+import { normalizeStrudelFlowBeatsPerCycle, normalizeStrudelFlowBeatsPerMinute } from './tempo'
 import type { StrudelFlowEdge, StrudelFlowNode, StrudelFlowPatch } from './types'
 
 const readNode = (value: unknown): StrudelFlowNode | null => {
@@ -127,7 +128,16 @@ export const parseStrudelFlowPatch = (rawValue: string | null): StrudelFlowPatch
           STRUDEL_FLOW_MIN_BEATS_PER_MINUTE,
           STRUDEL_FLOW_MAX_BEATS_PER_MINUTE
         )
-      )
+      ),
+      beatsPerCycle: normalizeStrudelFlowBeatsPerCycle(
+        readStoredNumber(
+          parsed.beatsPerCycle,
+          STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE,
+          1,
+          STRUDEL_FLOW_MAX_BEATS_PER_MINUTE
+        )
+      ),
+      setup: readStoredString(parsed.setup, '')
     }
   } catch {
     return null

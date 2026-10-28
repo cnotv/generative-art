@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { formatStrudelFlowNumber, generateStrudelFlowNodePattern } from './nodePatterns'
+import { createStrudelFlowDrumRow } from './nodeDefaults'
+import {
+  formatStrudelFlowKnobValue,
+  formatStrudelFlowNumber,
+  generateStrudelFlowNodePattern
+} from './nodePatterns'
 import type { StrudelFlowPadData } from './types'
 
 const makePadGrid = (notesByStep: Record<number, number[]> = {}): boolean[][] =>
@@ -16,7 +21,6 @@ const defaultPad = (overrides: Partial<StrudelFlowPadData> = {}): StrudelFlowPad
   scaleType: 'major',
   grid: makePadGrid({ 0: [0, 4], 1: [2], 2: [4], 3: [2], 4: [0] }),
   columnModifiers: {},
-  sound: 'triangle',
   ...overrides
 })
 
@@ -35,6 +39,25 @@ describe('formatStrudelFlowNumber', () => {
   })
 })
 
+describe('formatStrudelFlowKnobValue', () => {
+  it.each([
+    [1650, '1.65k'],
+    [20000, '20.0k'],
+    [440, '440'],
+    [12.34, '12.3'],
+    [1, '1.0'],
+    [0.25, '0.25'],
+    [0.5, '0.5'],
+    [Number.NaN, '0.0']
+  ])('writes %s as %s', (value, expected) => {
+    // Arrange / Act
+    const label = formatStrudelFlowKnobValue(value)
+
+    // Assert
+    expect(label).toBe(expected)
+  })
+})
+
 describe('generateStrudelFlowNodePattern', () => {
   it('returns no pattern for an instrument that is silent', () => {
     // Arrange
@@ -45,12 +68,13 @@ describe('generateStrudelFlowNodePattern', () => {
       octave: 4,
       scaleType: 'major' as const,
       chordProgression: [0, 5],
-      chordNotes: [[], []],
-      sound: 'sawtooth'
+      chordNotes: [[], []]
     }
     const silentBeats = {
       kind: 'beats' as const,
-      rows: [{ instrument: 'bd' as const, steps: Array(16).fill(false) as boolean[] }]
+      steps: 16,
+      rows: [createStrudelFlowDrumRow('bd')],
+      showModifiers: false
     }
 
     // Act
@@ -64,16 +88,15 @@ describe('generateStrudelFlowNodePattern', () => {
     expect(beatsPattern).toBe('')
   })
 
-  it('writes a pad arpeggio and a chord progression with their voice', () => {
+  it('writes a pad arpeggio and a chord progression', () => {
     // Arrange
-    const pad = defaultPad({ sound: 'sine', steps: 2, grid: makePadGrid({ 0: [0, 2], 1: [4] }) })
+    const pad = defaultPad({ steps: 2, grid: makePadGrid({ 0: [0, 2], 1: [4] }) })
     const chords = {
       kind: 'chords' as const,
       key: 'D',
       octave: 4,
       scaleType: 'minor' as const,
-      chordProgression: [0, 5],
-      sound: 'square'
+      chordProgression: [0, 5]
     }
 
     // Act
@@ -81,8 +104,8 @@ describe('generateStrudelFlowNodePattern', () => {
     const chordsPattern = generateStrudelFlowNodePattern(chords, '')
 
     // Assert
-    expect(padPattern).toBe('n("[0 2] [4]").scale("C3:major").sound("sine")')
-    expect(chordsPattern).toBe('n("<[0,2,4] [5,7,9]>").scale("D4:minor").sound("square")')
+    expect(padPattern).toBe('n("[0 2] [4]").scale("C3:major")')
+    expect(chordsPattern).toBe('n("<[0,2,4] [5,7,9]>").scale("D4:minor")')
   })
 
   it('writes chord mode and step modifiers into a pad pattern', () => {
@@ -98,7 +121,7 @@ describe('generateStrudelFlowNodePattern', () => {
     const pattern = generateStrudelFlowNodePattern(pad, '')
 
     // Assert
-    expect(pattern).toBe('n("[0, 2, 4]*2 [7] [1]!3").scale("C3:major").sound("triangle")')
+    expect(pattern).toBe('n("[0, 2, 4]*2 [7] [1]!3").scale("C3:major")')
   })
 
   it('writes hand-edited chord tones instead of a generated triad', () => {
@@ -109,39 +132,36 @@ describe('generateStrudelFlowNodePattern', () => {
       octave: 4,
       scaleType: 'major' as const,
       chordProgression: [0],
-      chordNotes: [[0, 3, 7]],
-      sound: 'sine'
+      chordNotes: [[0, 3, 7]]
     }
 
     // Act
     const pattern = generateStrudelFlowNodePattern(chords, '')
 
     // Assert
-    expect(pattern).toBe('n("<[0,3,7]>").scale("C4:major").sound("sine")')
+    expect(pattern).toBe('n("<[0,3,7]>").scale("C4:major")')
   })
 
-  it('writes one drum row as a struct and several as a stack', () => {
+  it('writes each track as a sample line over its steps, stacked when there are several', () => {
     // Arrange
-    const onlyKick = {
+    const onlyClap = {
       kind: 'beats' as const,
-      rows: [{ instrument: 'bd' as const, steps: [true, ...Array(15).fill(false)] as boolean[] }]
+      steps: 4,
+      rows: [{ ...createStrudelFlowDrumRow('cp', [1, 3]), modifiers: { 3: '*2' } }],
+      showModifiers: true
     }
-    const kickAndSnare = {
-      kind: 'beats' as const,
-      rows: [
-        ...onlyKick.rows,
-        { instrument: 'sd' as const, steps: [false, ...Array(15).fill(true)] as boolean[] }
-      ]
+    const clapAndKick = {
+      ...onlyClap,
+      rows: [...onlyClap.rows, createStrudelFlowDrumRow('bd', [0, 2, 12])]
     }
 
     // Act
-    const oneRowPattern = generateStrudelFlowNodePattern(onlyKick, '')
-    const twoRowPattern = generateStrudelFlowNodePattern(kickAndSnare, '')
+    const oneTrack = generateStrudelFlowNodePattern(onlyClap, '')
+    const twoTracks = generateStrudelFlowNodePattern(clapAndKick, '')
 
     // Assert
-    expect(oneRowPattern).toBe('s("bd").struct("1 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~")')
-    expect(twoRowPattern).toContain('stack(')
-    expect(twoRowPattern).toContain('s("sd").struct("~ 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1")')
+    expect(oneTrack).toBe('s("~ cp ~ cp*2")')
+    expect(twoTracks).toBe('stack(s("~ cp ~ cp*2"), s("bd ~ bd ~"))')
   })
 
   it('wraps a custom expression and drops a trailing semicolon', () => {
@@ -152,7 +172,7 @@ describe('generateStrudelFlowNodePattern', () => {
     const pattern = generateStrudelFlowNodePattern(code, '')
 
     // Assert
-    expect(pattern).toBe('(\nn("0 2 4").scale("C3:major")\n)')
+    expect(pattern).toBe('(n("0 2 4").scale("C3:major"))')
   })
 
   it.each([
@@ -188,7 +208,26 @@ describe('generateStrudelFlowNodePattern', () => {
       { kind: 'envelope' as const, attack: 0.1, decay: 0.1, sustain: 0.7, release: 0.2 },
       '.attack(0.1).decay(0.1).sustain(0.7).release(0.2)'
     ],
-    ['scope', { kind: 'scope' as const, scale: 0.25 }, '.analyze("flow-scope")']
+    [
+      'inline visualizer',
+      {
+        kind: 'visualizer' as const,
+        visual: 'punchcard' as const,
+        placement: 'inline' as const,
+        options: ''
+      },
+      '._punchcard()'
+    ],
+    [
+      'background visualizer',
+      {
+        kind: 'visualizer' as const,
+        visual: 'spiral' as const,
+        placement: 'background' as const,
+        options: '{ steady: .96 }'
+      },
+      '.spiral({ steady: .96 })'
+    ]
   ])('chains a %s effect onto its input', (_kind, data, expectedSuffix) => {
     // Arrange
     const input = 's("bd")'

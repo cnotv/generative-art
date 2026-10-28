@@ -22,7 +22,7 @@ const onResonanceChange = (resonance: number): void => {
 <template>
   <div class="strudel-flow-knobs">
     <StrudelFlowKnob
-      label="Cutoff"
+      label="LPF"
       :model-value="data.cutoff"
       :min="20"
       :max="20000"
@@ -31,7 +31,7 @@ const onResonanceChange = (resonance: number): void => {
       @update:model-value="onCutoffChange"
     />
     <StrudelFlowKnob
-      label="Resonance"
+      label="LPQ"
       :model-value="data.resonance"
       :min="0.1"
       :max="20"

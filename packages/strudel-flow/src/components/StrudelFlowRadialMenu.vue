@@ -2,21 +2,26 @@
 import { computed, markRaw, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   Activity,
+  AudioLines,
   AudioWaveform,
   Clock,
   Code,
+  Disc3,
   Drum,
   Grid3x3,
+  Music,
   Music2,
   Piano,
   Plus,
   SlidersHorizontal,
   Volume1,
+  Wand2,
   Waves,
   X
 } from 'lucide-vue-next'
 import { STRUDEL_FLOW_NODE_DEFINITIONS } from '../nodeDefinitions'
 import type { StrudelFlowNodeKind } from '../types'
+import type { Component } from 'vue'
 
 const emit = defineEmits<{
   add: [kind: StrudelFlowNodeKind]
@@ -26,21 +31,27 @@ const MENU_SIZE = 380
 const CENTER = MENU_SIZE / 2
 const CATEGORY_RADIUS = 146
 const ITEM_RADIUS = 76
+const ITEM_START_ANGLE = 150
 const CATEGORY_META = [
   { label: 'Instruments', category: 'Instruments', icon: markRaw(Piano) },
-  { label: 'Effects', category: 'Effects', icon: markRaw(SlidersHorizontal) }
+  { label: 'Effects', category: 'Effects', icon: markRaw(SlidersHorizontal) },
+  { label: 'Sounds', category: 'Sounds', icon: markRaw(AudioLines) }
 ] as const
-const NODE_ICONS = {
+const NODE_ICONS: Record<StrudelFlowNodeKind, Component> = {
   pad: markRaw(Grid3x3),
   beats: markRaw(Drum),
   chords: markRaw(Music2),
+  notes: markRaw(Music),
+  samples: markRaw(Disc3),
   code: markRaw(Code),
+  voice: markRaw(AudioLines),
   filter: markRaw(SlidersHorizontal),
   delay: markRaw(Clock),
   space: markRaw(Waves),
   level: markRaw(Volume1),
   envelope: markRaw(Activity),
-  scope: markRaw(AudioWaveform)
+  visualizer: markRaw(AudioWaveform),
+  effect: markRaw(Wand2)
 }
 
 const isOpen = ref(false)
@@ -54,12 +65,21 @@ const categories = computed(() =>
   }))
 )
 const activeCategoryData = computed(() => categories.value[activeCategory.value] ?? null)
+// The first category sits at the top, as in the reference menu, and the rest follow clockwise.
+const categoryStartAngle = computed(() => 90 + 180 / categories.value.length)
 const categoryPositions = computed(() =>
-  categories.value.map((_, index) => polar(CATEGORY_RADIUS, 180 - ((index + 0.5) * 360) / 2))
+  categories.value.map((_, index) =>
+    polar(
+      CATEGORY_RADIUS,
+      categoryStartAngle.value - ((index + 0.5) * 360) / categories.value.length
+    )
+  )
 )
 const itemPositions = computed(() => {
   const items = activeCategoryData.value?.items ?? []
-  return items.map((_, index) => polar(ITEM_RADIUS, 150 - ((index + 0.5) * 360) / items.length))
+  return items.map((_, index) =>
+    polar(ITEM_RADIUS, ITEM_START_ANGLE - ((index + 0.5) * 360) / items.length)
+  )
 })
 
 const polar = (radius: number, angle: number): { x: number; y: number } => {
@@ -70,9 +90,15 @@ const polar = (radius: number, angle: number): { x: number; y: number } => {
   }
 }
 
-const sectorPath = (index: number, count: number, outer: number, inner: number): string => {
+const sectorPath = (
+  index: number,
+  count: number,
+  outer: number,
+  inner: number,
+  startAngle = 180
+): string => {
   const slice = 360 / count
-  const start = 180 - index * slice
+  const start = startAngle - index * slice
   const end = start - slice
   const outerStart = polar(outer, start)
   const outerEnd = polar(outer, end)
@@ -81,18 +107,19 @@ const sectorPath = (index: number, count: number, outer: number, inner: number):
   const largeArc = slice > 180 ? 1 : 0
   return [
     `M ${outerStart.x} ${outerStart.y}`,
-    `A ${outer} ${outer} 0 ${largeArc} 0 ${outerEnd.x} ${outerEnd.y}`,
+    `A ${outer} ${outer} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
     `L ${innerEnd.x} ${innerEnd.y}`,
-    `A ${inner} ${inner} 0 ${largeArc} 1 ${innerStart.x} ${innerStart.y}`,
+    `A ${inner} ${inner} 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
     'Z'
   ].join(' ')
 }
 
-const categorySector = (index: number): string => sectorPath(index, 2, 178, 112)
+const categorySector = (index: number): string =>
+  sectorPath(index, categories.value.length, 178, 112, categoryStartAngle.value)
 const itemSector = (index: number): string =>
   activeCategoryData.value === null
     ? ''
-    : sectorPath(index, activeCategoryData.value.items.length, 110, 36)
+    : sectorPath(index, activeCategoryData.value.items.length, 110, 36, ITEM_START_ANGLE)
 
 const positionStyle = (position: { x: number; y: number }): Record<string, string> => ({
   left: `${(position.x / MENU_SIZE) * 100}%`,

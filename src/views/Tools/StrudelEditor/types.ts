@@ -24,41 +24,37 @@ export type StrudelEvaluationResult = {
 
 export type StrudelExportFormat = 'wav' | 'midi'
 
-export type StrudelExportStatus = 'idle' | 'exporting' | 'error'
-
-/** What the export tab asks for: a file of the cycles from `beginCycle` up to `endCycle`. */
-export type StrudelExportRequest = {
+export type StrudelExportOptions = {
+  /** WAV is the sound as it plays; MIDI is its notes, for a DAW, a synth or a game. */
   format: StrudelExportFormat
-  beginCycle: number
+  startCycle: number
   endCycle: number
-  /** Only WAV uses it; a MIDI file holds notes, not samples. */
   sampleRate: number
-  /** Without the extension, which the format adds. */
   fileName: string
 }
 
-export type StrudelExportState = {
-  exportStatus: Ref<StrudelExportStatus>
-  exportErrorMessage: Ref<string>
-  /** Saves the code on screen as a WAV or MIDI file; playback stops first. */
-  exportPattern: (request: StrudelExportRequest) => Promise<void>
-}
-
-/** One sounding event of a pattern, read off Strudel's untyped hap. */
-export type StrudelNoteEvent = {
-  beginCycle: number
-  durationCycles: number
-  value: Record<string, unknown>
-}
+export type StrudelExportStatus = 'idle' | 'rendering' | 'done' | 'error'
 
 export type StrudelPlayback = {
   evaluateCode: (patternCode: string) => Promise<StrudelEvaluationResult>
   stopPlayback: () => Promise<void>
-  /** Renders the code to a downloaded file, without playing it aloud. */
-  exportPattern: (
+  /** Renders the cycles offline and downloads them as a WAV file. */
+  renderToWav: (
     patternCode: string,
-    request: StrudelExportRequest
+    exportOptions: StrudelExportOptions
   ) => Promise<StrudelEvaluationResult>
+  /** Downloads the notes that start inside the cycles as a standard MIDI file. */
+  renderToMidi: (
+    patternCode: string,
+    exportOptions: StrudelExportOptions
+  ) => Promise<StrudelEvaluationResult>
+}
+
+/** One event of a pattern that starts inside the exported cycles, read off Strudel's hap. */
+export type StrudelScheduledHap = {
+  value: unknown
+  beginCycle: number
+  durationCycles: number
 }
 
 /** What the transpiler found in the evaluated code, in Strudel's own untyped shapes. */
@@ -272,6 +268,7 @@ export type StrudelTabId =
   | 'welcome'
   | 'patterns'
   | 'import'
+  | 'midi'
   | 'reference'
   | 'export'
   | 'console'
@@ -342,6 +339,22 @@ export type StrudelTranscriptionState = {
   transcriptionResult: Ref<TranscriptionResult | null>
   transcribedCode: Ref<string>
   transcriptionError: Ref<string>
-  transcribeAudioFile: (audioFile: File) => Promise<void>
+  transcribeFile: (chosenFile: File) => Promise<void>
   loadTranscription: () => void
+}
+
+export type MidiDeviceStatus = 'idle' | 'connecting' | 'ready' | 'unsupported' | 'denied'
+
+export type MidiDevicesState = {
+  midiDeviceStatus: Ref<MidiDeviceStatus>
+  midiInputNames: Ref<string[]>
+  midiOutputNames: Ref<string[]>
+  connectMidiDevices: () => Promise<void>
+}
+
+export type MidiSnippet = {
+  id: string
+  title: string
+  description: string
+  code: string
 }

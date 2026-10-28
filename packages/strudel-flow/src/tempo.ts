@@ -1,4 +1,6 @@
 import {
+  STRUDEL_FLOW_BEATS_PER_CYCLE_OPTIONS,
+  STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE,
   STRUDEL_FLOW_DEFAULT_BEATS_PER_MINUTE,
   STRUDEL_FLOW_MAX_BEATS_PER_MINUTE,
   STRUDEL_FLOW_MIN_BEATS_PER_MINUTE
@@ -18,3 +20,13 @@ export const normalizeStrudelFlowBeatsPerMinute = (beatsPerMinute: number): numb
     Math.max(STRUDEL_FLOW_MIN_BEATS_PER_MINUTE, Math.round(beatsPerMinute))
   )
 }
+
+/**
+ * Keeps the beats in one cycle to a value the B/C picker offers.
+ * @param beatsPerCycle - the requested beats per cycle
+ * @returns that value, or the default when the picker has no such option
+ */
+export const normalizeStrudelFlowBeatsPerCycle = (beatsPerCycle: number): number =>
+  STRUDEL_FLOW_BEATS_PER_CYCLE_OPTIONS.some((option) => Number(option.value) === beatsPerCycle)
+    ? beatsPerCycle
+    : STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE

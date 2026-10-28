@@ -7,7 +7,7 @@
  *
  * Usage:
  *   node scripts/strudel-export.mjs <pattern.strudel> --out <file.wav|file.mid>
- *     [--begin 0] [--end 4] [--rate 48000] [--url http://localhost:5317]
+ *     [--start 0] [--cycles 1] [--rate 48000] [--url http://localhost:5317]
  * The format follows the output's extension.
  */
 import { readFileSync } from 'node:fs'
@@ -23,8 +23,8 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     out: { type: 'string' },
-    begin: { type: 'string', default: '0' },
-    end: { type: 'string', default: '4' },
+    start: { type: 'string', default: '0' },
+    cycles: { type: 'string', default: '1' },
     rate: { type: 'string', default: '48000' },
     url: { type: 'string', default: 'http://localhost:5317' }
   }
@@ -58,13 +58,13 @@ try {
   await page.goto(`${values.url}/tools/StrudelEditor`)
   await page.getByRole('tab', { name: 'export' }).click()
   await page.getByRole('button', { name: format === 'midi' ? 'MIDI' : 'WAV', exact: true }).click()
-  await page.locator('#export-filename').fill(basename(outputPath, extension))
-  await page.locator('#export-start').fill(values.begin)
-  await page.locator('#export-end').fill(values.end)
+  await page.getByLabel('File name').fill(basename(outputPath, extension))
+  await page.getByLabel('Start cycle').fill(values.start)
+  await page.getByLabel('Cycles').fill(values.cycles)
   if (format === 'wav') {
     await page.getByRole('button', { name: rateLabel, exact: true }).click()
   }
-  const exportButton = page.getByRole('button', { name: /^Export (WAV|MIDI)$/ })
+  const exportButton = page.getByRole('button', { name: /^Export to (WAV|MIDI)$/ })
   const failure = page
     .getByRole('alert')
     .first()

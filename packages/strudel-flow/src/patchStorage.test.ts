@@ -57,12 +57,11 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.nodes[0]?.position).toEqual({ x: 10, y: 20 })
     expect(patch?.nodes[0]?.data).toMatchObject({
       kind: 'pad',
-      steps: 5,
+      steps: 8,
       mode: 'arp',
       octave: 3,
       key: 'C',
-      scaleType: 'major',
-      sound: 'sine'
+      scaleType: 'major'
     })
     expect(patch?.nodes[1]?.data).toEqual({ kind: 'filter', cutoff: 800, resonance: 4 })
   })
@@ -75,7 +74,13 @@ describe('parseStrudelFlowPatch', () => {
     const patch = parseStrudelFlowPatch(storedValue)
 
     // Assert
-    expect(patch).toEqual({ nodes: [], edges: [], beatsPerMinute: 120 })
+    expect(patch).toEqual({
+      nodes: [],
+      edges: [],
+      beatsPerMinute: 120,
+      beatsPerCycle: 4,
+      setup: ''
+    })
   })
 
   it.each([
@@ -135,12 +140,11 @@ describe('parseStrudelFlowPatch', () => {
     // Assert
     expect(patch?.nodes[0]?.data).toMatchObject({
       kind: 'pad',
-      steps: 5,
+      steps: 8,
       mode: 'arp',
       octave: 3,
       key: 'C',
-      scaleType: 'major',
-      sound: 'triangle'
+      scaleType: 'major'
     })
     expect(patch?.nodes[1]?.data).toEqual({ kind: 'filter', cutoff: 20000, resonance: 0.1 })
   })
@@ -193,8 +197,7 @@ describe('parseStrudelFlowPatch', () => {
             key: 'D',
             scaleType: 'minor',
             grid,
-            columnModifiers: { 0: '*2', 1: 'sausage', 2: '/3' },
-            sound: 'sine'
+            columnModifiers: { 0: '*2', 1: 'sausage', 2: '/3' }
           }
         },
         {
@@ -209,8 +212,7 @@ describe('parseStrudelFlowPatch', () => {
             chordNotes: [
               [7, 3, 0],
               [9, 5, 4]
-            ],
-            sound: 'sawtooth'
+            ]
           }
         }
       ]
@@ -228,7 +230,6 @@ describe('parseStrudelFlowPatch', () => {
       octave: 4,
       key: 'D',
       scaleType: 'minor',
-      sound: 'sine',
       columnModifiers: { 0: '*2', 2: '/3' }
     })
     expect(padData.grid[0]?.[3]).toBe(true)
@@ -242,8 +243,7 @@ describe('parseStrudelFlowPatch', () => {
       chordNotes: [
         [0, 3, 7],
         [4, 5, 9]
-      ],
-      sound: 'sawtooth'
+      ]
     })
   })
 
@@ -291,7 +291,7 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.nodes[1]?.data).not.toHaveProperty('chordNotes')
   })
 
-  it('reads the level, envelope, scope and expanded space effects', () => {
+  it('reads the level, envelope, visualizer and expanded space effects', () => {
     // Arrange
     const storedValue = storePatch({
       nodes: [
@@ -318,9 +318,9 @@ describe('parseStrudelFlowPatch', () => {
           data: { kind: 'envelope', attack: -2, decay: 0.5, sustain: 2, release: 1.5 }
         },
         {
-          id: 'scope',
+          id: 'visualizer',
           position: { x: 0, y: 300 },
-          data: { kind: 'scope', scale: 9 }
+          data: { kind: 'visualizer', visual: 'kaleidoscope', placement: 'background', options: 7 }
         }
       ]
     })
@@ -350,7 +350,12 @@ describe('parseStrudelFlowPatch', () => {
       sustain: 1,
       release: 1.5
     })
-    expect(patch?.nodes[3]?.data).toEqual({ kind: 'scope', scale: 4 })
+    expect(patch?.nodes[3]?.data).toEqual({
+      kind: 'visualizer',
+      visual: 'pianoroll',
+      placement: 'background',
+      options: ''
+    })
   })
 
   it('gives a cable a usable id when its stored one is missing or already taken', () => {

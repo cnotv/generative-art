@@ -33,13 +33,14 @@ Check memory and running processes first (the global rules), then start your own
 a free port; never reuse or stop another session's. Then:
 
 ```sh
-node scripts/strudel-export.mjs <name>.strudel --out <name>.wav --end <cycles> --url http://localhost:<port>
-node scripts/strudel-export.mjs <name>.strudel --out <name>.mid --end <cycles> --url http://localhost:<port>
+node scripts/strudel-export.mjs <name>.strudel --out <name>.wav --cycles <count> --url http://localhost:<port>
+node scripts/strudel-export.mjs <name>.strudel --out <name>.mid --cycles <count> --url http://localhost:<port>
 ```
 
-The extension picks the format. `--begin` and `--end` are cycles, so at `setcpm(30)` four
-cycles are eight seconds; a one-shot sound effect usually wants `--end 1` or less, with the
-pattern slowed to fit. Chromium runs headless with `--mute-audio` and the WAV renders offline.
+The extension picks the format. `--start` is the cycle to begin at and `--cycles` how many to
+export, one by default: at `setcpm(30)` one cycle is two seconds. A one-shot sound effect is one
+cycle, with the cycle sped up to the effect's length (`setcpm(240)` makes it a quarter of a
+second). Chromium runs headless with `--mute-audio` and the WAV renders offline.
 
 **Nothing may play aloud.** Never press Play in the browser pane and never run a browser test
 that starts audio unmuted: the user may be wearing headphones. A pattern error is printed by

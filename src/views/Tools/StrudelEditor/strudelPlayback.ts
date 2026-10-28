@@ -1,16 +1,14 @@
-import { downloadDataUrl } from '@/utils/downloadDataUrl'
+import { DEFAULT_CPS, DEFAULT_SAMPLE_BANK, STRUDEL_DRAW_TIME, STRUDEL_NO_DRAW_TIME } from './config'
 import {
-  DEFAULT_SAMPLE_BANK,
-  STRUDEL_DEFAULT_CYCLES_PER_SECOND,
-  STRUDEL_DRAW_TIME,
-  STRUDEL_EXPORT_MAX_POLYPHONY,
-  STRUDEL_NO_DRAW_TIME
-} from './config'
+  downloadExportFile,
+  readScheduledHaps,
+  renderStrudelPatternToWav
+} from './strudelOfflineRender'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
-  StrudelExportRequest,
-  StrudelNoteEvent,
+  StrudelExportFormat,
+  StrudelExportOptions,
   StrudelPlayback,
   StrudelPlaybackHooks
 } from './types'
@@ -31,8 +29,8 @@ type StrudelEngine = {
   synthRegistrar: UnknownCallable
   sampleBankLoader: UnknownCallable
   contextGetter: UnknownCallable
+  audioModule: Record<string, unknown>
   contextSetter: UnknownCallable
-  audioRenderer: UnknownCallable
   scheduleHandler: unknown
   codeTranspiler: unknown
   scopeModules: unknown[]
@@ -63,6 +61,8 @@ const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
   await resumeFunction.call(audioContext)
 }
 
+const readCyclesPerSecond = (scheduler: unknown): number =>
+  isRecordModule(scheduler) && typeof scheduler.cps === 'number' ? scheduler.cps : DEFAULT_CPS
 // iOS mutes Web Audio while the ring switch is on silent unless the page declares itself a
 // player. Safari 17 added this switch; older browsers have no audioSession and keep the default.
 const requestPlaybackAudioSession = (): void => {
@@ -140,14 +140,16 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     webaudioModule,
     tonalModule,
     transpilerModule,
-    drawModule
+    drawModule,
+    midiModule
   ]: unknown[] = await Promise.all([
     import('@strudel/core'),
     import('@strudel/mini'),
     import('@strudel/webaudio'),
     import('@strudel/tonal'),
     import('@strudel/transpiler'),
-    import('@strudel/draw')
+    import('@strudel/draw'),
+    import('@strudel/midi/midi.mjs')
   ])
   // Importing the editor module registers _pianoroll, _scope and the other inline widgets
   // with the transpiler, and supplies the sliderWithID that slider() is rewritten into.
@@ -166,8 +168,8 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     synthRegistrar: toCallable(webaudioModule.registerSynthSounds),
     sampleBankLoader: toCallable(webaudioModule.samples),
     contextGetter: toCallable(webaudioModule.getAudioContext),
+    audioModule: webaudioModule,
     contextSetter: toCallable(webaudioModule.setAudioContext),
-    audioRenderer: toCallable(webaudioModule.renderPatternAudio),
     scheduleHandler: webaudioModule.webaudioOutput,
     codeTranspiler: transpilerModule.transpiler,
     scopeModules: [
@@ -176,6 +178,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
       tonalModule,
       coreModule,
       drawModule,
+      midiModule,
       { slider, sliderWithID }
     ]
   }
@@ -186,8 +189,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     synthRegistrar,
     sampleBankLoader,
     contextGetter,
-    contextSetter,
-    audioRenderer
+    contextSetter
   } = engine
   if (
     replFactory === undefined ||
@@ -197,7 +199,6 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     sampleBankLoader === undefined ||
     contextGetter === undefined ||
     contextSetter === undefined ||
-    audioRenderer === undefined ||
     typeof engine.scheduleHandler !== 'function' ||
     typeof engine.codeTranspiler !== 'function'
   ) {
@@ -211,55 +212,8 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     synthRegistrar,
     sampleBankLoader,
     contextGetter,
-    contextSetter,
-    audioRenderer
+    contextSetter
   }
-}
-
-const readCyclesPerSecond = (scheduler: unknown): number =>
-  isRecordModule(scheduler) && typeof scheduler.cps === 'number'
-    ? scheduler.cps
-    : STRUDEL_DEFAULT_CYCLES_PER_SECOND
-
-const toNoteEvent = (hap: unknown): StrudelNoteEvent[] => {
-  if (!isRecordModule(hap) || !isRecordModule(hap.whole) || !isRecordModule(hap.value)) {
-    return []
-  }
-  const hasOnset = toCallable(hap.hasOnset)
-  return hasOnset?.call(hap) === true
-    ? [
-        {
-          beginCycle: Number(hap.whole.begin),
-          durationCycles: Number(hap.duration),
-          value: hap.value
-        }
-      ]
-    : []
-}
-
-/**
- * The events that start inside the requested cycles, the same ones the WAV render plays.
- * @param pattern - the evaluated Strudel pattern
- * @param request - the cycles to read
- * @param cyclesPerSecond - the pattern's speed, which `cpm`-relative functions read
- * @returns each event's start, length and control values
- */
-const readNoteEvents = (
-  pattern: Record<string, unknown>,
-  request: StrudelExportRequest,
-  cyclesPerSecond: number
-): StrudelNoteEvent[] => {
-  const queryArc = toCallable(pattern.queryArc)
-  const haps = queryArc?.call(pattern, request.beginCycle, request.endCycle, {
-    _cps: cyclesPerSecond
-  })
-  return toUnknownList(haps).flatMap(toNoteEvent)
-}
-
-const saveFile = (fileContents: Blob, fileName: string): void => {
-  const fileUrl = URL.createObjectURL(fileContents)
-  downloadDataUrl(fileUrl, fileName)
-  URL.revokeObjectURL(fileUrl)
 }
 
 /**
@@ -317,8 +271,7 @@ export const loadDefaultStrudelPlayback = async (
   }
   await engine.audioInitializer()
   engine.synthRegistrar()
-  // A WAV render closes the context it finds, so playback moves to a new one after each.
-  let audioContext: unknown = await engine.contextGetter()
+  const audioContext: unknown = engine.contextGetter()
   await resumeAudioContext(audioContext)
   await engine.sampleBankLoader(DEFAULT_SAMPLE_BANK)
   await engine.scopeInitializer(...engine.scopeModules)
@@ -366,6 +319,40 @@ export const loadDefaultStrudelPlayback = async (
     throw new Error('Strudel modules failed to load')
   }
 
+  // Exporting evaluates without starting the scheduler, so nothing plays while a file renders.
+  const evaluateForExport = async (patternCode: string): Promise<unknown> => {
+    await stopFunction()
+    latestEvaluationError = null
+    const pattern: unknown = await evaluateFunction(patternCode, false)
+    if (latestEvaluationError !== null || pattern === undefined) {
+      throw new Error(describeError(latestEvaluationError))
+    }
+    return pattern
+  }
+
+  const exportAs =
+    (
+      format: StrudelExportFormat,
+      writeFile: (
+        pattern: unknown,
+        cyclesPerSecond: number,
+        exportOptions: StrudelExportOptions
+      ) => Promise<ArrayBuffer | Uint8Array<ArrayBuffer>>
+    ) =>
+    async (
+      patternCode: string,
+      exportOptions: StrudelExportOptions
+    ): Promise<StrudelEvaluationResult> => {
+      try {
+        const pattern = await evaluateForExport(patternCode)
+        const file = await writeFile(pattern, readCyclesPerSecond(replScheduler), exportOptions)
+        downloadExportFile(file, exportOptions.fileName, format)
+        return { success: true }
+      } catch (error) {
+        return { success: false, errorMessage: describeError(error) }
+      }
+    }
+
   return {
     evaluateCode: async (patternCode: string): Promise<StrudelEvaluationResult> => {
       // Each Play or Update is a tap, and iOS may have suspended the context since the last.
@@ -379,45 +366,15 @@ export const loadDefaultStrudelPlayback = async (
     stopPlayback: async (): Promise<void> => {
       await stopFunction()
     },
-    exportPattern: async (
-      patternCode: string,
-      request: StrudelExportRequest
-    ): Promise<StrudelEvaluationResult> => {
-      await stopFunction()
-      latestEvaluationError = null
-      const pattern: unknown = await evaluateFunction(patternCode, false)
-      if (latestEvaluationError !== null || !isRecordModule(pattern)) {
-        return { success: false, errorMessage: describeError(latestEvaluationError) }
-      }
-      const cyclesPerSecond = readCyclesPerSecond(replScheduler)
-      if (request.format === 'midi') {
-        const { buildPatternMidi } = await import('./patternMidi')
-        const midiBytes = buildPatternMidi(readNoteEvents(pattern, request, cyclesPerSecond), {
-          beginCycle: request.beginCycle,
-          cyclesPerSecond
-        })
-        saveFile(new Blob([midiBytes], { type: 'audio/midi' }), `${request.fileName}.mid`)
-        return { success: true }
-      }
-      try {
-        await engine.audioRenderer(
-          pattern,
-          cyclesPerSecond,
-          request.beginCycle,
-          request.endCycle,
-          request.sampleRate,
-          STRUDEL_EXPORT_MAX_POLYPHONY,
-          false,
-          request.fileName
-        )
-      } finally {
-        const playbackContext = new AudioContext()
-        pageAudio.context = playbackContext
-        engine.contextSetter(playbackContext)
-        await engine.audioInitializer()
-        audioContext = playbackContext
-      }
-      return { success: true }
-    }
+    renderToWav: exportAs('wav', (pattern, cyclesPerSecond, exportOptions) =>
+      renderStrudelPatternToWav(engine.audioModule, pattern, cyclesPerSecond, exportOptions)
+    ),
+    renderToMidi: exportAs('midi', async (pattern, cyclesPerSecond, exportOptions) => {
+      const { buildPatternMidi } = await import('./patternMidi')
+      return buildPatternMidi(readScheduledHaps(pattern, exportOptions, cyclesPerSecond), {
+        beginCycle: exportOptions.startCycle,
+        cyclesPerSecond
+      })
+    })
   }
 }

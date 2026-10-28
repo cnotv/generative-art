@@ -1,57 +1,61 @@
 import { ref } from 'vue'
+import type { Ref } from 'vue'
 import type {
-  StrudelExportRequest,
-  StrudelExportState,
+  StrudelEditorStatus,
+  StrudelExportOptions,
   StrudelExportStatus,
-  StrudelLogEntry,
   StrudelPlayback
 } from './types'
 
-type StrudelExportOptions = {
+type StrudelExportHooks = {
   loadPlayback: () => Promise<StrudelPlayback>
-  readPatternCode: () => string
-  stopPlayingPattern: () => Promise<void>
-  appendLog: (message: string, level?: StrudelLogEntry['level']) => void
+  patternCode: Ref<string>
+  /** Rendering stops whatever was playing, so the editor's play state has to follow. */
+  editorStatus: Ref<StrudelEditorStatus>
+  appendLog: (message: string, level?: 'info' | 'warn' | 'error') => void
 }
 
-const describeExportError = (error: unknown): string =>
-  error instanceof Error ? error.message : 'Pattern failed to export'
-
 /**
- * Export state for the export tab: renders the code on screen to a WAV or MIDI download.
- * @param exportOptions - the editor's playback, code, stop action and console log
- * @returns the export status, its error and the export action
+ * The WAV and MIDI export: renders the code on screen offline through the playback engine and reports
+ * how it went.
+ * @param hooks - the playback, the code and play state it works on, and the log
+ * @returns the export status, its error, and the action that starts it
  */
-export const useStrudelExport = (exportOptions: StrudelExportOptions): StrudelExportState => {
+export const useStrudelExport = (
+  hooks: StrudelExportHooks
+): {
+  exportStatus: Ref<StrudelExportStatus>
+  exportError: Ref<string>
+  exportPattern: (exportOptions: StrudelExportOptions) => Promise<void>
+} => {
   const exportStatus = ref<StrudelExportStatus>('idle')
-  const exportErrorMessage = ref('')
+  const exportError = ref('')
 
-  const failExport = (message: string): void => {
+  const fail = (message: string): void => {
     exportStatus.value = 'error'
-    exportErrorMessage.value = message
-    exportOptions.appendLog(message, 'error')
+    exportError.value = message
+    hooks.appendLog(message, 'error')
   }
 
-  const exportPattern = async (request: StrudelExportRequest): Promise<void> => {
-    exportStatus.value = 'exporting'
-    exportErrorMessage.value = ''
-    exportOptions.appendLog(`Exporting ${request.format.toUpperCase()}...`)
+  const exportPattern = async (exportOptions: StrudelExportOptions): Promise<void> => {
+    exportStatus.value = 'rendering'
+    exportError.value = ''
+    hooks.appendLog(`Exporting cycles ${exportOptions.startCycle} to ${exportOptions.endCycle}...`)
     try {
-      const playback = await exportOptions.loadPlayback()
-      await exportOptions.stopPlayingPattern()
-      const exportResult = await playback.exportPattern(exportOptions.readPatternCode(), request)
-      if (!exportResult.success) {
-        failExport(exportResult.errorMessage ?? 'Pattern failed to export')
+      const playback = await hooks.loadPlayback()
+      const render = exportOptions.format === 'midi' ? playback.renderToMidi : playback.renderToWav
+      const result = await render(hooks.patternCode.value, exportOptions)
+      hooks.editorStatus.value = 'idle'
+      if (!result.success) {
+        fail(result.errorMessage ?? 'Pattern failed to evaluate')
         return
       }
-      exportStatus.value = 'idle'
-      exportOptions.appendLog(
-        `Exported ${request.fileName}.${request.format === 'midi' ? 'mid' : 'wav'}`
-      )
+      exportStatus.value = 'done'
+      hooks.appendLog(`Exported ${exportOptions.format === 'midi' ? 'MIDI' : 'WAV'} file`)
     } catch (error) {
-      failExport(describeExportError(error))
+      fail(error instanceof Error ? error.message : 'Export failed')
     }
   }
 
-  return { exportStatus, exportErrorMessage, exportPattern }
+  return { exportStatus, exportError, exportPattern }
 }
