@@ -694,6 +694,91 @@
   line-height: 1.5rem;
 }
 
+.strudel-flow-calls__row--controls {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1-5) var(--spacing-2);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+}
+
+.strudel-flow-calls__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.strudel-flow-calls__name {
+  color: var(--sf-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.strudel-flow-calls__control {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.strudel-flow-calls__control-label {
+  color: var(--sf-muted-foreground);
+}
+
+.strudel-flow-calls__slider {
+  width: 100%;
+  accent-color: var(--sf-accent);
+}
+
+.strudel-flow-calls__value {
+  min-width: 2.5rem;
+  color: var(--sf-card-foreground);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.strudel-flow-calls__text {
+  grid-column: 2 / -1;
+  min-width: 0;
+  padding: var(--spacing-0-5) var(--spacing-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--sf-card);
+  color: var(--sf-card-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.strudel-flow-calls__steps {
+  display: flex;
+  grid-column: 2 / -1;
+  gap: var(--spacing-1);
+}
+
+.strudel-flow-calls__step {
+  flex: 1;
+  max-width: 2.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--sf-muted-foreground) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--sf-card);
+  cursor: pointer;
+}
+
+.strudel-flow-calls__step--on {
+  border-color: var(--sf-accent);
+  background: var(--sf-accent);
+}
+
+.strudel-flow-calls__text:focus-visible,
+.strudel-flow-calls__step:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sf-ring);
+}
+
 .strudel-flow-calls__punctuation {
   color: var(--sf-muted-foreground);
 }
@@ -1358,8 +1443,16 @@
   display: block;
   width: 100%;
   height: auto;
+  max-height: 10rem;
+  object-fit: contain;
   border-radius: var(--radius-md);
   background: var(--sf-muted);
+}
+
+.strudel-flow-visualizer__settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
 }
 
 .strudel-flow-visualizer__hint {

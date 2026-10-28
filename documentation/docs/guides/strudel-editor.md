@@ -207,20 +207,24 @@ readable names; picking one appends the sound's code name to the end of the line
 
 ![A Beats node with kick, clap and hi-hat tracks over eight steps, variations shown and the Shape footer open](/img/strudel-flow/beats-node.webp)
 
-All of Strudel's visuals live in one **Visualizer** node. Pick the type from its list, choose
-whether it draws **under the line** (`._punchcard()`) or **behind the code** (`.punchcard()`), and
-optionally give it options such as `{ labels: 1 }`. Any visual call in the code, with or without
-the underscore, reads back as a Visualizer with that type picked. While the pattern plays, a visual
-drawn under the line also draws live inside its node; one drawn behind the code only shows in the
-code editor, so switch to Code to watch it.
+All of Strudel's visuals live in one **Visualizer** node: the visual itself, a list to pick its
+type, and a toggle for whether it draws **under the line** (`._punchcard()`) or **behind the
+code** (`.punchcard()`). Any visual call in the code, with or without the underscore, reads back as
+a Visualizer with that type picked, and options such as `{ labels: 1 }` written in the code are
+kept. While the pattern plays the node draws the visual live; behind the code it shows the canvas
+every background visual shares. A visual only draws the pattern, so calls chained after it go on
+an Effect node of their own rather than onto the Visualizer.
 
 A call with no dedicated node, such as `.mask("<1 1 1 0>")`, `.sometimesBy(.2, x => x.ply(2))` or
-`.jux(rev)`, sits under **Calls** on the node it follows in the code, written as `.name(argument)`.
-So does a dedicated call whose argument is a signal or a slider rather than a number, such as
-`.lpf(sine.range(300, 3000))`. Edit the name or argument in place, remove a call with its cross,
-or add one from the node's **…** menu with **Add call**. Calls chained straight after a
-`stack(...)` of several instruments have no single node to sit on, so they gather on one Effect
-node.
+`.jux(rev)`, sits under **Calls** on the node it follows in the code. Common ones get controls: a
+step per cycle to switch on and off for `mask` and `struct`, a slider for the chance of
+`sometimesBy`, `someCyclesBy` and `degradeBy`, the amount and subdivision of `swingBy`, and sliders
+for `fast`, `slow`, `ply`, `late`, `early`, `velocity`, `speed`, `crush`, `shape` and `hpf`. Any
+other call, or one whose argument the controls cannot show (a pattern where a number goes), is
+written as `.name(argument)` to edit in place. So is a dedicated call whose argument is a signal
+or a slider, such as `.lpf(sine.range(300, 3000))`. Remove a call with its cross, or add one from
+the node's **…** menu with **Add call**. Calls chained straight after a `stack(...)` of several
+instruments have no single node to sit on, so they gather on one Effect node.
 
 Each node header has a **…** menu with **View code**, which shows what the node writes, **Add
 call** and **Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every

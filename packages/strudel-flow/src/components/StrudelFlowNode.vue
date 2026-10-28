@@ -67,6 +67,10 @@ const controlProperties = computed(() =>
 const visualizerWidgetIds = inject(STRUDEL_FLOW_VISUALIZER_WIDGET_IDS, null)
 const visualWidgetId = computed(() => visualizerWidgetIds?.value[props.id] ?? null)
 const hasCalls = computed(() => props.data.kind === 'effect' || (props.data.calls ?? []).length > 0)
+// A visual only draws the pattern, so calls that change it go on another node.
+const canTakeCalls = computed(
+  () => props.data.kind !== 'effect' && props.data.kind !== 'visualizer'
+)
 const isInstrument = computed(() => isStrudelFlowInstrumentKind(props.data.kind))
 const isMuted = computed(() => 'muted' in props.data && props.data.muted === true)
 const inputLabel = computed(() => `${title.value} pattern input`)
@@ -160,7 +164,7 @@ const onRemove = (): void => {
           {{ isCodeVisible ? 'Hide code' : 'View code' }}
         </button>
         <button
-          v-if="data.kind !== 'effect'"
+          v-if="canTakeCalls"
           type="button"
           class="strudel-flow-node__menu-item"
           role="menuitem"

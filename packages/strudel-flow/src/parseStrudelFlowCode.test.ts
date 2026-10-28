@@ -325,6 +325,19 @@ describe('parseStrudelFlowCode', () => {
     })
   })
 
+  it('starts an Effect node for calls after a visual rather than putting them on it', () => {
+    // Arrange
+    const code = '$: note("c3")._punchcard().mask("<1 1 1 0>").swingBy(1/3, 4)'
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+
+    // Assert
+    expect(parsed?.nodes.map((node) => node.data.kind)).toEqual(['notes', 'visualizer', 'effect'])
+    expect(parsed?.nodes[1]?.data).not.toHaveProperty('calls')
+    expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
+  })
+
   it('keeps stacked drum lines with calls of their own apart', () => {
     // Arrange
     const code = '$: stack(s("bd").mask("1 0"), s("hh"))'

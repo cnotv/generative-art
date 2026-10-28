@@ -455,29 +455,46 @@ const replaceLast = (list: StrudelFlowNodeData[], data: StrudelFlowNodeData) => 
 ]
 
 // A call no dedicated node covers sits on the node it follows: the last effect, or the one
-// instrument it starts from. After a stack with nothing chained yet there is no such node, so
-// the calls there gather on one Effect node.
+// instrument it starts from. A visual only draws the pattern, and after a stack with nothing
+// chained yet there is no single node, so the calls there gather on an Effect node.
+const startEffectNode = (state: EffectChainState, call: Call): EffectChainState => ({
+  ...state,
+  effects: [...state.effects, withCall({ kind: 'effect', calls: [] }, call)]
+})
+
+const addCallToOnlyBranch = (state: EffectChainState, call: Call): EffectChainState => {
+  const [onlyBranch] = state.branches
+  const branchEffect = onlyBranch?.effects.at(-1)
+  if (state.branches.length !== 1 || onlyBranch === undefined) {
+    return startEffectNode(state, call)
+  }
+  if (branchEffect !== undefined) {
+    return branchEffect.kind === 'visualizer'
+      ? startEffectNode(state, call)
+      : {
+          ...state,
+          branches: [
+            {
+              ...onlyBranch,
+              effects: replaceLast(onlyBranch.effects, withCall(branchEffect, call))
+            }
+          ]
+        }
+  }
+  const [onlyInstrument] = onlyBranch.instruments
+  return onlyBranch.instruments.length === 1 && onlyInstrument !== undefined
+    ? { ...state, branches: [{ ...onlyBranch, instruments: [withCall(onlyInstrument, call)] }] }
+    : startEffectNode(state, call)
+}
+
 const addGenericCall = (state: EffectChainState, call: Call): EffectChainState => {
   const lastEffect = state.effects.at(-1)
-  if (lastEffect !== undefined) {
-    return { ...state, effects: replaceLast(state.effects, withCall(lastEffect, call)) }
+  if (lastEffect === undefined) {
+    return addCallToOnlyBranch(state, call)
   }
-  const [onlyBranch] = state.branches
-  const branchEnd = onlyBranch?.effects.at(-1) ?? onlyBranch?.instruments[0]
-  if (state.branches.length !== 1 || onlyBranch === undefined || branchEnd === undefined) {
-    return { ...state, effects: [withCall({ kind: 'effect', calls: [] }, call)] }
-  }
-  if (onlyBranch.effects.length > 0) {
-    return {
-      ...state,
-      branches: [
-        { ...onlyBranch, effects: replaceLast(onlyBranch.effects, withCall(branchEnd, call)) }
-      ]
-    }
-  }
-  return onlyBranch.instruments.length === 1
-    ? { ...state, branches: [{ ...onlyBranch, instruments: [withCall(branchEnd, call)] }] }
-    : { ...state, effects: [withCall({ kind: 'effect', calls: [] }, call)] }
+  return lastEffect.kind === 'visualizer'
+    ? startEffectNode(state, call)
+    : { ...state, effects: replaceLast(state.effects, withCall(lastEffect, call)) }
 }
 
 // Consecutive calls of one effect, such as `.lpf(800).lpq(4)`, share a node until a field

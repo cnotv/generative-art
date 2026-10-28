@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { STRUDEL_FLOW_BACKGROUND_CANVAS_ID } from '../../config'
 import type { StrudelFlowVisualizerData } from '../../types'
 
 const props = defineProps<{
@@ -12,17 +13,20 @@ const previewCanvas = ref<HTMLCanvasElement | null>(null)
 const isMirroring = ref(false)
 let frameRequest: number | null = null
 
-const message = computed(() => {
-  if (props.placement === 'background') {
-    return 'Behind the code draws behind the code editor; switch to Code to watch it.'
-  }
-  return props.widgetId === null
+const message = computed(() =>
+  props.widgetId === null && props.placement === 'inline'
     ? 'Connect an instrument to draw its visual here.'
     : 'Press Play to draw the visual here.'
-})
+)
+
+// Behind the code, every background visual shares the one canvas behind the code editor.
+const sourceCanvasId = computed(() =>
+  props.placement === 'background' ? STRUDEL_FLOW_BACKGROUND_CANVAS_ID : props.widgetId
+)
 
 const readSourceCanvas = (): HTMLCanvasElement | null => {
-  const source = props.widgetId === null ? null : document.getElementById(props.widgetId)
+  const source =
+    sourceCanvasId.value === null ? null : document.getElementById(sourceCanvasId.value)
   return source instanceof HTMLCanvasElement && source.width > 0 && source.height > 0
     ? source
     : null
@@ -31,7 +35,7 @@ const readSourceCanvas = (): HTMLCanvasElement | null => {
 // Strudel paints into a canvas inside the code editor, which the flow hides, so each frame
 // copies that canvas here rather than moving it out from under the editor.
 const mirrorFrame = (): void => {
-  const source = props.placement === 'inline' ? readSourceCanvas() : null
+  const source = readSourceCanvas()
   const target = previewCanvas.value
   const context = target?.getContext('2d')
   if (source !== null && target !== null && context !== null && context !== undefined) {
