@@ -3,7 +3,7 @@ import {
   TAB_DIGIT_CONTRAST,
   TAB_DIGIT_GRID_WIDTH,
   TAB_DIGIT_MAX_DISTANCE,
-  TAB_DIGIT_TEMPLATES
+  TAB_DIGIT_TEMPLATE_SETS
 } from '../../config'
 import type { TabImage } from '../../types'
 import { meanOf } from './imageProbes'
@@ -17,8 +17,11 @@ export type DigitBox = {
 
 const INK_BY_CHARACTER: Record<string, number> = { ' ': 0, '.': 0.3, '+': 0.65, '#': 1 }
 
-const TEMPLATE_GRIDS = TAB_DIGIT_TEMPLATES.map((rows) =>
-  rows.flatMap((row) => Array.from(row, (cell) => INK_BY_CHARACTER[cell] ?? 0))
+const TEMPLATES = TAB_DIGIT_TEMPLATE_SETS.flatMap((set) =>
+  set.map((rows, digit) => ({
+    digit,
+    grid: rows.flatMap((row) => Array.from(row, (cell) => INK_BY_CHARACTER[cell] ?? 0))
+  }))
 )
 
 const overlap = (pixel: number, start: number, end: number): number =>
@@ -90,9 +93,9 @@ const SHIFTS_IN_CELLS = [-1, -0.5, 0, 0.5, 1]
 const closestDigit = (image: TabImage, box: DigitBox): { digit: number; distance: number } => {
   const candidates = SHIFTS_IN_CELLS.flatMap((shift) => {
     const grid = sampleGrid(image, box, shift)
-    return TEMPLATE_GRIDS.map((template, digit) => ({
-      digit,
-      distance: distanceBetween(grid, template)
+    return TEMPLATES.map((template) => ({
+      digit: template.digit,
+      distance: distanceBetween(grid, template.grid)
     }))
   })
   return candidates.reduce((best, candidate) =>

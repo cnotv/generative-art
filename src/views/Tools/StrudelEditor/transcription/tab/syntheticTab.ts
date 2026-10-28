@@ -1,4 +1,4 @@
-import { TAB_DIGIT_TEMPLATES } from '../../config'
+import { TAB_DIGIT_TEMPLATE_SETS } from '../../config'
 import type { TabImage } from '../../types'
 import { buildTabImage } from './buildTabImage'
 
@@ -22,7 +22,7 @@ type Rectangle = { left: number; top: number; right: number; bottom: number; gra
 type SyntheticNote = { lineIndex: number; fret: number }
 
 const glyphRectangles = (digit: number, centreX: number, centreY: number): Rectangle[] =>
-  TAB_DIGIT_TEMPLATES[digit].flatMap((row, rowIndex) =>
+  TAB_DIGIT_TEMPLATE_SETS[0][digit].flatMap((row, rowIndex) =>
     [...row].flatMap((character, columnIndex) => {
       const ink = INK_BY_CHARACTER[character] ?? 0
       const left = centreX - (5 * CELL) / 2 + columnIndex * CELL
