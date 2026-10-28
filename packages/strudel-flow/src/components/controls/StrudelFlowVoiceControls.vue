@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { STRUDEL_FLOW_SOUND_OPTIONS } from '../../config'
-import type { StrudelFlowVoiceData } from '../../types'
+import type { StrudelFlowSampleGroup, StrudelFlowVoiceData } from '../../types'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 
 const props = defineProps<{
   data: StrudelFlowVoiceData
+  /** Every synth and instrument the host can play, under their headings. */
+  voiceGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -14,9 +16,27 @@ const emit = defineEmits<{
 
 const sound = computed(() => props.data.sound)
 
-// A sound read from code, such as a sample bank, stays selectable next to the synths.
+const waveformValues = new Set(STRUDEL_FLOW_SOUND_OPTIONS.map((option) => option.value))
+
+// The four waveforms are listed above, so the host's copies of them are left out of the groups.
+const soundGroups = computed(() =>
+  (props.voiceGroups ?? [])
+    .map((group) => ({
+      label: group.label,
+      options: group.samples.filter((sample) => !waveformValues.has(sample.value))
+    }))
+    .filter((group) => group.options.length > 0)
+)
+
+const isListed = computed(
+  () =>
+    waveformValues.has(sound.value) ||
+    soundGroups.value.some((group) => group.options.some((option) => option.value === sound.value))
+)
+
+// A sound read from code that the host does not list stays selectable next to the waveforms.
 const soundOptions = computed(() =>
-  STRUDEL_FLOW_SOUND_OPTIONS.some((option) => option.value === sound.value)
+  isListed.value
     ? STRUDEL_FLOW_SOUND_OPTIONS
     : [...STRUDEL_FLOW_SOUND_OPTIONS, { value: sound.value, label: sound.value }]
 )
@@ -56,6 +76,7 @@ const WAVEFORMS = [
       label="Voice"
       :model-value="sound"
       :options="soundOptions"
+      :groups="soundGroups"
       @update:model-value="setSound"
     />
   </div>

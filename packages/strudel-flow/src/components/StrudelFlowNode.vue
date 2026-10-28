@@ -28,6 +28,7 @@ const props = defineProps<{
   data: StrudelFlowNodeData
   selected?: boolean
   sampleGroups?: StrudelFlowSampleGroup[]
+  voiceGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -60,10 +61,13 @@ const isCodeVisible = ref(false)
 
 const definition = computed(() => getStrudelFlowNodeDefinition(props.data.kind))
 const title = computed(() => definition.value.title)
-// Only the nodes that pick samples take the list; on any other it would land as an attribute.
-const controlProperties = computed(() =>
-  SAMPLE_PICKING_KINDS.has(props.data.kind) ? { sampleGroups: props.sampleGroups ?? [] } : {}
-)
+// Only the nodes that pick sounds take a list; on any other it would land as an attribute.
+const controlProperties = computed(() => {
+  if (SAMPLE_PICKING_KINDS.has(props.data.kind)) {
+    return { sampleGroups: props.sampleGroups ?? [] }
+  }
+  return props.data.kind === 'voice' ? { voiceGroups: props.voiceGroups ?? [] } : {}
+})
 const visualizerWidgetIds = inject(STRUDEL_FLOW_VISUALIZER_WIDGET_IDS, null)
 const visualWidgetId = computed(() => visualizerWidgetIds?.value[props.id] ?? null)
 const hasCalls = computed(() => props.data.kind === 'effect' || (props.data.calls ?? []).length > 0)
