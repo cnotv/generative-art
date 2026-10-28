@@ -450,6 +450,14 @@ stands alone and replaces the list.
 
 ![The import tab holding a bass tab and a piano score: the pianoroll box ticked, one tempo, a row per file with a Remove button, the warnings and the code folded, and the Load and Add buttons](/img/strudel-editor/import-tab-instruments.webp)
 
+<video controls loop muted playsinline width="720" src="/video/strudel-editor/import-tab-walkthrough.webm">
+  A walkthrough of the import tab. The two help headings open and close on click. A bass tab and a
+  piano score are picked from the drop zone and become two rows. The warnings and the code open
+  from their headings, unticking the pianoroll box takes the pianoroll lines out of the code and
+  ticking it puts them back. Load fills the editor, Play draws a pianoroll under each instrument,
+  and the flow view shows a notes, voice and visualizer node for each one.
+</video>
+
 The song plays at the first file's tempo, with one bar per cycle in the first file's metre. Each
 instrument is its own `$:` block, so Strudel plays them together, and the flow view shows a Notes
 node with its Voice for each one. Three kinds of warning go to the console tab and fold under a
