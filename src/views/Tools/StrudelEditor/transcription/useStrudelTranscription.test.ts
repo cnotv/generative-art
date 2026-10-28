@@ -3,6 +3,7 @@ import type { TranscriptionResult, TranscriptionRunner } from '../types'
 import { useStrudelTranscription } from './useStrudelTranscription'
 
 const RESULT: TranscriptionResult = {
+  kind: 'grid',
   beatsPerMinute: 128,
   bars: [
     {

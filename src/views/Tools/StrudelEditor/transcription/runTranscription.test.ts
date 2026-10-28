@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isMidiFile } from './runTranscription'
+import { isImageFile, isMidiFile } from './runTranscription'
 
 describe('isMidiFile', () => {
   it.each([
@@ -17,5 +17,24 @@ describe('isMidiFile', () => {
 
     // Assert
     expect(isMidi).toBe(expected)
+  })
+})
+
+describe('isImageFile', () => {
+  it.each([
+    ['riff.png', '', true],
+    ['RIFF.JPEG', '', true],
+    ['shot', 'image/webp', true],
+    ['loop.mp3', 'audio/mpeg', false],
+    ['song.mid', 'audio/midi', false]
+  ])('reads %s (%s) as an image: %s', (fileName, fileType, expected) => {
+    // Arrange
+    const chosenFile = new File(['data'], fileName, { type: fileType })
+
+    // Act
+    const isImage = isImageFile(chosenFile)
+
+    // Assert
+    expect(isImage).toBe(expected)
   })
 })

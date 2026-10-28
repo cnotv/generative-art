@@ -1183,6 +1183,7 @@ describe('useStrudelEditor transcription', () => {
   it('loads a transcription into the editor and leaves the error state', async () => {
     // Arrange
     const transcriptionRunner = vi.fn().mockResolvedValue({
+      kind: 'grid',
       beatsPerMinute: 100,
       bars: [{ steps: [{ drums: ['bd'], bassNote: null }], chord: null }]
     })

@@ -95,6 +95,7 @@ export const transcribeMidi = (buffer: ArrayBuffer): TranscriptionResult => {
   const lastStep = Math.max(...events.map((event) => event.firstStep))
   const barCount = Math.min(TRANSCRIPTION_MAX_BARS, Math.floor(lastStep / STEPS_PER_BAR) + 1)
   return {
+    kind: 'grid',
     beatsPerMinute: Math.round(midi.header.tempos[0]?.bpm ?? MIDI_DEFAULT_BEATS_PER_MINUTE),
     bars: Array.from({ length: barCount }, (_, barIndex) => buildBar(barIndex, events))
   }

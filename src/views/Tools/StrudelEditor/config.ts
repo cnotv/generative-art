@@ -589,7 +589,10 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
 export const TRANSCRIPTION_SAMPLE_RATE = 22050
 export const TRANSCRIPTION_MAX_SECONDS = 90
 export const TRANSCRIPTION_MAX_BARS = 64
-export const TRANSCRIPTION_ACCEPTED_TYPES = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.mid,.midi'
+export const TRANSCRIPTION_ACCEPTED_TYPES =
+  'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.mid,.midi,image/png,image/jpeg,image/webp'
+/** A screenshot larger than this is refused, since every pixel is held in memory twice. */
+export const TAB_IMAGE_MAX_PIXELS = 16000000
 
 export const ONSET_FRAME_SIZE = 1024
 export const ONSET_HOP_SIZE = 512
@@ -1161,4 +1164,120 @@ export const STRUDEL_SETUP_CALL_NAMES = [
   'all',
   'each',
   'hush'
+]
+
+/** A pixel this far from the page colour is faint ink: a staff line, a bar line or a tie. */
+export const TAB_FAINT_DEVIATION = 25
+/** A pixel this far from the page colour is bright ink: a fret digit, a stem or a beam. */
+export const TAB_BRIGHT_DEVIATION = 100
+export const TAB_BACKGROUND_SAMPLE_STRIDE = 7
+/** Printed words such as a tempo are dimmer than a fret number, so they get their own level. */
+export const TAB_TEXT_DEVIATION = 50
+export const TAB_LUMINANCE_WEIGHTS = { red: 0.299, green: 0.587, blue: 0.114 }
+
+/** Every length below is a multiple of the gap between two staff lines, so any zoom works. */
+export const TAB_LINE_COVERAGE_RATIO = 0.5
+export const TAB_SYSTEM_BREAK_GAP_RATIO = 2
+export const TAB_LINE_START_RUN_RATIO = 2
+export const TAB_BAR_LINE_COVERAGE_RATIO = 0.9
+export const TAB_BAR_MERGE_GAP_RATIO = 0.5
+/** Narrower than this and a vertical stroke is a clef, a cursor or a stray line, not a bar. */
+export const TAB_BAR_MIN_WIDTH_RATIO = 4
+export const TAB_GLYPH_WINDOW_RATIO = 0.45
+export const TAB_GLYPH_MIN_HEIGHT_RATIO = 0.6
+export const TAB_GLYPH_MIN_WIDTH_RATIO = 0.25
+export const TAB_GLYPH_MAX_WIDTH_RATIO = 0.8
+export const TAB_GLYPH_MERGE_GAP_RATIO = 0.5
+export const TAB_STEM_TOP_RATIO = 1
+export const TAB_STEM_BOTTOM_RATIO = 2.75
+export const TAB_STEM_COVERAGE_RATIO = 0.7
+export const TAB_STEM_MERGE_GAP_RATIO = 0.3
+export const TAB_BEAM_NEAR_RATIO = 0.25
+export const TAB_BEAM_FAR_RATIO = 0.55
+export const TAB_BRACKET_TOP_RATIO = 3
+export const TAB_BRACKET_BOTTOM_RATIO = 3.8
+export const TAB_BRACKET_MIN_SEGMENT_RATIO = 1
+export const TAB_BRACKET_JOIN_GAP_RATIO = 3
+export const TAB_STEM_NOTE_REACH_RATIO = 0.6
+
+export const TAB_TEMPO_BAND_TOP_RATIO = 3.5
+export const TAB_TEMPO_BAND_BOTTOM_RATIO = 1.5
+export const TAB_EQUALS_MIN_WIDTH_RATIO = 0.4
+export const TAB_EQUALS_MAX_WIDTH_RATIO = 1
+export const TAB_EQUALS_MAX_HEIGHT_RATIO = 0.5
+export const TAB_TEMPO_DIGIT_GAP_RATIO = 0.5
+export const TAB_TEMPO_MAX_DIGITS = 3
+export const TAB_TEMPO_MIN_BEATS_PER_MINUTE = 30
+export const TAB_TEMPO_MAX_BEATS_PER_MINUTE = 300
+
+export const TAB_BEATS_PER_BAR = 4
+/** Beats a stem lasts by how many beams or flags it carries: none, one, two, three. */
+export const TAB_BEAM_BEATS = [1, 0.5, 0.25, 0.125]
+export const TAB_TRIPLET_NUMERATOR = 2
+export const TAB_TRIPLET_DENOMINATOR = 3
+export const TAB_MAX_BEAMS = 3
+
+/** MIDI note of each open string, from the top staff line down. */
+export const TAB_OPEN_STRINGS = {
+  bass: [43, 38, 33, 28],
+  guitar: [64, 59, 55, 50, 45, 40]
+}
+export const TAB_INSTRUMENT_BY_LINE_COUNT: Record<number, 'bass' | 'guitar'> = {
+  4: 'bass',
+  6: 'guitar'
+}
+export const TAB_SOUNDS = {
+  bass: 'gm_electric_bass_finger',
+  guitar: 'gm_acoustic_guitar_nylon'
+}
+
+export const TAB_DIGIT_GRID_WIDTH = 5
+export const TAB_DIGIT_GRID_HEIGHT = 7
+/** Thin anti-aliased strokes read faint in a small cell, so coverage is boosted before matching. */
+export const TAB_DIGIT_CONTRAST = 1
+/** A glyph further than this mean squared difference from every digit is left unread. */
+export const TAB_DIGIT_MAX_DISTANCE = 0.12
+/**
+ * Each digit sampled onto the grid, a space for no ink up to # for full ink, in one set per
+ * typeface. The first set holds 0, 1, 3, 5, 7, 8 and 9 sampled from a real Songsterr screenshot,
+ * with 2, 4 and 6 (which it never prints) drawn by hand in the same style. The others were sampled
+ * from the browser's Arial, which also covers 2, 4 and 6 and the heavier weight of many tab sites.
+ */
+export const TAB_DIGIT_TEMPLATE_SETS = [
+  [
+    ['.##+ ', '++.#.', '#+ #+', '#+ #+', '#+ #+', '++.#.', '.##+ '],
+    ['  .# ', ' +##.', ' ++#.', '  .#.', '  .#.', '  .#.', '  .# '],
+    ['.##+ ', '++.#.', '  .#.', '  ##.', ' .#+ ', '.#+  ', '+####'],
+    ['.##+ ', '++.#.', '  +# ', '  +# ', '   ++', '++.#+', '.##+ '],
+    ['  .#.', ' .##.', '.+.#.', '+. #.', '+####', '   #.', '   #.'],
+    ['.###.', '.#.. ', '+##+ ', '.+.#+', '   ++', '++.#+', '.+#+ '],
+    ['.###.', '+#...', '#+.  ', '#+##.', '#+ .#', '++.+#', '.##+ '],
+    ['+####', ' ..#+', '  .# ', '  ++ ', ' .#. ', ' +#  ', ' ++  '],
+    [' +##.', '.#.++', ' #+++', ' ###.', '.#.+#', '.#.+#', ' ###.'],
+    ['.##+ ', '++.#.', '#+ #+', '+#+#+', ' .+#+', '++.#.', '.##+ ']
+  ],
+  [
+    ['.### ', '++ #.', '#. .+', '#. .#', '#. .+', '++ ++', '.### '],
+    ['  +# ', ' +## ', ' +.# ', '  .# ', '  .# ', '  .# ', '  .# '],
+    ['.###.', '++ ++', '.  ++', '  .#.', ' .#. ', '+#.  ', '####+'],
+    ['.### ', '++.#.', '  .#.', '  ##.', '   ++', '#+ ++', '.###.'],
+    ['  ++ ', ' .#+ ', ' +++ ', '++.+ ', '#++#.', '+++#.', '  .+ '],
+    ['.###.', '.#.. ', '+#+. ', '+++#+', '   .#', '++ ++', '.###.'],
+    [' ###.', '++ ++', '#+.. ', '##+#.', '#. +#', '++ ++', '.###.'],
+    ['+###+', ' ..#.', '  ++ ', '  #. ', ' .+  ', ' +.  ', ' +.  '],
+    ['.### ', '+#.#.', '+#.#.', '.###.', '#+ ++', '#. ++', '.###.'],
+    ['.##+ ', '#+ #+', '#. +#', '+#.##', ' +++#', '+. ++', '.### ']
+  ],
+  [
+    ['.##+ ', '+#+#.', '## #+', '#+ #+', '#+ #+', '+#.#.', '.### '],
+    ['  +# ', ' +## ', '.### ', '  +# ', '  +# ', '  +# ', '  +# '],
+    ['.###.', '+#.#+', '.. #+', '  +#.', ' +#. ', '+#+..', '####+'],
+    ['.##+ ', '+#+#.', ' .+#.', '  ##.', '   #+', '+#.#+', '.###.'],
+    ['  +#.', ' .##.', ' ###.', '+#+#.', '##+#+', '++##+', '  .#.'],
+    ['.###+', '.#++.', '.#+. ', '+#+#+', '   ##', '+#.#+', '.###.'],
+    [' +##.', '+#.#+', '##.. ', '####+', '## ##', '+#.#+', '.###.'],
+    ['#####', '+++#+', '  +# ', ' .#. ', ' +#  ', ' ++  ', ' #+  '],
+    ['.##+ ', '+#.#.', '+#.#.', '.###.', '##.#+', '##.#+', '.###.'],
+    ['.##+ ', '##+#.', '#+ #+', '+#+#+', ' ++#+', '++.#.', '.##+ ']
+  ]
 ]

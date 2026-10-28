@@ -3,12 +3,12 @@ import { computed } from 'vue'
 import Button from '@/components/ui/button/Button.vue'
 import DropZone from '@/components/DropZone.vue'
 import { TRANSCRIPTION_ACCEPTED_TYPES, TRANSCRIPTION_STAGE_LABELS } from '../config'
-import type { TranscriptionProgress, TranscriptionResult, TranscriptionStatus } from '../types'
+import type { TranscriptionOutput, TranscriptionProgress, TranscriptionStatus } from '../types'
 
 const props = defineProps<{
   status: TranscriptionStatus
   progress: TranscriptionProgress | null
-  result: TranscriptionResult | null
+  result: TranscriptionOutput | null
   code: string
   errorMessage: string
 }>()
@@ -25,7 +25,7 @@ const stageLabel = computed(() =>
 )
 
 const chordProgression = computed(() =>
-  (props.result?.bars ?? [])
+  (props.result?.kind === 'grid' ? props.result.bars : [])
     .map((bar) => bar.chord)
     .filter((chord): chord is string => chord !== null)
     .filter((chord, index, chords) => index === 0 || chords[index - 1] !== chord)
@@ -47,12 +47,13 @@ const onLoadRequested = (): void => {
 <template>
   <section class="strudel-import">
     <p class="strudel-import__intro">
-      Turn a song or a MIDI file into a Strudel pattern. Audio is analysed in your browser for its
-      tempo, drums, bass line and chords; a MIDI file is read note for note. Either way it is
-      written out as code you can play and edit.
+      Turn a song, a MIDI file or a tab screenshot into a Strudel pattern. Audio is analysed in your
+      browser for its tempo, drums, bass line and chords; a MIDI file is read note for note; a bass
+      or guitar tab is read from the picture. Either way it is written out as code you can play and
+      edit.
     </p>
     <DropZone
-      label="Drop an MP3, other audio or a MIDI file here, or click to browse"
+      label="Drop an MP3, other audio, a MIDI file or a tab screenshot here, or click to browse"
       :accept="TRANSCRIPTION_ACCEPTED_TYPES"
       @change="onFilesChosen"
     />
@@ -75,8 +76,10 @@ const onLoadRequested = (): void => {
         <dd>{{ result.beatsPerMinute }} BPM</dd>
         <dt>Bars</dt>
         <dd>{{ result.bars.length }}</dd>
-        <dt>Chords</dt>
-        <dd>{{ chordProgression || 'none detected' }}</dd>
+        <template v-if="result.kind === 'grid'">
+          <dt>Chords</dt>
+          <dd>{{ chordProgression || 'none detected' }}</dd>
+        </template>
       </dl>
       <pre class="strudel-import__code">{{ code }}</pre>
       <Button class="strudel-import__load" @click="onLoadRequested">Load into editor</Button>
@@ -84,7 +87,9 @@ const onLoadRequested = (): void => {
 
     <p class="strudel-import__note">
       From audio, the result is a sketch in the spirit of the track, not a copy: it hears drums, a
-      bass line and one chord per bar, and leaves the melody to you.
+      bass line and one chord per bar, and leaves the melody to you. A tab screenshot works best
+      when it is a clean digital one with the rhythm row under the staff. The tempo is read from a
+      marker such as "= 96" above the first staff, and is 120 when there is none.
     </p>
   </section>
 </template>

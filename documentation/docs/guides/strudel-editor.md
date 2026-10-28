@@ -42,7 +42,7 @@ flow tab:
   Each sound shows a readable name ("Bass drum", "Acoustic bass") with the name code plays it
   by in grey beside it (`rolandtr909_bd`, `gm_acoustic_bass`); search matches either, or the
   group. Clicking a sound plays it once; the number is how many variations `n` picks from.
-- **import**: turn an MP3, other audio or a MIDI file into a pattern (below)
+- **import**: turn an MP3, other audio, a MIDI file or a tab screenshot into a pattern (below)
 - **midi**: play or drive MIDI devices (below)
 - **reference**: function quick list
 - **export**: save the code as a WAV or MIDI file (below)
@@ -340,6 +340,25 @@ heard, so the result is exact rather than a sketch:
 The tempo is the file's first tempo, and notes are placed by their ticks, so a tempo change inside
 the file never shifts them off the grid. Up to 64 bars are read. **Load into editor** replaces the
 code, as with audio.
+
+## Turning a tab screenshot into a pattern
+
+Drop a PNG, JPEG or WebP of a bass or guitar tab on the same **import** tab. The picture is read
+in a Web Worker with plain image processing, no model, and the file never leaves the browser. A
+staff of four lines is read as a bass and one of six as a guitar.
+
+| Read    | From                                                              |
+| ------- | ----------------------------------------------------------------- |
+| Notes   | the fret numbers on each string line, named from the open strings |
+| Lengths | the stems and beams under the staff, and a bracket for triplets   |
+| Ties    | a stem with no number above it                                    |
+| Bars    | the bar lines, so each bar is one cycle of the pattern            |
+
+It works best on a clean digital screenshot, dark or light, with the rhythm row visible. The
+tempo comes from a marker such as "= 96" above the first staff; with none, or one it cannot
+read, the code starts at 120 BPM and you change the number in `setcps`. A mark it cannot read, such as a slide sign, is skipped and listed in the console tab.
+How it works and where it stops is in
+[Reading a tab screenshot without a model](../journey/strudel-tab-image-import.md).
 
 ## MIDI devices
 
