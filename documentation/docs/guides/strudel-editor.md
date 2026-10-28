@@ -38,7 +38,7 @@ flow tab:
 - **import**: turn an MP3, other audio or a MIDI file into a pattern (below)
 - **midi**: play or drive MIDI devices (below)
 - **reference**: function quick list
-- **export**: render the code offline to a WAV file (below)
+- **export**: save the code as a WAV or MIDI file (below)
 - **console**: evaluation log
 - **settings**: theme and panel position
 - **flow**: build a pattern from instrument and effect nodes (below)
@@ -333,13 +333,40 @@ straight into the editor, already naming the first device found:
 - **Drive a synth**: `.midi("<output>")` sends the pattern's notes to an output instead of the
   browser.
 
-## Exporting a WAV file
+## Exporting a WAV or MIDI file
 
-The **export** tab renders the code on screen offline, faster than real time, and downloads it as
-a 16-bit stereo WAV. Choose the start and end cycle and the sample rate; the file name defaults to
-the date. Playback stops while it renders, and Play works again as soon as the file is saved.
+The **export** tab saves the code on screen as a file. Choose the format, the cycle to start at
+and how many cycles to export: the default is one, so a sound effect or a single bar comes out
+played once. The file name defaults to the date. Playback stops while it renders, and Play works
+again as soon as the file is saved.
+
+![The export tab with MIDI picked](/img/strudel-editor/export-tab.webp)
+
+| Format | Holds                          | Pick it for                                               |
+| ------ | ------------------------------ | --------------------------------------------------------- |
+| WAV    | the sound, exactly as it plays | a sound effect, a loop or a track to play as it is        |
+| MIDI   | the notes and their timing     | a melody to edit in a DAW, play on a synth or feed a game |
+
+WAV renders offline, faster than real time, as a 16-bit stereo file at the chosen sample rate.
 Why the editor renders through its own path rather than Strudel's `renderPatternAudio` is in
 [Strudel's published builds and their audio clocks](../journey/strudel-published-builds.md).
+
+MIDI is built from the same events the WAV would play: one track per sound, at the pattern's
+tempo with four beats to a cycle. Pitched events keep their `note`, `n` with a `scale`, or
+`freq`; drum samples with a General MIDI equivalent (`bd`, `sd`, `hh`, `oh`, `cp` and the rest of
+`STRUDEL_DRUM_MIDI_NOTES` in `config.ts`) land on the drum channel. Other samples carry no note
+and are left out, and no effect reaches a MIDI file.
+
+`scripts/strudel-export.mjs` does the same from the command line, against a running dev server,
+in a muted headless browser:
+
+```sh
+node scripts/strudel-export.mjs groove.strudel --out groove.wav --cycles 8
+node scripts/strudel-export.mjs groove.strudel --out groove.mid --url http://localhost:5317
+```
+
+The format follows the extension; `--start`, `--cycles` and `--rate` set the range and the WAV
+sample rate.
 
 The flow editor follows [Strudel Flow](https://xyflow.com/strudel-flow) by
 [xyflow](https://xyflow.com), whose source is on

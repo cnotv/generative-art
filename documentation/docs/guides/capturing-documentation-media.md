@@ -8,7 +8,7 @@ Anything with a visual outcome is documented with a picture of it, not a descrip
 to produce one from the running app, so the picture is the real thing rather than a mock-up.
 
 :::note Source files
-`.claude/rules/docs.md`, `AGENTS.md` (Project facts), `documentation/static/`
+`scripts/capture.mjs`, `.claude/rules/docs.md`, `AGENTS.md` (Project facts), `documentation/static/`
 :::
 
 ## Before anything, run the app on a known port
@@ -25,35 +25,55 @@ Routes come from the view tree as `/<dir-lowercase>/<ViewBaseName>` — `/games/
 
 ## A screenshot
 
-Playwright is already a dev dependency. Write the script **outside** the repository and import
+`scripts/capture.mjs` is the one tool for every still of the app: docs images, pull request
+screenshots and the per-page Open Graph images. It waits for the scene to load, presses the
+lobby's **Start** button when there is one, closes the panels and encodes by the output's
+extension:
+
+```bash
+pnpm capture /games/TiltMaze --out documentation/static/img/tilt-maze/board.webp --size 720x520
+```
+
+| Option           | Default                 | Use                                                   |
+| ---------------- | ----------------------- | ----------------------------------------------------- |
+| `--out <file>`   | `public/og/<route>.jpg` | `.webp` for docs, `.png` or `.jpg` for a pull request |
+| `--size <w>x<h>` | `1200x630`              | the Open Graph size; `720x520` suits the docs column  |
+| `--base <url>`   | `http://localhost:5317` | a dev server or preview on another port               |
+| `--wait <ms>`    | `8000`                  | longer for a heavy scene, shorter for a plain page    |
+| `--all`          |                         | every route, each to its Open Graph image             |
+
+A 3D view needs roughly eight seconds before models and textures have loaded. Screenshotting
+earlier photographs a half-built scene, which is the most common way these end up wrong.
+
+### The Open Graph images
+
+Each route's share image is `public/og/<group>/<View>.jpg`, the route path plus `.jpg`, and
+the landing page's doubles as the site default and the docs site's social card. They are
+committed rather than taken during the build, because a headless browser does not run on every
+host this site builds on. A unit test fails for any route without one, so a new view needs:
+
+```bash
+pnpm capture /games/NewGame
+```
+
+Run `pnpm capture --all` after a change that alters how many views look.
+
+### When a shot needs interaction first
+
+The script covers a view as it loads. A moment mid-play, a panel opened on purpose or a clip to
+the canvas needs your own Playwright script. Write it **outside** the repository and import
 Playwright by absolute path, so nothing is left behind:
 
 ```js
 import { chromium } from '<repo>/node_modules/playwright/index.mjs'
 
-const browser = await chromium.launch()
+const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
 const page = await browser.newPage({ viewport: { width: 720, height: 520 } })
 
 await page.goto('http://localhost:5317/games/TiltMaze')
 await page.waitForTimeout(8000)
-
-// Panels cover the scene; close them unless they are the subject.
-await page.evaluate(() => document.querySelector('[aria-label="Close all panels"]')?.click())
-await page.waitForTimeout(400)
-
 await page.screenshot({ path: '/tmp/shot.png' })
 await browser.close()
-```
-
-A 3D view needs roughly eight seconds before models and textures have loaded. Screenshotting
-earlier photographs a half-built scene, which is the most common way these end up wrong.
-
-Clip the shot to the canvas rather than taking the whole page. It drops the page band above the
-canvas while keeping the DOM overlays that sit inside that rectangle, so the HUD still appears:
-
-```js
-const clip = await page.locator('canvas').first().boundingBox()
-await page.screenshot({ path: '/tmp/shot.png', clip })
 ```
 
 ## Four things that will waste a run
@@ -121,7 +141,8 @@ for (const key of directions) {
 
 ## Converting for the docs
 
-Screenshots go in as `.webp`, which is roughly a fifth of the PNG for flat-shaded scenes. Use the
+Screenshots go in as `.webp`, which is roughly a fifth of the PNG for flat-shaded scenes.
+`pnpm capture --out <name>.webp` already writes it; a shot from your own script converts with the
 `sharp` already installed:
 
 ```js

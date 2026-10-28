@@ -21,6 +21,11 @@ declare module '@strudel/codemirror' {
   export function sliderWithID(id: string, value: number, min?: number, max?: number): unknown
 }
 
+declare module '@strudel/core/util.mjs' {
+  /** The MIDI key of an event's `freq` or `note`, as Strudel's own MIDI output computes it. */
+  export function valueToMidi(value: object, fallbackValue?: number): number
+}
+
 declare module '@strudel/draw' {
   export type DrawFrameCallback = (
     haps: unknown[],

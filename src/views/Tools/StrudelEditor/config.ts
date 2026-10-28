@@ -410,12 +410,39 @@ export const STRUDEL_BANK_ALIASES_URL = 'https://strudel.b-cdn.net/tidal-drum-ma
 /** Strudel's own tempo before a pattern sets one: one cycle every two seconds. */
 export const DEFAULT_CPS = 0.5
 
+/** One cycle by default: a sound effect or a single bar, played once. */
 export const EXPORT_DEFAULT_OPTIONS: StrudelExportOptions = {
+  format: 'wav',
   startCycle: 0,
-  endCycle: 4,
+  endCycle: 1,
   sampleRate: 48000,
   fileName: ''
 }
+export const EXPORT_FORMAT_OPTIONS = [
+  { value: 'wav', label: 'WAV' },
+  { value: 'midi', label: 'MIDI' }
+]
+/** General MIDI percussion keys for the drum sample names Strudel's banks share. */
+export const STRUDEL_DRUM_MIDI_NOTES: Record<string, number> = {
+  bd: 36,
+  rim: 37,
+  sd: 38,
+  cp: 39,
+  lt: 41,
+  hh: 42,
+  mt: 45,
+  oh: 46,
+  ht: 48,
+  cr: 49,
+  rd: 51,
+  cb: 56,
+  sh: 70
+}
+/** MIDI channel 10, counted from zero as files store it, is percussion in General MIDI. */
+export const MIDI_DRUM_CHANNEL = 9
+/** Strudel counts a cycle as one bar of four beats, which `setcpm(bpm / 4)` assumes too. */
+export const STRUDEL_BEATS_PER_CYCLE = 4
+export const STRUDEL_EXPORT_DEFAULT_VELOCITY = 0.8
 export const EXPORT_SAMPLE_RATE_OPTIONS = [
   { value: '44100', label: '44.1 kHz' },
   { value: '48000', label: '48 kHz' },

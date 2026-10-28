@@ -6,12 +6,17 @@ import {
   STRUDEL_SOUND_PREVIEW_NOTE,
   STRUDEL_SOUND_PREVIEW_SECONDS
 } from './config'
-import { downloadWavFile, renderStrudelPatternToWav } from './strudelOfflineRender'
+import {
+  downloadExportFile,
+  readScheduledHaps,
+  renderStrudelPatternToWav
+} from './strudelOfflineRender'
 import { isRecordModule, requireCallable, requireRecordModule, toCallable } from './strudelModules'
 import { loadStrudelSoundLibrary } from './strudelSoundLibrary'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
+  StrudelExportFormat,
   StrudelExportOptions,
   StrudelPlayback,
   StrudelPlaybackHooks,
@@ -284,6 +289,40 @@ export const loadDefaultStrudelPlayback = async (
     throw new Error('Strudel modules failed to load')
   }
 
+  // Exporting evaluates without starting the scheduler, so nothing plays while a file renders.
+  const evaluateForExport = async (patternCode: string): Promise<unknown> => {
+    await stopFunction()
+    latestEvaluationError = null
+    const pattern: unknown = await evaluateFunction(patternCode, false)
+    if (latestEvaluationError !== null || pattern === undefined) {
+      throw new Error(describeError(latestEvaluationError))
+    }
+    return pattern
+  }
+
+  const exportAs =
+    (
+      format: StrudelExportFormat,
+      writeFile: (
+        pattern: unknown,
+        cyclesPerSecond: number,
+        exportOptions: StrudelExportOptions
+      ) => Promise<ArrayBuffer | Uint8Array<ArrayBuffer>>
+    ) =>
+    async (
+      patternCode: string,
+      exportOptions: StrudelExportOptions
+    ): Promise<StrudelEvaluationResult> => {
+      try {
+        const pattern = await evaluateForExport(patternCode)
+        const file = await writeFile(pattern, readCyclesPerSecond(replScheduler), exportOptions)
+        downloadExportFile(file, exportOptions.fileName, format)
+        return { success: true }
+      } catch (error) {
+        return { success: false, errorMessage: describeError(error) }
+      }
+    }
+
   return {
     evaluateCode: async (patternCode: string): Promise<StrudelEvaluationResult> => {
       // Each Play or Update is a tap, and iOS may have suspended the context since the last.
@@ -297,29 +336,16 @@ export const loadDefaultStrudelPlayback = async (
     stopPlayback: async (): Promise<void> => {
       await stopFunction()
     },
-    renderToWav: async (
-      patternCode: string,
-      exportOptions: StrudelExportOptions
-    ): Promise<StrudelEvaluationResult> => {
-      await stopFunction()
-      latestEvaluationError = null
-      const pattern: unknown = await evaluateFunction(patternCode, false)
-      if (latestEvaluationError !== null || pattern === undefined) {
-        return { success: false, errorMessage: describeError(latestEvaluationError) }
-      }
-      try {
-        const wavFile = await renderStrudelPatternToWav(
-          engine.audioModule,
-          pattern,
-          readCyclesPerSecond(replScheduler),
-          exportOptions
-        )
-        downloadWavFile(wavFile, exportOptions.fileName)
-        return { success: true }
-      } catch (error) {
-        return { success: false, errorMessage: describeError(error) }
-      }
-    }
+    renderToWav: exportAs('wav', (pattern, cyclesPerSecond, exportOptions) =>
+      renderStrudelPatternToWav(engine.audioModule, pattern, cyclesPerSecond, exportOptions)
+    ),
+    renderToMidi: exportAs('midi', async (pattern, cyclesPerSecond, exportOptions) => {
+      const { buildPatternMidi } = await import('./patternMidi')
+      return buildPatternMidi(readScheduledHaps(pattern, exportOptions, cyclesPerSecond), {
+        beginCycle: exportOptions.startCycle,
+        cyclesPerSecond
+      })
+    })
   }
 }
 

@@ -91,7 +91,10 @@ vi.mock('@strudel/tonal', () => ({}))
 vi.mock('@strudel/midi/midi.mjs', () => ({}))
 vi.mock('./strudelOfflineRender', () => ({
   renderStrudelPatternToWav: mockOfflineRender,
-  downloadWavFile: mockWavDownload
+  downloadExportFile: mockWavDownload,
+  readScheduledHaps: vi.fn(() => [
+    { value: { note: 'c3', s: 'sawtooth' }, beginCycle: 1, durationCycles: 1 }
+  ])
 }))
 vi.mock('@strudel/transpiler', () => ({
   transpiler: mockCodeTranspiler
@@ -151,7 +154,8 @@ const buildExampleList = (): StrudelExample[] => [
 const buildSuccessfulPlayback = (): StrudelPlayback => ({
   evaluateCode: vi.fn(async () => ({ success: true })),
   stopPlayback: vi.fn(async () => {}),
-  renderToWav: vi.fn(async () => ({ success: true }))
+  renderToWav: vi.fn(async () => ({ success: true })),
+  renderToMidi: vi.fn(async () => ({ success: true }))
 })
 
 describe('findStrudelExample', () => {
@@ -236,7 +240,13 @@ describe('loadDefaultStrudelPlayback', () => {
       scheduler: { cps: 0.75 }
     })
     const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
-    const exportOptions = { startCycle: 1, endCycle: 3, sampleRate: 44100, fileName: 'loop' }
+    const exportOptions = {
+      format: 'wav' as const,
+      startCycle: 1,
+      endCycle: 3,
+      sampleRate: 44100,
+      fileName: 'loop'
+    }
 
     // Act
     const result = await playback.renderToWav('s("bd")', exportOptions)
@@ -251,7 +261,33 @@ describe('loadDefaultStrudelPlayback', () => {
       0.75,
       exportOptions
     )
-    expect(mockWavDownload).toHaveBeenCalledWith(wavFile, 'loop')
+    expect(mockWavDownload).toHaveBeenCalledWith(wavFile, 'loop', 'wav')
+  })
+
+  it('downloads the notes of the exported cycles as a MIDI file', async () => {
+    // Arrange
+    mockEvaluateFunction.mockResolvedValue({})
+    mockReplFactory.mockResolvedValue({
+      evaluate: mockEvaluateFunction,
+      stop: mockStopFunction,
+      scheduler: { cps: 0.5 }
+    })
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+    const exportOptions = {
+      format: 'midi' as const,
+      startCycle: 1,
+      endCycle: 2,
+      sampleRate: 48000,
+      fileName: 'riff'
+    }
+
+    // Act
+    const result = await playback.renderToMidi('note("c3")', exportOptions)
+
+    // Assert
+    expect(result).toEqual({ success: true })
+    expect(mockEvaluateFunction).toHaveBeenCalledWith('note("c3")', false)
+    expect(mockWavDownload).toHaveBeenCalledWith(expect.any(Uint8Array), 'riff', 'midi')
   })
 
   it('hands the scheduler output to the pinned core under defaultOutput', async () => {
@@ -807,7 +843,8 @@ describe('useStrudelEditor', () => {
     const failingPlayback: StrudelPlayback = {
       evaluateCode: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' })),
       stopPlayback: vi.fn(async () => {}),
-      renderToWav: vi.fn(async () => ({ success: true }))
+      renderToWav: vi.fn(async () => ({ success: true })),
+      renderToMidi: vi.fn(async () => ({ success: true }))
     }
     const { playPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -863,7 +900,8 @@ describe('useStrudelEditor', () => {
       stopPlayback: vi.fn(async () => {
         throw new Error('stop failed')
       }),
-      renderToWav: vi.fn(async () => ({ success: true }))
+      renderToWav: vi.fn(async () => ({ success: true })),
+      renderToMidi: vi.fn(async () => ({ success: true }))
     }
     const { playPattern, stopPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -1161,23 +1199,34 @@ describe('useStrudelEditor transcription', () => {
   })
 
   it.each([
-    [{ success: true }, 'done', ''],
-    [{ success: false, errorMessage: 'bad pattern' }, 'error', 'bad pattern']
-  ] as const)('exports the code on screen and reports %o', async (renderResult, status, error) => {
-    // Arrange
-    const playback = { ...buildSuccessfulPlayback(), renderToWav: vi.fn(async () => renderResult) }
-    const { patternCode, exportPattern, exportStatus, exportError } = useStrudelEditor({
-      initialExamples: buildExampleList(),
-      playbackLoader: vi.fn(async () => playback)
-    })
-    const exportOptions = { startCycle: 0, endCycle: 2, sampleRate: 48000, fileName: '' }
+    ['wav', { success: true }, 'done', ''],
+    ['midi', { success: true }, 'done', ''],
+    ['wav', { success: false, errorMessage: 'bad pattern' }, 'error', 'bad pattern']
+  ] as const)(
+    'exports the code on screen as %s and reports %o',
+    async (format, renderResult, status, error) => {
+      // Arrange
+      const playback = {
+        ...buildSuccessfulPlayback(),
+        renderToWav: vi.fn(async () => renderResult),
+        renderToMidi: vi.fn(async () => renderResult)
+      }
+      const { patternCode, exportPattern, exportStatus, exportError } = useStrudelEditor({
+        initialExamples: buildExampleList(),
+        playbackLoader: vi.fn(async () => playback)
+      })
+      const exportOptions = { format, startCycle: 0, endCycle: 1, sampleRate: 48000, fileName: '' }
 
-    // Act
-    await exportPattern(exportOptions)
+      // Act
+      await exportPattern(exportOptions)
 
-    // Assert
-    expect(playback.renderToWav).toHaveBeenCalledWith(patternCode.value, exportOptions)
-    expect(exportStatus.value).toBe(status)
-    expect(exportError.value).toBe(error)
-  })
+      // Assert
+      const render = format === 'midi' ? playback.renderToMidi : playback.renderToWav
+      const otherRender = format === 'midi' ? playback.renderToWav : playback.renderToMidi
+      expect(render).toHaveBeenCalledWith(patternCode.value, exportOptions)
+      expect(otherRender).not.toHaveBeenCalled()
+      expect(exportStatus.value).toBe(status)
+      expect(exportError.value).toBe(error)
+    }
+  )
 })

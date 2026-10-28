@@ -1,13 +1,7 @@
 import { encodeWav } from './wavEncoding'
-import type { StrudelExportOptions } from './types'
+import type { StrudelExportFormat, StrudelExportOptions, StrudelScheduledHap } from './types'
 
 type UnknownCallable = (...callArguments: unknown[]) => unknown
-
-type ScheduledHap = {
-  value: unknown
-  beginCycle: number
-  durationCycles: number
-}
 
 const EXPORT_CHANNEL_COUNT = 2
 
@@ -28,13 +22,19 @@ const readCycle = (value: unknown): number => {
   return typeof cycle === 'number' ? cycle : Number.NaN
 }
 
-// Only haps that start inside the range sound, in onset order: controls such as `cut` depend
-// on the order superdough sees them in.
-const readScheduledHaps = (
+/**
+ * The haps that start inside the range, in onset order: controls such as `cut` depend on the
+ * order superdough sees them in, and the MIDI export writes the same events the WAV plays.
+ * @param pattern - the evaluated pattern
+ * @param exportOptions - the cycle range
+ * @param cyclesPerSecond - the tempo the pattern set
+ * @returns each event's value, start and length in cycles
+ */
+export const readScheduledHaps = (
   pattern: unknown,
   exportOptions: StrudelExportOptions,
   cyclesPerSecond: number
-): ScheduledHap[] => {
+): StrudelScheduledHap[] => {
   const haps = readFunction(pattern, 'queryArc')(exportOptions.startCycle, exportOptions.endCycle, {
     _cps: cyclesPerSecond
   })
@@ -113,16 +113,27 @@ export const renderStrudelPatternToWav = async (
   }
 }
 
+const EXPORT_FILE_TYPES: Record<StrudelExportFormat, { extension: string; mimeType: string }> = {
+  wav: { extension: 'wav', mimeType: 'audio/wav' },
+  midi: { extension: 'mid', mimeType: 'audio/midi' }
+}
+
 /**
  * Hands a finished file to the browser as a download.
  * @param fileContent - the file
  * @param fileName - the name to save it under, without the extension
+ * @param format - which kind of file it is, for its extension and type
  */
-export const downloadWavFile = (fileContent: ArrayBuffer, fileName: string): void => {
-  const url = URL.createObjectURL(new Blob([fileContent], { type: 'audio/wav' }))
+export const downloadExportFile = (
+  fileContent: ArrayBuffer | Uint8Array<ArrayBuffer>,
+  fileName: string,
+  format: StrudelExportFormat
+): void => {
+  const { extension, mimeType } = EXPORT_FILE_TYPES[format]
+  const url = URL.createObjectURL(new Blob([fileContent], { type: mimeType }))
   const link = document.createElement('a')
   link.href = url
-  link.download = `${fileName.trim() || new Date().toISOString()}.wav`
+  link.download = `${fileName.trim() || new Date().toISOString()}.${extension}`
   link.click()
   URL.revokeObjectURL(url)
 }
