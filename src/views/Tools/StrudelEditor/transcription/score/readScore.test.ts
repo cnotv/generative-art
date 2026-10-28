@@ -8,6 +8,10 @@ import { loadSampleScoreImage } from './sampleScoreImage'
 import { buildScoreMasks } from './scoreMasks'
 import { drawGrandStaffScore } from './syntheticScore'
 
+// Reading a whole score takes seconds, so each image is read once for every test that needs it.
+const sampleImage = loadSampleScoreImage()
+const sampleScore = sampleImage.then(readScore)
+
 const beatsOf = (events: TabEvent[]): number =>
   events.reduce((total, event) => total + event.beats, 0)
 
@@ -18,7 +22,7 @@ const beatList = (events: TabEvent[]): number[] => events.map((event) => event.b
 describe('the page structure of the sample score', () => {
   it('pairs ten staves into five grand staves with fifteen bars between them', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const image = await sampleImage
 
     // Act
     const grandStaves = findGrandStaves(image)
@@ -34,7 +38,7 @@ describe('the page structure of the sample score', () => {
 
   it('reads the clefs, the three sharps of A major and common time', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const image = await sampleImage
     const [first] = findGrandStaves(image)
     const masks = buildScoreMasks(image, lineGapOf(first.treble))
 
@@ -51,23 +55,23 @@ describe('the page structure of the sample score', () => {
 describe('readScore on the sample score', () => {
   it('reads the tempo marker and the metre', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const score = await sampleScore
 
     // Act
-    const score = readScore(image)
+    const { beatsPerMinute, beatsPerBar, bars } = score
 
     // Assert
-    expect(score.beatsPerMinute).toBe(65)
-    expect(score.beatsPerBar).toBe(4)
-    expect(score.bars).toHaveLength(15)
+    expect(beatsPerMinute).toBe(65)
+    expect(beatsPerBar).toBe(4)
+    expect(bars).toHaveLength(15)
   })
 
   it('puts the opening pickup at the end of its bar, after a rest', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const score = await sampleScore
 
     // Act
-    const [pickup] = readScore(image).bars
+    const [pickup] = score.bars
 
     // Assert
     expect(pickup.rightHand).toEqual([
@@ -81,10 +85,10 @@ describe('readScore on the sample score', () => {
 
   it('reads the first full bar note for note in both hands', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const score = await sampleScore
 
     // Act
-    const { rightHand, leftHand } = readScore(image).bars[1]
+    const { rightHand, leftHand } = score.bars[1]
 
     // Assert
     expect(notesOf(rightHand).flat()).toEqual(['a5', 'g#5', 'a5', 'g#5', 'a5', 'e5', 'a5', 'd5'])
@@ -95,10 +99,10 @@ describe('readScore on the sample score', () => {
 
   it('holds a dotted half note for three beats in both hands', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const score = await sampleScore
 
     // Act
-    const { rightHand, leftHand } = readScore(image).bars[2]
+    const { rightHand, leftHand } = score.bars[2]
 
     // Assert
     expect(rightHand[0]).toEqual({ notes: ['d5'], beats: 3 })
@@ -110,10 +114,10 @@ describe('readScore on the sample score', () => {
 
   it('fills every left hand bar and the first six right hand bars with exactly four beats', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const score = await sampleScore
 
     // Act
-    const { bars } = readScore(image)
+    const { bars } = score
 
     // Assert
     expect(bars.every((bar) => Math.abs(beatsOf(bar.leftHand) - 4) < 0.01)).toBe(true)
@@ -122,10 +126,10 @@ describe('readScore on the sample score', () => {
 
   it('names each bar it could not make add up, and the marks it skipped, rather than hiding them', async () => {
     // Arrange
-    const image = await loadSampleScoreImage()
+    const score = await sampleScore
 
     // Act
-    const { bars, warnings } = readScore(image)
+    const { bars, warnings } = score
     const offBars = bars.flatMap((bar, index) =>
       Math.abs(beatsOf(bar.rightHand) - 4) > 0.01 ? [index + 1] : []
     )
@@ -142,12 +146,14 @@ describe('readScore on the sample score', () => {
 })
 
 describe('readScore on a drawn grand staff at another zoom', () => {
+  const drawnScore = readScore(drawGrandStaffScore())
+
   it('reads quarter notes and applies the one sharp of the key', () => {
     // Arrange
-    const image = drawGrandStaffScore()
+    const score = drawnScore
 
     // Act
-    const [first] = readScore(image).bars
+    const [first] = score.bars
 
     // Assert
     expect(first.rightHand).toEqual([
@@ -161,10 +167,10 @@ describe('readScore on a drawn grand staff at another zoom', () => {
 
   it('reads a half note, beamed eighths, a rest and a printed sharp', () => {
     // Arrange
-    const image = drawGrandStaffScore()
+    const score = drawnScore
 
     // Act
-    const [, second] = readScore(image).bars
+    const [, second] = score.bars
 
     // Assert
     expect(second.rightHand).toEqual([
@@ -178,14 +184,14 @@ describe('readScore on a drawn grand staff at another zoom', () => {
 
   it('assumes four beats and says so when no metre is printed', () => {
     // Arrange
-    const image = drawGrandStaffScore()
+    const { beatsPerBar, warnings } = drawnScore
 
     // Act
-    const score = readScore(image)
+    const assumedBeats = beatsPerBar
 
     // Assert
-    expect(score.beatsPerBar).toBe(4)
-    expect(score.warnings).toContain('No metre was read, so 4/4 is assumed')
+    expect(assumedBeats).toBe(4)
+    expect(warnings).toContain('No metre was read, so 4/4 is assumed')
   })
 
   it('refuses an image with no grand staff', () => {
