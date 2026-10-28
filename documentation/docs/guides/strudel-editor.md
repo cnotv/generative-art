@@ -217,8 +217,8 @@ an Effect node of their own rather than onto the Visualizer.
 
 A call with no dedicated node, such as `.mask("<1 1 1 0>")`, `.sometimesBy(.2, x => x.ply(2))` or
 `.jux(rev)`, sits under **Calls** on the node it follows in the code. Common ones get controls: a
-step per cycle to switch on and off for `mask` and `struct`, a slider for the chance of
-`sometimesBy`, `someCyclesBy` and `degradeBy`, the amount and subdivision of `swingBy`, and sliders
+step per cycle to switch on and off for `mask` and `struct`, a knob for the chance of
+`sometimesBy`, `someCyclesBy` and `degradeBy`, the amount and subdivision of `swingBy`, and knobs
 for `fast`, `slow`, `ply`, `late`, `early`, `velocity`, `speed`, `crush`, `shape` and `hpf`. Any
 other call, or one whose argument the controls cannot show (a pattern where a number goes), is
 written as `.name(argument)` to edit in place. So is a dedicated call whose argument is a signal

@@ -2,8 +2,8 @@
 import { computed } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
 import { readStrudelFlowCallFields, writeStrudelFlowCallFields } from '../../callArguments'
-import { formatStrudelFlowKnobValue } from '../../nodePatterns'
 import type { StrudelFlowCall, StrudelFlowCallField, StrudelFlowNodeData } from '../../types'
+import StrudelFlowKnob from './StrudelFlowKnob.vue'
 
 const props = defineProps<{
   data: StrudelFlowNodeData
@@ -47,16 +47,17 @@ const updateField = (callIndex: number, fieldIndex: number, field: StrudelFlowCa
   )
 }
 
-const onNumberInput = (
+const onNumberChange = (
   callIndex: number,
   fieldIndex: number,
   field: Extract<StrudelFlowCallField, { kind: 'number' }>,
-  event: Event
+  value: number
 ): void => {
-  if (event.target instanceof HTMLInputElement) {
-    updateField(callIndex, fieldIndex, { ...field, value: Number(event.target.value) })
-  }
+  updateField(callIndex, fieldIndex, { ...field, value })
 }
+
+const hasNumberField = (fields: StrudelFlowCallField[]): boolean =>
+  fields.some((field) => field.kind === 'number')
 
 const onTextInput = (
   callIndex: number,
@@ -111,24 +112,21 @@ const onAdd = (): void => {
               <X aria-hidden="true" />
             </button>
           </div>
-          <template v-for="(field, fieldIndex) in callFields[index]" :key="fieldIndex">
-            <label v-if="field.kind === 'number'" class="strudel-flow-calls__control">
-              <span class="strudel-flow-calls__control-label">{{ field.label }}</span>
-              <input
-                class="strudel-flow-calls__slider nodrag"
-                type="range"
+          <div v-if="hasNumberField(callFields[index] ?? [])" class="strudel-flow-knobs">
+            <template v-for="(field, fieldIndex) in callFields[index]" :key="fieldIndex">
+              <StrudelFlowKnob
+                v-if="field.kind === 'number'"
+                :label="field.label"
+                :model-value="field.value"
                 :min="field.min"
                 :max="field.max"
                 :step="field.step"
-                :value="field.value"
-                :aria-label="`${call.method} ${field.label.toLowerCase()}`"
-                @input="onNumberInput(index, fieldIndex, field, $event)"
+                @update:model-value="onNumberChange(index, fieldIndex, field, $event)"
               />
-              <output class="strudel-flow-calls__value">
-                {{ formatStrudelFlowKnobValue(field.value) }}
-              </output>
-            </label>
-            <label v-else-if="field.kind === 'text'" class="strudel-flow-calls__control">
+            </template>
+          </div>
+          <template v-for="(field, fieldIndex) in callFields[index]" :key="fieldIndex">
+            <label v-if="field.kind === 'text'" class="strudel-flow-calls__control">
               <span class="strudel-flow-calls__control-label">{{ field.label }}</span>
               <input
                 class="strudel-flow-calls__text nodrag"
@@ -138,7 +136,7 @@ const onAdd = (): void => {
                 @input="onTextInput(index, fieldIndex, field, $event)"
               />
             </label>
-            <div v-else class="strudel-flow-calls__control">
+            <div v-else-if="field.kind === 'toggles'" class="strudel-flow-calls__control">
               <span class="strudel-flow-calls__control-label">{{ field.label }}</span>
               <div
                 class="strudel-flow-calls__steps"

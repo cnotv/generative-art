@@ -718,7 +718,7 @@
 
 .strudel-flow-calls__control {
   display: grid;
-  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
   align-items: center;
   gap: var(--spacing-2);
 }
@@ -727,20 +727,7 @@
   color: var(--sf-muted-foreground);
 }
 
-.strudel-flow-calls__slider {
-  width: 100%;
-  accent-color: var(--sf-accent);
-}
-
-.strudel-flow-calls__value {
-  min-width: 2.5rem;
-  color: var(--sf-card-foreground);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
 .strudel-flow-calls__text {
-  grid-column: 2 / -1;
   min-width: 0;
   padding: var(--spacing-0-5) var(--spacing-1);
   border: 0;
@@ -753,7 +740,6 @@
 
 .strudel-flow-calls__steps {
   display: flex;
-  grid-column: 2 / -1;
   gap: var(--spacing-1);
 }
 
