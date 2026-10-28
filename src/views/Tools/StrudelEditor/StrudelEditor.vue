@@ -264,7 +264,8 @@ const toolbarTools = [
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
   { id: 'console', label: 'Console', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
-  { id: 'flow', label: 'Nodes', icon: Boxes }
+  { id: 'flow', label: 'Nodes', icon: Boxes },
+  { id: 'hints', label: 'Hints', icon: CircleHelp }
 ] as const satisfies { id: StrudelTabId; label: string; icon: unknown }[]
 
 const visibleTools = computed(() =>
@@ -312,18 +313,6 @@ onBeforeUnmount(() => {
             @update:model-value="onEditorModeChange"
           />
         </div>
-        <IconButton
-          class="strudel-editor__help"
-          size="md"
-          variant="ghost"
-          :active="activeTab === 'hints'"
-          title="Hints"
-          aria-label="Hints"
-          :aria-pressed="activeTab === 'hints'"
-          @click="toggleDrawer('hints')"
-        >
-          <CircleHelp aria-hidden="true" />
-        </IconButton>
       </header>
       <StrudelCodeEditor
         v-show="editorMode === 'code'"
@@ -530,7 +519,7 @@ onBeforeUnmount(() => {
   gap: var(--spacing-1);
 }
 
-.strudel-editor__help {
+.strudel-editor__mode {
   margin-left: auto;
 }
 

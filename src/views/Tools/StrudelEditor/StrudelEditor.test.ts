@@ -186,8 +186,15 @@ describe('StrudelEditor view', () => {
       .map((button) => button.attributes('aria-label'))
 
     // Assert
-    expect(toolLabels).toEqual(['Import', 'Export', 'MIDI', 'Sounds', 'Console', 'Settings'])
-    expect(wrapper.find('button[aria-label="Hints"]').exists()).toBe(true)
+    expect(toolLabels).toEqual([
+      'Import',
+      'Export',
+      'MIDI',
+      'Sounds',
+      'Console',
+      'Settings',
+      'Hints'
+    ])
   })
 
   it('lists the sounds by group and readable name, filters them, and previews one', async () => {
