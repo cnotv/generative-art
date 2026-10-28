@@ -730,7 +730,7 @@ describe('StrudelEditor audible playback', () => {
           const kinds = [...document.querySelectorAll<HTMLElement>('.strudel-flow-node')].map(
             (node) => node.dataset.nodeKind
           )
-          expect(kinds.sort()).toEqual(['effect', 'filter', 'notes', 'pad', 'voice'])
+          expect(kinds.sort()).toEqual(['filter', 'notes', 'pad', 'voice'])
         },
         { timeout: 15000 }
       )

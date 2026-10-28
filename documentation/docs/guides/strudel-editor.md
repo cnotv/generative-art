@@ -189,7 +189,7 @@ the beats in one cycle (**B/C**).
 | **Level**      | effect     | `gain`, `pan` and `postgain`                                                       |
 | **Envelope**   | effect     | `attack`, `decay`, `sustain` and `release`                                         |
 | **Visualizer** | effect     | a pianoroll, punchcard, scope, spiral, pitch wheel or spectrum, picked from a list |
-| **Effect**     | effect     | any other chained call, such as `fast(2)` or `jux(rev)`                            |
+| **Effect**     | effect     | chained calls with no single node to sit on, such as after a whole `stack(...)`    |
 | **Voice**      | sound      | the synth or sample bank, written as `sound("…")`                                  |
 
 The Beats node has a sample picker on each track, grouped into kicks, snares, hi-hats, claps,
@@ -207,14 +207,28 @@ readable names; picking one appends the sound's code name to the end of the line
 
 ![A Beats node with kick, clap and hi-hat tracks over eight steps, variations shown and the Shape footer open](/img/strudel-flow/beats-node.webp)
 
-All of Strudel's visuals live in one **Visualizer** node. Pick the type from its list, choose
-whether it draws **under the line** (`._punchcard()`) or **behind the code** (`.punchcard()`), and
-optionally give it options such as `{ labels: 1 }`. Any visual call in the code, with or without
-the underscore, reads back as a Visualizer with that type picked. The drawing itself appears in the
-code editor, so switch to Code to watch it.
+All of Strudel's visuals live in one **Visualizer** node: the visual itself, a list to pick its
+type, and a toggle for whether it draws **under the line** (`._punchcard()`) or **behind the
+code** (`.punchcard()`). Any visual call in the code, with or without the underscore, reads back as
+a Visualizer with that type picked, and options such as `{ labels: 1 }` written in the code are
+kept. While the pattern plays the node draws the visual live: under the line it sits in the node,
+and behind the code it fills the node's full width and height behind its controls, showing the
+canvas every background visual shares. A visual only draws the pattern, so calls chained after it go on
+an Effect node of their own rather than onto the Visualizer.
 
-Each node header has a **…** menu with **View code**, which shows what the node writes, and
-**Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
+A call with no dedicated node, such as `.mask("<1 1 1 0>")`, `.sometimesBy(.2, x => x.ply(2))` or
+`.jux(rev)`, sits under **Calls** on the node it follows in the code. Common ones get controls: a
+step per cycle to switch on and off for `mask` and `struct`, a knob for the chance of
+`sometimesBy`, `someCyclesBy` and `degradeBy`, the amount and subdivision of `swingBy`, and knobs
+for `fast`, `slow`, `ply`, `late`, `early`, `velocity`, `speed`, `crush`, `shape` and `hpf`. Any
+other call, or one whose argument the controls cannot show (a pattern where a number goes), is
+written as `.name(argument)` to edit in place. So is a dedicated call whose argument is a signal
+or a slider, such as `.lpf(sine.range(300, 3000))`. Remove a call with its cross, or add one from
+the node's **…** menu with **Add call**. Calls chained straight after a `stack(...)` of several
+instruments have no single node to sit on, so they gather on one Effect node.
+
+Each node header has a **…** menu with **View code**, which shows what the node writes, **Add
+call** and **Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
 instrument of a group writes the whole block as `_$:`. Drag a node by its header to arrange the
 canvas. Connect an output dot to an input by dragging, or click the output and then the input.
 Delete or Backspace removes a selected node and its cables. An instrument has no input, a pair of
@@ -231,8 +245,9 @@ The code is the source of truth, and the graph always shows it:
 
 - **Typing** rebuilds the graph each time the code pauses on something that parses as
   JavaScript; while it has a syntax error the graph keeps its last good state.
-- **Every chained call becomes a node.** Calls with a dedicated node get it, any other call becomes
-  an Effect node with its arguments kept verbatim, and a `stack(...)` splits into its instruments.
+- **Every chained call has a place.** Calls with a dedicated node get it, any other call sits on
+  the node it follows with its arguments kept verbatim, and a `stack(...)` splits into its
+  instruments.
   A flat sample line of up to sixteen steps, such as `s("bd ~ [bd,cp] ~")`, becomes Beats tracks;
   a richer one, with sub-sequences or euclidean rhythms, becomes a Samples node, and `note("…")`
   becomes Notes. A head nothing reads, such as

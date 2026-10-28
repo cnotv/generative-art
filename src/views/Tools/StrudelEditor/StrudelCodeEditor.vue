@@ -20,7 +20,12 @@ const codeMirror = ref<StrudelCodeMirror | null>(null)
 let isUnmounted = false
 let canvasResizeObserver: ResizeObserver | null = null
 
+// The flow hides the editor but its Visualizer nodes still copy this canvas, so a hidden
+// editor keeps the size it last had rather than shrinking the canvas to nothing.
 const fitCanvasToEditor = (canvas: HTMLCanvasElement): void => {
+  if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+    return
+  }
   const pixelWidth = Math.round(canvas.clientWidth * window.devicePixelRatio)
   const pixelHeight = Math.round(canvas.clientHeight * window.devicePixelRatio)
   if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {

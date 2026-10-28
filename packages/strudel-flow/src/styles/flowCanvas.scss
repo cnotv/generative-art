@@ -667,10 +667,186 @@
   width: 24rem;
 }
 
-.strudel-flow-effect {
+/* Calls: chained calls kept as written, on the node they follow in the code. */
+.strudel-flow-calls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1-5);
+}
+
+.strudel-flow-calls__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strudel-flow-calls__row {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-1) var(--spacing-1) var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-md);
+  background: var(--sf-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.5rem;
+}
+
+.strudel-flow-calls__row--controls {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1-5) var(--spacing-2);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+}
+
+.strudel-flow-calls__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.strudel-flow-calls__name {
+  color: var(--sf-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.strudel-flow-calls__control {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: center;
   gap: var(--spacing-2);
+}
+
+.strudel-flow-calls__control-label {
+  color: var(--sf-muted-foreground);
+}
+
+.strudel-flow-calls__text {
+  min-width: 0;
+  padding: var(--spacing-0-5) var(--spacing-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--sf-card);
+  color: var(--sf-card-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.strudel-flow-calls__steps {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.strudel-flow-calls__step {
+  flex: 1;
+  max-width: 2.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--sf-muted-foreground) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--sf-card);
+  cursor: pointer;
+}
+
+.strudel-flow-calls__step--on {
+  border-color: var(--sf-accent);
+  background: var(--sf-accent);
+}
+
+.strudel-flow-calls__text:focus-visible,
+.strudel-flow-calls__step:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sf-ring);
+}
+
+.strudel-flow-calls__punctuation {
+  color: var(--sf-muted-foreground);
+}
+
+.strudel-flow-calls__method,
+.strudel-flow-calls__argument {
+  min-width: 0;
+  padding: 0 var(--spacing-0-5);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sf-card-foreground);
+  font: inherit;
+  line-height: inherit;
+}
+
+.strudel-flow-calls__method {
+  flex: none;
+  color: var(--sf-accent);
+  font-weight: 600;
+}
+
+.strudel-flow-calls__argument {
+  flex: 1;
+  field-sizing: content;
+  min-height: 1.5rem;
+  resize: none;
+  overflow-wrap: anywhere;
+}
+
+.strudel-flow-calls__method:focus-visible,
+.strudel-flow-calls__argument:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sf-ring);
+}
+
+.strudel-flow-calls__remove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-left: var(--spacing-1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sf-muted-foreground);
+  cursor: pointer;
+}
+
+.strudel-flow-calls__remove svg,
+.strudel-flow-calls__add svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.strudel-flow-calls__remove:hover,
+.strudel-flow-calls__remove:focus-visible {
+  background: var(--sf-card);
+  color: var(--sf-card-foreground);
+}
+
+.strudel-flow-calls__add {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 1px dashed var(--sf-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.strudel-flow-calls__add:hover,
+.strudel-flow-calls__add:focus-visible {
+  background: var(--sf-muted);
+  color: var(--sf-card-foreground);
 }
 
 .strudel-flow-node[data-node-kind='level'],
@@ -1242,6 +1418,59 @@
 
 /* Visualizer: type, placement and options for one of Strudel's visuals. */
 .strudel-flow-visualizer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* Behind the code: the visual fills the node's full width, and its height follows the node. */
+.strudel-flow-visual-preview--backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.strudel-flow-visual-preview--backdrop .strudel-flow-visual-preview__canvas {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: fill;
+  border-radius: inherit;
+  background: transparent;
+  opacity: 0.55;
+}
+
+.strudel-flow-node[data-node-kind='visualizer'] {
+  position: relative;
+}
+
+.strudel-flow-node[data-node-kind='visualizer'] > .strudel-flow-node__header,
+.strudel-flow-node[data-node-kind='visualizer'] > .strudel-flow-node__body {
+  position: relative;
+  z-index: 1;
+}
+
+.strudel-flow-node[data-node-kind='visualizer']:has(.strudel-flow-visual-preview--backdrop)
+  .strudel-flow-node__body {
+  background: transparent;
+}
+
+/* The app pins every canvas full-size and absolute for its 3D views. */
+.strudel-flow-visual-preview__canvas {
+  position: static;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 10rem;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  background: var(--sf-muted);
+}
+
+.strudel-flow-visualizer__settings {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);

@@ -99,11 +99,39 @@ export type StrudelFlowVoiceData = {
   sound: string
 }
 
-/** Any chained call no dedicated effect covers, such as `.fast(2)` or `.jux(rev)`. */
-export type StrudelFlowEffectData = {
-  kind: 'effect'
+/** One chained call kept as written, such as `.mask("<1 0>")` or `.jux(rev)`. */
+export type StrudelFlowCall = {
   method: string
   argument: string
+}
+
+/** One argument of a call the editor has controls for, as `config.ts` describes it. */
+export type StrudelFlowCallParameter =
+  | { kind: 'number'; label: string; min: number; max: number; step: number }
+  | { kind: 'text'; label: string }
+  | { kind: 'toggles'; label: string }
+
+/** A call argument read into a control: a slider value, free text, or on and off steps. */
+export type StrudelFlowCallField =
+  | { kind: 'number'; label: string; min: number; max: number; step: number; value: number }
+  | { kind: 'text'; label: string; value: string }
+  | {
+      kind: 'toggles'
+      label: string
+      steps: boolean[]
+      /** Written `"<1 0>"`, one step per cycle, rather than `"1 0"` within one. */
+      perCycle: boolean
+    }
+
+/** Calls no dedicated node covers, chained after the node they follow in the code. */
+export type StrudelFlowCallList = {
+  calls?: StrudelFlowCall[]
+}
+
+/** Chained calls with no single node to sit on, such as the ones after a whole `stack(...)`. */
+export type StrudelFlowEffectData = {
+  kind: 'effect'
+  calls: StrudelFlowCall[]
 }
 
 export type StrudelFlowFilterData = {
@@ -160,21 +188,23 @@ export type StrudelFlowVisualizerData = {
   options: string
 }
 
-export type StrudelFlowNodeData =
-  | StrudelFlowPadData
-  | StrudelFlowBeatsData
-  | StrudelFlowChordsData
-  | StrudelFlowNotesData
-  | StrudelFlowSamplesData
-  | StrudelFlowCodeData
-  | StrudelFlowVoiceData
-  | StrudelFlowFilterData
-  | StrudelFlowDelayData
-  | StrudelFlowSpaceData
-  | StrudelFlowLevelData
-  | StrudelFlowEnvelopeData
-  | StrudelFlowVisualizerData
-  | StrudelFlowEffectData
+export type StrudelFlowNodeData = StrudelFlowCallList &
+  (
+    | StrudelFlowPadData
+    | StrudelFlowBeatsData
+    | StrudelFlowChordsData
+    | StrudelFlowNotesData
+    | StrudelFlowSamplesData
+    | StrudelFlowCodeData
+    | StrudelFlowVoiceData
+    | StrudelFlowFilterData
+    | StrudelFlowDelayData
+    | StrudelFlowSpaceData
+    | StrudelFlowLevelData
+    | StrudelFlowEnvelopeData
+    | StrudelFlowVisualizerData
+    | StrudelFlowEffectData
+  )
 
 export type StrudelFlowNodePosition = {
   x: number

@@ -21,51 +21,29 @@ const onVisualChange = (value: string): void => {
     update({ visual: option.value })
   }
 }
-
-const onOptionsInput = (event: Event): void => {
-  if (event.target instanceof HTMLInputElement) {
-    update({ options: event.target.value })
-  }
-}
 </script>
 
 <template>
-  <div class="strudel-flow-visualizer">
+  <div class="strudel-flow-visualizer__settings">
     <StrudelFlowSelect
       label="Type"
+      hide-label
       :model-value="data.visual"
       :options="STRUDEL_FLOW_VISUAL_OPTIONS"
       @update:model-value="onVisualChange"
     />
-    <div class="strudel-flow-field">
-      <span class="strudel-flow-field__label">Draw</span>
-      <div class="strudel-flow-mode" role="group" aria-label="Where the visual draws">
-        <button
-          v-for="placement in STRUDEL_FLOW_VISUAL_PLACEMENT_OPTIONS"
-          :key="placement.value"
-          type="button"
-          class="strudel-flow-mode__button nodrag"
-          :class="{ 'strudel-flow-mode__button--active': data.placement === placement.value }"
-          :aria-pressed="data.placement === placement.value"
-          @click="update({ placement: placement.value === 'background' ? 'background' : 'inline' })"
-        >
-          {{ placement.label }}
-        </button>
-      </div>
+    <div class="strudel-flow-mode" role="group" aria-label="Where the visual draws">
+      <button
+        v-for="placement in STRUDEL_FLOW_VISUAL_PLACEMENT_OPTIONS"
+        :key="placement.value"
+        type="button"
+        class="strudel-flow-mode__button nodrag"
+        :class="{ 'strudel-flow-mode__button--active': data.placement === placement.value }"
+        :aria-pressed="data.placement === placement.value"
+        @click="update({ placement: placement.value === 'background' ? 'background' : 'inline' })"
+      >
+        {{ placement.label }}
+      </button>
     </div>
-    <label class="strudel-flow-field">
-      <span class="strudel-flow-field__label">Options</span>
-      <input
-        class="input nodrag"
-        :value="data.options"
-        placeholder="{ labels: 1 }"
-        aria-label="Visual options"
-        spellcheck="false"
-        @input="onOptionsInput"
-      />
-    </label>
-    <p class="strudel-flow-visualizer__hint">
-      Draws in the code editor; switch to Code to watch it.
-    </p>
   </div>
 </template>

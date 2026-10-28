@@ -27,7 +27,7 @@ const NODE_SIZES: Record<StrudelFlowNodeKind, NodeSize> = {
   space: { width: 448, height: 460 },
   level: { width: 384, height: 260 },
   envelope: { width: 448, height: 260 },
-  visualizer: { width: 384, height: 260 },
+  visualizer: { width: 384, height: 320 },
   effect: { width: 320, height: 220 }
 }
 

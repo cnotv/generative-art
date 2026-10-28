@@ -1,4 +1,4 @@
-import type { StrudelFlowVisualName } from './types'
+import type { StrudelFlowCallParameter, StrudelFlowVisualName } from './types'
 
 export const STRUDEL_FLOW_PATCH_STORAGE_KEY = 'strudel-flow-patch'
 
@@ -171,3 +171,41 @@ export const STRUDEL_FLOW_DRUM_SOUND_GROUPS = [
     sounds: ['perc', 'tabla', 'tok', 'tink', 'click', 'stomp', 'glasstap', 'can', 'bottle']
   }
 ]
+
+/**
+ * Strudel names the canvas of an inline visual `<evaluation id>_widget_<call>_<index>`. The
+ * editor evaluates without an id, so the name starts at the underscore.
+ */
+export const STRUDEL_FLOW_WIDGET_ID_PREFIX = '_widget_'
+
+/** Background canvas id that Strudel's `getDrawContext()` paints behind-the-code visuals on. */
+export const STRUDEL_FLOW_BACKGROUND_CANVAS_ID = 'test-canvas'
+
+/** The calls a node shows controls for, one entry per argument; any other call stays text. */
+export const STRUDEL_FLOW_CALL_PARAMETERS: Record<string, StrudelFlowCallParameter[]> = {
+  mask: [{ kind: 'toggles', label: 'Plays' }],
+  struct: [{ kind: 'toggles', label: 'Hits' }],
+  sometimesBy: [
+    { kind: 'number', label: 'Chance', min: 0, max: 1, step: 0.01 },
+    { kind: 'text', label: 'Then' }
+  ],
+  someCyclesBy: [
+    { kind: 'number', label: 'Chance', min: 0, max: 1, step: 0.01 },
+    { kind: 'text', label: 'Then' }
+  ],
+  degradeBy: [{ kind: 'number', label: 'Drop', min: 0, max: 1, step: 0.01 }],
+  swingBy: [
+    { kind: 'number', label: 'Swing', min: 0, max: 0.5, step: 0.01 },
+    { kind: 'number', label: 'Subdivision', min: 1, max: 16, step: 1 }
+  ],
+  fast: [{ kind: 'number', label: 'Speed', min: 0.25, max: 8, step: 0.25 }],
+  slow: [{ kind: 'number', label: 'Speed', min: 0.25, max: 8, step: 0.25 }],
+  ply: [{ kind: 'number', label: 'Repeats', min: 1, max: 8, step: 1 }],
+  late: [{ kind: 'number', label: 'Shift', min: 0, max: 1, step: 0.01 }],
+  early: [{ kind: 'number', label: 'Shift', min: 0, max: 1, step: 0.01 }],
+  velocity: [{ kind: 'number', label: 'Velocity', min: 0, max: 1, step: 0.01 }],
+  speed: [{ kind: 'number', label: 'Rate', min: -2, max: 4, step: 0.05 }],
+  crush: [{ kind: 'number', label: 'Bits', min: 1, max: 16, step: 1 }],
+  shape: [{ kind: 'number', label: 'Drive', min: 0, max: 1, step: 0.01 }],
+  hpf: [{ kind: 'number', label: 'Cutoff', min: 20, max: 20000, step: 10 }]
+}

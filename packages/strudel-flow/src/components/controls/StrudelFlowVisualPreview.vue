@@ -1,0 +1,83 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { STRUDEL_FLOW_BACKGROUND_CANVAS_ID } from '../../config'
+import type { StrudelFlowVisualizerData } from '../../types'
+
+const props = defineProps<{
+  placement: StrudelFlowVisualizerData['placement']
+  /** The canvas Strudel paints this node's visual on, or null when it is not in the code. */
+  widgetId: string | null
+}>()
+
+const previewCanvas = ref<HTMLCanvasElement | null>(null)
+const isMirroring = ref(false)
+let frameRequest: number | null = null
+
+// Behind the code, the visual fills the node behind its controls instead of sitting in them.
+const isBackdrop = computed(() => props.placement === 'background')
+
+const message = computed(() =>
+  props.widgetId === null && props.placement === 'inline'
+    ? 'Connect an instrument to draw its visual here.'
+    : 'Press Play to draw the visual here.'
+)
+
+// Behind the code, every background visual shares the one canvas behind the code editor.
+const sourceCanvasId = computed(() =>
+  props.placement === 'background' ? STRUDEL_FLOW_BACKGROUND_CANVAS_ID : props.widgetId
+)
+
+const readSourceCanvas = (): HTMLCanvasElement | null => {
+  const source =
+    sourceCanvasId.value === null ? null : document.getElementById(sourceCanvasId.value)
+  return source instanceof HTMLCanvasElement && source.width > 0 && source.height > 0
+    ? source
+    : null
+}
+
+// Strudel paints into a canvas inside the code editor, which the flow hides, so each frame
+// copies that canvas here rather than moving it out from under the editor.
+const mirrorFrame = (): void => {
+  const source = readSourceCanvas()
+  const target = previewCanvas.value
+  const context = target?.getContext('2d')
+  if (source !== null && target !== null && context !== null && context !== undefined) {
+    if (target.width !== source.width || target.height !== source.height) {
+      target.width = source.width
+      target.height = source.height
+    }
+    context.clearRect(0, 0, target.width, target.height)
+    context.drawImage(source, 0, 0)
+  }
+  if (isMirroring.value !== (source !== null)) {
+    isMirroring.value = source !== null
+  }
+  frameRequest = window.requestAnimationFrame(mirrorFrame)
+}
+
+onMounted(() => {
+  frameRequest = window.requestAnimationFrame(mirrorFrame)
+})
+
+onBeforeUnmount(() => {
+  if (frameRequest !== null) {
+    window.cancelAnimationFrame(frameRequest)
+  }
+})
+</script>
+
+<template>
+  <div
+    class="strudel-flow-visual-preview"
+    :class="{ 'strudel-flow-visual-preview--backdrop': isBackdrop }"
+  >
+    <canvas
+      v-show="isMirroring"
+      ref="previewCanvas"
+      class="strudel-flow-visual-preview__canvas"
+      role="img"
+      aria-label="Live visual of the pattern"
+    />
+    <p v-if="!isMirroring && !isBackdrop" class="strudel-flow-visualizer__hint">{{ message }}</p>
+  </div>
+</template>

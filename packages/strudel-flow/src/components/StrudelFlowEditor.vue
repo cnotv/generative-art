@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, provide, ref, watch } from 'vue'
 import { Controls } from '@vue-flow/controls'
 import { VueFlow } from '@vue-flow/core'
 import type { Connection, VueFlowStore } from '@vue-flow/core'
@@ -10,7 +10,9 @@ import '../styles/flowCanvas.scss'
 import StrudelFlowNode from './StrudelFlowNode.vue'
 import StrudelFlowRadialMenu from './StrudelFlowRadialMenu.vue'
 import StrudelFlowToolbar from './StrudelFlowToolbar.vue'
+import { getStrudelFlowVisualizerWidgetIds } from '../compileStrudelFlow'
 import { STRUDEL_FLOW_REFERENCE } from '../config'
+import { STRUDEL_FLOW_VISUALIZER_WIDGET_IDS } from './visualizerWidgetIdsKey'
 import { canUseStrudelFlowConnection } from '../connections'
 import type {
   StrudelFlowEdge,
@@ -41,6 +43,11 @@ const emit = defineEmits<{
 }>()
 
 const DEFAULT_EDGE_OPTIONS = { type: 'default' }
+
+provide(
+  STRUDEL_FLOW_VISUALIZER_WIDGET_IDS,
+  computed(() => getStrudelFlowVisualizerWidgetIds(props.nodes, props.edges))
+)
 
 const radialMenu = ref<{ open: () => void } | null>(null)
 const flowStore = ref<VueFlowStore | null>(null)

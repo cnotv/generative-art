@@ -1,6 +1,7 @@
 import { getStrudelFlowChordNotes } from './chords'
 import type {
   StrudelFlowBeatsData,
+  StrudelFlowCall,
   StrudelFlowChordsData,
   StrudelFlowDrumRow,
   StrudelFlowNodeData,
@@ -120,14 +121,6 @@ const generateVoicePattern = (
   input: string
 ): string => (input.length === 0 ? '' : `${input}.sound(${JSON.stringify(data.sound)})`)
 
-const generateEffectPattern = (
-  data: Extract<StrudelFlowNodeData, { kind: 'effect' }>,
-  input: string
-): string =>
-  input.length === 0 || data.method.trim().length === 0
-    ? input
-    : `${input}.${data.method.trim()}(${data.argument.trim()})`
-
 const generateFilterPattern = (
   data: Extract<StrudelFlowNodeData, { kind: 'filter' }>,
   input: string
@@ -193,6 +186,12 @@ const generateVisualizerPattern = (
   return `${input}.${prefix}${data.visual}(${data.options.trim()})`
 }
 
+const chainCalls = (calls: StrudelFlowCall[]): string =>
+  calls
+    .filter((call) => call.method.trim().length > 0)
+    .map((call) => `.${call.method.trim()}(${call.argument.trim()})`)
+    .join('')
+
 type PatternGenerators = {
   [Kind in StrudelFlowNodeData['kind']]: (
     data: Extract<StrudelFlowNodeData, { kind: Kind }>,
@@ -214,7 +213,8 @@ const PATTERN_GENERATORS: PatternGenerators = {
   level: generateLevelPattern,
   envelope: generateEnvelopePattern,
   visualizer: generateVisualizerPattern,
-  effect: generateEffectPattern
+  // An Effect node is nothing but its calls, which every node chains after its own pattern.
+  effect: (_data, input) => input
 }
 
 const generateWith = <Kind extends StrudelFlowNodeData['kind']>(
@@ -230,5 +230,10 @@ const generateWith = <Kind extends StrudelFlowNodeData['kind']>(
  * @param input - the pattern arriving from upstream, empty for an instrument
  * @returns the node's Strudel expression, or an empty string when it makes no sound
  */
-export const generateStrudelFlowNodePattern = (data: StrudelFlowNodeData, input: string): string =>
-  generateWith(data, input)
+export const generateStrudelFlowNodePattern = (
+  data: StrudelFlowNodeData,
+  input: string
+): string => {
+  const pattern = generateWith(data, input)
+  return pattern.length === 0 ? pattern : `${pattern}${chainCalls(data.calls ?? [])}`
+}
