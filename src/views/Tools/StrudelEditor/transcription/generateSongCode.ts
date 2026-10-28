@@ -83,20 +83,32 @@ const metreWarnings = (sources: SongSource[], beatsPerBar: number): string[] =>
         `The ${sourceDescription(source)} "${safeFileName(source.sourceName)}" has ${beatsPerBarOf(source)} beats to the bar, but each bar fills a cycle of ${beatsPerBar}, so it plays ${beatsPerBarOf(source) < beatsPerBar ? 'slower' : 'faster'} than marked`
     )
 
+type LoopLength = { name: string; bars: number }
+
+// A score's hands share one length, so lengths are compared per file, named as the rows are.
+const loopLengths = (sources: SongSource[], instruments: SongInstrument[]): LoopLength[] =>
+  sources.map((source, sourceIndex) => ({
+    name:
+      source.transcription.kind === 'score'
+        ? 'piano score'
+        : (instruments.find((instrument) => instrument.sourceIndex === sourceIndex)?.label ??
+          source.transcription.instrument),
+    bars: source.transcription.bars.length
+  }))
+
 // Each block loops on its own, so two lengths that do not divide line up again only every so often.
-const loopWarnings = (instruments: SongInstrument[]): string[] =>
-  instruments.flatMap((first, index) =>
-    instruments.slice(index + 1).flatMap((second) => {
-      const firstBars = first.bars.length
-      const secondBars = second.bars.length
-      const longer = Math.max(firstBars, secondBars)
-      const shorter = Math.min(firstBars, secondBars)
+const loopWarnings = (lengths: LoopLength[]): string[] =>
+  lengths.flatMap((first, index) =>
+    lengths.slice(index + 1).flatMap((second) => {
+      const longer = Math.max(first.bars, second.bars)
+      const shorter = Math.min(first.bars, second.bars)
       if (shorter === 0 || longer % shorter === 0) {
         return []
       }
-      const realignBars = (firstBars * secondBars) / greatestCommonDivisor(firstBars, secondBars)
+      const realignBars =
+        (first.bars * second.bars) / greatestCommonDivisor(first.bars, second.bars)
       return [
-        `The ${first.label} (${firstBars} bars) and ${second.label} (${secondBars} bars) loop at different lengths, so they line up again only every ${realignBars} bars`
+        `The ${first.name} (${first.bars} bars) and ${second.name} (${second.bars} bars) loop at different lengths, so they line up again only every ${realignBars} bars`
       ]
     })
   )
@@ -132,7 +144,7 @@ export const createImportedSong = (sources: SongSource[]): ImportedSong => {
     warnings: [
       ...tempoWarnings(sources, beatsPerMinute),
       ...metreWarnings(sources, beatsPerBar),
-      ...loopWarnings(instruments)
+      ...loopWarnings(loopLengths(sources, instruments))
     ]
   }
 }

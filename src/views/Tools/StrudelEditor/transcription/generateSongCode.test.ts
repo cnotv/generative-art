@@ -126,6 +126,23 @@ describe('createImportedSong', () => {
     // Assert
     expect(song.warnings.filter((warning) => warning.includes('loop'))).toHaveLength(warningCount)
   })
+
+  it('compares a score with a tab once, not once per hand', () => {
+    // Arrange
+    const threeBarScore: ScoreTranscription = { ...SCORE, bars: [...SCORE.bars, SCORE.bars[0]] }
+    const sources = [
+      { sourceName: 'low.png', transcription: BASS },
+      { sourceName: 'river.png', transcription: threeBarScore }
+    ]
+
+    // Act
+    const song = createImportedSong(sources)
+
+    // Assert
+    expect(song.warnings).toEqual([
+      'The bass (2 bars) and piano score (3 bars) loop at different lengths, so they line up again only every 6 bars'
+    ])
+  })
 })
 
 describe('generateSongCode', () => {
