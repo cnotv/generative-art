@@ -97,6 +97,38 @@ line: the large time signature at the start, and a playback cursor outlining one
 caught by one rule, since neither encloses a plausible bar. A stroke closer than four gaps to the
 previous edge is ignored. A double bar line counts once.
 
+## Several tabs make one song
+
+A bass tab and a guitar tab of the same song are two screenshots, and the first version let the
+second replace the first. Keeping both raised two questions the single tab never had.
+
+The first was what shape of code the flow view would accept, since the graph is rebuilt from the
+code on every edit. A spike settled it before any generator was written: a program of labelled
+`$:` blocks, one per instrument, already reads as one Notes node and its Voice per block, and
+compiles back to code that reads the same way again. Nothing in the flow package had to change
+for the graph, so the song is written in that form.
+
+The second was what Add means. Strudel has a rule that is easy to miss: once any labelled block
+exists, an unlabelled last expression is no longer played. Appending a labelled guitar under a
+single tab loaded the old way would therefore have silenced the bass with no error. The append
+labels that expression first, which is the only edit it makes to code that is already there.
+
+```mermaid
+flowchart LR
+  bass[Bass tab] --> song[Song: first tempo,<br/>one block each]
+  guitar[Guitar tab] --> song
+  song --> load[Load: replace<br/>the code]
+  song --> add[Add: label the bare<br/>expression, append blocks]
+  load --> play[Strudel plays<br/>every block]
+  add --> play
+```
+
+Each block loops on its own, so instruments with different bar counts drift and realign only at
+the least common multiple of their lengths. Padding or cutting to one length would change what
+was transcribed, so the import warns instead and leaves the choice in the code. A tempo that
+differs between screenshots is handled the same way: the first tab's tempo plays, and the others
+are reported.
+
 ## What it does not do
 
 | Missing                                 | Why                                                                                |
@@ -107,6 +139,7 @@ previous edge is ignored. A double bar line counts once.
 | Slides, bends, vibrato, ghost notes     | Read as a note without the effect, or skipped with a warning.                      |
 | Photos, scans, handwriting              | The geometry is no longer straight and clean, which every detector here relies on. |
 | Standard notation                       | Read separately, see [reading a piano score](./strudel-piano-score-import.md).     |
+| Instruments of different lengths        | Each loops on its own and the import warns. Nothing is padded or cut to match.     |
 
 The shape of the result is the reason this stayed small. It writes its own note pattern with
 lengths and ties, so the audio and MIDI import, which keeps one bass note per sixteenth, did not

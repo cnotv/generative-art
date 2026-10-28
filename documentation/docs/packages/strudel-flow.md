@@ -94,6 +94,8 @@ const { nodes, edges, beatsPerMinute, compilation, addNode, connectNodes } = use
 
 The flow editor is not a separate format: any code maps onto a graph. `parseStrudelFlowCode(code, existingNodes)` reads it block by block. Calls with a dedicated node get it, any other chained call becomes an Effect node, a flat sample line such as `s("~ cp ~ cp")` becomes Beats tracks, `note("…")` becomes Notes, richer sample lines become Samples, `stack(...)` splits into its instruments with their own branch effects, and a head nothing reads becomes a Code node. Statements that are not patterns, such as `samples(...)` or `const cc = await midin(...)`, go to `setup`. It returns `null` while the code has a syntax error, and `loadCode` then leaves the graph alone and returns `false`.
 
+`appendStrudelFlowBlocks(code, blocks)` appends `$:` blocks to a program so they play alongside it. Strudel stops playing an unlabelled last expression once any labelled block exists, so that expression gets `$:` in front of it first; code that already has labelled blocks, or plays no pattern, is only appended to.
+
 ```typescript
 import { useStrudelFlow } from '@webgamekit/strudel-flow'
 
