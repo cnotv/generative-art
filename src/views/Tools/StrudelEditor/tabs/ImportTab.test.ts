@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ImportTab from './ImportTab.vue'
-import type { TranscriptionResult } from '../types'
+import type { TabTranscription, TranscriptionResult } from '../types'
 
 const RESULT: TranscriptionResult = {
+  kind: 'grid',
   beatsPerMinute: 126,
   bars: [
     { steps: [], chord: 'Am' },
@@ -11,6 +12,14 @@ const RESULT: TranscriptionResult = {
     { steps: [], chord: 'F' },
     { steps: [], chord: null }
   ]
+}
+
+const TAB_RESULT: TabTranscription = {
+  kind: 'tab',
+  beatsPerMinute: 120,
+  instrument: 'bass',
+  bars: [[{ notes: ['a2'], beats: 4 }]],
+  warnings: []
 }
 
 const mountTab = (overrides: Partial<InstanceType<typeof ImportTab>['$props']> = {}) =>
@@ -96,5 +105,28 @@ describe('ImportTab', () => {
 
     // Assert
     expect(alert.text()).toBe('Unable to decode audio data')
+  })
+
+  it('summarises a tab by tempo and bars, without a chord row', () => {
+    // Arrange
+    const wrapper = mountTab({ status: 'done', result: TAB_RESULT, code: 'setcps(120/60/4)' })
+
+    // Act
+    const summary = wrapper.find('.strudel-import__summary').text()
+
+    // Assert
+    expect(summary).toContain('120 BPM')
+    expect(summary).not.toContain('Chords')
+  })
+
+  it('accepts screenshots as well as audio', () => {
+    // Arrange
+    const wrapper = mountTab()
+
+    // Act
+    const accept = wrapper.find<HTMLInputElement>('input[type="file"]').attributes('accept')
+
+    // Assert
+    expect(accept).toContain('image/png')
   })
 })

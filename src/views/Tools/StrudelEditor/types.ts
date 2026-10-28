@@ -351,6 +351,7 @@ export type TranscriptionBar = {
 }
 
 export type TranscriptionResult = {
+  kind: 'grid'
   beatsPerMinute: number
   bars: TranscriptionBar[]
 }
@@ -376,18 +377,18 @@ export type TranscriptionRequest = {
 
 export type TranscriptionWorkerMessage =
   | { kind: 'progress'; progress: TranscriptionProgress }
-  | { kind: 'result'; result: TranscriptionResult }
+  | { kind: 'result'; result: TranscriptionOutput }
   | { kind: 'error'; message: string }
 
 export type TranscriptionRunner = (
   audioFile: File,
   onProgress: (progress: TranscriptionProgress) => void
-) => Promise<TranscriptionResult>
+) => Promise<TranscriptionOutput>
 
 export type StrudelTranscriptionState = {
   transcriptionStatus: Ref<TranscriptionStatus>
   transcriptionProgress: Ref<TranscriptionProgress | null>
-  transcriptionResult: Ref<TranscriptionResult | null>
+  transcriptionResult: Ref<TranscriptionOutput | null>
   transcribedCode: Ref<string>
   transcriptionError: Ref<string>
   transcribeFile: (chosenFile: File) => Promise<void>
@@ -408,4 +409,59 @@ export type MidiSnippet = {
   title: string
   description: string
   code: string
+}
+
+/** What an import produces: a grid of drums, bass and chords, or the notes of a tab. */
+export type TranscriptionOutput = TranscriptionResult | TabTranscription
+
+export type TabInstrument = 'bass' | 'guitar'
+
+/** One struck chord or note of a tab bar; an empty note list is a rest. */
+export type TabEvent = {
+  notes: string[]
+  beats: number
+}
+
+export type TabTranscription = {
+  kind: 'tab'
+  beatsPerMinute: number
+  instrument: TabInstrument
+  bars: TabEvent[][]
+  warnings: string[]
+}
+
+/** How far each pixel sits from the page background, so dark and light themes read alike. */
+export type TabImage = {
+  width: number
+  height: number
+  deviation: Uint8Array
+}
+
+export type TabImageRequest = {
+  width: number
+  height: number
+  pixels: Uint8ClampedArray
+}
+
+export type TabSystem = {
+  lineYs: number[]
+  startX: number
+  endX: number
+}
+
+export type TabBarSpan = {
+  startX: number
+  endX: number
+}
+
+export type TabGlyph = {
+  centerX: number
+  lineIndex: number
+  fret: number | null
+}
+
+export type TabStem = {
+  x: number
+  beams: number
+  isTriplet: boolean
 }

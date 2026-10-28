@@ -45,6 +45,7 @@ describe('generateStrudelCode', () => {
   it('writes tempo, drums, bass and chords as one stack', () => {
     // Arrange
     const result: TranscriptionResult = {
+      kind: 'grid',
       beatsPerMinute: 124,
       bars: [FOUR_ON_THE_FLOOR, FOUR_ON_THE_FLOOR]
     }
@@ -70,7 +71,7 @@ describe('generateStrudelCode', () => {
   it('leaves out layers the audio did not have', () => {
     // Arrange
     const drumsOnly = createBar({ 0: ['bd'] }, {}, null)
-    const result: TranscriptionResult = { beatsPerMinute: 90, bars: [drumsOnly] }
+    const result: TranscriptionResult = { kind: 'grid', beatsPerMinute: 90, bars: [drumsOnly] }
 
     // Act
     const code = generateStrudelCode(result, 'drums.wav')
@@ -84,6 +85,7 @@ describe('generateStrudelCode', () => {
   it('plays silence when nothing was detected', () => {
     // Arrange
     const result: TranscriptionResult = {
+      kind: 'grid',
       beatsPerMinute: 120,
       bars: [createBar({}, {}, null)]
     }
@@ -97,7 +99,11 @@ describe('generateStrudelCode', () => {
 
   it('keeps a file name with line breaks inside the comment', () => {
     // Arrange
-    const result: TranscriptionResult = { beatsPerMinute: 120, bars: [FOUR_ON_THE_FLOOR] }
+    const result: TranscriptionResult = {
+      kind: 'grid',
+      beatsPerMinute: 120,
+      bars: [FOUR_ON_THE_FLOOR]
+    }
 
     // Act
     const code = generateStrudelCode(result, 'evil\nsetcps(9).mp3')

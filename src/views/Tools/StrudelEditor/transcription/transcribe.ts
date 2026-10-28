@@ -266,5 +266,5 @@ export const transcribeSamples = (
   onProgress({ stage: 'notes', fraction: NOTES_DONE_FRACTION })
 
   onProgress({ stage: 'done', fraction: 1 })
-  return { beatsPerMinute: tempo.beatsPerMinute, bars }
+  return { kind: 'grid', beatsPerMinute: tempo.beatsPerMinute, bars }
 }

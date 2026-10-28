@@ -2,11 +2,17 @@ import { ref } from 'vue'
 import type {
   StrudelTranscriptionState,
   TranscriptionProgress,
-  TranscriptionResult,
+  TranscriptionOutput,
   TranscriptionRunner,
   TranscriptionStatus
 } from '../types'
 import { generateStrudelCode } from './generateStrudelCode'
+import { generateTabCode } from './generateTabCode'
+
+const codeFor = (result: TranscriptionOutput, sourceName: string): string =>
+  result.kind === 'tab'
+    ? generateTabCode(result, sourceName)
+    : generateStrudelCode(result, sourceName)
 
 type TranscriptionOptions = {
   runner: TranscriptionRunner
@@ -25,7 +31,7 @@ export const useStrudelTranscription = (
 ): StrudelTranscriptionState => {
   const transcriptionStatus = ref<TranscriptionStatus>('idle')
   const transcriptionProgress = ref<TranscriptionProgress | null>(null)
-  const transcriptionResult = ref<TranscriptionResult | null>(null)
+  const transcriptionResult = ref<TranscriptionOutput | null>(null)
   const transcribedCode = ref('')
   const transcriptionError = ref('')
   const sourceName = ref('')
@@ -49,12 +55,15 @@ export const useStrudelTranscription = (
         return
       }
       transcriptionResult.value = result
-      transcribedCode.value = generateStrudelCode(result, chosenFile.name)
+      transcribedCode.value = codeFor(result, chosenFile.name)
       sourceName.value = chosenFile.name
       transcriptionStatus.value = 'done'
       options.appendLog(
         `Transcribed ${chosenFile.name}: ${result.beatsPerMinute} BPM, ${result.bars.length} bars`
       )
+      if (result.kind === 'tab') {
+        result.warnings.forEach((warning) => options.appendLog(warning, 'warn'))
+      }
     } catch (error) {
       if (!isCurrent()) {
         return
