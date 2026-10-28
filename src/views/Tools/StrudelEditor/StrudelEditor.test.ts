@@ -422,6 +422,10 @@ describe('StrudelEditor view', () => {
       expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
     })
     const codeOnOpen = readEditorCode(wrapper)
+    // The palette renders with the flow tab, which can land a tick after the canvas on a slow run.
+    await vi.waitFor(() => {
+      expect(wrapper.find('button[aria-label="Add Notes node"]').exists()).toBe(true)
+    })
     await wrapper.find('button[aria-label="Add Notes node"]').trigger('click')
     await flushPromises()
     const codeAfterAdd = readEditorCode(wrapper)
