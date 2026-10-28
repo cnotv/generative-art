@@ -537,6 +537,10 @@ export const EXPORT_DEFAULT_OPTIONS: StrudelExportOptions = {
 }
 /** The finest repetition the export looks for: a sound played up to sixteen times a cycle. */
 export const STRUDEL_MAX_REPETITIONS_PER_CYCLE = 16
+/** The longest loop the timeline looks for, in bars; a pattern that has not repeated by then shows this many. */
+export const STRUDEL_TIMELINE_MAX_LOOP_BARS = 16
+/** The finest point the timeline seeks to: a sixteenth of a bar. */
+export const STRUDEL_TIMELINE_SEEK_STEP = 0.0625
 export const EXPORT_FORMAT_OPTIONS = [
   { value: 'wav', label: 'WAV' },
   { value: 'midi', label: 'MIDI' }

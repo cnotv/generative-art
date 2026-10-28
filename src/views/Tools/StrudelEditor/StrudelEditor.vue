@@ -23,6 +23,7 @@ import ExportTab from './tabs/ExportTab.vue'
 import ConsoleTab from './tabs/ConsoleTab.vue'
 import SettingsTab from './tabs/SettingsTab.vue'
 import FlowTab from './tabs/FlowTab.vue'
+import StrudelTimeline from './timeline/StrudelTimeline.vue'
 
 // Vue Flow is a large canvas library and only loads when the player opens flow mode.
 const StrudelFlowEditor = defineAsyncComponent(() =>
@@ -63,7 +64,13 @@ const {
   exportPattern,
   repetitionCycles,
   measureRepetition,
-  loadTranscription
+  loadTranscription,
+  playheadCycle,
+  timelineBars,
+  cyclesPerSecond,
+  loopBars,
+  loopMeasured,
+  seekToCycle
 } = useStrudelEditor()
 
 const {
@@ -339,6 +346,14 @@ onBeforeUnmount(() => {
       <p v-if="editorStatus === 'error'" class="strudel-editor__error" role="alert">
         {{ errorMessage || 'Pattern failed to evaluate.' }}
       </p>
+      <StrudelTimeline
+        :playhead-cycle="playheadCycle"
+        :timeline-bars="timelineBars"
+        :cycles-per-second="cyclesPerSecond"
+        :loop-bars="loopBars"
+        :loop-measured="loopMeasured"
+        @seek="seekToCycle"
+      />
     </section>
 
     <section class="strudel-editor__side" aria-label="Player">

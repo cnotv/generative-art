@@ -28,10 +28,13 @@ const describeSlice = (
     .sort()
     .join('|')
 
-const repeatsEvery = (haps: StrudelScheduledHap[], repetitionsPerCycle: number): boolean => {
-  const sliceLength = 1 / repetitionsPerCycle
+const sliceRepeats = (
+  haps: StrudelScheduledHap[],
+  sliceLength: number,
+  sliceCount: number
+): boolean => {
   const firstSlice = describeSlice(haps, 0, sliceLength)
-  return Array.from({ length: repetitionsPerCycle - 1 }, (_, index) => index + 1).every(
+  return Array.from({ length: sliceCount - 1 }, (_, index) => index + 1).every(
     (sliceIndex) => describeSlice(haps, sliceIndex * sliceLength, sliceLength) === firstSlice
   )
 }
@@ -50,6 +53,24 @@ export const findRepetitionCycles = (haps: StrudelScheduledHap[]): number => {
   const repetitionsPerCycle = Array.from(
     { length: STRUDEL_MAX_REPETITIONS_PER_CYCLE - 1 },
     (_, index) => STRUDEL_MAX_REPETITIONS_PER_CYCLE - index
-  ).find((candidate) => repeatsEvery(haps, candidate))
+  ).find((candidate) => sliceRepeats(haps, 1 / candidate, candidate))
   return repetitionsPerCycle === undefined ? 1 : 1 / repetitionsPerCycle
+}
+
+/**
+ * How many bars the whole mix takes to come round again, for the timeline. Instruments that
+ * repeat at different lengths, such as three bars under four, only line up again at their
+ * least common multiple, so that is the loop: the shortest whole number of bars every
+ * instrument repeats in at once.
+ * @param haps - the events of the first `maxBars * 2` bars, so every candidate is seen twice
+ * @param maxBars - the longest loop to look for
+ * @returns the loop length in bars, or null when nothing repeats within `maxBars`
+ */
+export const findLoopBars = (haps: StrudelScheduledHap[], maxBars: number): number | null => {
+  const queriedBars = maxBars * 2
+  return (
+    Array.from({ length: maxBars }, (_, index) => index + 1).find((candidateBars) =>
+      sliceRepeats(haps, candidateBars, Math.floor(queriedBars / candidateBars))
+    ) ?? null
+  )
 }
