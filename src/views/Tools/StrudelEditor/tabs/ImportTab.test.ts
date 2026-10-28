@@ -175,6 +175,22 @@ describe('ImportTab', () => {
     expect(wrapper.emitted('update:addVisualizer')).toEqual([[false]])
   })
 
+  it.each([
+    ['.strudel-import__intro', 'Turn music into Strudel code', 'a MIDI file is read note for note'],
+    ['.strudel-import__note', 'What reads well', 'is 120 when there is none']
+  ])('keeps %s to a few words and moves the rest into a tooltip', (selector, shortText, detail) => {
+    // Arrange
+    const wrapper = mountTab()
+
+    // Act
+    const line = wrapper.find(selector)
+
+    // Assert
+    expect(line.text()).toBe(shortText)
+    expect(shortText.split(' ').length).toBeLessThanOrEqual(5)
+    expect(line.find('button[title]').attributes('title')).toContain(detail)
+  })
+
   it('explains the pianoroll in a tooltip rather than in the label', () => {
     // Arrange
     const wrapper = mountTab()

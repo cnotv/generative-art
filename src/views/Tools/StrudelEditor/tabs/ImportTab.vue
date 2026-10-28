@@ -65,6 +65,24 @@ const songRows = computed(() => {
   }
 })
 
+const INTRO_HINT = [
+  'Turn a song, a MIDI file, a tab or a piano score into a Strudel pattern.',
+  'Audio is analysed in your browser for its tempo, drums, bass line and chords;',
+  'a MIDI file is read note for note; a bass or guitar tab and a piano score are read from the',
+  'picture. Either way it is written out as code you can play and edit.'
+].join(' ')
+
+const NOTE_HINT = [
+  'From audio, the result is a sketch in the spirit of the track, not a copy: it hears drums, a',
+  'bass line and one chord per bar, and leaves the melody to you. A tab screenshot works best',
+  'when it is a clean digital one with the rhythm row under the staff, and a piano score when it',
+  'is a clean engraving of a grand staff; grace notes, ornaments and ties are not read. The tempo',
+  'is read from a marker such as "= 96" above the first staff, and is 120 when there is none.',
+  'Drop several tabs and scores, together or one after another, and each becomes its own',
+  "instrument on the first file's tempo. Load replaces the editor's code; Add appends the",
+  'instruments to it.'
+].join(' ')
+
 const VISUALIZER_HINT =
   'Ends every tab and score instrument with ._pianoroll(), so each draws its notes under its ' +
   'line and gets a Visualizer node in the flow view. Off, the code is the plain import.'
@@ -77,10 +95,10 @@ const onFilesChosen = (files: FileList): void => {
 <template>
   <section class="strudel-import">
     <p class="strudel-import__intro">
-      Turn a song, a MIDI file, a tab or a piano score into a Strudel pattern. Audio is analysed in
-      your browser for its tempo, drums, bass line and chords; a MIDI file is read note for note; a
-      bass or guitar tab and a piano score are read from the picture. Either way it is written out
-      as code you can play and edit.
+      Turn music into Strudel code
+      <IconButton size="xs" :title="INTRO_HINT">
+        <Info aria-hidden="true" />
+      </IconButton>
     </p>
     <DropZone
       label="Drop an MP3, other audio, a MIDI file, or tab or piano score images here, or click to browse"
@@ -157,14 +175,10 @@ const onFilesChosen = (files: FileList): void => {
     </template>
 
     <p class="strudel-import__note">
-      From audio, the result is a sketch in the spirit of the track, not a copy: it hears drums, a
-      bass line and one chord per bar, and leaves the melody to you. A tab screenshot works best
-      when it is a clean digital one with the rhythm row under the staff, and a piano score when it
-      is a clean engraving of a grand staff; grace notes, ornaments and ties are not read. The tempo
-      is read from a marker such as "= 96" above the first staff, and is 120 when there is none.
-      Drop several tabs and scores, together or one after another, and each becomes its own
-      instrument on the first file's tempo, with a pianoroll under it while that box is ticked. Load
-      replaces the editor's code; Add appends the instruments to it.
+      What reads well
+      <IconButton size="xs" :title="NOTE_HINT">
+        <Info aria-hidden="true" />
+      </IconButton>
     </p>
   </section>
 </template>
@@ -179,6 +193,9 @@ const onFilesChosen = (files: FileList): void => {
 
 .strudel-import__intro,
 .strudel-import__note {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
   margin: 0;
   font-size: var(--font-size-md);
   color: var(--color-muted-foreground);
