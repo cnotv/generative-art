@@ -6,7 +6,11 @@ import { STRUDEL_FLOW_OPEN_STRINGS, StrudelFlowTabStaff } from '@webgamekit/stru
 import type { StrudelFlowNoteBar, StrudelFlowTabInstrument } from '@webgamekit/strudel-flow'
 import { TAB_BEATS_PER_BAR } from '../../config'
 import type { TabEvent } from '../../types'
+import { findBarSpans } from './barLines'
 import { buildTabImage } from './buildTabImage'
+import { findFretGlyphs } from './fretGlyphs'
+import { findStems } from './rhythmRow'
+import { findStaffSystems, lineGapOf } from './staffLines'
 import { readTab } from './readTab'
 import { loadSampleTabImage } from './sampleTabImage'
 import { drawQuarterNoteTab } from './syntheticTab'
@@ -40,6 +44,14 @@ const themedSvg = (svg: string, theme: (typeof THEMES)['light']): string =>
     </style>`
   )
 
+const comparable = (bars: TabEvent[][]) =>
+  bars.map((bar) =>
+    bar.map((event) => ({
+      notes: event.notes.toSorted(),
+      beats: Math.round(event.beats * 1000) / 1000
+    }))
+  )
+
 const renderAndRead = async (
   bars: TabEvent[][],
   instrument: StrudelFlowTabInstrument,
@@ -54,19 +66,39 @@ const renderAndRead = async (
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
-  return readTab(
-    buildTabImage(info.width, info.height, new Uint8ClampedArray(data)),
-    STRUDEL_FLOW_OPEN_STRINGS
+  const image = buildTabImage(info.width, info.height, new Uint8ClampedArray(data))
+  const tab = readTab(image, STRUDEL_FLOW_OPEN_STRINGS)
+  const expected = comparable(bars)
+  const received = comparable(tab.bars)
+  const [system] = findStaffSystems(image)
+  const spans = findBarSpans(image, system)
+  const glyphs = findFretGlyphs(image, system)
+  const stems = findStems(image, system)
+  const misread = expected.flatMap((bar, index) =>
+    JSON.stringify(bar) === JSON.stringify(received[index])
+      ? []
+      : [
+          {
+            index,
+            expected: bar,
+            received: received[index],
+            gap: lineGapOf(system),
+            lineYs: system.lineYs,
+            span: spans[index],
+            glyphs: glyphs.filter(
+              (glyph) => glyph.centerX >= spans[index].startX && glyph.centerX < spans[index].endX
+            ),
+            stems: stems.filter(
+              (stem) => stem.x >= spans[index].startX && stem.x < spans[index].endX
+            )
+          }
+        ]
   )
+  if (misread.length > 0) {
+    console.warn('ROUNDTRIP-DIAG', JSON.stringify(misread))
+  }
+  return tab
 }
-
-const comparable = (bars: TabEvent[][]) =>
-  bars.map((bar) =>
-    bar.map((event) => ({
-      notes: event.notes.toSorted(),
-      beats: Math.round(event.beats * 1000) / 1000
-    }))
-  )
 
 describe('tab round trip', () => {
   it.each(Object.entries(THEMES))(
