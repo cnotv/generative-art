@@ -1,12 +1,11 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { ROOT, discoverRoutes } from './routes.mjs'
+import { ROOT, discoverRoutes, ogImage, DEFAULT_OG_IMAGE } from './routes.mjs'
 
 const DIST = process.env.DIST_DIR || join(ROOT, 'dist')
 const SITE_URL = process.env.SITE_URL || 'https://cnotv.xyz'
 const DEFAULT_DESCRIPTION =
   'Interactive generative art, 3D experiments, and games built with Three.js and Vue.'
-const DEFAULT_IMAGE = `${SITE_URL}/logobw.svg`
 
 const viewsMeta = JSON.parse(readFileSync(join(ROOT, 'src/config/viewsMeta.json'), 'utf-8'))
 
@@ -34,7 +33,8 @@ const run = () => {
   routes.forEach(({ path, name }) => {
     const meta = viewsMeta[name]
     const description = meta?.description || DEFAULT_DESCRIPTION
-    const image = meta?.image ? `${SITE_URL}${meta.image}` : DEFAULT_IMAGE
+    const capture = existsSync(join(DIST, ogImage(path))) ? ogImage(path) : DEFAULT_OG_IMAGE
+    const image = `${SITE_URL}${meta?.image || capture}`
     const url = `${SITE_URL}${path}`
     const html = injectMeta(indexHtml, { title: name, description, url, image })
     const outDirectory = join(DIST, path)

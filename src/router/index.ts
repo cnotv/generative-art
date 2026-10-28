@@ -19,6 +19,10 @@ const router = createRouter({
   ]
 })
 
+// Mirrors `ogImage` in scripts/routes.mjs: the capture written by scripts/capture.mjs
+const ogImage = (path: string): string =>
+  `${window.location.origin}${import.meta.env.BASE_URL}og${path}.jpg`
+
 const getPageTitle = (name: string | null | symbol): string => {
   if (name && typeof name === 'string') return name
   return 'Generative Art'
@@ -33,7 +37,7 @@ router.beforeEach((to, _from, next) => {
   updatePageMeta({
     title,
     description: viewMeta?.description,
-    image: viewMeta?.image
+    image: viewMeta?.image ?? (name ? ogImage(to.path) : undefined)
   })
 
   next()
