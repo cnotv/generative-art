@@ -7,6 +7,11 @@ export const ROOT = join(__dirname, '..')
 export const VIEWS_DIR = join(ROOT, 'src/views')
 export const GROUPS = ['Experiments', 'Games', 'Generative', 'Tools', 'Stages']
 
+// The Open Graph image of a route, written by `scripts/capture.mjs` into public/. Mirrored by
+// `ogImage` in src/router/index.ts for the client-side meta.
+export const ogImage = (routePath) => `/og${routePath}.jpg`
+export const DEFAULT_OG_IMAGE = ogImage('/experiments/LandingPage')
+
 // Kept in sync with `deriveRouteName` in src/config/router.ts, which derives the same names
 // at runtime for the client-side page title and meta. Node has no TypeScript runner here, so
 // the two can't share one module without adding a dependency.

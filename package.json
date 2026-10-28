@@ -19,6 +19,7 @@
     "test:browser:ui": "vitest --config vitest.browser.config.ts --ui",
     "verify:packages": "pnpm -r run build && node scripts/verify-packages.mjs",
     "analyze": "node scripts/analyze-assets.mjs",
+    "capture": "node scripts/capture.mjs",
     "check:assets": "node scripts/analyze-assets.mjs --check --glb-only",
     "size": "size-limit",
     "build-only": "vite build",
