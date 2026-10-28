@@ -17,7 +17,13 @@ const barLineColumns = (image: TabImage, system: TabSystem): number[] => {
   ).filter((x) => countInRange(top, bottom + 1, (y) => isInkAt(image, x, y)) >= needed)
 }
 
-const keepWideBars = (edges: number[], minWidth: number): number[] =>
+/**
+ * Drops edges too close to their neighbours to enclose a bar, keeping the first and last.
+ * @param edges - ascending x positions, the staff ends included
+ * @param minWidth - the narrowest bar in pixels
+ * @returns the edges that still bound a bar
+ */
+export const keepWideBars = (edges: number[], minWidth: number): number[] =>
   edges.reduce<number[]>(
     (kept, edge, index) =>
       index === 0 ||

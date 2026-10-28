@@ -1281,3 +1281,97 @@ export const TAB_DIGIT_TEMPLATE_SETS = [
     ['.##+ ', '##+#.', '#+ #+', '+#+#+', ' ++#+', '++.#.', '.##+ ']
   ]
 ]
+
+/** Piano scores: every length is again a multiple of the staff line gap. */
+export const SCORE_STAFF_LINE_COUNT = 5
+/** A treble and a bass staff further apart than this are two systems, not one grand staff. */
+export const SCORE_GRAND_STAFF_MAX_GAP_RATIO = 12
+/** A horizontal stroke no thicker than this is a staff line, ledger line, tie or slur. */
+export const SCORE_THIN_LINE_RATIO = 0.2
+export const SCORE_CLEF_ZONE_RATIO = 3.6
+export const SCORE_TREBLE_CLEF_REACH_RATIO = 1
+export const SCORE_PRELUDE_SEARCH_RATIO = 16
+export const SCORE_KEY_STEP_RATIO = 1.5
+export const SCORE_METRE_REACH_RATIO = 2.5
+export const SCORE_METRE_MIN_HEIGHT_RATIO = 1.5
+export const SCORE_METRE_MIN_WIDTH_RATIO = 0.9
+export const SCORE_METRE_PIECE_GAP_RATIO = 0.5
+/** Thinner than this is the system's opening line, not a clef or a sign. */
+export const SCORE_PRELUDE_MIN_WIDTH_RATIO = 0.3
+/** Shorter than this is a clef dot or a speck, skipped while reading the key. */
+export const SCORE_PRELUDE_SPECK_RATIO = 0.6
+export const SCORE_COMMON_TIME_BEATS = 4
+export const SCORE_ACCIDENTAL_MIN_HEIGHT_RATIO = 1.6
+export const SCORE_ACCIDENTAL_MAX_WIDTH_RATIO = 1.3
+export const SCORE_ACCIDENTAL_STROKE_RATIO = 1.4
+export const SCORE_NATURAL_OFFSET_RATIO = 0.6
+export const SCORE_FLAT_MAX_WIDTH_RATIO = 1.1
+export const SCORE_FLAT_BOWL_RATIO = 0.4
+/** A pixel whose horizontal and vertical runs both reach these is inside a filled note head. */
+export const SCORE_HEAD_CORE_WIDTH_RATIO = 0.8
+export const SCORE_HEAD_CORE_HEIGHT_RATIO = 0.75
+export const SCORE_HEAD_CORE_MIN_RATIO = 0.35
+export const SCORE_HEAD_HALF_WIDTH_RATIO = 0.65
+export const SCORE_HEAD_HALF_HEIGHT_RATIO = 0.5
+export const SCORE_HOLE_REACH_RATIO = 0.45
+export const SCORE_HOLE_MIN_WIDTH_RATIO = 0.2
+export const SCORE_HOLE_MAX_WIDTH_RATIO = 1
+export const SCORE_HOLE_MAX_HEIGHT_RATIO = 0.7
+export const SCORE_HOLLOW_MIN_WIDTH_RATIO = 1
+export const SCORE_STEM_MIN_RATIO = 2.5
+export const SCORE_STEM_ATTACH_RATIO = 0.8
+export const SCORE_BEAM_SEARCH_RATIO = 1.8
+export const SCORE_BEAM_NEAR_RATIO = 0.3
+export const SCORE_BEAM_FAR_RATIO = 0.8
+export const SCORE_DOT_FAR_RATIO = 1.6
+export const SCORE_DOT_MAX_SIZE_RATIO = 0.6
+export const SCORE_DOT_ABOVE_RATIO = 1
+export const SCORE_DOT_BELOW_RATIO = 0.35
+export const SCORE_ACCIDENTAL_REACH_RATIO = 1.5
+/** Smaller than this in both directions is a dot or a speck, never a rest or a skipped mark. */
+export const SCORE_MARK_MIN_SIZE_RATIO = 0.6
+export const SCORE_REST_BLOCK_MAX_RATIO = 0.8
+export const SCORE_REST_QUARTER_MIN_RATIO = 2.3
+export const SCORE_REST_MIN_WIDTH_RATIO = 0.45
+export const SCORE_REST_MAX_WIDTH_RATIO = 1.6
+export const SCORE_REST_MAX_STROKE_RATIO = 1.5
+/** A quarter rest has one long stroke too, but it sits in a dense body a stem never has. */
+export const SCORE_REST_MIN_DENSITY = 0.4
+export const SCORE_REST_BEATS = { whole: 4, half: 2, quarter: 1, eighth: 0.5 }
+/** Only blobs up to this size are joined back together; a beamed group never is. */
+export const SCORE_MARK_MERGE_MAX_RATIO = 3.5
+/** Letter steps above C0 of each clef's bottom line: E4 for treble, G2 for bass. */
+export const SCORE_BOTTOM_LINE_STEP = { treble: 30, bass: 18 }
+/** Letters counted from C as 0: the order sharps, then flats, are added to a key. */
+export const SCORE_SHARP_ORDER = [3, 0, 4, 1, 5, 2, 6]
+export const SCORE_FLAT_ORDER = [6, 2, 5, 1, 4, 0, 3]
+export const SCORE_LETTER_SEMITONES = [0, 2, 4, 5, 7, 9, 11]
+/** How far above and below its staff a note head is still looked for. */
+export const SCORE_ZONE_REACH_RATIO = 4
+/** Heads and rests closer together than this start at the same moment. */
+export const SCORE_ONSET_GROUP_RATIO = 0.6
+export const SCORE_WHOLE_NOTE_MIN_WIDTH_RATIO = 1.4
+export const SCORE_DOT_FACTOR = 1.5
+export const SCORE_HOLLOW_BEATS = 2
+export const SCORE_SOUND = 'gm_piano'
+export const SCORE_MARK_MERGE_MARGIN_RATIO = 0.3
+export const SCORE_UNREAD_REACH_RATIO = 1.5
+export const SCORE_BAR_LINE_MAX_WIDTH_RATIO = 0.4
+export const SCORE_HOLLOW_CLEARANCE_RATIO = 1.5
+/** Rests sit near the middle line, a second voice's a little off it. */
+export const SCORE_REST_CENTRE_REACH_RATIO = 1.5
+/** A rest shaped mark this close in front of a head is a grace note leading into it. */
+export const SCORE_GRACE_REACH_RATIO = 1
+export const SCORE_REST_BLOCK_MIN_HEIGHT_RATIO = 0.4
+export const SCORE_REST_BLOCK_MIN_WIDTH_RATIO = 0.9
+export const SCORE_REST_BLOCK_MIN_DENSITY = 0.7
+export const SCORE_REST_LINE_TOUCH_PIXELS = 2
+/** A score prints its tempo higher above the staff than a tab, in a wider type. */
+export const SCORE_TEMPO_BAND = {
+  topRatio: 5,
+  bottomRatio: 1.5,
+  equalsMaxWidthRatio: 1.6,
+  equalsMaxHeightRatio: 1,
+  digitMaxWidthRatio: 1.4
+}
+export const SCORE_RING_INSET_RATIO = 0.25

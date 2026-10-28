@@ -42,7 +42,7 @@ flow tab:
   Each sound shows a readable name ("Bass drum", "Acoustic bass") with the name code plays it
   by in grey beside it (`rolandtr909_bd`, `gm_acoustic_bass`); search matches either, or the
   group. Clicking a sound plays it once; the number is how many variations `n` picks from.
-- **import**: turn an MP3, other audio, a MIDI file or a tab screenshot into a pattern (below)
+- **import**: turn an MP3, other audio, a MIDI file, a tab or a piano score image into a pattern (below)
 - **midi**: play or drive MIDI devices (below)
 - **reference**: function quick list
 - **export**: save the code as a WAV or MIDI file (below)
@@ -359,6 +359,36 @@ tempo comes from a marker such as "= 96" above the first staff; with none, or on
 read, the code starts at 120 BPM and you change the number in `setcps`. A mark it cannot read, such as a slide sign, is skipped and listed in the console tab.
 How it works and where it stops is in
 [Reading a tab screenshot without a model](../journey/strudel-tab-image-import.md).
+
+## Turning a piano score into a pattern
+
+Drop a PNG, JPEG or WebP of piano music in standard notation on the same **import** tab: a
+grand staff, a treble staff over a bass staff joined by bar lines. Five line staves taken in
+pairs are read as a score, anything else as a tab, so there is nothing to choose. As with a tab,
+the picture is read in a Web Worker with plain image processing and never leaves the browser.
+
+![The editor after loading a piano score: a tempo of 65, then a right hand and a left hand block on gm_piano](/img/strudel-editor/import-piano-score.webp)
+
+| Read              | From                                                                       |
+| ----------------- | -------------------------------------------------------------------------- |
+| Clef, key, metre  | the start of each staff: the clef, the run of sharps or flats, C or digits |
+| Pitch             | each note head's line or space, with the key and any accidental in its bar |
+| Lengths           | filled or hollow heads, the beams or flags on the stem, dots, rests        |
+| Chords and voices | heads struck at the same moment, on one stem or on two                     |
+| Tempo             | a marker such as "quarter note = 65" above the first staff                 |
+
+The code sets the tempo with one bar per cycle and writes the right hand and the left hand as two
+`$:` blocks on `gm_piano`, so they play together. An opening pickup bar is filled with a rest in
+front of its notes. Every bar is checked against the metre, and a bar that does not add up is
+named in the console tab, as are bars where it skipped a mark it could not read.
+
+It reads a clean digital engraving. Ties are played as a repeated note, grace notes, ornaments,
+dynamics, pedal marks and words are skipped, and a clef or metre change part way through, triplets
+and photographed or handwritten music are not read. On the sample it was built against, all
+fifteen left hand bars and ten of the fifteen right hand bars add up to the metre, and the first
+six bars match the printed notes; the right hand bars that do not are passages with two voices on
+one staff or a grace note. How it works and where it stops is in [Reading a piano score without a
+model](../journey/strudel-piano-score-import.md).
 
 ## MIDI devices
 

@@ -7,12 +7,17 @@ import type {
   TranscriptionStatus
 } from '../types'
 import { generateStrudelCode } from './generateStrudelCode'
+import { generateScoreCode } from './generateScoreCode'
 import { generateTabCode } from './generateTabCode'
 
-const codeFor = (result: TranscriptionOutput, sourceName: string): string =>
-  result.kind === 'tab'
+const codeFor = (result: TranscriptionOutput, sourceName: string): string => {
+  if (result.kind === 'score') {
+    return generateScoreCode(result, sourceName)
+  }
+  return result.kind === 'tab'
     ? generateTabCode(result, sourceName)
     : generateStrudelCode(result, sourceName)
+}
 
 type TranscriptionOptions = {
   runner: TranscriptionRunner
@@ -61,7 +66,7 @@ export const useStrudelTranscription = (
       options.appendLog(
         `Transcribed ${chosenFile.name}: ${result.beatsPerMinute} BPM, ${result.bars.length} bars`
       )
-      if (result.kind === 'tab') {
+      if (result.kind !== 'grid') {
         result.warnings.forEach((warning) => options.appendLog(warning, 'warn'))
       }
     } catch (error) {

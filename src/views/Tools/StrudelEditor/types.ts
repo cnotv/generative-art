@@ -411,8 +411,8 @@ export type MidiSnippet = {
   code: string
 }
 
-/** What an import produces: a grid of drums, bass and chords, or the notes of a tab. */
-export type TranscriptionOutput = TranscriptionResult | TabTranscription
+/** What an import produces: a grid of drums, bass and chords, the notes of a tab or a score. */
+export type TranscriptionOutput = TranscriptionResult | TabTranscription | ScoreTranscription
 
 export type TabInstrument = 'bass' | 'guitar'
 
@@ -464,4 +464,54 @@ export type TabStem = {
   x: number
   beams: number
   isTriplet: boolean
+}
+
+export type Clef = 'treble' | 'bass'
+
+/** A treble and a bass staff joined by bar lines, as in piano music. */
+export type GrandStaff = {
+  treble: TabSystem
+  bass: TabSystem
+}
+
+/** What sits at the start of a staff: the clef, the key signature and, on the first, the metre. */
+export type StaffPrelude = {
+  clef: Clef
+  /** Positive for sharps, negative for flats. */
+  keyAccidentals: number
+  beatsPerBar: number | null
+  endX: number
+}
+
+export type PixelBox = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+export type NoteHead = PixelBox & {
+  centerX: number
+  centerY: number
+  isHollow: boolean
+}
+
+/** A struck chord, a held note or a rest of one staff, before it is named and timed. */
+export type ScoreEvent = {
+  x: number
+  heads: NoteHead[]
+  beats: number
+}
+
+export type ScoreBar = {
+  rightHand: TabEvent[]
+  leftHand: TabEvent[]
+}
+
+export type ScoreTranscription = {
+  kind: 'score'
+  beatsPerMinute: number
+  beatsPerBar: number
+  bars: ScoreBar[]
+  warnings: string[]
 }
