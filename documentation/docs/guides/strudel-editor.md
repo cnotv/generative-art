@@ -29,7 +29,9 @@ flow tab:
 - **welcome**: intro and about
 - **patterns**: your saved patterns, then the examples, then the shipped
   electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
-  typed in by hand from a score and only approximate. Each is a link to its own anchor, so
+  typed in by hand from a score and only approximate, and three songs typed in from guitar
+  tabs: the Megalovania riff, Breakfast in America (Supertramp) and the Come as You Are riff
+  (Nirvana), played on the General MIDI guitars. Each is a link to its own anchor, so
   `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
   pattern can open in a new tab. The name field at the top saves the code in the editor under
   that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under

@@ -333,6 +333,57 @@ stack(
   // bass: only in the last bar
   note("<~!21 [d2 d2 d2 ~ a1 a1 ~ ~ ~ ~ ~ ~]>").s("sawtooth").lpf(500).gain(.6)
 )`
+  },
+  {
+    id: 'megalovania-riff',
+    label: 'Megalovania riff (Toby Fox)',
+    code: `// "Megalovania" by Toby Fox, the riff typed in from a guitar tab
+// One bar of sixteenth notes at 121 BPM; only the first two notes change,
+// stepping down D, C, B, B flat over four bars.
+
+setcpm(121/4)
+
+note("<d4 c4 b3 bb3>!2 d5 ~ a4 ~ ~ g#4 ~ g4 ~ f4@2 d4 f4 g4")
+  .s("gm_overdriven_guitar")`
+  },
+  {
+    id: 'breakfast-in-america',
+    label: 'Breakfast in America (Supertramp)',
+    code: `// "Breakfast in America" by Supertramp, the guitar part typed in from a tab:
+// intro, verse, bridge, verse, bridge. The tab speeds up from 70 to 74 BPM;
+// this keeps 72.
+
+setcpm(72/4)
+
+// One bar each, in eighth notes: a chord on the beat, a bass note between.
+const intro = note("[[c4,eb4,g4] g3]*4")
+const cmToBb = note("[[c4,eb4,g4] g3]*2@4 [[bb3,d4,f4] f3]*2@4")
+const abToBb = note("[[ab3,c4,eb4] eb3]*3@6 [ab3,c4,eb4,ab2] [bb3,d4,f4,bb2]")
+const abHeld = note("[[ab3,c4,eb4] eb3]*3@6 [ab3,c4,eb4,ab2]@2")
+const gOverB = note("[[b3,d4,g4] g3]*4")
+const cmHigh = note("[[c4,eb4,g4,c5] g3]*4")
+// Fm9 then B flat, the low F held under the second Fm9
+const fm9ToBb = note("[ab3,c4,eb4,g4]@2 [ab3,c4,eb4,g4] ~ [f3,bb3,d4,f4]@2 [f3,bb3,d4,f4] ~, f2@4 bb2@3 bb2")
+// The 2/4 bar fills the first half of its cycle, the only half arrange plays
+const bbTwoBeats = note("[[f3,bb3,d4,f4] bb2]*2 ~")
+
+const verse = [[1, cmToBb], [1, abToBb], [1, cmToBb], [1, abHeld], [1, gOverB], [1, cmHigh], [1, gOverB]]
+const bridge = [[2, fm9ToBb], [0.5, bbTwoBeats]]
+
+arrange([2, intro], ...verse, ...bridge, ...verse, ...bridge)
+  .s("gm_acoustic_guitar_steel")`
+  },
+  {
+    id: 'come-as-you-are-riff',
+    label: 'Come as You Are riff (Nirvana)',
+    code: `// "Come as You Are" by Nirvana, the intro riff typed in from a guitar tab
+// Tuned a whole step down, so the open low string is D; two bars of eighth
+// notes at 120 BPM, every note left ringing into the next.
+
+setcpm(120/4)
+
+note("<[e2@2 g2 e2 g2 e2 e2 eb2] [d2 a2 d2 d2@2 a2 d2 eb2]>")
+  .s("gm_electric_guitar_clean").clip(2).room(.3)`
   }
 ]
 
