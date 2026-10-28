@@ -50,12 +50,24 @@ const lineExtent = (image: TabImage, lineYs: number[]): { startX: number; endX: 
 }
 
 /**
- * Finds every staff on the page: groups of four (bass) or six (guitar) long horizontal lines
- * that sit evenly apart. Anything else, such as a rule or a table border, is ignored.
+ * Finds every staff with a given number of long horizontal lines sitting evenly apart. Any other
+ * group, such as a rule or a table border, is ignored.
+ * @param image - the page image
+ * @param isWantedLineCount - which line counts make a staff
+ * @returns the staves from top to bottom
+ */
+export const findStaves = (
+  image: TabImage,
+  isWantedLineCount: (lineCount: number) => boolean
+): TabSystem[] =>
+  splitIntoStaves(lineCentres(image))
+    .filter((lineYs) => isWantedLineCount(lineYs.length))
+    .map((lineYs) => ({ lineYs, ...lineExtent(image, lineYs) }))
+
+/**
+ * Finds every tab staff on the page: groups of four (bass) or six (guitar) lines.
  * @param image - the tab image
  * @returns the staves from top to bottom
  */
 export const findStaffSystems = (image: TabImage): TabSystem[] =>
-  splitIntoStaves(lineCentres(image))
-    .filter((lineYs) => lineYs.length in TAB_INSTRUMENT_BY_LINE_COUNT)
-    .map((lineYs) => ({ lineYs, ...lineExtent(image, lineYs) }))
+  findStaves(image, (lineCount) => lineCount in TAB_INSTRUMENT_BY_LINE_COUNT)

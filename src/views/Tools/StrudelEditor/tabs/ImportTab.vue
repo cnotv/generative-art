@@ -47,13 +47,13 @@ const onLoadRequested = (): void => {
 <template>
   <section class="strudel-import">
     <p class="strudel-import__intro">
-      Turn a song, a MIDI file or a tab screenshot into a Strudel pattern. Audio is analysed in your
-      browser for its tempo, drums, bass line and chords; a MIDI file is read note for note; a bass
-      or guitar tab is read from the picture. Either way it is written out as code you can play and
-      edit.
+      Turn a song, a MIDI file, a tab or a piano score into a Strudel pattern. Audio is analysed in
+      your browser for its tempo, drums, bass line and chords; a MIDI file is read note for note; a
+      bass or guitar tab and a piano score are read from the picture. Either way it is written out
+      as code you can play and edit.
     </p>
     <DropZone
-      label="Drop an MP3, other audio, a MIDI file or a tab screenshot here, or click to browse"
+      label="Drop an MP3, other audio, a MIDI file, or a tab or piano score image here, or click to browse"
       :accept="TRANSCRIPTION_ACCEPTED_TYPES"
       @change="onFilesChosen"
     />
@@ -88,8 +88,9 @@ const onLoadRequested = (): void => {
     <p class="strudel-import__note">
       From audio, the result is a sketch in the spirit of the track, not a copy: it hears drums, a
       bass line and one chord per bar, and leaves the melody to you. A tab screenshot works best
-      when it is a clean digital one with the rhythm row under the staff. The tempo is read from a
-      marker such as "= 96" above the first staff, and is 120 when there is none.
+      when it is a clean digital one with the rhythm row under the staff, and a piano score when it
+      is a clean engraving of a grand staff; grace notes, ornaments and ties are not read. The tempo
+      is read from a marker such as "= 96" above the first staff, and is 120 when there is none.
     </p>
   </section>
 </template>

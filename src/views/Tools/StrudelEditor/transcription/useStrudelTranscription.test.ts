@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { TranscriptionResult, TranscriptionRunner } from '../types'
+import type { ScoreTranscription, TranscriptionResult, TranscriptionRunner } from '../types'
 import { useStrudelTranscription } from './useStrudelTranscription'
 
 const RESULT: TranscriptionResult = {
@@ -25,7 +25,28 @@ const setup = (runner: TranscriptionRunner) => {
   return { transcription, applyCode, appendLog }
 }
 
+const SCORE: ScoreTranscription = {
+  kind: 'score',
+  beatsPerMinute: 65,
+  beatsPerBar: 4,
+  bars: [{ rightHand: [{ notes: ['a5'], beats: 4 }], leftHand: [{ notes: ['f#3'], beats: 4 }] }],
+  warnings: ['Bar 7, right hand: holds 3.75 beats, not 4']
+}
+
 describe('useStrudelTranscription', () => {
+  it('writes a piano score as two hands and logs what it could not read', async () => {
+    // Arrange
+    const { transcription, appendLog } = setup(vi.fn().mockResolvedValue(SCORE))
+
+    // Act
+    await transcription.transcribeFile(createFile('river.png'))
+
+    // Assert
+    expect(transcription.transcribedCode.value).toContain('// right hand')
+    expect(transcription.transcribedCode.value).toContain('// left hand')
+    expect(appendLog).toHaveBeenCalledWith('Bar 7, right hand: holds 3.75 beats, not 4', 'warn')
+  })
+
   it('turns the analysed file into Strudel code without touching the editor yet', async () => {
     // Arrange
     const { transcription, applyCode } = setup(vi.fn().mockResolvedValue(RESULT))

@@ -60,11 +60,11 @@ export const isImageFile = (chosenFile: File): boolean =>
   IMAGE_FILE_PATTERN.test(chosenFile.name) || chosenFile.type.startsWith('image/')
 
 /**
- * Reads the notes off a tab screenshot. The decoder and the reader are imported on demand,
+ * Reads the notes off a tab or piano score screenshot. The decoder and the reader are imported on demand,
  * keeping them out of the view chunk, and the reading runs in a worker.
  * @param imageFile - the uploaded screenshot
  * @param onProgress - called as each stage finishes
- * @returns the tab as bars of notes
+ * @returns the tab or the score as bars of notes
  */
 export const runTabTranscription: TranscriptionRunner = async (imageFile, onProgress) => {
   onProgress({ stage: 'decoding', fraction: 0 })
@@ -102,7 +102,7 @@ export const runMidiTranscription: TranscriptionRunner = async (midiFile, onProg
 }
 
 /**
- * The editor's runner: a screenshot is read as a tab, MIDI files note for note, anything else
+ * The editor's runner: a screenshot is read as a tab or a score, MIDI files note for note, anything else
  * is analysed as audio.
  * @param chosenFile - the uploaded file
  * @param onProgress - called as each stage finishes
