@@ -126,8 +126,17 @@ flowchart LR
 Each block loops on its own, so instruments with different bar counts drift and realign only at
 the least common multiple of their lengths. Padding or cutting to one length would change what
 was transcribed, so the import warns instead and leaves the choice in the code. A tempo that
-differs between screenshots is handled the same way: the first tab's tempo plays, and the others
+differs between screenshots is handled the same way: the first file's tempo plays, and the others
 are reported.
+
+A piano score joins a song the same way, as two instruments, one per hand. It brings one thing a
+tab never does, a metre other than four beats. Strudel's cycle is one bar for every block at once,
+so a score in three in a song of four has each bar stretched to the longer cycle and plays slower
+than marked. That is reported too rather than corrected, for the same reason as the loop lengths.
+
+Each imported block can end with a pianoroll under its line, on by default. The visual is a call
+appended to the block, so it is one more node on that instrument's branch in the flow view rather
+than anything the import has to model, and leaving it off gives back exactly the code from before.
 
 ## What it does not do
 
