@@ -32,6 +32,7 @@ const emit = defineEmits<{
 <style>
 .input {
   display: flex;
+  box-sizing: border-box;
   height: 2.5rem;
   width: 100%;
   border-radius: var(--radius-md);

@@ -22,7 +22,11 @@ export type StrudelEvaluationResult = {
   errorMessage?: string
 }
 
+export type StrudelExportFormat = 'wav' | 'midi'
+
 export type StrudelExportOptions = {
+  /** WAV is the sound as it plays; MIDI is its notes, for a DAW, a synth or a game. */
+  format: StrudelExportFormat
   startCycle: number
   endCycle: number
   sampleRate: number
@@ -39,6 +43,18 @@ export type StrudelPlayback = {
     patternCode: string,
     exportOptions: StrudelExportOptions
   ) => Promise<StrudelEvaluationResult>
+  /** Downloads the notes that start inside the cycles as a standard MIDI file. */
+  renderToMidi: (
+    patternCode: string,
+    exportOptions: StrudelExportOptions
+  ) => Promise<StrudelEvaluationResult>
+}
+
+/** One event of a pattern that starts inside the exported cycles, read off Strudel's hap. */
+export type StrudelScheduledHap = {
+  value: unknown
+  beginCycle: number
+  durationCycles: number
 }
 
 /** What the transpiler found in the evaluated code, in Strudel's own untyped shapes. */
