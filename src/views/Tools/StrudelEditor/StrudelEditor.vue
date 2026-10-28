@@ -80,7 +80,7 @@ const {
 } = useStrudelFlow()
 
 const editorMode = ref<StrudelEditorMode>('code')
-const { soundEntries, sampleGroups, soundsStatus, loadSounds } = useStrudelSounds()
+const { soundEntries, sampleGroups, voiceGroups, soundsStatus, loadSounds } = useStrudelSounds()
 
 // The sound list registers the whole library, so it loads only once something shows it.
 watch(
@@ -314,6 +314,7 @@ onBeforeUnmount(() => {
           :beats-per-minute="flowBeatsPerMinute"
           :beats-per-cycle="flowBeatsPerCycle"
           :sample-groups="sampleGroups"
+          :voice-groups="voiceGroups"
           @connect="onFlowNodesConnected"
           @update-node="updateFlowNodeData"
           @remove-node="removeFlowNode"

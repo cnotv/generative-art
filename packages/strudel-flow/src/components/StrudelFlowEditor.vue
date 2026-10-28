@@ -29,6 +29,8 @@ const props = defineProps<{
   beatsPerCycle: number
   /** Every sample the host can play, for the Samples and Beats nodes to pick from. */
   sampleGroups?: StrudelFlowSampleGroup[]
+  /** Every synth and instrument the host can play, for the Voice node to pick from. */
+  voiceGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -139,6 +141,7 @@ const openRadialMenu = (): void => {
           :data="nodeProperties.data"
           :selected="nodeProperties.selected"
           :sample-groups="sampleGroups ?? []"
+          :voice-groups="voiceGroups ?? []"
           @update="onNodeUpdated(nodeProperties.id, $event)"
           @remove="onNodeRemoved"
         />
