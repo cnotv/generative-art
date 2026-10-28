@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   ELECTRO_TUNES,
-  DEFAULT_SAMPLE_BANK,
+  STRUDEL_SAMPLE_BANKS,
   DEFAULT_STRUDEL_EXAMPLE_ID,
   STRUDEL_EXAMPLES,
   STRUDEL_LICENSE_NOTE
@@ -80,14 +80,16 @@ describe('StrudelEditor config', () => {
     expect(mentionsLicense).toBe(true)
   })
 
-  it('points the sample bank at a loadable github kit', () => {
+  it('registers dirt-samples last, so the names it shares stay the kit the examples play', () => {
     // Arrange
-    const sampleBank = DEFAULT_SAMPLE_BANK
+    const sampleBanks = STRUDEL_SAMPLE_BANKS
 
     // Act
-    const isGithubKit = sampleBank.startsWith('github:')
+    const lastBank = sampleBanks.at(-1)
 
     // Assert
-    expect(isGithubKit).toBe(true)
+    expect(lastBank?.manifestUrl).toBe(
+      'https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/strudel.json'
+    )
   })
 })

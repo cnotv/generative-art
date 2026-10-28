@@ -6,6 +6,21 @@ export type StrudelExample = {
   code: string
 }
 
+/** A sample manifest Strudel's `samples()` loads, with the folder its files are served from. */
+export type StrudelSampleBank = {
+  /** The sounds tab's heading for the bank's sounds. */
+  label: string
+  manifestUrl: string
+  /** Where its files are served; also how a registered sound is traced back to its bank. */
+  baseUrl: string
+  /** strudel.cc's grouping, so the sounds tab can tell drum machines from other samples. */
+  tag?: string
+  /** Splits the bank into one group per machine, its sounds named `<machine>_<part>`. */
+  groupsByMachine?: boolean
+  /** Shared by every sound in the bank, so dropped from their readable names. */
+  namePrefix?: string
+}
+
 /** A pattern the player saved under a name, kept in local storage. */
 export type StrudelSavedPattern = {
   name: string
@@ -269,6 +284,7 @@ export type StrudelTabId =
   | 'hints'
   | 'welcome'
   | 'patterns'
+  | 'sounds'
   | 'import'
   | 'midi'
   | 'reference'
@@ -278,10 +294,43 @@ export type StrudelTabId =
   | 'flow'
 
 export type StrudelSoundEntry = {
+  /** What code plays it by, as in `s("rolandtr909_bd")`. */
   name: string
+  /** A readable name, such as "Bass drum" or "Acoustic bass". */
+  label: string
+  /** The heading it is listed under: its bank, drum machine or instrument family. */
+  group: string
   type: string
+  tag: string
   sampleCount: number
 }
+
+/** Sounds listed under one heading in the sounds tab. */
+export type StrudelSoundGroup = {
+  label: string
+  sounds: StrudelSoundEntry[]
+}
+
+/** A drum machine as its alias list spells it. */
+export type StrudelDrumMachine = {
+  /** The machine's own spelling, such as "RolandTR909". */
+  name: string
+  /** The short bank name that also selects it, such as "TR909". */
+  alias: string
+}
+
+/** What naming the sounds needs beyond the sound map, gathered while the library loads. */
+export type StrudelSoundLibrary = {
+  /** Keyed by the lower-case id the machine's sounds start with, such as "rolandtr909". */
+  drumMachines: Record<string, StrudelDrumMachine>
+}
+
+export type StrudelSoundFilter = 'all' | 'samples' | 'drum-machines' | 'synths' | 'wavetables'
+
+export type StrudelSoundsStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+/** Strudel ships untyped JS, so every function read off one of its modules starts as this. */
+export type StrudelUnknownCallable = (...callArguments: unknown[]) => unknown
 
 export type StrudelLogEntry = {
   id: number

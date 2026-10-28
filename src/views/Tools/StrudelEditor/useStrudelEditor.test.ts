@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { nextTick } from 'vue'
 import {
-  DEFAULT_SAMPLE_BANK,
   DEFAULT_STRUDEL_EXAMPLE_ID,
   STRUDEL_SAVED_CODE_STORAGE_KEY,
   STRUDEL_SAVED_PATTERNS_STORAGE_KEY,
@@ -26,8 +25,7 @@ const {
   mockReplFactory,
   mockScopeInitializer,
   mockAudioInitializer,
-  mockSynthRegistrar,
-  mockSampleBankLoader,
+  mockLoadSoundLibrary,
   mockContextGetter,
   mockContextSetter,
   mockResumeFunction,
@@ -62,8 +60,7 @@ const {
     mockReplFactory: vi.fn(),
     mockScopeInitializer: vi.fn(),
     mockAudioInitializer: vi.fn(),
-    mockSynthRegistrar: vi.fn(),
-    mockSampleBankLoader: vi.fn(),
+    mockLoadSoundLibrary: vi.fn(),
     mockContextGetter: vi.fn(),
     mockContextSetter: vi.fn(),
     mockResumeFunction: vi.fn(),
@@ -83,11 +80,12 @@ vi.mock('@strudel/core', () => ({
 vi.mock('@strudel/mini', () => ({}))
 vi.mock('@strudel/webaudio', () => ({
   initAudio: mockAudioInitializer,
-  registerSynthSounds: mockSynthRegistrar,
-  samples: mockSampleBankLoader,
   getAudioContext: mockContextGetter,
   setAudioContext: mockContextSetter,
   webaudioOutput: mockScheduleHandler
+}))
+vi.mock('./strudelSoundLibrary', () => ({
+  loadStrudelSoundLibrary: mockLoadSoundLibrary
 }))
 vi.mock('@strudel/tonal', () => ({}))
 vi.mock('@strudel/midi/midi.mjs', () => ({}))
@@ -315,7 +313,6 @@ describe('loadDefaultStrudelPlayback', () => {
 
     // Assert
     expect(mockAudioInitializer).toHaveBeenCalledTimes(1)
-    expect(mockSynthRegistrar).toHaveBeenCalledTimes(1)
     expect(mockResumeFunction).toHaveBeenCalledTimes(1)
   })
 
@@ -420,7 +417,7 @@ describe('loadDefaultStrudelPlayback', () => {
     expect(evaluationResult).toEqual({ success: true })
   })
 
-  it('loads the default drum kit before anything can evaluate', async () => {
+  it('loads the sound library before anything can evaluate', async () => {
     // Arrange
     const playbackLoader = loadDefaultStrudelPlayback
 
@@ -429,10 +426,10 @@ describe('loadDefaultStrudelPlayback', () => {
     await playback.evaluateCode('s("bd sd")')
 
     // Assert
-    expect(mockSampleBankLoader).toHaveBeenCalledWith(DEFAULT_SAMPLE_BANK)
-    const bankLoadOrder = mockSampleBankLoader.mock.invocationCallOrder[0] ?? 0
+    const libraryLoadOrder = mockLoadSoundLibrary.mock.invocationCallOrder[0] ?? 0
     const evaluateOrder = mockEvaluateFunction.mock.invocationCallOrder[0] ?? 0
-    expect(bankLoadOrder).toBeLessThan(evaluateOrder)
+    expect(libraryLoadOrder).toBeGreaterThan(0)
+    expect(libraryLoadOrder).toBeLessThan(evaluateOrder)
   })
 
   it('puts slider() and the draw functions in the evaluation scope', async () => {
@@ -1014,6 +1011,7 @@ describe('useStrudelEditor', () => {
       'hints',
       'welcome',
       'patterns',
+      'sounds',
       'import',
       'midi',
       'reference',
@@ -1062,6 +1060,7 @@ describe('STRUDEL_TABS', () => {
       'hints',
       'welcome',
       'patterns',
+      'sounds',
       'import',
       'midi',
       'reference',

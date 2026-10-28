@@ -35,6 +35,18 @@ export type StrudelFlowSoundGroup = {
   sounds: string[]
 }
 
+/** A sample a picker offers: the name code plays it by, and a readable name to show. */
+export type StrudelFlowSampleOption = {
+  value: string
+  label: string
+}
+
+/** The host's samples under one heading, such as a drum machine, for the sample pickers. */
+export type StrudelFlowSampleGroup = {
+  label: string
+  samples: StrudelFlowSampleOption[]
+}
+
 export type StrudelFlowPadData = StrudelFlowMuteFlag & {
   kind: 'pad'
   steps: number

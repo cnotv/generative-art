@@ -8,10 +8,13 @@ import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import { useStrudelFlow } from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
 import { useStrudelHints } from './hints/useStrudelHints'
-import type { StrudelEditorMode, StrudelTabId } from './types'
+import { useStrudelSounds } from './useStrudelSounds'
+import { previewStrudelSound } from './strudelPlayback'
+import type { StrudelEditorMode, StrudelSoundEntry, StrudelTabId } from './types'
 import HintsTab from './tabs/HintsTab.vue'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
+import SoundsTab from './tabs/SoundsTab.vue'
 import ImportTab from './tabs/ImportTab.vue'
 import MidiTab from './tabs/MidiTab.vue'
 import StrudelCodeEditor from './StrudelCodeEditor.vue'
@@ -77,6 +80,23 @@ const {
 } = useStrudelFlow()
 
 const editorMode = ref<StrudelEditorMode>('code')
+const { soundEntries, sampleGroups, soundsStatus, loadSounds } = useStrudelSounds()
+
+// The sound list registers the whole library, so it loads only once something shows it.
+watch(
+  [activeTab, editorMode],
+  ([tabId, mode]) => {
+    if (tabId === 'sounds' || mode === 'flow') {
+      void loadSounds()
+    }
+  },
+  { immediate: true }
+)
+
+const onSoundPreview = (soundEntry: StrudelSoundEntry): void => {
+  // A sound that cannot play has nothing to recover; the click simply stays silent.
+  previewStrudelSound(soundEntry.name, soundEntry.type).catch(() => undefined)
+}
 const sidePanelCollapsed = ref(false)
 let flowPlaybackTimer: number | null = null
 let codeParseTimer: number | null = null
@@ -293,6 +313,7 @@ onBeforeUnmount(() => {
           v-model:edges="flowEdges"
           :beats-per-minute="flowBeatsPerMinute"
           :beats-per-cycle="flowBeatsPerCycle"
+          :sample-groups="sampleGroups"
           @connect="onFlowNodesConnected"
           @update-node="updateFlowNodeData"
           @remove-node="removeFlowNode"
@@ -352,6 +373,12 @@ onBeforeUnmount(() => {
             @select="onPatternSelected"
             @save="savePattern"
             @delete="deleteSavedPattern"
+          />
+          <SoundsTab
+            v-else-if="activeTab === 'sounds'"
+            :sound-entries="soundEntries"
+            :sounds-status="soundsStatus"
+            @preview="onSoundPreview"
           />
           <ImportTab
             v-else-if="activeTab === 'import'"

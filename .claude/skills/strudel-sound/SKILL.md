@@ -19,13 +19,13 @@ in this repository. The editor itself is documented in
 
 Save it as `<name>.strudel` in the scratchpad while iterating.
 
-| What             | Here                                                                                                                                                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Samples          | the dirt-samples kit only: `bd`, `sd`, `hh`, `oh`, `cp`, `rim`, `lt`, `mt`, `ht`, `cr`, `rd`, `cb`, `sh` and the rest of `github:tidalcycles/dirt-samples` |
-| Banks            | none. `.bank("RolandTR909")` fails with `sound RolandTR909_hh not found`                                                                                   |
-| Synths           | `sine`, `sawtooth`, `square`, `triangle`, and the other superdough synths                                                                                  |
-| Tempo            | `setcpm(bpm / 4)`: one cycle is a bar of four beats, which the MIDI export assumes too                                                                     |
-| Pitches for MIDI | `note(...)`, or `n(...)` with `.scale(...)`. A bare `n` on a synth has no pitch in the MIDI file                                                           |
+| What             | Here                                                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Samples          | everything strudel.cc preloads: dirt-samples, `piano`, the VCSL instruments, mridangam and the uzu drum kit; the sounds tab lists every name |
+| Banks            | the tidal drum machines, by full or short name: `.bank("RolandTR909")` or `.bank("TR909")`                                                   |
+| Synths           | `sine`, `sawtooth`, `square`, `triangle`, the other superdough synths, the uzu wavetables (`wt_*`) and the General MIDI soundfonts (`gm_*`)  |
+| Tempo            | `setcpm(bpm / 4)`: one cycle is a bar of four beats, which the MIDI export assumes too                                                       |
+| Pitches for MIDI | `note(...)`, or `n(...)` with `.scale(...)`. A bare `n` on a synth has no pitch in the MIDI file                                             |
 
 ## 2. Render it
 

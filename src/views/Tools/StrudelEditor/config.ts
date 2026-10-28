@@ -5,6 +5,8 @@ import type {
   StrudelInstrumentRole,
   StrudelMusicStyle,
   StrudelPatternIdea,
+  StrudelSampleBank,
+  StrudelSoundFilter,
   StrudelTabId,
   StrudelVisualName,
   TranscriptionStage
@@ -331,6 +333,57 @@ stack(
   // bass: only in the last bar
   note("<~!21 [d2 d2 d2 ~ a1 a1 ~ ~ ~ ~ ~ ~]>").s("sawtooth").lpf(500).gain(.6)
 )`
+  },
+  {
+    id: 'megalovania-riff',
+    label: 'Megalovania riff (Toby Fox)',
+    code: `// "Megalovania" by Toby Fox, the riff typed in from a guitar tab
+// One bar of sixteenth notes at 121 BPM; only the first two notes change,
+// stepping down D, C, B, B flat over four bars.
+
+setcpm(121/4)
+
+note("<d4 c4 b3 bb3>!2 d5 ~ a4 ~ ~ g#4 ~ g4 ~ f4@2 d4 f4 g4")
+  .s("gm_overdriven_guitar")`
+  },
+  {
+    id: 'breakfast-in-america',
+    label: 'Breakfast in America (Supertramp)',
+    code: `// "Breakfast in America" by Supertramp, the guitar part typed in from a tab:
+// intro, verse, bridge, verse, bridge. The tab speeds up from 70 to 74 BPM;
+// this keeps 72.
+
+setcpm(72/4)
+
+// One bar each, in eighth notes: a chord on the beat, a bass note between.
+const intro = note("[[c4,eb4,g4] g3]*4")
+const cmToBb = note("[[c4,eb4,g4] g3]*2@4 [[bb3,d4,f4] f3]*2@4")
+const abToBb = note("[[ab3,c4,eb4] eb3]*3@6 [ab3,c4,eb4,ab2] [bb3,d4,f4,bb2]")
+const abHeld = note("[[ab3,c4,eb4] eb3]*3@6 [ab3,c4,eb4,ab2]@2")
+const gOverB = note("[[b3,d4,g4] g3]*4")
+const cmHigh = note("[[c4,eb4,g4,c5] g3]*4")
+// Fm9 then B flat, the low F held under the second Fm9
+const fm9ToBb = note("[ab3,c4,eb4,g4]@2 [ab3,c4,eb4,g4] ~ [f3,bb3,d4,f4]@2 [f3,bb3,d4,f4] ~, f2@4 bb2@3 bb2")
+// The 2/4 bar fills the first half of its cycle, the only half arrange plays
+const bbTwoBeats = note("[[f3,bb3,d4,f4] bb2]*2 ~")
+
+const verse = [[1, cmToBb], [1, abToBb], [1, cmToBb], [1, abHeld], [1, gOverB], [1, cmHigh], [1, gOverB]]
+const bridge = [[2, fm9ToBb], [0.5, bbTwoBeats]]
+
+arrange([2, intro], ...verse, ...bridge, ...verse, ...bridge)
+  .s("gm_acoustic_guitar_steel")`
+  },
+  {
+    id: 'come-as-you-are-riff',
+    label: 'Come as You Are riff (Nirvana)',
+    code: `// "Come as You Are" by Nirvana, the intro riff typed in from a guitar tab
+// Tuned a whole step down, so the open low string is D; two bars of eighth
+// notes at 120 BPM, every note left ringing into the next.
+
+setcpm(120/4)
+
+note("<[e2@2 g2 e2 g2 e2 e2 eb2] [d2 a2 d2 d2@2 a2 d2 eb2]>")
+  .s("gm_electric_guitar_clean").clip(2).room(.3)`
   }
 ]
 
@@ -345,10 +398,131 @@ export const STRUDEL_SAVED_PATTERN_ID_PREFIX = 'saved-'
 export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
 
 /**
- * Classic TR-909 style kit the shipped examples play. Loaded once before the first
- * evaluation, or every trigger fails with "sound not found".
+ * Every bank strudel.cc preloads, plus dirt-samples, which the shipped examples play. Loaded
+ * once, before the first evaluation, or every trigger fails with "sound not found". The lists
+ * download together but register in this order, and a later bank wins a name two banks share:
+ * dirt-samples is last, so `bd`, `sd`, `hh` and the other names it shares with the uzu drum kit
+ * stay the kit the examples were written for. The CDN folders are the ones strudel.cc reads
+ * from, faster than the GitHub folders the manifests name.
  */
-export const DEFAULT_SAMPLE_BANK = 'github:tidalcycles/dirt-samples'
+export const STRUDEL_SAMPLE_BANKS: StrudelSampleBank[] = [
+  {
+    label: 'Piano',
+    manifestUrl: 'https://strudel.b-cdn.net/piano.json',
+    baseUrl: 'https://strudel.b-cdn.net/piano/'
+  },
+  {
+    label: 'VCSL instruments',
+    manifestUrl: 'https://strudel.b-cdn.net/vcsl.json',
+    baseUrl: 'https://strudel.b-cdn.net/VCSL/'
+  },
+  {
+    label: 'Drum machines',
+    manifestUrl: 'https://strudel.b-cdn.net/tidal-drum-machines.json',
+    baseUrl: 'https://strudel.b-cdn.net/tidal-drum-machines/machines/',
+    tag: 'drum-machines',
+    groupsByMachine: true
+  },
+  {
+    label: 'Uzu drum kit',
+    manifestUrl: 'https://strudel.b-cdn.net/uzu-drumkit.json',
+    baseUrl: 'https://strudel.b-cdn.net/uzu-drumkit/',
+    tag: 'drum-machines'
+  },
+  {
+    label: 'Wavetables',
+    manifestUrl: 'https://strudel.b-cdn.net/uzu-wavetables.json',
+    baseUrl: 'https://strudel.b-cdn.net/uzu-wavetables/',
+    namePrefix: 'wt_'
+  },
+  {
+    label: 'Mridangam',
+    manifestUrl: 'https://strudel.b-cdn.net/mridangam.json',
+    baseUrl: 'https://strudel.b-cdn.net/mrid/',
+    tag: 'drum-machines',
+    namePrefix: 'mridangam_'
+  },
+  {
+    label: 'Dirt samples',
+    manifestUrl: 'https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/strudel.json',
+    baseUrl: 'https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/'
+  }
+]
+
+/** The sounds tab's filters, the ones strudel.cc's sounds tab offers. */
+export const STRUDEL_SOUND_FILTERS: { id: StrudelSoundFilter; label: string }[] = [
+  { id: 'all', label: 'all' },
+  { id: 'samples', label: 'samples' },
+  { id: 'drum-machines', label: 'drum machines' },
+  { id: 'synths', label: 'synths' },
+  { id: 'wavetables', label: 'wavetables' }
+]
+
+/** The tag strudel.cc gives drum machine banks, which the filters split from other samples. */
+export const STRUDEL_DRUM_MACHINES_TAG = 'drum-machines'
+
+/**
+ * What the drum abbreviations stand for, as the sounds tab names them. A drum machine sound is
+ * named after its part (`RolandTR909_bd`), and so is a plain kit sample (`bd`, `808bd`).
+ */
+export const STRUDEL_DRUM_PART_NAMES: Record<string, string> = {
+  bd: 'bass drum',
+  sd: 'snare drum',
+  hh: 'closed hi-hat',
+  oh: 'open hi-hat',
+  cp: 'clap',
+  rim: 'rimshot',
+  lt: 'low tom',
+  mt: 'mid tom',
+  ht: 'high tom',
+  cr: 'crash',
+  rd: 'ride',
+  cb: 'cowbell',
+  sh: 'shaker',
+  tb: 'tambourine',
+  perc: 'percussion',
+  misc: 'miscellaneous',
+  fx: 'effects',
+  brk: 'breakbeat'
+}
+
+/** The sixteen General MIDI families, eight programs each, that group the `gm_*` soundfonts. */
+export const STRUDEL_GENERAL_MIDI_FAMILIES = [
+  'Pianos',
+  'Chromatic percussion',
+  'Organs',
+  'Guitars',
+  'Basses',
+  'Strings',
+  'Ensembles',
+  'Brass',
+  'Reeds',
+  'Pipes',
+  'Synth leads',
+  'Synth pads',
+  'Synth effects',
+  'World instruments',
+  'Percussive',
+  'Sound effects'
+]
+
+/** General MIDI programs per family; a soundfont's family is its program divided by this. */
+export const STRUDEL_GENERAL_MIDI_FAMILY_SIZE = 8
+
+/** The group of the built-in oscillators and noise, which come from no sample bank. */
+export const STRUDEL_SYNTHS_GROUP_LABEL = 'Synths'
+
+/** How long a sound plays when its name is clicked in the sounds tab, in seconds. */
+export const STRUDEL_SOUND_PREVIEW_SECONDS = 0.5
+
+/** The note a synth or soundfont previews at, A3, since unlike a sample it has no pitch of its own. */
+export const STRUDEL_SOUND_PREVIEW_NOTE = 57
+
+/** Lead time before a preview starts, so the first scheduled sample is not clipped. */
+export const STRUDEL_SOUND_PREVIEW_LEAD_SECONDS = 0.05
+
+/** Short names such as `.bank("TR909")` for the drum machines, applied once they are loaded. */
+export const STRUDEL_BANK_ALIASES_URL = 'https://strudel.b-cdn.net/tidal-drum-machines-alias.json'
 
 /** Strudel's own tempo before a pattern sets one: one cycle every two seconds. */
 export const DEFAULT_CPS = 0.5
@@ -401,6 +575,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'hints', label: 'hints' },
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
+  { id: 'sounds', label: 'sounds' },
   { id: 'import', label: 'import' },
   { id: 'midi', label: 'midi' },
   { id: 'reference', label: 'reference' },

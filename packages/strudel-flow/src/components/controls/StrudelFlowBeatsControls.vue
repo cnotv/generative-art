@@ -8,13 +8,14 @@ import {
   STRUDEL_FLOW_STEP_COUNT
 } from '../../config'
 import { createStrudelFlowDrumRow } from '../../nodeDefaults'
-import type { StrudelFlowBeatsData, StrudelFlowDrumRow } from '../../types'
+import type { StrudelFlowBeatsData, StrudelFlowDrumRow, StrudelFlowSampleGroup } from '../../types'
 import StrudelFlowAccordion from './StrudelFlowAccordion.vue'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 import StrudelFlowStepper from './StrudelFlowStepper.vue'
 
 const props = defineProps<{
   data: StrudelFlowBeatsData
+  sampleGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -25,7 +26,25 @@ const visibleSteps = computed(() =>
   Array.from({ length: props.data.steps }, (_, stepIndex) => stepIndex)
 )
 
-const KNOWN_SOUNDS = new Set(STRUDEL_FLOW_DRUM_SOUND_GROUPS.flatMap((group) => group.sounds))
+const DRUM_SOUNDS = new Set(STRUDEL_FLOW_DRUM_SOUND_GROUPS.flatMap((group) => group.sounds))
+
+// The host's full library follows the drum shortlist, minus what the shortlist already names.
+const libraryGroups = computed(() =>
+  (props.sampleGroups ?? [])
+    .map((group) => ({
+      label: group.label,
+      options: group.samples.filter((sample) => !DRUM_SOUNDS.has(sample.value))
+    }))
+    .filter((group) => group.options.length > 0)
+)
+
+const knownSounds = computed(
+  () =>
+    new Set([
+      ...DRUM_SOUNDS,
+      ...libraryGroups.value.flatMap((group) => group.options.map((option) => option.value))
+    ])
+)
 
 const toOptions = (sounds: string[]): { value: string; label: string }[] =>
   sounds.map((sound) => ({ value: sound, label: sound }))
@@ -34,11 +53,14 @@ const toOptions = (sounds: string[]): { value: string; label: string }[] =>
 const soundGroups = (
   sound: string
 ): { label: string; options: { value: string; label: string }[] }[] => [
-  ...(KNOWN_SOUNDS.has(sound) ? [] : [{ label: 'In this pattern', options: toOptions([sound]) }]),
+  ...(knownSounds.value.has(sound)
+    ? []
+    : [{ label: 'In this pattern', options: toOptions([sound]) }]),
   ...STRUDEL_FLOW_DRUM_SOUND_GROUPS.map((group) => ({
     label: group.label,
     options: toOptions(group.sounds)
-  }))
+  })),
+  ...libraryGroups.value
 ]
 
 const update = (patch: Partial<StrudelFlowBeatsData>): void => {
