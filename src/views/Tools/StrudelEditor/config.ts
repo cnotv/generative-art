@@ -361,6 +361,8 @@ export const EXPORT_DEFAULT_OPTIONS: StrudelExportOptions = {
   sampleRate: 48000,
   fileName: ''
 }
+/** The finest repetition the export looks for: a sound played up to sixteen times a cycle. */
+export const STRUDEL_MAX_REPETITIONS_PER_CYCLE = 16
 export const EXPORT_FORMAT_OPTIONS = [
   { value: 'wav', label: 'WAV' },
   { value: 'midi', label: 'MIDI' }

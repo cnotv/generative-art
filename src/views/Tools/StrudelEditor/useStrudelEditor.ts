@@ -84,8 +84,11 @@ type StrudelEditorState = StrudelTranscriptionState & {
   stopPattern: () => Promise<void>
   exportStatus: Ref<StrudelExportStatus>
   exportError: Ref<string>
-  /** Renders the code on screen offline and downloads it as a WAV file. */
+  /** Renders the code on screen offline and downloads it as a WAV or MIDI file. */
   exportPattern: (exportOptions: StrudelExportOptions) => Promise<void>
+  /** Cycles in one repetition of the code, once measured for the export tab. */
+  repetitionCycles: Ref<number | null>
+  measureRepetition: () => Promise<void>
   setActiveTab: (tabId: StrudelTabId) => void
   clearLogEntries: () => void
   attachEditor: (editorHandle: StrudelEditorHandle | null) => void

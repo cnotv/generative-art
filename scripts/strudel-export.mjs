@@ -7,8 +7,9 @@
  *
  * Usage:
  *   node scripts/strudel-export.mjs <pattern.strudel> --out <file.wav|file.mid>
- *     [--start 0] [--cycles 1] [--rate 48000] [--url http://localhost:5317]
- * The format follows the output's extension.
+ *     [--start 0] [--cycles 1 | --once] [--rate 48000] [--url http://localhost:5317]
+ * The format follows the output's extension. `--once` exports a single repetition of the
+ * pattern, which is shorter than a cycle when the code speeds it up, as `fast(2)` does.
  */
 import { readFileSync } from 'node:fs'
 import { basename, extname, resolve } from 'node:path'
@@ -25,6 +26,7 @@ const { values, positionals } = parseArgs({
     out: { type: 'string' },
     start: { type: 'string', default: '0' },
     cycles: { type: 'string', default: '1' },
+    once: { type: 'boolean', default: false },
     rate: { type: 'string', default: '48000' },
     url: { type: 'string', default: 'http://localhost:5317' }
   }
@@ -61,6 +63,12 @@ try {
   await page.getByLabel('File name').fill(basename(outputPath, extension))
   await page.getByLabel('Start cycle').fill(values.start)
   await page.getByLabel('Cycles').fill(values.cycles)
+  if (values.once) {
+    await page.getByRole('button', { name: 'One repetition' }).click()
+    const measured = page.getByText(/One repetition lasts/)
+    await measured.waitFor({ timeout: RENDER_TIMEOUT })
+    console.log(await measured.innerText())
+  }
   if (format === 'wav') {
     await page.getByRole('button', { name: rateLabel, exact: true }).click()
   }

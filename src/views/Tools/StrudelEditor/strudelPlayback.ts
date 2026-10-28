@@ -1,9 +1,16 @@
-import { DEFAULT_CPS, DEFAULT_SAMPLE_BANK, STRUDEL_DRAW_TIME, STRUDEL_NO_DRAW_TIME } from './config'
+import {
+  DEFAULT_CPS,
+  EXPORT_DEFAULT_OPTIONS,
+  DEFAULT_SAMPLE_BANK,
+  STRUDEL_DRAW_TIME,
+  STRUDEL_NO_DRAW_TIME
+} from './config'
 import {
   downloadExportFile,
   readScheduledHaps,
   renderStrudelPatternToWav
 } from './strudelOfflineRender'
+import { findRepetitionCycles } from './patternRepetition'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
@@ -365,6 +372,17 @@ export const loadDefaultStrudelPlayback = async (
     },
     stopPlayback: async (): Promise<void> => {
       await stopFunction()
+    },
+    measureRepetition: async (patternCode: string): Promise<number> => {
+      const pattern = await evaluateForExport(patternCode)
+      const cyclesPerSecond = readCyclesPerSecond(replScheduler)
+      return findRepetitionCycles(
+        readScheduledHaps(
+          pattern,
+          { ...EXPORT_DEFAULT_OPTIONS, startCycle: 0, endCycle: 1 },
+          cyclesPerSecond
+        )
+      )
     },
     renderToWav: exportAs('wav', (pattern, cyclesPerSecond, exportOptions) =>
       renderStrudelPatternToWav(engine.audioModule, pattern, cyclesPerSecond, exportOptions)

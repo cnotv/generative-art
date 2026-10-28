@@ -320,8 +320,10 @@ straight into the editor, already naming the first device found:
 ## Exporting a WAV or MIDI file
 
 The **export** tab saves the code on screen as a file. Choose the format, the cycle to start at
-and how many cycles to export: the default is one, so a sound effect or a single bar comes out
-played once. The file name defaults to the date. Playback stops while it renders, and Play works
+and how many cycles to export: the default is one. A pattern can repeat inside a cycle, as the
+Coin example does with `fast(2)`, so **One repetition** measures how long a single play of it
+lasts and sets the length to that, which can be a fraction of a cycle: Coin then exports as one
+coin, half a cycle long. The file name defaults to the date. Playback stops while it renders, and Play works
 again as soon as the file is saved.
 
 ![The export tab with MIDI picked](/img/strudel-editor/export-tab.webp)
@@ -350,7 +352,7 @@ node scripts/strudel-export.mjs groove.strudel --out groove.mid --url http://loc
 ```
 
 The format follows the extension; `--start`, `--cycles` and `--rate` set the range and the WAV
-sample rate.
+sample rate, and `--once` exports one repetition instead of a cycle count.
 
 The flow editor follows [Strudel Flow](https://xyflow.com/strudel-flow) by
 [xyflow](https://xyflow.com), whose source is on
