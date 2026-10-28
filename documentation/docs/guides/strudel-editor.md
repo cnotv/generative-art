@@ -352,8 +352,9 @@ pnpm vitest run src/views/Tools/StrudelEditor/codeEditor/strudelDocumentation.te
 Open the **import** tab and drop an audio file on it, or click to browse. Anything the browser
 can decode works: MP3, WAV, OGG, M4A, FLAC. The file never leaves the browser. It is decoded to
 mono, analysed in a Web Worker, and summarised as a tempo, a bar count and a chord progression,
-with the generated code underneath. Press **Load into editor** to replace the editor's code
-with it, then Play.
+with the generated code folded under **Code**; open it to read it. The tab's own help sits under
+**Turn music into Strudel code** at the top and **Read suggestions** at the bottom, folded until you
+open them. Press **Load** to replace the editor's code with it, then Play.
 
 ![The import tab after transcribing a drum, bass and chord loop](/img/strudel-editor/import-tab.webp)
 
@@ -387,7 +388,7 @@ heard, so the result is exact rather than a sketch:
 | Chords | the major or minor triad closest to every note held across the bar                 |
 
 The tempo is the file's first tempo, and notes are placed by their ticks, so a tempo change inside
-the file never shifts them off the grid. Up to 64 bars are read. **Load into editor** replaces the
+the file never shifts them off the grid. Up to 64 bars are read. **Load** replaces the
 code, as with audio.
 
 ## Turning a tab screenshot into a pattern
@@ -447,11 +448,12 @@ tab lists the files in the order they arrived, named bass, guitar, then bass 2 f
 or right hand and left hand for a score, each with a **Remove** button. An audio or MIDI file still
 stands alone and replaces the list.
 
-![The import tab holding a bass tab and a piano score: the pianoroll box ticked, one tempo, a row per file with a Remove button, the tempo and loop warnings, the code with a labelled block and a pianoroll for each instrument, and the Load into editor and Add to editor buttons](/img/strudel-editor/import-tab-instruments.webp)
+![The import tab holding a bass tab and a piano score: the pianoroll box ticked, one tempo, a row per file with a Remove button, the warnings and the code folded, and the Load and Add buttons](/img/strudel-editor/import-tab-instruments.webp)
 
 The song plays at the first file's tempo, with one bar per cycle in the first file's metre. Each
 instrument is its own `$:` block, so Strudel plays them together, and the flow view shows a Notes
-node with its Voice for each one. Three notes go to the console tab and under the list:
+node with its Voice for each one. Three kinds of warning go to the console tab and fold under a
+count, such as **2 warnings**, below the list:
 
 - a file marked with another tempo, which still plays at the first one;
 - a score counting another number of beats to the bar. Each bar fills one cycle, so a waltz in a
@@ -459,15 +461,15 @@ node with its Voice for each one. Three notes go to the console tab and under th
 - two files whose bar counts do not divide each other. Each block loops on its own, so a 20 bar
   bass and an 8 bar guitar line up again only every 40 bars. Nothing is padded or cut.
 
-**Load into editor** replaces the code, as before. **Add to editor** keeps the code that is there
+**Load** replaces the code, as before. **Add** keeps the code that is there
 and appends the instruments as blocks, without a second tempo. Code that plays a single
 unlabelled expression, such as one tab loaded on its own, gets `$:` in front of that expression
 first, because Strudel stops playing it as soon as any labelled block appears.
 
 ### A pianoroll under each instrument
 
-The **Draw a pianoroll per instrument** box above the list is ticked by default, and its info
-button explains it in a tooltip. While it is ticked, every instrument block a tab or score import
+The **Draw a pianoroll per instrument** box above the list is ticked by default. While it is
+ticked, every instrument block a tab or score import
 writes ends with `._pianoroll()` on its own line, so each one draws its notes under its code as it
 plays, and the flow view gains a Visualizer node on each instrument. A block that only rests stays
 `silence`, with nothing to draw. Unticked, the code is exactly what the import wrote before, and

@@ -157,7 +157,7 @@ describe('StrudelEditor audible playback', () => {
 
     try {
       // Act: trusted click, so the browser grants the audio gesture.
-      await page.getByRole('button', { name: 'Play' }).click()
+      await page.getByRole('button', { name: 'Play', exact: true }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
@@ -205,7 +205,7 @@ describe('StrudelEditor audible playback', () => {
       // Act: switch to patterns tab, click Caverave, then play
       await page.getByRole('tab', { name: 'patterns' }).click()
       await page.getByRole('link', { name: 'Caverave' }).click()
-      await page.getByRole('button', { name: 'Play' }).click()
+      await page.getByRole('button', { name: 'Play', exact: true }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
@@ -256,9 +256,9 @@ describe('StrudelEditor audible playback', () => {
       await page.getByRole('tab', { name: 'import' }).click()
       const fileInput = wrapper.find<HTMLInputElement>('input[type="file"]').element
       await userEvent.upload(page.elementLocator(fileInput), audioFile)
-      await page.getByRole('button', { name: 'Load into editor' }).click({ timeout: 60000 })
+      await page.getByRole('button', { name: 'Load', exact: true }).click({ timeout: 60000 })
       const editorCode = readEditorCode()
-      await page.getByRole('button', { name: 'Play' }).click()
+      await page.getByRole('button', { name: 'Play', exact: true }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
@@ -293,7 +293,7 @@ describe('StrudelEditor audible playback', () => {
       // Act: type the code the way a player would, then press Play.
       const codeEditor = page.getByRole('textbox', { name: 'Live code pattern' })
       await codeEditor.fill(INLINE_WIDGET_CODE)
-      await page.getByRole('button', { name: 'Play' }).click()
+      await page.getByRole('button', { name: 'Play', exact: true }).click()
       await vi.waitFor(
         () => {
           expect(oscillatorCount).toBeGreaterThan(0)
@@ -335,7 +335,7 @@ describe('StrudelEditor audible playback', () => {
       try {
         // Act
         await page.getByRole('textbox', { name: 'Live code pattern' }).fill(exampleCode)
-        await page.getByRole('button', { name: 'Play' }).click()
+        await page.getByRole('button', { name: 'Play', exact: true }).click()
         await vi.waitFor(
           () => {
             expect(
@@ -375,7 +375,7 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         await codeEditor.fill(visualCode)
-        await page.getByRole('button', { name: 'Play' }).click()
+        await page.getByRole('button', { name: 'Play', exact: true }).click()
         await vi.waitFor(
           () => {
             expect(hasPaintedPixels(backgroundCanvas())).toBe(true)
@@ -407,7 +407,7 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         await codeEditor.fill('note("c3 e3").s("triangle")')
-        await page.getByRole('button', { name: 'Play' }).click()
+        await page.getByRole('button', { name: 'Play', exact: true }).click()
         await vi.waitFor(
           () => {
             expect(readPlayButtonLabel()).toBe('Stop')
@@ -443,7 +443,7 @@ describe('StrudelEditor audible playback', () => {
       try {
         // Act
         await page.getByRole('textbox', { name: 'Live code pattern' }).fill('s("bd sd"')
-        await page.getByRole('button', { name: 'Play' }).click()
+        await page.getByRole('button', { name: 'Play', exact: true }).click()
         await vi.waitFor(
           () => {
             expect(wrapper.find('.strudel-editor__error').exists()).toBe(true)
@@ -531,7 +531,7 @@ describe('StrudelEditor audible playback', () => {
           },
           { timeout: 15000 }
         )
-        await page.getByRole('button', { name: 'Play' }).click()
+        await page.getByRole('button', { name: 'Play', exact: true }).click()
         await vi.waitFor(
           () => {
             expect(bufferStartCount).toBeGreaterThan(0)
@@ -833,7 +833,7 @@ describe('StrudelEditor audible playback', () => {
 
         // Act
         const appliedCount = await applyEveryHint()
-        await page.getByRole('button', { name: 'Play' }).click()
+        await page.getByRole('button', { name: 'Play', exact: true }).click()
 
         // Assert
         expect(appliedCount).toBeLessThan(MAX_HINTS_APPLIED)
@@ -885,7 +885,7 @@ describe('StrudelEditor audible playback', () => {
           )
         ].map((title) => title.textContent)
         await applyEveryHint()
-        await page.getByRole('button', { name: 'Play' }).click()
+        await page.getByRole('button', { name: 'Play', exact: true }).click()
 
         // Assert
         expect(reviewTitles).toEqual([

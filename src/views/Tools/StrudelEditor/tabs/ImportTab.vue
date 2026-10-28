@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Button from '@/components/ui/button/Button.vue'
-import { Info } from 'lucide-vue-next'
 import { Checkbox } from '@/components/ui/checkbox'
-import IconButton from '@/components/IconButton.vue'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion'
 import DropZone from '@/components/DropZone.vue'
 import { TRANSCRIPTION_ACCEPTED_TYPES, TRANSCRIPTION_STAGE_LABELS } from '../config'
 import { createImportedSong, toSongSources } from '../transcription/generateSongCode'
@@ -65,27 +69,9 @@ const songRows = computed(() => {
   }
 })
 
-const INTRO_HINT = [
-  'Turn a song, a MIDI file, a tab or a piano score into a Strudel pattern.',
-  'Audio is analysed in your browser for its tempo, drums, bass line and chords;',
-  'a MIDI file is read note for note; a bass or guitar tab and a piano score are read from the',
-  'picture. Either way it is written out as code you can play and edit.'
-].join(' ')
-
-const NOTE_HINT = [
-  'From audio, the result is a sketch in the spirit of the track, not a copy: it hears drums, a',
-  'bass line and one chord per bar, and leaves the melody to you. A tab screenshot works best',
-  'when it is a clean digital one with the rhythm row under the staff, and a piano score when it',
-  'is a clean engraving of a grand staff; grace notes, ornaments and ties are not read. The tempo',
-  'is read from a marker such as "= 96" above the first staff, and is 120 when there is none.',
-  'Drop several tabs and scores, together or one after another, and each becomes its own',
-  "instrument on the first file's tempo. Load replaces the editor's code; Add appends the",
-  'instruments to it.'
-].join(' ')
-
-const VISUALIZER_HINT =
-  'Ends every tab and score instrument with ._pianoroll(), so each draws its notes under its ' +
-  'line and gets a Visualizer node in the flow view. Off, the code is the plain import.'
+const warningCountLabel = computed(() =>
+  props.warnings.length === 1 ? '1 warning' : `${props.warnings.length} warnings`
+)
 
 const onFilesChosen = (files: FileList): void => {
   emit('files', [...files])
@@ -94,12 +80,19 @@ const onFilesChosen = (files: FileList): void => {
 
 <template>
   <section class="strudel-import">
-    <p class="strudel-import__intro">
-      Turn music into Strudel code
-      <IconButton size="xs" :title="INTRO_HINT">
-        <Info aria-hidden="true" />
-      </IconButton>
-    </p>
+    <Accordion>
+      <AccordionItem value="intro">
+        <AccordionTrigger>Turn music into Strudel code</AccordionTrigger>
+        <AccordionContent>
+          <p class="strudel-import__text">
+            Turn a song, a MIDI file, a tab or a piano score into a Strudel pattern. Audio is
+            analysed in your browser for its tempo, drums, bass line and chords; a MIDI file is read
+            note for note; a bass or guitar tab and a piano score are read from the picture. Either
+            way it is written out as code you can play and edit.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
     <DropZone
       label="Drop an MP3, other audio, a MIDI file, or tab or piano score images here, or click to browse"
       :accept="TRANSCRIPTION_ACCEPTED_TYPES"
@@ -113,9 +106,6 @@ const onFilesChosen = (files: FileList): void => {
         @update:model-value="emit('update:addVisualizer', $event)"
       />
       <label for="strudel-import-visualizer">Draw a pianoroll per instrument</label>
-      <IconButton size="xs" :title="VISUALIZER_HINT">
-        <Info aria-hidden="true" />
-      </IconButton>
     </div>
 
     <div v-if="status === 'working'" class="strudel-import__progress" role="status">
@@ -139,8 +129,15 @@ const onFilesChosen = (files: FileList): void => {
         <dt>Chords</dt>
         <dd>{{ chordProgression || 'none detected' }}</dd>
       </dl>
-      <pre class="strudel-import__code">{{ code }}</pre>
-      <Button class="strudel-import__action" @click="emit('load')">Load into editor</Button>
+      <Accordion>
+        <AccordionItem value="code">
+          <AccordionTrigger>Code</AccordionTrigger>
+          <AccordionContent>
+            <pre class="strudel-import__code">{{ code }}</pre>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      <Button class="strudel-import__action" @click="emit('load')">Load</Button>
     </template>
     <template v-else-if="songRows.rows.length > 0">
       <dl class="strudel-import__summary">
@@ -164,22 +161,45 @@ const onFilesChosen = (files: FileList): void => {
           </Button>
         </li>
       </ul>
-      <ul v-if="warnings.length > 0" class="strudel-import__warnings">
-        <li v-for="warning in warnings" :key="warning">{{ warning }}</li>
-      </ul>
-      <pre class="strudel-import__code">{{ code }}</pre>
+      <Accordion type="multiple">
+        <AccordionItem v-if="warnings.length > 0" value="warnings">
+          <AccordionTrigger>{{ warningCountLabel }}</AccordionTrigger>
+          <AccordionContent>
+            <ul class="strudel-import__warnings">
+              <li v-for="warning in warnings" :key="warning">{{ warning }}</li>
+            </ul>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="code">
+          <AccordionTrigger>Code</AccordionTrigger>
+          <AccordionContent>
+            <pre class="strudel-import__code">{{ code }}</pre>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
       <div class="strudel-import__actions">
-        <Button @click="emit('load')">Load into editor</Button>
-        <Button variant="outline" @click="emit('add')">Add to editor</Button>
+        <Button @click="emit('load')">Load</Button>
+        <Button variant="outline" @click="emit('add')">Add</Button>
       </div>
     </template>
 
-    <p class="strudel-import__note">
-      What reads well
-      <IconButton size="xs" :title="NOTE_HINT">
-        <Info aria-hidden="true" />
-      </IconButton>
-    </p>
+    <Accordion>
+      <AccordionItem value="suggestions">
+        <AccordionTrigger>Read suggestions</AccordionTrigger>
+        <AccordionContent>
+          <p class="strudel-import__text">
+            From audio, the result is a sketch in the spirit of the track, not a copy: it hears
+            drums, a bass line and one chord per bar, and leaves the melody to you. A tab screenshot
+            works best when it is a clean digital one with the rhythm row under the staff, and a
+            piano score when it is a clean engraving of a grand staff; grace notes, ornaments and
+            ties are not read. The tempo is read from a marker such as "= 96" above the first staff,
+            and is 120 when there is none. Drop several tabs and scores, together or one after
+            another, and each becomes its own instrument on the first file's tempo. Load replaces
+            the editor's code; Add appends the instruments to it.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   </section>
 </template>
 
@@ -191,11 +211,7 @@ const onFilesChosen = (files: FileList): void => {
   padding: var(--spacing-4);
 }
 
-.strudel-import__intro,
-.strudel-import__note {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
+.strudel-import__text {
   margin: 0;
   font-size: var(--font-size-md);
   color: var(--color-muted-foreground);
