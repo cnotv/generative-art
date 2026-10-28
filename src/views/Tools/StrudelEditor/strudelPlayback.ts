@@ -162,6 +162,8 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     import('@strudel/transpiler'),
     import('@strudel/draw'),
     import('@strudel/midi/midi.mjs'),
+    // Pinned to the release built on the same webaudio: a mismatch installs a second copy,
+    // and the fonts register in a sound map playback never reads, failing silently.
     import('@strudel/soundfonts')
   ])
   // Importing the editor module registers _pianoroll, _scope and the other inline widgets
