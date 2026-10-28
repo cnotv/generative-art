@@ -119,6 +119,27 @@ pattern turns that pattern into a block too, and both keep playing. Only `$:` bl
 on their own, so a single plain pattern is never reviewed. Every snippet uses only the sounds the
 editor loads and Strudel's built-in synths.
 
+## The timeline
+
+A timeline runs along the bottom of the left side, under the code editor or the flow canvas, and
+shows where the pattern is in its loop: the bar, the time in seconds and the loop's length. Its
+playhead follows the sound while the pattern plays.
+
+![Two instruments playing from bar 5: the timeline reads Bar 5 of 12 and Loops every 12 bars, and the boxed notes are the fifth bar's](/img/strudel-editor/timeline.webp)
+
+- **Click or drag** the timeline to pick a time. While the pattern plays it carries on from there;
+  while it is stopped, the next Play starts there. Stop puts the playhead back on the picked time.
+  The arrow keys move it once the playhead has focus.
+- **One bar is one cycle**, the same bar the flow tempo bar counts beats in, and the seconds come
+  from the tempo the code sets.
+- **The loop** is measured each time the pattern plays or updates: the shortest number of whole
+  bars after which every instrument comes round together. Instruments of different lengths only
+  line up at their least common multiple, so a 3 bar bass under a 4 bar lead loops every 12 bars.
+  A pattern that does not repeat within 16 bars, such as one built on `rand`, shows a 16 bar
+  window and says so. Until the first Play the timeline spans 16 bars.
+- **Code and flow mode share one position**: both play the same compiled code through one
+  scheduler, so switching mode keeps the playhead where it is.
+
 ## The code editor
 
 The editor fills the left side of the screen at full height and scrolls on its own; the
