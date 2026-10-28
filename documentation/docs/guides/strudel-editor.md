@@ -447,7 +447,7 @@ tab lists the files in the order they arrived, named bass, guitar, then bass 2 f
 or right hand and left hand for a score, each with a **Remove** button. An audio or MIDI file still
 stands alone and replaces the list.
 
-![The import tab holding a bass tab and a piano score: the visualizer switch on, one tempo, a row per file with a Remove button, the tempo and loop warnings, the code with a labelled block and a pianoroll for each instrument, and the Load into editor and Add to editor buttons](/img/strudel-editor/import-tab-instruments.webp)
+![The import tab holding a bass tab and a piano score: the pianoroll box ticked, one tempo, a row per file with a Remove button, the tempo and loop warnings, the code with a labelled block and a pianoroll for each instrument, and the Load into editor and Add to editor buttons](/img/strudel-editor/import-tab-instruments.webp)
 
 The song plays at the first file's tempo, with one bar per cycle in the first file's metre. Each
 instrument is its own `$:` block, so Strudel plays them together, and the flow view shows a Notes
@@ -466,13 +466,14 @@ first, because Strudel stops playing it as soon as any labelled block appears.
 
 ### A pianoroll under each instrument
 
-The **Add a visualizer to each instrument** switch above the list is on by default. While it is
-on, every instrument block a tab or score import writes ends with `._pianoroll()` on its own line,
-so each one draws its notes under its code as it plays, and the flow view gains a Visualizer node
-on each instrument. A block that only rests stays `silence`, with nothing to draw. Switched off,
-the code is exactly what the import wrote before, and one file on its own writes exactly its
-single import code either way. The audio and MIDI import is left alone: it writes one `stack(...)`
-of drums, bass and chords, where a pianoroll would draw the drums too.
+The **Draw a pianoroll per instrument** box above the list is ticked by default, and its info
+button explains it in a tooltip. While it is ticked, every instrument block a tab or score import
+writes ends with `._pianoroll()` on its own line, so each one draws its notes under its code as it
+plays, and the flow view gains a Visualizer node on each instrument. A block that only rests stays
+`silence`, with nothing to draw. Unticked, the code is exactly what the import wrote before, and
+one file on its own writes exactly its single import code either way. The audio and MIDI import is
+left alone: it writes one `stack(...)` of drums, bass and chords, where a pianoroll would draw the
+drums too.
 
 ## MIDI devices
 

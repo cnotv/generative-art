@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Button from '@/components/ui/button/Button.vue'
-import { Switch } from '@/components/ui/switch'
+import { Info } from 'lucide-vue-next'
+import { Checkbox } from '@/components/ui/checkbox'
+import IconButton from '@/components/IconButton.vue'
 import DropZone from '@/components/DropZone.vue'
 import { TRANSCRIPTION_ACCEPTED_TYPES, TRANSCRIPTION_STAGE_LABELS } from '../config'
 import { createImportedSong, toSongSources } from '../transcription/generateSongCode'
@@ -63,6 +65,10 @@ const songRows = computed(() => {
   }
 })
 
+const VISUALIZER_HINT =
+  'Ends every tab and score instrument with ._pianoroll(), so each draws its notes under its ' +
+  'line and gets a Visualizer node in the flow view. Off, the code is the plain import.'
+
 const onFilesChosen = (files: FileList): void => {
   emit('files', [...files])
 }
@@ -82,13 +88,17 @@ const onFilesChosen = (files: FileList): void => {
       multiple
       @change="onFilesChosen"
     />
-    <label class="strudel-import__option">
-      <Switch
+    <div class="strudel-import__option">
+      <Checkbox
+        id="strudel-import-visualizer"
         :model-value="addVisualizer"
         @update:model-value="emit('update:addVisualizer', $event)"
       />
-      Add a visualizer to each instrument
-    </label>
+      <label for="strudel-import-visualizer">Draw a pianoroll per instrument</label>
+      <IconButton size="xs" :title="VISUALIZER_HINT">
+        <Info aria-hidden="true" />
+      </IconButton>
+    </div>
 
     <div v-if="status === 'working'" class="strudel-import__progress" role="status">
       <progress
@@ -153,8 +163,8 @@ const onFilesChosen = (files: FileList): void => {
       is a clean engraving of a grand staff; grace notes, ornaments and ties are not read. The tempo
       is read from a marker such as "= 96" above the first staff, and is 120 when there is none.
       Drop several tabs and scores, together or one after another, and each becomes its own
-      instrument on the first file's tempo, with a pianoroll under it while the visualizer switch is
-      on. Load replaces the editor's code; Add appends the instruments to it.
+      instrument on the first file's tempo, with a pianoroll under it while that box is ticked. Load
+      replaces the editor's code; Add appends the instruments to it.
     </p>
   </section>
 </template>

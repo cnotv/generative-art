@@ -159,18 +159,32 @@ describe('ImportTab', () => {
     expect(summary).not.toContain('Chords')
   })
 
-  it('offers a visualizer switch that reflects its state and reports a change', async () => {
+  it('offers a pianoroll checkbox that reflects its state and reports a change', async () => {
     // Arrange
     const wrapper = mountTab({ addVisualizer: true })
-    const visualizerSwitch = wrapper.find('button[role="switch"]')
+    const visualizerCheckbox = wrapper.find('button[role="checkbox"]')
 
     // Act
-    await visualizerSwitch.trigger('click')
+    await visualizerCheckbox.trigger('click')
 
     // Assert
-    expect(visualizerSwitch.attributes('aria-checked')).toBe('true')
-    expect(wrapper.text()).toContain('Add a visualizer to each instrument')
+    expect(visualizerCheckbox.attributes('aria-checked')).toBe('true')
+    expect(wrapper.find(`label[for="${visualizerCheckbox.attributes('id')}"]`).text()).toBe(
+      'Draw a pianoroll per instrument'
+    )
     expect(wrapper.emitted('update:addVisualizer')).toEqual([[false]])
+  })
+
+  it('explains the pianoroll in a tooltip rather than in the label', () => {
+    // Arrange
+    const wrapper = mountTab()
+
+    // Act
+    const info = wrapper.find('.strudel-import__option button[title]')
+
+    // Assert
+    expect(info.attributes('title')).toContain('._pianoroll()')
+    expect(info.attributes('title')).toContain('Off, the code is the plain import')
   })
 
   it('lists a piano score next to a tab as one row naming both hands', () => {

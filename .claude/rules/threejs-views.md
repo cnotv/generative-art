@@ -47,7 +47,7 @@ exception is content that is part of the game itself, such as a score HUD.
 
 - Expose runtime settings through `registerViewConfig`, not `<Teleport>` into panel slots.
 - Use `ButtonSelector` for multi-option button groups. If a needed input type is not covered
-  by the existing components (`Slider`, `Switch`, `Select`, `ColorPicker`, `CoordinateInput`,
+  by the existing components (`Slider`, `Checkbox`, `Select`, `ColorPicker`, `CoordinateInput`,
   `ButtonSelector`), request a new one and describe its requirements — never build an ad-hoc
   widget in a view template.
 - At most one level of Accordion; sub-groups inside `AccordionContent` are plain labelled
