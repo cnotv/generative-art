@@ -1,5 +1,5 @@
 const BASE_URL = window.location.origin
-const DEFAULT_IMAGE = `${BASE_URL}/logobw.svg`
+const DEFAULT_IMAGE = `${BASE_URL}${import.meta.env.BASE_URL}og/experiments/LandingPage.jpg`
 const DEFAULT_DESCRIPTION =
   'Interactive generative art, 3D experiments, and games built with Three.js and Vue.'
 

@@ -104,7 +104,7 @@ A PR body links to these homes; a section growing into an explanation belongs in
 
 - **Dev server:** `pnpm dev --port 5317 --strictPort`, served at `http://localhost:5317`
 - **Routes:** `/<dir-lowercase>/<ViewBaseName>` from the view tree, e.g. `/games/GoombaRunner`
-- **Verify notes:** `documentation/docs/guides/visual-verification-with-screenshots.md`
+- **Verify notes:** `documentation/docs/guides/visual-verification-with-screenshots.md`; shots: `pnpm capture`
 - **Checks:** `pnpm lint`, `pnpm lint:css`, `pnpm test:unit`; **Security:** `pnpm audit --prod`, no threat model
 - **Docs home:** `documentation/docs/`, homes above; **Docs build:** `pnpm docs:build`
 - **Preview deploys:** the `deploy/netlify` check's `targetUrl`, with the view's route appended

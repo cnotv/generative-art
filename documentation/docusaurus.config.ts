@@ -1,6 +1,6 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
+import { themes as prismThemes } from 'prism-react-renderer'
+import type { Config } from '@docusaurus/types'
+import type * as Preset from '@docusaurus/preset-classic'
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -11,7 +11,7 @@ const config: Config = {
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: true // Improve compatibility with the upcoming Docusaurus v4
   },
 
   // Set the production url of your site here
@@ -28,7 +28,7 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   markdown: {
-    mermaid: true,
+    mermaid: true
   },
 
   themes: ['@docusaurus/theme-mermaid'],
@@ -38,7 +38,7 @@ const config: Config = {
   // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en']
   },
 
   presets: [
@@ -47,25 +47,27 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/cnotv/generative-art/tree/main/documentation/',
+          editUrl: 'https://github.com/cnotv/generative-art/tree/main/documentation/'
         },
         blog: false,
         theme: {
-          customCss: './src/css/custom.css',
-        },
-      } satisfies Preset.Options,
-    ],
+          customCss: './src/css/custom.css'
+        }
+      } satisfies Preset.Options
+    ]
   ],
 
   themeConfig: {
+    // Same capture as the app's default OG image (scripts/capture.mjs)
+    image: 'https://cnotv.xyz/og/experiments/LandingPage.jpg',
     colorMode: {
-      respectPrefersColorScheme: true,
+      respectPrefersColorScheme: true
     },
     docs: {
       sidebar: {
         hideable: false,
-        autoCollapseCategories: false,
-      },
+        autoCollapseCategories: false
+      }
     },
     navbar: {
       title: 'WebGameKit',
@@ -74,14 +76,14 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'tutorialSidebar',
           position: 'left',
-          label: 'Docs',
+          label: 'Docs'
         },
         {
           href: 'https://github.com/cnotv/generative-art',
           label: 'GitHub',
-          position: 'right',
-        },
-      ],
+          position: 'right'
+        }
+      ]
     },
     footer: {
       style: 'dark',
@@ -91,56 +93,56 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/getting-started',
+              to: '/docs/getting-started'
             },
             {
               label: 'Architecture',
-              to: '/docs/architecture/monorepo',
-            },
-          ],
+              to: '/docs/architecture/monorepo'
+            }
+          ]
         },
         {
           title: 'Packages',
           items: [
             {
               label: '@webgamekit/threejs',
-              to: '/docs/packages/threejs',
+              to: '/docs/packages/threejs'
             },
             {
               label: '@webgamekit/controls',
-              to: '/docs/packages/controls',
+              to: '/docs/packages/controls'
             },
             {
               label: '@webgamekit/animation',
-              to: '/docs/packages/animation',
+              to: '/docs/packages/animation'
             },
             {
               label: '@webgamekit/game',
-              to: '/docs/packages/game',
+              to: '/docs/packages/game'
             },
             {
               label: '@webgamekit/audio',
-              to: '/docs/packages/audio',
-            },
-          ],
+              to: '/docs/packages/audio'
+            }
+          ]
         },
         {
           title: 'Links',
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/cnotv/generative-art',
-            },
-          ],
-        },
+              href: 'https://github.com/cnotv/generative-art'
+            }
+          ]
+        }
       ],
-      copyright: `WebGameKit Documentation`,
+      copyright: `WebGameKit Documentation`
     },
     prism: {
       theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
-    },
-  } satisfies Preset.ThemeConfig,
-};
+      darkTheme: prismThemes.dracula
+    }
+  } satisfies Preset.ThemeConfig
+}
 
-export default config;
+export default config
