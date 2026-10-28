@@ -411,6 +411,7 @@ export type StrudelTranscriptionState = {
   transcribedCode: Readonly<Ref<string>>
   transcriptionWarnings: Readonly<Ref<string[]>>
   transcriptionError: Ref<string>
+  addVisualizer: Ref<boolean>
   transcribeFiles: (chosenFiles: File[]) => Promise<void>
   removeTranscription: (transcriptionId: number) => void
   loadTranscription: () => void
@@ -455,20 +456,33 @@ export type TabTranscription = {
   warnings: string[]
 }
 
-/** A tab read from one file, before it joins a song. */
-export type TabSource = {
+/** A tab or a piano score read from one file, before it joins a song. */
+export type SongSource = {
   sourceName: string
-  transcription: TabTranscription
+  transcription: TabTranscription | ScoreTranscription
 }
 
-/** A tab in a song, named for its block: its instrument, numbered when another shares it. */
-export type TabSongInstrument = TabSource & { label: string }
+/** One block of a song: a tab, or one hand of a score, named for what it plays. */
+export type SongInstrument = {
+  label: string
+  sourceName: string
+  sourceIndex: number
+  sound: string
+  bars: TabEvent[][]
+}
 
-/** Several tabs played together on one tempo, the first tab's. */
-export type TabSong = {
+/** Several imported files played together on the first file's tempo and metre. */
+export type ImportedSong = {
   beatsPerMinute: number
-  instruments: TabSongInstrument[]
+  beatsPerBar: number
+  sources: SongSource[]
+  instruments: SongInstrument[]
   warnings: string[]
+}
+
+/** How the tab and score imports write their code. */
+export type ImportCodeOptions = {
+  addVisualizer: boolean
 }
 
 /** How far each pixel sits from the page background, so dark and light themes read alike. */

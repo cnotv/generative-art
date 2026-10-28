@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Button from '@/components/ui/button/Button.vue'
+import { Switch } from '@/components/ui/switch'
 import DropZone from '@/components/DropZone.vue'
 import { TRANSCRIPTION_ACCEPTED_TYPES, TRANSCRIPTION_STAGE_LABELS } from '../config'
-import { createTabSong, toTabSources } from '../transcription/generateTabCode'
+import { createImportedSong, toSongSources } from '../transcription/generateSongCode'
 import type { ImportedTranscription, TranscriptionProgress, TranscriptionStatus } from '../types'
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const props = defineProps<{
   code: string
   warnings: string[]
   errorMessage: string
+  addVisualizer: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +22,7 @@ const emit = defineEmits<{
   load: []
   add: []
   remove: [transcriptionId: number]
+  'update:addVisualizer': [addVisualizer: boolean]
 }>()
 
 const stageLabel = computed(() =>
@@ -28,28 +31,34 @@ const stageLabel = computed(() =>
     : TRANSCRIPTION_STAGE_LABELS[props.progress.stage]
 )
 
-// Audio, MIDI and score imports stand alone, so the list then holds just that one.
-const standaloneResult = computed(() => {
+// An audio or MIDI import stands alone, so the list then holds just that one.
+const gridResult = computed(() => {
   const result = props.transcriptions[0]?.result
-  return result === undefined || result.kind === 'tab' ? null : result
+  return result?.kind === 'grid' ? result : null
 })
 
 const chordProgression = computed(() =>
-  (standaloneResult.value?.kind === 'grid' ? standaloneResult.value.bars : [])
+  (gridResult.value?.bars ?? [])
     .map((bar) => bar.chord)
     .filter((chord): chord is string => chord !== null)
     .filter((chord, index, chords) => index === 0 || chords[index - 1] !== chord)
     .join(' ')
 )
 
-// Only tabs are listed, and only while the list holds nothing else, so rows match the song's.
-const tabRows = computed(() => {
-  const song = createTabSong(toTabSources(props.transcriptions))
+// One row per file, naming the instruments it plays; a score that only rests plays none.
+const songRows = computed(() => {
+  const song = createImportedSong(toSongSources(props.transcriptions))
   return {
     beatsPerMinute: song.beatsPerMinute,
-    instruments: song.instruments.map((instrument, index) => ({
-      ...instrument,
-      id: props.transcriptions[index].id
+    rows: song.sources.map((source, sourceIndex) => ({
+      id: props.transcriptions[sourceIndex].id,
+      sourceName: source.sourceName,
+      barCount: source.transcription.bars.length,
+      label:
+        song.instruments
+          .filter((instrument) => instrument.sourceIndex === sourceIndex)
+          .map((instrument) => instrument.label)
+          .join(' and ') || 'piano score'
     }))
   }
 })
@@ -73,6 +82,13 @@ const onFilesChosen = (files: FileList): void => {
       multiple
       @change="onFilesChosen"
     />
+    <label class="strudel-import__option">
+      <Switch
+        :model-value="addVisualizer"
+        @update:model-value="emit('update:addVisualizer', $event)"
+      />
+      Add a visualizer to each instrument
+    </label>
 
     <div v-if="status === 'working'" class="strudel-import__progress" role="status">
       <progress
@@ -86,41 +102,35 @@ const onFilesChosen = (files: FileList): void => {
     <p v-else-if="status === 'error'" class="strudel-import__error" role="alert">
       {{ errorMessage }}
     </p>
-    <template v-if="standaloneResult !== null">
+    <template v-if="gridResult !== null">
       <dl class="strudel-import__summary">
         <dt>Tempo</dt>
-        <dd>{{ standaloneResult.beatsPerMinute }} BPM</dd>
+        <dd>{{ gridResult.beatsPerMinute }} BPM</dd>
         <dt>Bars</dt>
-        <dd>{{ standaloneResult.bars.length }}</dd>
-        <template v-if="standaloneResult.kind === 'grid'">
-          <dt>Chords</dt>
-          <dd>{{ chordProgression || 'none detected' }}</dd>
-        </template>
+        <dd>{{ gridResult.bars.length }}</dd>
+        <dt>Chords</dt>
+        <dd>{{ chordProgression || 'none detected' }}</dd>
       </dl>
       <pre class="strudel-import__code">{{ code }}</pre>
       <Button class="strudel-import__action" @click="emit('load')">Load into editor</Button>
     </template>
-    <template v-else-if="tabRows.instruments.length > 0">
+    <template v-else-if="songRows.rows.length > 0">
       <dl class="strudel-import__summary">
         <dt>Tempo</dt>
-        <dd>{{ tabRows.beatsPerMinute }} BPM</dd>
+        <dd>{{ songRows.beatsPerMinute }} BPM</dd>
       </dl>
       <ul class="strudel-import__instruments">
-        <li
-          v-for="instrument in tabRows.instruments"
-          :key="instrument.id"
-          class="strudel-import__instrument"
-        >
-          <span class="strudel-import__instrument-label">{{ instrument.label }}</span>
+        <li v-for="row in songRows.rows" :key="row.id" class="strudel-import__instrument">
+          <span class="strudel-import__instrument-label">{{ row.label }}</span>
           <span class="strudel-import__instrument-source">
-            {{ instrument.sourceName }}, {{ instrument.transcription.bars.length }} bars
+            {{ row.sourceName }}, {{ row.barCount }} bars
           </span>
           <Button
             class="strudel-import__instrument-remove"
             size="sm"
             variant="outline"
-            :aria-label="`Remove ${instrument.label} ${instrument.sourceName}`"
-            @click="emit('remove', instrument.id)"
+            :aria-label="`Remove ${row.label} ${row.sourceName}`"
+            @click="emit('remove', row.id)"
           >
             Remove
           </Button>
@@ -142,8 +152,9 @@ const onFilesChosen = (files: FileList): void => {
       when it is a clean digital one with the rhythm row under the staff, and a piano score when it
       is a clean engraving of a grand staff; grace notes, ornaments and ties are not read. The tempo
       is read from a marker such as "= 96" above the first staff, and is 120 when there is none.
-      Drop several tabs, together or one after another, and each becomes its own instrument on the
-      first tab's tempo. Load replaces the editor's code; Add appends the instruments to it.
+      Drop several tabs and scores, together or one after another, and each becomes its own
+      instrument on the first file's tempo, with a pianoroll under it while the visualizer switch is
+      on. Load replaces the editor's code; Add appends the instruments to it.
     </p>
   </section>
 </template>
@@ -199,6 +210,14 @@ const onFilesChosen = (files: FileList): void => {
 
 .strudel-import__summary dd {
   margin: 0;
+  color: var(--color-foreground);
+}
+
+.strudel-import__option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-md);
   color: var(--color-foreground);
 }
 

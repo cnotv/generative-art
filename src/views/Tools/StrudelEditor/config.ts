@@ -1,5 +1,6 @@
 import type {
   DrumSound,
+  ImportCodeOptions,
   StrudelExample,
   StrudelExportOptions,
   StrudelInstrumentRole,
@@ -1356,6 +1357,12 @@ export const SCORE_WHOLE_NOTE_MIN_WIDTH_RATIO = 1.4
 export const SCORE_DOT_FACTOR = 1.5
 export const SCORE_HOLLOW_BEATS = 2
 export const SCORE_SOUND = 'gm_piano'
+
+/** The visual a tab or score import draws under each instrument's line when asked to. */
+export const IMPORT_VISUAL_CALL = '._pianoroll()'
+
+/** Import code as it was first written: no visual under the lines. */
+export const IMPORT_CODE_PLAIN: ImportCodeOptions = { addVisualizer: false }
 export const SCORE_MARK_MERGE_MARGIN_RATIO = 0.3
 export const SCORE_UNREAD_REACH_RATIO = 1.5
 export const SCORE_BAR_LINE_MAX_WIDTH_RATIO = 0.4

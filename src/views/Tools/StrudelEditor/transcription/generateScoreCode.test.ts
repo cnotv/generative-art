@@ -76,4 +76,28 @@ describe('generateScoreCode', () => {
     // Assert
     expect(code).not.toContain('// left hand')
   })
+
+  it('draws a pianoroll under each hand when the visualizer is on', () => {
+    // Arrange
+    const transcription = score()
+
+    // Act
+    const code = generateScoreCode(transcription, 'river.png', { addVisualizer: true })
+
+    // Assert
+    expect(code).toContain('$: note("<[~@14 a4 c#5] [a5,e5]>").s("gm_piano")\n  ._pianoroll()')
+    expect(code).toContain('$: note("<~ [f#3 c#4]>").s("gm_piano")\n  ._pianoroll()')
+  })
+
+  it('writes the same code as before when the visualizer is off', () => {
+    // Arrange
+    const transcription = score()
+
+    // Act
+    const code = generateScoreCode(transcription, 'river.png', { addVisualizer: false })
+
+    // Assert
+    expect(code).toBe(generateScoreCode(transcription, 'river.png'))
+    expect(code).not.toContain('_pianoroll')
+  })
 })

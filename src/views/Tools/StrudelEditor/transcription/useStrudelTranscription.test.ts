@@ -196,35 +196,74 @@ describe('useStrudelTranscription', () => {
     expect(transcription.transcribedCode.value.match(/setcps/g)).toHaveLength(1)
   })
 
-  it.each([
-    ['an audio song', 'song.mp3', RESULT],
-    ['a piano score', 'river.png', SCORE]
-  ] as const)(
-    'replaces the tabs with %s, and that with a later tab',
-    async (_description, standaloneName, standaloneResult) => {
-      // Arrange
-      const { transcription } = setup(
-        runnerByName({
-          'low.png': BASS_TAB,
-          [standaloneName]: standaloneResult,
-          'lead.png': GUITAR_TAB
-        })
-      )
+  it('adds a piano score to the tabs as two more instruments', async () => {
+    // Arrange
+    const { transcription } = setup(runnerByName({ 'low.png': BASS_TAB, 'river.png': SCORE }))
 
-      // Act
-      await transcription.transcribeFiles([createFile('low.png'), createFile(standaloneName)])
-      const afterStandalone = transcription.importedTranscriptions.value.map(
-        (entry) => entry.sourceName
-      )
-      await transcription.transcribeFiles([createFile('lead.png')])
+    // Act
+    await transcription.transcribeFiles([createFile('low.png'), createFile('river.png')])
 
-      // Assert
-      expect(afterStandalone).toEqual([standaloneName])
-      expect(transcription.importedTranscriptions.value.map((entry) => entry.sourceName)).toEqual([
-        'lead.png'
-      ])
-    }
-  )
+    // Assert
+    expect(transcription.importedTranscriptions.value.map((entry) => entry.sourceName)).toEqual([
+      'low.png',
+      'river.png'
+    ])
+    expect(transcription.transcribedCode.value).toContain('// right hand "river.png"')
+    expect(transcription.transcribedCode.value).toContain('// left hand "river.png"')
+  })
+
+  it('replaces the tabs and scores with an audio song, and that with a later tab', async () => {
+    // Arrange
+    const { transcription } = setup(
+      runnerByName({
+        'low.png': BASS_TAB,
+        'river.png': SCORE,
+        'song.mp3': RESULT,
+        'lead.png': GUITAR_TAB
+      })
+    )
+
+    // Act
+    await transcription.transcribeFiles([
+      createFile('low.png'),
+      createFile('river.png'),
+      createFile('song.mp3')
+    ])
+    const afterAudio = transcription.importedTranscriptions.value.map((entry) => entry.sourceName)
+    await transcription.transcribeFiles([createFile('lead.png')])
+
+    // Assert
+    expect(afterAudio).toEqual(['song.mp3'])
+    expect(transcription.importedTranscriptions.value.map((entry) => entry.sourceName)).toEqual([
+      'lead.png'
+    ])
+  })
+
+  it('draws a pianoroll under each instrument by default, and not once switched off', async () => {
+    // Arrange
+    const { transcription } = setup(runnerByName({ 'lead.png': GUITAR_TAB }))
+    await transcription.transcribeFiles([createFile('lead.png')])
+    const codeByDefault = transcription.transcribedCode.value
+
+    // Act
+    transcription.addVisualizer.value = false
+
+    // Assert
+    expect(codeByDefault.endsWith('  ._pianoroll()')).toBe(true)
+    expect(transcription.transcribedCode.value).not.toContain('_pianoroll')
+  })
+
+  it('leaves the audio song without a visualizer', async () => {
+    // Arrange
+    const { transcription } = setup(vi.fn().mockResolvedValue(RESULT))
+
+    // Act
+    await transcription.transcribeFiles([createFile()])
+
+    // Assert
+    expect(transcription.addVisualizer.value).toBe(true)
+    expect(transcription.transcribedCode.value).not.toContain('_pianoroll')
+  })
 
   it('removes one tab from the song and goes idle once none is left', async () => {
     // Arrange
@@ -257,7 +296,7 @@ describe('useStrudelTranscription', () => {
     // Assert
     expect(applyCode).not.toHaveBeenCalled()
     expect(appendCode).toHaveBeenCalledWith(
-      '// guitar "lead.png": 1 bars\n$: note("e4").s("gm_acoustic_guitar_nylon")'
+      '// guitar "lead.png": 1 bars\n$: note("e4").s("gm_acoustic_guitar_nylon")\n  ._pianoroll()'
     )
     expect(appendLog).toHaveBeenCalledWith('Added lead.png to the editor')
   })

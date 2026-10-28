@@ -52,6 +52,7 @@ const mountTab = (overrides: Partial<InstanceType<typeof ImportTab>['$props']> =
       code: '',
       warnings: [],
       errorMessage: '',
+      addVisualizer: true,
       ...overrides
     }
   })
@@ -158,19 +159,38 @@ describe('ImportTab', () => {
     expect(summary).not.toContain('Chords')
   })
 
-  it('summarises a piano score by tempo and bars, with no chord row and no Add', () => {
+  it('offers a visualizer switch that reflects its state and reports a change', async () => {
     // Arrange
-    const transcriptions = [{ id: 1, sourceName: 'river.png', result: SCORE_RESULT }]
+    const wrapper = mountTab({ addVisualizer: true })
+    const visualizerSwitch = wrapper.find('button[role="switch"]')
 
     // Act
-    const wrapper = mountTab({ status: 'done', transcriptions, code: '// right hand' })
+    await visualizerSwitch.trigger('click')
 
     // Assert
-    const summary = wrapper.find('.strudel-import__summary').text()
-    expect(summary).toContain('65 BPM')
-    expect(summary).not.toContain('Chords')
-    expect(findButton(wrapper, 'Load into editor')).toBeDefined()
-    expect(findButton(wrapper, 'Add to editor')).toBeUndefined()
+    expect(visualizerSwitch.attributes('aria-checked')).toBe('true')
+    expect(wrapper.text()).toContain('Add a visualizer to each instrument')
+    expect(wrapper.emitted('update:addVisualizer')).toEqual([[false]])
+  })
+
+  it('lists a piano score next to a tab as one row naming both hands', () => {
+    // Arrange
+    const transcriptions = [
+      ...imported(TAB_RESULT),
+      { id: 2, sourceName: 'river.png', result: SCORE_RESULT }
+    ]
+
+    // Act
+    const wrapper = mountTab({ status: 'done', transcriptions })
+
+    // Assert
+    const rows = wrapper.findAll('.strudel-import__instrument').map((row) => row.text())
+    expect(rows).toHaveLength(2)
+    expect(rows[1]).toContain('right hand and left hand')
+    expect(rows[1]).toContain('river.png, 1 bars')
+    expect(
+      wrapper.find('button[aria-label="Remove right hand and left hand river.png"]').exists()
+    ).toBe(true)
   })
 
   it('lists every imported tab as an instrument with its own remove button', async () => {

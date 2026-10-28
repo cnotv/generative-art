@@ -57,6 +57,7 @@ const {
   transcribedCode,
   transcriptionWarnings,
   transcriptionError,
+  addVisualizer,
   transcribeFiles,
   removeTranscription,
   addTranscription,
@@ -419,6 +420,7 @@ onBeforeUnmount(() => {
             :code="transcribedCode"
             :warnings="transcriptionWarnings"
             :error-message="transcriptionError"
+            v-model:add-visualizer="addVisualizer"
             @files="onFilesChosen"
             @load="loadTranscription"
             @add="addTranscription"
