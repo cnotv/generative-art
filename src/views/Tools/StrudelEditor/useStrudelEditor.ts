@@ -29,6 +29,7 @@ import type {
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
 import { runTranscription } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
+import { useStrudelTimeline } from './timeline/useStrudelTimeline'
 
 /**
  * Example with the given id.
@@ -127,7 +128,9 @@ const createPlaybackHooks = (
  * @param editorOptions - examples, playback loader and transcription runner, for tests
  * @returns reactive editor state and its actions
  */
-export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelEditorState => {
+export const useStrudelEditor = (
+  editorOptions?: StrudelEditorOptions
+): StrudelEditorState & ReturnType<typeof useStrudelTimeline> => {
   const exampleList = editorOptions?.initialExamples ?? STRUDEL_EXAMPLES
   const defaultExample =
     resolveDefaultStrudelExample(
@@ -153,15 +156,19 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
 
   const playbackHooks = createPlaybackHooks(editorHandle)
 
+  const timeline = useStrudelTimeline({ editorStatus, getPlayback: () => playbackReference.value })
+
   const playPattern = async (): Promise<void> => {
     errorMessage.value = ''
     appendLog('Playing pattern...')
     const evaluatedCode = patternCode.value
     try {
       const playback = await loadCachedPlayback(playbackReference, playbackLoader, playbackHooks)
+      timeline.applyStartCycle()
       const evaluationResult = await playback.evaluateCode(evaluatedCode)
       if (evaluationResult.success) {
         playingCode.value = evaluatedCode
+        timeline.measurePlayedPattern()
         editorStatus.value = 'playing'
         appendLog('Pattern playing')
       } else {
@@ -287,6 +294,7 @@ export const useStrudelEditor = (editorOptions?: StrudelEditorOptions): StrudelE
     setActiveTab,
     clearLogEntries,
     attachEditor,
-    ...transcription
+    ...transcription,
+    ...timeline
   }
 }

@@ -5,14 +5,15 @@ import {
   STRUDEL_NO_DRAW_TIME,
   STRUDEL_SOUND_PREVIEW_LEAD_SECONDS,
   STRUDEL_SOUND_PREVIEW_NOTE,
-  STRUDEL_SOUND_PREVIEW_SECONDS
+  STRUDEL_SOUND_PREVIEW_SECONDS,
+  STRUDEL_TIMELINE_MAX_LOOP_BARS
 } from './config'
 import {
   downloadExportFile,
   readScheduledHaps,
   renderStrudelPatternToWav
 } from './strudelOfflineRender'
-import { findRepetitionCycles } from './patternRepetition'
+import { findLoopBars, findRepetitionCycles } from './patternRepetition'
 import { isRecordModule, requireCallable, requireRecordModule, toCallable } from './strudelModules'
 import { loadStrudelSoundLibrary } from './strudelSoundLibrary'
 import type {
@@ -22,6 +23,7 @@ import type {
   StrudelExportOptions,
   StrudelPlayback,
   StrudelPlaybackHooks,
+  StrudelPlaybackPosition,
   StrudelUnknownCallable
 } from './types'
 
@@ -64,6 +66,33 @@ const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
 
 const readCyclesPerSecond = (scheduler: unknown): number =>
   isRecordModule(scheduler) && typeof scheduler.cps === 'number' ? scheduler.cps : DEFAULT_CPS
+
+const readSchedulerPosition = (scheduler: unknown): StrudelPlaybackPosition => {
+  const now = isRecordModule(scheduler) ? toCallable(scheduler.now) : undefined
+  const cycle: unknown = now?.call(scheduler)
+  return {
+    cycle: typeof cycle === 'number' ? cycle : 0,
+    cyclesPerSecond: readCyclesPerSecond(scheduler)
+  }
+}
+
+/**
+ * Pinned `@strudel/core` 1.2.6 has no `setCycle`. Its Cyclist queries each tick from
+ * `lastEnd` and re-anchors its clock to that cycle on the tick after
+ * `num_ticks_since_cps_change` returns to 0, so setting both moves a running scheduler and
+ * sets where a stopped one starts, since `start()` keeps `lastEnd`. `lastBegin` is what
+ * `now()` counts from, set too so the playhead does not jump back until that tick.
+ * @param scheduler - the REPL's Cyclist
+ * @param cycle - the cycle to play from
+ */
+const seekScheduler = (scheduler: unknown, cycle: number): void => {
+  if (!isRecordModule(scheduler)) {
+    return
+  }
+  Reflect.set(scheduler, 'lastEnd', cycle)
+  Reflect.set(scheduler, 'lastBegin', cycle)
+  Reflect.set(scheduler, 'num_ticks_since_cps_change', 0)
+}
 // iOS mutes Web Audio while the ring switch is on silent unless the page declares itself a
 // player. Safari 17 added this switch; older browsers have no audioSession and keep the default.
 const requestPlaybackAudioSession = (): void => {
@@ -251,6 +280,7 @@ export const loadDefaultStrudelPlayback = async (
   const cleanupVisuals = await createVisualsCleanup(hooks)
   let replScheduler: unknown = null
   let latestEvaluationError: unknown = null
+  let latestPattern: unknown = null
   const callbacks: ReplCallbacks = {
     beforeEval: cleanupVisuals,
     // The REPL reports a failed evaluation here and never rejects, so a typo would
@@ -259,6 +289,7 @@ export const loadDefaultStrudelPlayback = async (
       latestEvaluationError = error
     },
     afterEval: (evaluation) => {
+      latestPattern = isRecordModule(evaluation) ? (evaluation.pattern ?? null) : null
       hooks.onEvaluated(readEvaluationMeta(evaluation))
       drawer.setDrawTime(patternHasPainters(evaluation) ? STRUDEL_DRAW_TIME : STRUDEL_NO_DRAW_TIME)
       drawer.invalidate(replScheduler)
@@ -338,6 +369,23 @@ export const loadDefaultStrudelPlayback = async (
     stopPlayback: async (): Promise<void> => {
       await stopFunction()
     },
+    readPosition: () => readSchedulerPosition(replScheduler),
+    seekToCycle: (cycle: number) => seekScheduler(replScheduler, cycle),
+    measureLoop: (): number | null =>
+      latestPattern === null
+        ? null
+        : findLoopBars(
+            readScheduledHaps(
+              latestPattern,
+              {
+                ...EXPORT_DEFAULT_OPTIONS,
+                startCycle: 0,
+                endCycle: STRUDEL_TIMELINE_MAX_LOOP_BARS * 2
+              },
+              readCyclesPerSecond(replScheduler)
+            ),
+            STRUDEL_TIMELINE_MAX_LOOP_BARS
+          ),
     measureRepetition: async (patternCode: string): Promise<number> => {
       const pattern = await evaluateForExport(patternCode)
       const cyclesPerSecond = readCyclesPerSecond(replScheduler)

@@ -23,6 +23,7 @@ import ExportTab from './tabs/ExportTab.vue'
 import ConsoleTab from './tabs/ConsoleTab.vue'
 import SettingsTab from './tabs/SettingsTab.vue'
 import FlowTab from './tabs/FlowTab.vue'
+import StrudelTimeline from './timeline/StrudelTimeline.vue'
 
 // Vue Flow is a large canvas library and only loads when the player opens flow mode.
 const StrudelFlowEditor = defineAsyncComponent(() =>
@@ -63,7 +64,14 @@ const {
   exportPattern,
   repetitionCycles,
   measureRepetition,
-  loadTranscription
+  loadTranscription,
+  playheadCycle,
+  timelineBars,
+  cyclesPerSecond,
+  loopBars,
+  loopMeasured,
+  seekToCycle,
+  holdPlayingPosition
 } = useStrudelEditor()
 
 const {
@@ -212,6 +220,12 @@ const onStopRequested = (): void => {
   void stopPattern()
 }
 
+// A pause is a stop that keeps where it was, so the next Play carries on from there.
+const onPauseRequested = (): void => {
+  holdPlayingPosition()
+  onStopRequested()
+}
+
 // One button above the editor: Play when idle, Stop while playing, and Update once the code has
 // changed since it started, which swaps the old pattern for the new one.
 const playButtonAction = computed(() => {
@@ -339,6 +353,17 @@ onBeforeUnmount(() => {
       <p v-if="editorStatus === 'error'" class="strudel-editor__error" role="alert">
         {{ errorMessage || 'Pattern failed to evaluate.' }}
       </p>
+      <StrudelTimeline
+        :playhead-cycle="playheadCycle"
+        :timeline-bars="timelineBars"
+        :cycles-per-second="cyclesPerSecond"
+        :loop-bars="loopBars"
+        :loop-measured="loopMeasured"
+        :is-playing="editorStatus === 'playing'"
+        @seek="seekToCycle"
+        @play="onPlayRequested"
+        @pause="onPauseRequested"
+      />
     </section>
 
     <section class="strudel-editor__side" aria-label="Player">

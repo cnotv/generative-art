@@ -50,9 +50,20 @@ export type StrudelExportOptions = {
 
 export type StrudelExportStatus = 'idle' | 'rendering' | 'done' | 'error'
 
+/** Where the scheduler is: the cycle it is playing and how fast cycles pass. */
+export type StrudelPlaybackPosition = {
+  cycle: number
+  cyclesPerSecond: number
+}
+
 export type StrudelPlayback = {
   evaluateCode: (patternCode: string) => Promise<StrudelEvaluationResult>
   stopPlayback: () => Promise<void>
+  readPosition: () => StrudelPlaybackPosition
+  /** Plays on from this cycle, or starts there on the next Play when stopped. */
+  seekToCycle: (cycle: number) => void
+  /** Bars the last played pattern takes to repeat as a whole, or null when it does not within the timeline's limit. */
+  measureLoop: () => number | null
   /** Renders the cycles offline and downloads them as a WAV file. */
   renderToWav: (
     patternCode: string,

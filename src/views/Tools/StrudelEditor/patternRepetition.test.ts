@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findRepetitionCycles } from './patternRepetition'
+import { findLoopBars, findRepetitionCycles } from './patternRepetition'
 import type { StrudelScheduledHap } from './types'
 
 const hap = (beginCycle: number, durationCycles: number, note: string): StrudelScheduledHap => ({
@@ -47,5 +47,38 @@ describe('findRepetitionCycles', () => {
 
     // Assert
     expect(repetitionCycles).toBe(1)
+  })
+})
+
+const everyBar = (barCount: number, notes: string[]): StrudelScheduledHap[] =>
+  Array.from({ length: barCount }, (_, bar) => hap(bar, 1, notes[bar % notes.length] ?? 'c3'))
+
+describe('findLoopBars', () => {
+  it.each([
+    ['a one bar groove', everyBar(32, ['c3']), 1],
+    ['a three bar melody', everyBar(32, ['c3', 'e3', 'g3']), 3],
+    [
+      'a three bar bass under a four bar lead, which meet again after twelve',
+      [...everyBar(32, ['c2', 'f2', 'g2']), ...everyBar(32, ['c4', 'd4', 'e4', 'f4'])],
+      12
+    ],
+    ['a pattern with no events', [], 1]
+  ])('measures %s', (_, haps, expectedBars) => {
+    // Act
+    const loopBars = findLoopBars(haps, 16)
+
+    // Assert
+    expect(loopBars).toBe(expectedBars)
+  })
+
+  it('reports no loop when nothing repeats inside the limit', () => {
+    // Arrange
+    const haps = Array.from({ length: 32 }, (_, bar) => hap(bar, 1, `n${bar}`))
+
+    // Act
+    const loopBars = findLoopBars(haps, 16)
+
+    // Assert
+    expect(loopBars).toBeNull()
   })
 })

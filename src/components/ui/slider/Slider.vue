@@ -10,6 +10,8 @@ const props = defineProps<{
   step?: number
   disabled?: boolean
   class?: string
+  /** Names the thumb for assistive technology, since the thumb is what takes focus. */
+  label?: string
 }>()
 
 const emit = defineEmits<{
@@ -35,6 +37,7 @@ const emit = defineEmits<{
       v-for="(_, index) in modelValue ?? defaultValue ?? [0]"
       :key="index"
       class="slider__thumb"
+      :aria-label="label"
     />
   </SliderRoot>
 </template>

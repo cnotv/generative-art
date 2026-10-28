@@ -15,6 +15,7 @@ import type {
   StrudelPlaybackHooks
 } from './types'
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
+import { readScheduledHaps } from './strudelOfflineRender'
 import {
   findStrudelExample,
   resolveDefaultStrudelExample,
@@ -156,7 +157,10 @@ const buildSuccessfulPlayback = (): StrudelPlayback => ({
   stopPlayback: vi.fn(async () => {}),
   renderToWav: vi.fn(async () => ({ success: true })),
   renderToMidi: vi.fn(async () => ({ success: true })),
-  measureRepetition: vi.fn(async () => 1)
+  measureRepetition: vi.fn(async () => 1),
+  readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
+  seekToCycle: vi.fn(),
+  measureLoop: vi.fn(() => 1)
 })
 
 describe('findStrudelExample', () => {
@@ -302,6 +306,62 @@ describe('loadDefaultStrudelPlayback', () => {
     // Assert
     expect(replOptions.defaultOutput).toBe(mockScheduleHandler)
     expect(replOptions).not.toHaveProperty('onSchedule')
+  })
+
+  it('starts the next query at the picked cycle and reads where the scheduler is', async () => {
+    // Arrange
+    const scheduler = {
+      cps: 0.75,
+      lastEnd: 0,
+      lastBegin: 0,
+      num_ticks_since_cps_change: 5,
+      now: vi.fn(() => 6.5)
+    }
+    mockReplFactory.mockResolvedValue({
+      evaluate: mockEvaluateFunction,
+      stop: mockStopFunction,
+      scheduler
+    })
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+
+    // Act
+    playback.seekToCycle(3)
+    const position = playback.readPosition()
+
+    // Assert
+    expect(scheduler).toMatchObject({ lastEnd: 3, lastBegin: 3, num_ticks_since_cps_change: 0 })
+    expect(position).toEqual({ cycle: 6.5, cyclesPerSecond: 0.75 })
+  })
+
+  it('measures the loop of the pattern the last evaluation played', async () => {
+    // Arrange
+    const playedPattern = { kind: 'pattern' }
+    vi.mocked(readScheduledHaps).mockReturnValueOnce(
+      Array.from({ length: 32 }, (_, bar) => ({
+        value: { s: 'bd' },
+        beginCycle: bar,
+        durationCycles: 1
+      }))
+    )
+    mockReplFactory.mockResolvedValue({
+      evaluate: mockEvaluateFunction,
+      stop: mockStopFunction,
+      scheduler: { cps: 0.5 }
+    })
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+    await playback.evaluateCode('s("bd")')
+    callReplOption('afterEval', { pattern: playedPattern })
+
+    // Act
+    const loopBars = playback.measureLoop()
+
+    // Assert
+    expect(vi.mocked(readScheduledHaps)).toHaveBeenCalledWith(
+      playedPattern,
+      expect.objectContaining({ startCycle: 0, endCycle: 32 }),
+      0.5
+    )
+    expect(loopBars).toBe(1)
   })
 
   it('initializes and resumes audio inside the play gesture', async () => {
@@ -846,7 +906,10 @@ describe('useStrudelEditor', () => {
       stopPlayback: vi.fn(async () => {}),
       renderToWav: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
-      measureRepetition: vi.fn(async () => 1)
+      measureRepetition: vi.fn(async () => 1),
+      readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
+      seekToCycle: vi.fn(),
+      measureLoop: vi.fn(() => 1)
     }
     const { playPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -878,6 +941,49 @@ describe('useStrudelEditor', () => {
     expect(errorMessage.value).toBe('audio unavailable')
   })
 
+  it('starts Play from the cycle picked on the timeline, then measures its loop', async () => {
+    // Arrange
+    const playback = { ...buildSuccessfulPlayback(), measureLoop: vi.fn(() => 2) }
+    const { playPattern, seekToCycle, loopBars } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    seekToCycle(1.5)
+
+    // Act
+    await playPattern()
+
+    // Assert
+    expect(playback.seekToCycle).toHaveBeenCalledWith(1.5)
+    expect(vi.mocked(playback.seekToCycle).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(playback.evaluateCode).mock.invocationCallOrder[0] ?? 0
+    )
+    expect(loopBars.value).toBe(2)
+  })
+
+  it('pauses at the playing position and resumes from it on the next Play', async () => {
+    // Arrange
+    const playback = {
+      ...buildSuccessfulPlayback(),
+      readPosition: vi.fn(() => ({ cycle: 6.5, cyclesPerSecond: 0.5 }))
+    }
+    const { playPattern, stopPattern, holdPlayingPosition, editorStatus } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    await playPattern()
+
+    // Act
+    holdPlayingPosition()
+    await stopPattern()
+    await playPattern()
+
+    // Assert
+    expect(playback.stopPlayback).toHaveBeenCalledTimes(1)
+    expect(playback.seekToCycle).toHaveBeenLastCalledWith(6.5)
+    expect(editorStatus.value).toBe('playing')
+  })
+
   it('stops playback and returns to idle', async () => {
     // Arrange
     const playback = buildSuccessfulPlayback()
@@ -904,7 +1010,10 @@ describe('useStrudelEditor', () => {
       }),
       renderToWav: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
-      measureRepetition: vi.fn(async () => 1)
+      measureRepetition: vi.fn(async () => 1),
+      readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
+      seekToCycle: vi.fn(),
+      measureLoop: vi.fn(() => 1)
     }
     const { playPattern, stopPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
