@@ -3,11 +3,17 @@ import { describe, expect, it } from 'vitest'
 import StrudelFlowBeatsControls from './StrudelFlowBeatsControls.vue'
 import StrudelFlowPatternControls from './StrudelFlowPatternControls.vue'
 import { createStrudelFlowNodeData } from '../../nodeDefaults'
-import type { StrudelFlowSoundGroup } from '../../types'
+import type { StrudelFlowSampleGroup } from '../../types'
 
-const SAMPLE_GROUPS: StrudelFlowSoundGroup[] = [
-  { label: 'Samples', sounds: ['bd', 'casio'] },
-  { label: 'Drum machines', sounds: ['RolandTR909_bd'] }
+const SAMPLE_GROUPS: StrudelFlowSampleGroup[] = [
+  {
+    label: 'Dirt samples',
+    samples: [
+      { value: 'bd', label: 'Bass drum' },
+      { value: 'casio', label: 'Casio' }
+    ]
+  },
+  { label: 'Roland TR909', samples: [{ value: 'rolandtr909_bd', label: 'Bass drum' }] }
 ]
 
 describe('StrudelFlowPatternControls sample picker', () => {
@@ -19,14 +25,20 @@ describe('StrudelFlowPatternControls sample picker', () => {
     const picker = wrapper.get('select[aria-label="Add sample"]')
 
     // Act
-    await picker.setValue('RolandTR909_bd')
+    await picker.setValue('rolandtr909_bd')
 
     // Assert
     expect(wrapper.emitted('update')?.[0]).toEqual([
-      { kind: 'samples', pattern: 'bd*2 RolandTR909_bd' }
+      { kind: 'samples', pattern: 'bd*2 rolandtr909_bd' }
     ])
-    const groupLabels = picker.findAll('optgroup').map((group) => group.attributes('label'))
-    expect(groupLabels).toEqual(['Samples', 'Drum machines'])
+    const groups = picker.findAll('optgroup').map((group) => ({
+      label: group.attributes('label'),
+      options: group.findAll('option').map((option) => option.text())
+    }))
+    expect(groups).toEqual([
+      { label: 'Dirt samples', options: ['Bass drum', 'Casio'] },
+      { label: 'Roland TR909', options: ['Bass drum'] }
+    ])
   })
 
   it.each([
@@ -45,7 +57,7 @@ describe('StrudelFlowPatternControls sample picker', () => {
 })
 
 describe('StrudelFlowBeatsControls track sounds', () => {
-  it('offers the host library after the drum shortlist, without repeating it', () => {
+  it('offers the host library by readable name after the drum shortlist, without repeating it', () => {
     // Arrange
     const wrapper = mount(StrudelFlowBeatsControls, {
       props: { data: createStrudelFlowNodeData('beats'), sampleGroups: SAMPLE_GROUPS }
@@ -55,9 +67,10 @@ describe('StrudelFlowBeatsControls track sounds', () => {
     const trackSelect = wrapper.get('select[aria-label="Track 1 sound"]')
     const libraryGroup = trackSelect
       .findAll('optgroup')
-      .find((group) => group.attributes('label') === 'Samples')
+      .find((group) => group.attributes('label') === 'Dirt samples')
 
     // Assert
-    expect(libraryGroup?.findAll('option').map((option) => option.text())).toEqual(['casio'])
+    expect(libraryGroup?.findAll('option').map((option) => option.text())).toEqual(['Casio'])
+    expect(libraryGroup?.find('option').attributes('value')).toBe('casio')
   })
 })

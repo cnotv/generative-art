@@ -24,11 +24,32 @@ vi.mock('./strudelSoundLibrary', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./strudelSoundLibrary')>()
   return {
     ...actual,
-    loadStrudelSoundLibrary: async () => undefined,
+    loadStrudelSoundLibrary: async () => ({ drumMachines: {} }),
     readStrudelSoundEntries: async () => [
-      { name: 'bd', type: 'sample', tag: '', sampleCount: 24 },
-      { name: 'RolandTR909_bd', type: 'sample', tag: 'drum-machines', sampleCount: 4 },
-      { name: 'gm_piano', type: 'soundfont', tag: '', sampleCount: 3 }
+      {
+        name: 'bd',
+        label: 'Bass drum',
+        group: 'Dirt samples',
+        type: 'sample',
+        tag: '',
+        sampleCount: 24
+      },
+      {
+        name: 'casio',
+        label: 'Casio',
+        group: 'Dirt samples',
+        type: 'sample',
+        tag: '',
+        sampleCount: 3
+      },
+      {
+        name: 'rolandtr909_bd',
+        label: 'Bass drum',
+        group: 'Roland TR909',
+        type: 'sample',
+        tag: 'drum-machines',
+        sampleCount: 4
+      }
     ]
   }
 })
@@ -182,29 +203,37 @@ describe('StrudelEditor view', () => {
     ])
   })
 
-  it('lists the sounds, filters them, and previews the one clicked', async () => {
+  it('lists the sounds by group and readable name, filters them, and previews one', async () => {
     // Arrange
     const wrapper = await mountEditorView()
     await clickTab(wrapper, 'sounds')
     // The tab link moves the hash a task later; wait, or it lands after the cleanup.
     await vi.waitFor(() => expect(window.location.hash).toBe('#sounds'))
     await flushPromises()
-    const readSoundLabels = (): string[] =>
-      wrapper.findAll('.strudel-sounds__list li').map((item) => item.text().replace(/\s+/g, ' '))
+    const readSoundGroups = (): string[][] =>
+      wrapper
+        .findAll('.strudel-sounds__group')
+        .map((group) => [
+          group.get('.strudel-sounds__group-title').text(),
+          ...group.findAll('li').map((item) => item.text().replace(/\s+/g, ' '))
+        ])
 
     // Act
-    const allSounds = readSoundLabels()
+    const allSounds = readSoundGroups()
     await wrapper
       .findAll('.button-selector__btn')
       .find((filterButton) => filterButton.text() === 'drum machines')
       ?.trigger('click')
-    const drumMachineSounds = readSoundLabels()
-    await wrapper.find('[aria-label="Preview RolandTR909_bd"]').trigger('click')
+    const drumMachineSounds = readSoundGroups()
+    await wrapper.find('[aria-label="Preview Bass drum, rolandtr909_bd"]').trigger('click')
 
     // Assert
-    expect(allSounds).toEqual(['bd (24)', 'RolandTR909_bd (4)', 'gm_piano (3)'])
-    expect(drumMachineSounds).toEqual(['RolandTR909_bd (4)'])
-    expect(mockPreviewSound).toHaveBeenCalledWith('RolandTR909_bd', 'sample')
+    expect(allSounds).toEqual([
+      ['Dirt samples', 'Bass drum bd (24)', 'Casio (3)'],
+      ['Roland TR909', 'Bass drum rolandtr909_bd (4)']
+    ])
+    expect(drumMachineSounds).toEqual([['Roland TR909', 'Bass drum rolandtr909_bd (4)']])
+    expect(mockPreviewSound).toHaveBeenCalledWith('rolandtr909_bd', 'sample')
   })
 
   it('shows the hints tab by default', async () => {

@@ -19,13 +19,13 @@ import StrudelFlowVoiceControls from './controls/StrudelFlowVoiceControls.vue'
 import { isStrudelFlowInstrumentKind } from '../nodeDefaults'
 import { getStrudelFlowNodeDefinition } from '../nodeDefinitions'
 import { generateStrudelFlowNodePattern } from '../nodePatterns'
-import type { StrudelFlowNodeData, StrudelFlowNodeKind, StrudelFlowSoundGroup } from '../types'
+import type { StrudelFlowNodeData, StrudelFlowNodeKind, StrudelFlowSampleGroup } from '../types'
 
 const props = defineProps<{
   id: string
   data: StrudelFlowNodeData
   selected?: boolean
-  sampleGroups?: StrudelFlowSoundGroup[]
+  sampleGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{

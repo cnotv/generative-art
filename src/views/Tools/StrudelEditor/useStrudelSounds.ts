@@ -1,21 +1,20 @@
 import { computed, ref, shallowRef } from 'vue'
-import type { StrudelFlowSoundGroup } from '@webgamekit/strudel-flow'
+import type { StrudelFlowSampleGroup } from '@webgamekit/strudel-flow'
 import {
-  loadStrudelSoundLibrary,
+  groupStrudelSoundEntries,
   matchesStrudelSoundFilter,
   readStrudelSoundEntries
 } from './strudelSoundLibrary'
-import type { StrudelSoundEntry, StrudelSoundFilter, StrudelSoundsStatus } from './types'
+import type { StrudelSoundEntry, StrudelSoundsStatus } from './types'
 
-const SAMPLE_PICKER_GROUPS: { label: string; soundFilter: StrudelSoundFilter }[] = [
-  { label: 'Samples', soundFilter: 'samples' },
-  { label: 'Drum machines', soundFilter: 'drum-machines' }
-]
+const isSample = (soundEntry: StrudelSoundEntry): boolean =>
+  matchesStrudelSoundFilter(soundEntry, 'samples') ||
+  matchesStrudelSoundFilter(soundEntry, 'drum-machines')
 
 /**
- * The sounds Strudel can play, for the sounds tab and the flow editor's sample picker. Loading
+ * The sounds Strudel can play, for the sounds tab and the flow editor's sample pickers. Loading
  * registers the library without starting audio, so the list is there before the first Play.
- * @returns the sound list, the samples grouped for the picker, the loading status, and the
+ * @returns the sound list, the samples grouped for the pickers, the loading status, and the
  * function that fills them
  */
 export const useStrudelSounds = () => {
@@ -28,7 +27,6 @@ export const useStrudelSounds = () => {
     }
     soundsStatus.value = 'loading'
     try {
-      await loadStrudelSoundLibrary()
       soundEntries.value = await readStrudelSoundEntries()
       soundsStatus.value = 'ready'
     } catch {
@@ -36,12 +34,13 @@ export const useStrudelSounds = () => {
     }
   }
 
-  const sampleGroups = computed<StrudelFlowSoundGroup[]>(() =>
-    SAMPLE_PICKER_GROUPS.map(({ label, soundFilter }) => ({
-      label,
-      sounds: soundEntries.value
-        .filter((soundEntry) => matchesStrudelSoundFilter(soundEntry, soundFilter))
-        .map((soundEntry) => soundEntry.name)
+  const sampleGroups = computed<StrudelFlowSampleGroup[]>(() =>
+    groupStrudelSoundEntries(soundEntries.value.filter(isSample)).map((soundGroup) => ({
+      label: soundGroup.label,
+      samples: soundGroup.sounds.map((soundEntry) => ({
+        value: soundEntry.name,
+        label: soundEntry.label
+      }))
     }))
   )
 

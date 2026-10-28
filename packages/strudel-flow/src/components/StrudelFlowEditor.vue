@@ -17,7 +17,7 @@ import type {
   StrudelFlowNode as StrudelFlowNodeType,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
-  StrudelFlowSoundGroup
+  StrudelFlowSampleGroup
 } from '../types'
 
 const props = defineProps<{
@@ -26,7 +26,7 @@ const props = defineProps<{
   beatsPerMinute: number
   beatsPerCycle: number
   /** Every sample the host can play, for the Samples and Beats nodes to pick from. */
-  sampleGroups?: StrudelFlowSoundGroup[]
+  sampleGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{

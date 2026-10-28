@@ -3,13 +3,13 @@ import { computed, ref } from 'vue'
 import type {
   StrudelFlowNotesData,
   StrudelFlowSamplesData,
-  StrudelFlowSoundGroup
+  StrudelFlowSampleGroup
 } from '../../types'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 
 const props = defineProps<{
   data: StrudelFlowNotesData | StrudelFlowSamplesData
-  sampleGroups?: StrudelFlowSoundGroup[]
+  sampleGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -23,11 +23,8 @@ const label = computed(() => (props.data.kind === 'notes' ? 'Notes' : 'Samples')
 const pickerGroups = computed(() =>
   props.data.kind === 'samples'
     ? (props.sampleGroups ?? [])
-        .filter((group) => group.sounds.length > 0)
-        .map((group) => ({
-          label: group.label,
-          options: group.sounds.map((sound) => ({ value: sound, label: sound }))
-        }))
+        .filter((group) => group.samples.length > 0)
+        .map((group) => ({ label: group.label, options: group.samples }))
     : []
 )
 

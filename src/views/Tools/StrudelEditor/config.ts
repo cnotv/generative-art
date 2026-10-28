@@ -347,39 +347,54 @@ export const STRUDEL_SAVED_PATTERN_ID_PREFIX = 'saved-'
 export const STRUDEL_SAVED_PATTERN_FALLBACK_SLUG = 'pattern'
 
 /**
- * dirt-samples, which the shipped examples play, plus every bank strudel.cc preloads, so code
- * copied from there finds its piano, VCSL instruments and drum machines. Loaded once before
- * the first evaluation, or every trigger fails with "sound not found". The CDN folders are the
- * ones strudel.cc reads from, faster than the GitHub folders the manifests name.
+ * Every bank strudel.cc preloads, plus dirt-samples, which the shipped examples play. Loaded
+ * once, before the first evaluation, or every trigger fails with "sound not found". The lists
+ * download together but register in this order, and a later bank wins a name two banks share:
+ * dirt-samples is last, so `bd`, `sd`, `hh` and the other names it shares with the uzu drum kit
+ * stay the kit the examples were written for. The CDN folders are the ones strudel.cc reads
+ * from, faster than the GitHub folders the manifests name.
  */
 export const STRUDEL_SAMPLE_BANKS: StrudelSampleBank[] = [
-  { manifestUrl: 'github:tidalcycles/dirt-samples' },
   {
+    label: 'Piano',
     manifestUrl: 'https://strudel.b-cdn.net/piano.json',
     baseUrl: 'https://strudel.b-cdn.net/piano/'
   },
   {
+    label: 'VCSL instruments',
     manifestUrl: 'https://strudel.b-cdn.net/vcsl.json',
     baseUrl: 'https://strudel.b-cdn.net/VCSL/'
   },
   {
+    label: 'Drum machines',
     manifestUrl: 'https://strudel.b-cdn.net/tidal-drum-machines.json',
     baseUrl: 'https://strudel.b-cdn.net/tidal-drum-machines/machines/',
-    tag: 'drum-machines'
+    tag: 'drum-machines',
+    groupsByMachine: true
   },
   {
+    label: 'Uzu drum kit',
     manifestUrl: 'https://strudel.b-cdn.net/uzu-drumkit.json',
     baseUrl: 'https://strudel.b-cdn.net/uzu-drumkit/',
     tag: 'drum-machines'
   },
   {
+    label: 'Wavetables',
     manifestUrl: 'https://strudel.b-cdn.net/uzu-wavetables.json',
-    baseUrl: 'https://strudel.b-cdn.net/uzu-wavetables/'
+    baseUrl: 'https://strudel.b-cdn.net/uzu-wavetables/',
+    namePrefix: 'wt_'
   },
   {
+    label: 'Mridangam',
     manifestUrl: 'https://strudel.b-cdn.net/mridangam.json',
     baseUrl: 'https://strudel.b-cdn.net/mrid/',
-    tag: 'drum-machines'
+    tag: 'drum-machines',
+    namePrefix: 'mridangam_'
+  },
+  {
+    label: 'Dirt samples',
+    manifestUrl: 'https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/strudel.json',
+    baseUrl: 'https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/'
   }
 ]
 
@@ -394,6 +409,57 @@ export const STRUDEL_SOUND_FILTERS: { id: StrudelSoundFilter; label: string }[] 
 
 /** The tag strudel.cc gives drum machine banks, which the filters split from other samples. */
 export const STRUDEL_DRUM_MACHINES_TAG = 'drum-machines'
+
+/**
+ * What the drum abbreviations stand for, as the sounds tab names them. A drum machine sound is
+ * named after its part (`RolandTR909_bd`), and so is a plain kit sample (`bd`, `808bd`).
+ */
+export const STRUDEL_DRUM_PART_NAMES: Record<string, string> = {
+  bd: 'bass drum',
+  sd: 'snare drum',
+  hh: 'closed hi-hat',
+  oh: 'open hi-hat',
+  cp: 'clap',
+  rim: 'rimshot',
+  lt: 'low tom',
+  mt: 'mid tom',
+  ht: 'high tom',
+  cr: 'crash',
+  rd: 'ride',
+  cb: 'cowbell',
+  sh: 'shaker',
+  tb: 'tambourine',
+  perc: 'percussion',
+  misc: 'miscellaneous',
+  fx: 'effects',
+  brk: 'breakbeat'
+}
+
+/** The sixteen General MIDI families, eight programs each, that group the `gm_*` soundfonts. */
+export const STRUDEL_GENERAL_MIDI_FAMILIES = [
+  'Pianos',
+  'Chromatic percussion',
+  'Organs',
+  'Guitars',
+  'Basses',
+  'Strings',
+  'Ensembles',
+  'Brass',
+  'Reeds',
+  'Pipes',
+  'Synth leads',
+  'Synth pads',
+  'Synth effects',
+  'World instruments',
+  'Percussive',
+  'Sound effects'
+]
+
+/** General MIDI programs per family; a soundfont's family is its program divided by this. */
+export const STRUDEL_GENERAL_MIDI_FAMILY_SIZE = 8
+
+/** The group of the built-in oscillators and noise, which come from no sample bank. */
+export const STRUDEL_SYNTHS_GROUP_LABEL = 'Synths'
 
 /** How long a sound plays when its name is clicked in the sounds tab, in seconds. */
 export const STRUDEL_SOUND_PREVIEW_SECONDS = 0.5

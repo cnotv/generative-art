@@ -8,14 +8,14 @@ import {
   STRUDEL_FLOW_STEP_COUNT
 } from '../../config'
 import { createStrudelFlowDrumRow } from '../../nodeDefaults'
-import type { StrudelFlowBeatsData, StrudelFlowDrumRow, StrudelFlowSoundGroup } from '../../types'
+import type { StrudelFlowBeatsData, StrudelFlowDrumRow, StrudelFlowSampleGroup } from '../../types'
 import StrudelFlowAccordion from './StrudelFlowAccordion.vue'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 import StrudelFlowStepper from './StrudelFlowStepper.vue'
 
 const props = defineProps<{
   data: StrudelFlowBeatsData
-  sampleGroups?: StrudelFlowSoundGroup[]
+  sampleGroups?: StrudelFlowSampleGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -33,13 +33,17 @@ const libraryGroups = computed(() =>
   (props.sampleGroups ?? [])
     .map((group) => ({
       label: group.label,
-      sounds: group.sounds.filter((sound) => !DRUM_SOUNDS.has(sound))
+      options: group.samples.filter((sample) => !DRUM_SOUNDS.has(sample.value))
     }))
-    .filter((group) => group.sounds.length > 0)
+    .filter((group) => group.options.length > 0)
 )
 
 const knownSounds = computed(
-  () => new Set([...DRUM_SOUNDS, ...libraryGroups.value.flatMap((group) => group.sounds)])
+  () =>
+    new Set([
+      ...DRUM_SOUNDS,
+      ...libraryGroups.value.flatMap((group) => group.options.map((option) => option.value))
+    ])
 )
 
 const toOptions = (sounds: string[]): { value: string; label: string }[] =>
@@ -52,10 +56,11 @@ const soundGroups = (
   ...(knownSounds.value.has(sound)
     ? []
     : [{ label: 'In this pattern', options: toOptions([sound]) }]),
-  ...[...STRUDEL_FLOW_DRUM_SOUND_GROUPS, ...libraryGroups.value].map((group) => ({
+  ...STRUDEL_FLOW_DRUM_SOUND_GROUPS.map((group) => ({
     label: group.label,
     options: toOptions(group.sounds)
-  }))
+  })),
+  ...libraryGroups.value
 ]
 
 const update = (patch: Partial<StrudelFlowBeatsData>): void => {

@@ -80,14 +80,16 @@ describe('StrudelEditor config', () => {
     expect(mentionsLicense).toBe(true)
   })
 
-  it('keeps dirt-samples, which the shipped examples play, among the sample banks', () => {
+  it('registers dirt-samples last, so the names it shares stay the kit the examples play', () => {
     // Arrange
-    const manifestUrls = STRUDEL_SAMPLE_BANKS.map(({ manifestUrl }) => manifestUrl)
+    const sampleBanks = STRUDEL_SAMPLE_BANKS
 
     // Act
-    const hasDirtSamples = manifestUrls.includes('github:tidalcycles/dirt-samples')
+    const lastBank = sampleBanks.at(-1)
 
     // Assert
-    expect(hasDirtSamples).toBe(true)
+    expect(lastBank?.manifestUrl).toBe(
+      'https://raw.githubusercontent.com/tidalcycles/dirt-samples/main/strudel.json'
+    )
   })
 })
