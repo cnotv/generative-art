@@ -1,4 +1,9 @@
-import type { StrudelFlowCallParameter, StrudelFlowVisualName } from './types'
+import type {
+  StrudelFlowCallParameter,
+  StrudelFlowNotation,
+  StrudelFlowNotationView,
+  StrudelFlowVisualName
+} from './types'
 
 export const STRUDEL_FLOW_PATCH_STORAGE_KEY = 'strudel-flow-patch'
 
@@ -209,3 +214,98 @@ export const STRUDEL_FLOW_CALL_PARAMETERS: Record<string, StrudelFlowCallParamet
   shape: [{ kind: 'number', label: 'Drive', min: 0, max: 1, step: 0.01 }],
   hpf: [{ kind: 'number', label: 'Cutoff', min: 20, max: 20000, step: 10 }]
 }
+
+/** MIDI note of each open string, from the top staff line (the highest string) down. */
+export const STRUDEL_FLOW_OPEN_STRINGS = {
+  bass: [43, 38, 33, 28],
+  guitar: [64, 59, 55, 50, 45, 40]
+}
+export const STRUDEL_FLOW_MAX_FRET = 24
+/** The most frets one hand covers, so a chord stays playable. */
+export const STRUDEL_FLOW_CHORD_FRET_SPAN = 4
+
+export const STRUDEL_FLOW_NOTATION_OPTIONS: { value: StrudelFlowNotation; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'guitar', label: 'Guitar tab' },
+  { value: 'bass', label: 'Bass tab' },
+  { value: 'piano', label: 'Piano roll' },
+  { value: 'names', label: 'Note names' }
+]
+
+/** Auto's choice: the first entry whose word is in the sound's name wins; anything else is names. */
+export const STRUDEL_FLOW_NOTATION_BY_SOUND: { word: string; view: StrudelFlowNotationView }[] = [
+  { word: 'bass', view: 'bass' },
+  { word: 'guitar', view: 'guitar' },
+  { word: 'piano', view: 'piano' },
+  { word: 'keys', view: 'piano' },
+  { word: 'organ', view: 'piano' },
+  { word: 'epiano', view: 'piano' },
+  { word: 'rhodes', view: 'piano' },
+  { word: 'harpsichord', view: 'piano' },
+  { word: 'clavinet', view: 'piano' }
+]
+
+/** The tab staff's drawing unit: the gap between two staff lines. */
+export const STRUDEL_FLOW_TAB_LINE_GAP = 12
+/**
+ * Every tab length below is a multiple of the line gap, and mirrors what the tab import reads:
+ * stems sit between one and two and three quarter gaps under the staff, beams stack up from the
+ * stem's foot, and a triplet bracket runs below the stems.
+ */
+export const STRUDEL_FLOW_TAB_TOP_MARGIN = 1.5
+export const STRUDEL_FLOW_TAB_BOTTOM_MARGIN = 0.8
+export const STRUDEL_FLOW_TAB_SIDE_MARGIN = 3
+export const STRUDEL_FLOW_TAB_STEM_TOP = 1
+export const STRUDEL_FLOW_TAB_STEM_BOTTOM = 2.6
+export const STRUDEL_FLOW_TAB_BEAM_THICKNESS = 0.2
+export const STRUDEL_FLOW_TAB_BEAM_STEP = 0.4
+export const STRUDEL_FLOW_TAB_FLAG_LENGTH = 0.8
+export const STRUDEL_FLOW_TAB_BRACKET_Y = 3.4
+export const STRUDEL_FLOW_TAB_DIGIT_WIDTH = 0.62
+export const STRUDEL_FLOW_TAB_DIGIT_CLEARANCE = 0.15
+/** A tie leaves its number this far below the line, sags to the second depth, and stops short. */
+export const STRUDEL_FLOW_TAB_TIE_TOP = 0.2
+export const STRUDEL_FLOW_TAB_TIE_SAG = 0.6
+export const STRUDEL_FLOW_TAB_TIE_END_GAP = 0.3
+/** Room a stem takes: a fixed part, so short notes stay legible, and a part per beat. */
+export const STRUDEL_FLOW_TAB_STEM_SPACE = 2
+export const STRUDEL_FLOW_TAB_SPACE_PER_BEAT = 1.5
+/** Beats a stem lasts by how many beams or flags it carries: none, one, two, three. */
+export const STRUDEL_FLOW_TAB_BEAM_BEATS = [1, 0.5, 0.25, 0.125]
+export const STRUDEL_FLOW_TAB_TRIPLET_NUMERATOR = 2
+export const STRUDEL_FLOW_TAB_TRIPLET_DENOMINATOR = 3
+
+export const STRUDEL_FLOW_PIANO_ROLL_ROW_HEIGHT = 6
+export const STRUDEL_FLOW_PIANO_ROLL_BEAT_WIDTH = 18
+export const STRUDEL_FLOW_PIANO_ROLL_GUTTER = 24
+export const STRUDEL_FLOW_PIANO_ROLL_MIN_ROWS = 12
+/** Pitch classes of the black keys, shaded in the piano roll. */
+export const STRUDEL_FLOW_BLACK_KEY_CLASSES = [1, 3, 6, 8, 10]
+export const STRUDEL_FLOW_TAB_MIN_BAR_WIDTH = 5
+export const STRUDEL_FLOW_TAB_STROKE_WIDTH = 0.1
+export const STRUDEL_FLOW_TAB_STEM_WIDTH = 0.12
+export const STRUDEL_FLOW_TAB_DIGIT_SIZE = 1
+/** Half the height of a digit in Arial, so a number written there sits centred on its line. */
+export const STRUDEL_FLOW_TAB_DIGIT_BASELINE = 0.36
+export const STRUDEL_FLOW_TAB_BRACKET_LABEL_GAP = 0.5
+export const STRUDEL_FLOW_TAB_BRACKET_OVERHANG = 0.3
+export const STRUDEL_FLOW_TAB_BRACKET_HOOK = 0.25
+export const STRUDEL_FLOW_TAB_BRACKET_LABEL_SIZE = 0.7
+export const STRUDEL_FLOW_TAB_BRACKET_LABEL_BASELINE = 0.25
+export const STRUDEL_FLOW_TAB_BOTTOM_SPACE = 4.3
+
+/** Semitones above C of each note letter, as Strudel reads note names. */
+export const STRUDEL_FLOW_PITCH_CLASSES: Record<string, number> = {
+  c: 0,
+  d: 2,
+  e: 4,
+  f: 5,
+  g: 7,
+  a: 9,
+  b: 11
+}
+/** Strudel's octave for a note name written without one, such as `c`. */
+export const STRUDEL_FLOW_DEFAULT_OCTAVE = 3
+export const STRUDEL_FLOW_SHARP_SIGNS = ['#', 's']
+/** The finest note length written as a fraction: a 24th of a beat covers sixteenth triplets. */
+export const STRUDEL_FLOW_MAX_LENGTH_DENOMINATOR = 24

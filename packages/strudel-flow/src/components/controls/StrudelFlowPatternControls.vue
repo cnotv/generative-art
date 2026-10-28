@@ -6,6 +6,7 @@ import type {
   StrudelFlowSampleGroup
 } from '../../types'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
+import StrudelFlowNotation from '../notation/StrudelFlowNotation.vue'
 
 const props = defineProps<{
   data: StrudelFlowNotesData | StrudelFlowSamplesData
@@ -47,6 +48,7 @@ const addSample = (sound: string): void => {
 </script>
 
 <template>
+  <StrudelFlowNotation v-if="data.kind === 'notes'" :data="data" @update="emit('update', $event)" />
   <label class="strudel-flow-field">
     <span class="strudel-flow-field__label">{{ label }} in mini notation</span>
     <textarea

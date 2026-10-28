@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import type { StrudelFlowTabInstrument } from '@webgamekit/strudel-flow'
 
 export type StrudelExample = {
   id: string
@@ -435,7 +436,10 @@ export type MidiSnippet = {
 /** What an import produces: a grid of drums, bass and chords, the notes of a tab or a score. */
 export type TranscriptionOutput = TranscriptionResult | TabTranscription | ScoreTranscription
 
-export type TabInstrument = 'bass' | 'guitar'
+export type TabInstrument = StrudelFlowTabInstrument
+
+/** MIDI note of each open string, from the top staff line down, for every instrument. */
+export type TabOpenStrings = Record<TabInstrument, number[]>
 
 /** One struck chord or note of a tab bar; an empty note list is a rest. */
 export type TabEvent = {
@@ -478,6 +482,8 @@ export type TabImageRequest = {
   width: number
   height: number
   pixels: Uint8ClampedArray
+  /** The tunings to name notes by; the worker cannot import the package that holds them. */
+  openStrings: TabOpenStrings
 }
 
 export type TabSystem = {

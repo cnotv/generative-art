@@ -76,10 +76,96 @@ export type StrudelFlowChordsData = StrudelFlowMuteFlag & {
   chordNotes?: number[][]
 }
 
+/** How a Notes node draws its notes: picked from the sound it plays, or one chosen by hand. */
+export type StrudelFlowNotation = 'auto' | 'guitar' | 'bass' | 'piano' | 'names'
+
+/** The view a notation resolves to once Auto has looked at the sound. */
+export type StrudelFlowNotationView = Exclude<StrudelFlowNotation, 'auto'>
+
 /** A `note("...")` line in mini notation. */
 export type StrudelFlowNotesData = StrudelFlowMuteFlag & {
   kind: 'notes'
   pattern: string
+  notation: StrudelFlowNotation
+}
+
+/** Notes struck together, when they start in the bar and how long they last, in beats. */
+export type StrudelFlowNoteEvent = {
+  notes: string[]
+  start: number
+  beats: number
+}
+
+/** One cycle of a pattern, its events in time order. */
+export type StrudelFlowNoteBar = StrudelFlowNoteEvent[]
+
+/**
+ * Reads a mini notation pattern into bars of notes. The host supplies it, since only the host
+ * loads Strudel; a pattern that cannot be read gives no bars.
+ */
+export type StrudelFlowNoteReader = (
+  pattern: string,
+  beatsPerCycle: number
+) => Promise<StrudelFlowNoteBar[]>
+
+/** What a Notes node needs from the editor around it to draw its notation. */
+export type StrudelFlowNotationContext = {
+  readNoteBars: StrudelFlowNoteReader | null
+  beatsPerCycle: number
+  /** The sound a node's notes play, or an empty string when nothing sets one. */
+  soundOf: (nodeId: string) => string
+}
+
+export type StrudelFlowTabInstrument = 'bass' | 'guitar'
+
+/** Where a note is played: the staff line counted from the top (highest string), and the fret. */
+export type StrudelFlowFretPosition = {
+  lineIndex: number
+  fret: number
+}
+
+/** A fret number on the staff, centred on its stem. */
+export type StrudelFlowTabFret = StrudelFlowFretPosition & {
+  x: number
+  y: number
+}
+
+export type StrudelFlowTabSegment = {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+/** A stem in the rhythm row. */
+export type StrudelFlowTabStem = {
+  x: number
+}
+
+/** A triplet bracket under the stems it groups, and where its 3 goes. */
+export type StrudelFlowTabBracket = {
+  path: string
+  labelX: number
+}
+
+/** Every mark of a tab staff, in drawing units, ready for an SVG. */
+export type StrudelFlowTabLayout = {
+  width: number
+  height: number
+  lineGap: number
+  /** Each string's line, broken where a fret number sits on it, from the top string down. */
+  strings: StrudelFlowTabSegment[][]
+  barLines: StrudelFlowTabSegment[]
+  frets: StrudelFlowTabFret[]
+  stems: StrudelFlowTabStem[]
+  /** Beams and flags; a flag is a beam reaching from one stem only. */
+  beams: StrudelFlowTabSegment[]
+  /** Arcs from a fret number to the stem where the note goes on ringing. */
+  ties: string[]
+  brackets: StrudelFlowTabBracket[]
+  stemTop: number
+  stemBottom: number
+  bracketLabelY: number
 }
 
 /** An `s("...")` line of samples in mini notation. */

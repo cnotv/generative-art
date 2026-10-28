@@ -7,7 +7,9 @@ import type { TabImageRequest } from '../../types'
  * @param imageFile - the uploaded PNG, JPEG or WebP
  * @returns the width, height and pixels
  */
-export const decodeImageFile = async (imageFile: File): Promise<TabImageRequest> => {
+export const decodeImageFile = async (
+  imageFile: File
+): Promise<Omit<TabImageRequest, 'openStrings'>> => {
   const bitmap = await createImageBitmap(imageFile)
   const { width, height } = bitmap
   if (width * height > TAB_IMAGE_MAX_PIXELS) {

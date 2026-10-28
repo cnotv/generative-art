@@ -395,7 +395,7 @@ const readMiniNotationHead = (head: Call): StrudelFlowNodeData | null => {
     return null
   }
   if (head.name === 'note') {
-    return { kind: 'notes', pattern: readStringLiteral(head.argument) }
+    return { kind: 'notes', pattern: readStringLiteral(head.argument), notation: 'auto' }
   }
   return SAMPLE_HEADS.has(head.name)
     ? { kind: 'samples', pattern: readStringLiteral(head.argument) }
@@ -648,15 +648,24 @@ const readProgram = (code: string): Program => {
 const takeReusable = (
   state: BuildState,
   kind: StrudelFlowNodeKind
-): { position: StrudelFlowNodePosition | null; reusable: StrudelFlowNode[] } => {
+): { node: StrudelFlowNode | null; reusable: StrudelFlowNode[] } => {
   const index = state.reusable.findIndex((node) => node.data.kind === kind)
   return index === -1
-    ? { position: null, reusable: state.reusable }
+    ? { node: null, reusable: state.reusable }
     : {
-        position: state.reusable[index].position,
+        node: state.reusable[index],
         reusable: [...state.reusable.slice(0, index), ...state.reusable.slice(index + 1)]
       }
 }
+
+// The code says nothing about how a node is drawn, so a reused node keeps its notation.
+const keepDrawingChoices = (
+  data: StrudelFlowNodeData,
+  reused: StrudelFlowNode | null
+): StrudelFlowNodeData =>
+  data.kind === 'notes' && reused?.data.kind === 'notes'
+    ? { ...data, notation: reused.data.notation }
+    : data
 
 const nextNodeId = (kind: StrudelFlowNodeKind, nodes: StrudelFlowNode[]): string => {
   const usedIds = new Set(nodes.map((node) => node.id))
@@ -681,7 +690,12 @@ const placeNode = (
       reusable: reused.reusable,
       nodes: [
         ...state.nodes,
-        { id: nodeId, type: 'strudel', position: reused.position ?? fallbackPosition, data }
+        {
+          id: nodeId,
+          type: 'strudel',
+          position: reused.node?.position ?? fallbackPosition,
+          data: keepDrawingChoices(data, reused.node)
+        }
       ]
     }
   }

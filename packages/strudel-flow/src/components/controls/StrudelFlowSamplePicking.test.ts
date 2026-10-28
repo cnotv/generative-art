@@ -42,7 +42,11 @@ describe('StrudelFlowPatternControls sample picker', () => {
   })
 
   it.each([
-    ['a Notes node', { kind: 'notes' as const, pattern: 'c3 e3' }, SAMPLE_GROUPS],
+    [
+      'a Notes node',
+      { kind: 'notes' as const, pattern: 'c3 e3', notation: 'auto' as const },
+      SAMPLE_GROUPS
+    ],
     ['a Samples node with no sounds loaded yet', { kind: 'samples' as const, pattern: '' }, []]
   ])('has no picker on %s', (_case, data, sampleGroups) => {
     // Arrange

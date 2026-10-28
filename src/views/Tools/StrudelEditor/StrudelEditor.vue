@@ -8,6 +8,7 @@ import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import { useStrudelFlow } from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
 import { useStrudelHints } from './hints/useStrudelHints'
+import { readStrudelNoteBars } from './noteBars'
 import { useStrudelSounds } from './useStrudelSounds'
 import { previewStrudelSound } from './strudelPlayback'
 import type { StrudelEditorMode, StrudelSoundEntry, StrudelTabId } from './types'
@@ -330,6 +331,7 @@ onBeforeUnmount(() => {
           v-model:edges="flowEdges"
           :beats-per-minute="flowBeatsPerMinute"
           :beats-per-cycle="flowBeatsPerCycle"
+          :note-reader="readStrudelNoteBars"
           :sample-groups="sampleGroups"
           :voice-groups="voiceGroups"
           @connect="onFlowNodesConnected"

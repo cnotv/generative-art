@@ -407,11 +407,31 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.nodes[0]?.data).toEqual({
       kind: 'notes',
       pattern: 'c3',
+      notation: 'auto',
       calls: [{ method: 'mask', argument: '"1 0"' }]
     })
     expect(patch?.nodes[1]?.data).toEqual({
       kind: 'effect',
       calls: [{ method: 'jux', argument: 'rev' }]
     })
+  })
+
+  it.each([
+    ['a patch saved before notations existed', undefined, 'auto'],
+    ['a notation picked by hand', 'piano', 'piano'],
+    ['an unknown notation', 'staff', 'auto']
+  ])('reads the Notes notation of %s', (_case, notation, expected) => {
+    // Arrange
+    const storedValue = storePatch({
+      nodes: [
+        { id: 'notes', position: { x: 0, y: 0 }, data: { kind: 'notes', pattern: 'c3', notation } }
+      ]
+    })
+
+    // Act
+    const patch = parseStrudelFlowPatch(storedValue)
+
+    // Assert
+    expect(patch?.nodes[0]?.data).toEqual({ kind: 'notes', pattern: 'c3', notation: expected })
   })
 })

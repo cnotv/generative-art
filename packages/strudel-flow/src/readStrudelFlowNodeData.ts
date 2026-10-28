@@ -8,6 +8,7 @@ import {
   STRUDEL_FLOW_MAX_ROOM_SIZE,
   STRUDEL_FLOW_MIN_FILTER_CUTOFF,
   STRUDEL_FLOW_MIN_FILTER_RESONANCE,
+  STRUDEL_FLOW_NOTATION_OPTIONS,
   STRUDEL_FLOW_PAD_MODIFIER_OPTIONS,
   STRUDEL_FLOW_PAD_NOTE_COUNT,
   STRUDEL_FLOW_PAD_STEP_COUNT,
@@ -239,7 +240,10 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
   notes: (raw) => ({
     ...readMuted(raw),
     kind: 'notes',
-    pattern: readStoredString(raw.pattern, STRUDEL_FLOW_NOTES_DEFAULTS.pattern)
+    pattern: readStoredString(raw.pattern, STRUDEL_FLOW_NOTES_DEFAULTS.pattern),
+    notation:
+      STRUDEL_FLOW_NOTATION_OPTIONS.find((option) => option.value === raw.notation)?.value ??
+      STRUDEL_FLOW_NOTES_DEFAULTS.notation
   }),
   samples: (raw) => ({
     ...readMuted(raw),

@@ -1221,11 +1221,6 @@ export const TAB_TRIPLET_NUMERATOR = 2
 export const TAB_TRIPLET_DENOMINATOR = 3
 export const TAB_MAX_BEAMS = 3
 
-/** MIDI note of each open string, from the top staff line down. */
-export const TAB_OPEN_STRINGS = {
-  bass: [43, 38, 33, 28],
-  guitar: [64, 59, 55, 50, 45, 40]
-}
 export const TAB_INSTRUMENT_BY_LINE_COUNT: Record<number, 'bass' | 'guitar'> = {
   4: 'bass',
   6: 'guitar'
@@ -1285,6 +1280,9 @@ export const TAB_DIGIT_TEMPLATE_SETS = [
     ['.##+ ', '##+#.', '#+ #+', '+#+#+', ' ++#+', '++.#.', '.##+ ']
   ]
 ]
+
+/** How many cycles the flow's notation reads to find where a pattern starts over. */
+export const STRUDEL_NOTE_BARS_MAX_CYCLES = 64
 
 /** Piano scores: every length is again a multiple of the staff line gap. */
 export const SCORE_STAFF_LINE_COUNT = 5
