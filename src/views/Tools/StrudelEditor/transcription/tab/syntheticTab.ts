@@ -9,7 +9,7 @@ import { buildTabImage } from './buildTabImage'
 
 const CELL = 2
 const LINE_GAP = 20
-const TOP = 30
+const TOP = 80
 const LEFT = 20
 const NOTE_SPACING = 60
 const STEM_TOP = 22
@@ -32,6 +32,18 @@ const glyphRectangles = (digit: number, centreX: number, centreY: number): Recta
         : [{ left, top, right: left + CELL, bottom: top + CELL, gray: Math.round(255 * (1 - ink)) }]
     })
   )
+
+const TEMPO_Y = TOP - 2.5 * LINE_GAP
+const TEMPO_X = LEFT + 40
+
+// An equals sign, then the digits of the tempo, in the middle of the band above the staff.
+const tempoRectangles = (tempo: number): Rectangle[] => [
+  { left: TEMPO_X, top: TEMPO_Y - 4, right: TEMPO_X + 12, bottom: TEMPO_Y - 2, gray: 0 },
+  { left: TEMPO_X, top: TEMPO_Y + 2, right: TEMPO_X + 12, bottom: TEMPO_Y + 4, gray: 0 },
+  ...[...String(tempo)].flatMap((digit, index) =>
+    glyphRectangles(Number(digit), TEMPO_X + 30 + index * 14, TEMPO_Y)
+  )
+]
 
 const noteRectangles = (
   notes: SyntheticNote[],
@@ -62,9 +74,14 @@ const noteRectangles = (
  * One bar of quarter notes on a light page.
  * @param lineCount - four for a bass, six for a guitar
  * @param chords - the notes struck on each quarter
+ * @param tempo - a tempo to print above the staff as "= 87", or none
  * @returns the image as the detectors see it
  */
-export const drawQuarterNoteTab = (lineCount: number, chords: SyntheticNote[][]): TabImage => {
+export const drawQuarterNoteTab = (
+  lineCount: number,
+  chords: SyntheticNote[][],
+  tempo?: number
+): TabImage => {
   const width = LEFT + (chords.length + 1) * NOTE_SPACING
   const height = TOP + (lineCount - 1) * LINE_GAP + STEM_BOTTOM + TOP
   const lines = Array.from({ length: lineCount }, (_, index) => ({
@@ -77,7 +94,7 @@ export const drawQuarterNoteTab = (lineCount: number, chords: SyntheticNote[][])
   const notes = chords.flatMap((chord, index) =>
     noteRectangles(chord, LEFT + NOTE_SPACING * (index + 1), lineCount)
   )
-  const rectangles = [...lines, ...notes]
+  const rectangles = [...lines, ...notes, ...(tempo === undefined ? [] : tempoRectangles(tempo))]
   const pixels = Uint8ClampedArray.from({ length: width * height * 4 }, (_, offset) => {
     const pixelIndex = Math.floor(offset / 4)
     const x = pixelIndex % width

@@ -7,6 +7,7 @@ import type { TabImage, TabTranscription } from '../../types'
 import { findBarSpans } from './barLines'
 import { findFretGlyphs } from './fretGlyphs'
 import { readBar, type BarReading } from './readBar'
+import { readTempo } from './readTempo'
 import { findStems } from './rhythmRow'
 import { findStaffSystems, lineGapOf } from './staffLines'
 
@@ -49,7 +50,7 @@ export const readTab = (image: TabImage): TabTranscription => {
   })
   return {
     kind: 'tab',
-    beatsPerMinute: MIDI_DEFAULT_BEATS_PER_MINUTE,
+    beatsPerMinute: readTempo(image, systems[0]) ?? MIDI_DEFAULT_BEATS_PER_MINUTE,
     instrument,
     bars: readings.map((reading) => reading.events),
     warnings: warningsFor(readings)

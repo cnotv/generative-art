@@ -355,8 +355,8 @@ staff of four lines is read as a bass and one of six as a guitar.
 | Bars    | the bar lines, so each bar is one cycle of the pattern            |
 
 It works best on a clean digital screenshot, dark or light, with the rhythm row visible. The
-tempo is not read from the picture, so the code starts at 120 BPM: change the number in
-`setcps`. A mark it cannot read, such as a slide sign, is skipped and listed in the console tab.
+tempo comes from a marker such as "= 96" above the first staff; with none, or one it cannot
+read, the code starts at 120 BPM and you change the number in `setcps`. A mark it cannot read, such as a slide sign, is skipped and listed in the console tab.
 How it works and where it stops is in
 [Reading a tab screenshot without a model](../journey/strudel-tab-image-import.md).
 

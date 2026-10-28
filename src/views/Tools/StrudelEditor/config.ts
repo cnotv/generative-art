@@ -1171,6 +1171,8 @@ export const TAB_FAINT_DEVIATION = 25
 /** A pixel this far from the page colour is bright ink: a fret digit, a stem or a beam. */
 export const TAB_BRIGHT_DEVIATION = 100
 export const TAB_BACKGROUND_SAMPLE_STRIDE = 7
+/** Printed words such as a tempo are dimmer than a fret number, so they get their own level. */
+export const TAB_TEXT_DEVIATION = 50
 export const TAB_LUMINANCE_WEIGHTS = { red: 0.299, green: 0.587, blue: 0.114 }
 
 /** Every length below is a multiple of the gap between two staff lines, so any zoom works. */
@@ -1197,6 +1199,16 @@ export const TAB_BRACKET_BOTTOM_RATIO = 3.8
 export const TAB_BRACKET_MIN_SEGMENT_RATIO = 1
 export const TAB_BRACKET_JOIN_GAP_RATIO = 3
 export const TAB_STEM_NOTE_REACH_RATIO = 0.6
+
+export const TAB_TEMPO_BAND_TOP_RATIO = 3.5
+export const TAB_TEMPO_BAND_BOTTOM_RATIO = 1.5
+export const TAB_EQUALS_MIN_WIDTH_RATIO = 0.4
+export const TAB_EQUALS_MAX_WIDTH_RATIO = 1
+export const TAB_EQUALS_MAX_HEIGHT_RATIO = 0.5
+export const TAB_TEMPO_DIGIT_GAP_RATIO = 0.5
+export const TAB_TEMPO_MAX_DIGITS = 3
+export const TAB_TEMPO_MIN_BEATS_PER_MINUTE = 30
+export const TAB_TEMPO_MAX_BEATS_PER_MINUTE = 300
 
 export const TAB_BEATS_PER_BAR = 4
 /** Beats a stem lasts by how many beams or flags it carries: none, one, two, three. */

@@ -1,4 +1,4 @@
-import { TAB_BRIGHT_DEVIATION, TAB_FAINT_DEVIATION } from '../../config'
+import { TAB_BRIGHT_DEVIATION, TAB_FAINT_DEVIATION, TAB_TEXT_DEVIATION } from '../../config'
 import type { TabImage } from '../../types'
 
 /**
@@ -28,6 +28,16 @@ const deviationAt = (image: TabImage, x: number, y: number): number =>
  */
 export const isInkAt = (image: TabImage, x: number, y: number): boolean =>
   deviationAt(image, x, y) >= TAB_FAINT_DEVIATION
+
+/**
+ * Whether a pixel is dim text or brighter: printed labels such as the tempo.
+ * @param image - the tab image
+ * @param x - column
+ * @param y - row
+ * @returns true when the pixel is at least text level ink
+ */
+export const isTextAt = (image: TabImage, x: number, y: number): boolean =>
+  deviationAt(image, x, y) >= TAB_TEXT_DEVIATION
 
 /**
  * Whether a pixel is bright ink: a fret digit, a stem or a beam.

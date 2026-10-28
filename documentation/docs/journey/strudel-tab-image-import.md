@@ -80,6 +80,16 @@ Anything that is not a digit is dropped rather than guessed. A slide or vibrato 
 is removed, and an unreadable fret is reported as a warning and skipped, so the pattern is never
 silently wrong.
 
+## The tempo is a number after an equals sign
+
+The tempo marker is small, dim text in a layout that differs between sites, so no site specific
+position can be assumed. What stays the same is its shape: a note symbol, an equals sign, then
+digits. The reader scans the band of labels above the first staff, finds a short wide mark made of
+exactly two separate bars, and reads the digits right after it with the same templates as the
+fret numbers. Digits are normalised by their own strongest pixel, so dim text reads as well as
+bright, but the ink level used to find them has to be lower than for fret numbers. A result
+outside 30 to 300 beats per minute is treated as a misread and ignored.
+
 ## Strokes that look like bar lines
 
 Two things in the sample drew a vertical stroke the full height of the staff without being a bar
@@ -89,14 +99,14 @@ previous edge is ignored. A double bar line counts once.
 
 ## What it does not do
 
-| Missing                                 | Why                                                                                  |
-| --------------------------------------- | ------------------------------------------------------------------------------------ |
-| Tempo                                   | The marker is small, dim text in a site specific layout. The code starts at 120 BPM. |
-| Time signature                          | Assumed to be 4/4. Reading it needs the large digits at the staff start.             |
-| Dotted notes, other tuplets, half notes | None occur in the sample, so none were verified against real data.                   |
-| Slides, bends, vibrato, ghost notes     | Read as a note without the effect, or skipped with a warning.                        |
-| Photos, scans, handwriting              | The geometry is no longer straight and clean, which every detector here relies on.   |
-| Standard notation                       | Only tab staves with four or six lines are recognised.                               |
+| Missing                                 | Why                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------- |
+| A tempo given in words                  | Only the form with an equals sign is read. Otherwise the code starts at 120 BPM.   |
+| Time signature                          | Assumed to be 4/4. Reading it needs the large digits at the staff start.           |
+| Dotted notes, other tuplets, half notes | None occur in the sample, so none were verified against real data.                 |
+| Slides, bends, vibrato, ghost notes     | Read as a note without the effect, or skipped with a warning.                      |
+| Photos, scans, handwriting              | The geometry is no longer straight and clean, which every detector here relies on. |
+| Standard notation                       | Only tab staves with four or six lines are recognised.                             |
 
 The shape of the result is the reason this stayed small. It writes its own note pattern with
 lengths and ties, so the audio and MIDI import, which keeps one bass note per sixteenth, did not

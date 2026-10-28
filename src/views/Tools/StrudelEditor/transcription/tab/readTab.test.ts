@@ -64,6 +64,41 @@ describe('readTab on the sample bass tab', () => {
   })
 })
 
+describe('tempo', () => {
+  it('reads the tempo printed above the first staff of the sample', async () => {
+    // Arrange
+    const image = await loadSampleTabImage()
+
+    // Act
+    const { beatsPerMinute } = readTab(image)
+
+    // Assert
+    expect(beatsPerMinute).toBe(96)
+  })
+
+  it('reads a three digit tempo on a differently sized page', () => {
+    // Arrange
+    const image = drawQuarterNoteTab(6, [[{ lineIndex: 0, fret: 3 }]], 142)
+
+    // Act
+    const { beatsPerMinute } = readTab(image)
+
+    // Assert
+    expect(beatsPerMinute).toBe(142)
+  })
+
+  it('falls back to 120 when no tempo is printed', () => {
+    // Arrange
+    const image = drawQuarterNoteTab(6, [[{ lineIndex: 0, fret: 3 }]])
+
+    // Act
+    const { beatsPerMinute } = readTab(image)
+
+    // Assert
+    expect(beatsPerMinute).toBe(120)
+  })
+})
+
 describe('readTab on a synthetic guitar tab', () => {
   it('names notes from the six open strings and stacks a chord', () => {
     // Arrange

@@ -88,8 +88,8 @@ const onLoadRequested = (): void => {
     <p class="strudel-import__note">
       From audio, the result is a sketch in the spirit of the track, not a copy: it hears drums, a
       bass line and one chord per bar, and leaves the melody to you. A tab screenshot works best
-      when it is a clean digital one with the rhythm row under the staff; the tempo is not read from
-      the picture, so set it in the code.
+      when it is a clean digital one with the rhythm row under the staff. The tempo is read from a
+      marker such as "= 96" above the first staff, and is 120 when there is none.
     </p>
   </section>
 </template>
