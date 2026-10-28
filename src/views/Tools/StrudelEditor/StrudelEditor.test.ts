@@ -17,6 +17,26 @@ vi.mock('@webgamekit/strudel-flow', async (importOriginal) => {
   }
 })
 
+const { mockPreviewSound } = vi.hoisted(() => ({ mockPreviewSound: vi.fn() }))
+
+// The sound library fetches manifests over the network; the browser tests load the real one.
+vi.mock('./strudelSoundLibrary', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./strudelSoundLibrary')>()
+  return {
+    ...actual,
+    loadStrudelSoundLibrary: async () => undefined,
+    readStrudelSoundEntries: async () => [
+      { name: 'bd', type: 'sample', tag: '', sampleCount: 24 },
+      { name: 'RolandTR909_bd', type: 'sample', tag: 'drum-machines', sampleCount: 4 },
+      { name: 'gm_piano', type: 'soundfont', tag: '', sampleCount: 3 }
+    ]
+  }
+})
+vi.mock('./strudelPlayback', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./strudelPlayback')>()),
+  previewStrudelSound: mockPreviewSound.mockResolvedValue(undefined)
+}))
+
 // CodeMirror and the Strudel engine only load in a real browser; the browser tests cover
 // them. This stand-in keeps the code in a textarea so the view wiring can be checked.
 vi.mock('./codeEditor/createStrudelCodeMirror', () => ({
@@ -137,7 +157,7 @@ describe('StrudelEditor view', () => {
     expect((codeField.element as HTMLTextAreaElement).value).toBe('s("hh*8")')
   })
 
-  it('renders the hints tab and the eight player menu tabs, without the empty sounds tab', async () => {
+  it('renders the hints tab and the player menu tabs, sounds after patterns', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
@@ -145,12 +165,13 @@ describe('StrudelEditor view', () => {
     const tabButtons = wrapper.findAll('.strudel-editor__tab')
 
     // Assert
-    expect(tabButtons.length).toBe(10)
+    expect(tabButtons.length).toBe(11)
     const tabLabels = tabButtons.map((tab) => tab.text())
     expect(tabLabels).toEqual([
       'hints',
       'welcome',
       'patterns',
+      'sounds',
       'import',
       'midi',
       'reference',
@@ -159,6 +180,31 @@ describe('StrudelEditor view', () => {
       'settings',
       'flow'
     ])
+  })
+
+  it('lists the sounds, filters them, and previews the one clicked', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    await clickTab(wrapper, 'sounds')
+    // The tab link moves the hash a task later; wait, or it lands after the cleanup.
+    await vi.waitFor(() => expect(window.location.hash).toBe('#sounds'))
+    await flushPromises()
+    const readSoundLabels = (): string[] =>
+      wrapper.findAll('.strudel-sounds__list li').map((item) => item.text().replace(/\s+/g, ' '))
+
+    // Act
+    const allSounds = readSoundLabels()
+    await wrapper
+      .findAll('.button-selector__btn')
+      .find((filterButton) => filterButton.text() === 'drum machines')
+      ?.trigger('click')
+    const drumMachineSounds = readSoundLabels()
+    await wrapper.find('[aria-label="Preview RolandTR909_bd"]').trigger('click')
+
+    // Assert
+    expect(allSounds).toEqual(['bd (24)', 'RolandTR909_bd (4)', 'gm_piano (3)'])
+    expect(drumMachineSounds).toEqual(['RolandTR909_bd (4)'])
+    expect(mockPreviewSound).toHaveBeenCalledWith('RolandTR909_bd', 'sample')
   })
 
   it('shows the hints tab by default', async () => {

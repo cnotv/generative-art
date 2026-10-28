@@ -19,12 +19,13 @@ import StrudelFlowVoiceControls from './controls/StrudelFlowVoiceControls.vue'
 import { isStrudelFlowInstrumentKind } from '../nodeDefaults'
 import { getStrudelFlowNodeDefinition } from '../nodeDefinitions'
 import { generateStrudelFlowNodePattern } from '../nodePatterns'
-import type { StrudelFlowNodeData, StrudelFlowNodeKind } from '../types'
+import type { StrudelFlowNodeData, StrudelFlowNodeKind, StrudelFlowSoundGroup } from '../types'
 
 const props = defineProps<{
   id: string
   data: StrudelFlowNodeData
   selected?: boolean
+  sampleGroups?: StrudelFlowSoundGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -50,6 +51,7 @@ const NODE_CONTROLS: Record<StrudelFlowNodeKind, Component> = {
 }
 
 const EFFECT_CODE_INPUT = 'pattern'
+const SAMPLE_PICKING_KINDS = new Set<StrudelFlowNodeKind>(['samples', 'beats'])
 
 const isMenuOpen = ref(false)
 const isCodeVisible = ref(false)
@@ -59,6 +61,10 @@ const title = computed(() =>
   props.data.kind === 'effect' && props.data.method.length > 0
     ? props.data.method
     : definition.value.title
+)
+// Only the nodes that pick samples take the list; on any other it would land as an attribute.
+const controlProperties = computed(() =>
+  SAMPLE_PICKING_KINDS.has(props.data.kind) ? { sampleGroups: props.sampleGroups ?? [] } : {}
 )
 const isInstrument = computed(() => isStrudelFlowInstrumentKind(props.data.kind))
 const isMuted = computed(() => 'muted' in props.data && props.data.muted === true)
@@ -156,7 +162,12 @@ const onRemove = (): void => {
     </header>
     <pre v-if="isCodeVisible" class="strudel-flow-node__code nodrag">{{ nodeCode }}</pre>
     <div class="strudel-flow-node__body nodrag">
-      <component :is="NODE_CONTROLS[data.kind]" :data="data" @update="onDataUpdate" />
+      <component
+        :is="NODE_CONTROLS[data.kind]"
+        :data="data"
+        v-bind="controlProperties"
+        @update="onDataUpdate"
+      />
     </div>
     <Handle
       type="source"

@@ -14,12 +14,13 @@ edit the code, and press the play button above the editor.
 - The code is saved to the browser's local storage as you type, so a refresh or a later visit
   opens where you left off. An address naming a pattern opens that pattern instead, and picking
   one replaces the saved code.
-- The first Play loads the same sounds strudel.cc does: dirt-samples, the piano, the VCSL
+- The editor loads the same sounds strudel.cc does: dirt-samples, the piano, the VCSL
   instruments, the tidal drum machines with their short names (`.bank("TR909")`), the uzu
   drum kit and wavetables, mridangam, and the General MIDI soundfonts (`gm_piano`,
-  `gm_acoustic_bass` and the rest), so code copied from strudel.cc plays unchanged.
+  `gm_acoustic_bass` and the rest), so code copied from strudel.cc plays unchanged. They load
+  on the first Play, or earlier when the sounds tab or the flow canvas opens.
 
-A panel opens on the hints tab, followed by six of the strudel.cc tabs, an import tab and the
+A panel opens on the hints tab, followed by seven of the strudel.cc tabs, an import tab and the
 flow tab:
 
 - **hints**: what the pattern is missing for its style (below)
@@ -31,6 +32,9 @@ flow tab:
   pattern can open in a new tab. The name field at the top saves the code in the editor under
   that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under
   a name already used replaces it, and its cross deletes it.
+- **sounds**: every sound the editor can play, searchable and filtered as on strudel.cc into
+  samples, drum machines, synths (soundfonts included) and wavetables. Clicking a name plays it
+  once; the number beside it is how many variations `n` picks from.
 - **import**: turn an MP3, other audio or a MIDI file into a pattern (below)
 - **midi**: play or drive MIDI devices (below)
 - **reference**: function quick list
@@ -38,6 +42,8 @@ flow tab:
 - **console**: evaluation log
 - **settings**: theme and panel position
 - **flow**: build a pattern from instrument and effect nodes (below)
+
+![The sounds tab: a search field, the all, samples, drum machines, synths and wavetables filters, and the sound names with their variation counts](/img/strudel-editor/sounds-tab.webp)
 
 Every tab has its own anchor, so `/tools/StrudelEditor#midi` opens on the midi tab and
 `#flow` opens the flow canvas. Tabs and patterns share the anchor: a name that is a tab opens it,
@@ -184,7 +190,13 @@ toms, cymbals and percussion from the loaded kit. Its **Shape** footer sets how 
 how many tracks there are, and whether the variation picker shows under each step: `*2` repeats a
 hit within its step, `!2` repeats the step, `@2` stretches it and `/2` plays it every other cycle.
 Each track is written as a plain sample line, such as `s("~ cp ~ cp*2")`, so typing a line like
-that reads back as a Beats track too.
+that reads back as a Beats track too. Below the shortlist, each track's picker also lists every
+other sample and drum machine in the library.
+
+The Samples node has an **Add sample** picker under its pattern, grouped into samples and drum
+machines; picking one appends it to the end of the line.
+
+![The flow canvas with a Samples node whose pattern ends in a picked casio sample, next to a Beats node](/img/strudel-editor/flow-sample-picker.webp)
 
 ![A Beats node with kick, clap and hi-hat tracks over eight steps, variations shown and the Shape footer open](/img/strudel-flow/beats-node.webp)
 

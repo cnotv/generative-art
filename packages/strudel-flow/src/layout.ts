@@ -19,7 +19,7 @@ const NODE_SIZES: Record<StrudelFlowNodeKind, NodeSize> = {
   beats: { width: 704, height: 320 },
   chords: { width: 416, height: 520 },
   notes: { width: 384, height: 200 },
-  samples: { width: 384, height: 200 },
+  samples: { width: 384, height: 260 },
   code: { width: 448, height: 300 },
   voice: { width: 320, height: 240 },
   filter: { width: 448, height: 240 },

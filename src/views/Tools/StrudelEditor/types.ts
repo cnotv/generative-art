@@ -10,6 +10,8 @@ export type StrudelExample = {
 export type StrudelSampleBank = {
   manifestUrl: string
   baseUrl?: string
+  /** strudel.cc's grouping, so the sounds tab can tell drum machines from other samples. */
+  tag?: string
 }
 
 /** A pattern the player saved under a name, kept in local storage. */
@@ -257,6 +259,7 @@ export type StrudelTabId =
   | 'hints'
   | 'welcome'
   | 'patterns'
+  | 'sounds'
   | 'import'
   | 'midi'
   | 'reference'
@@ -268,8 +271,16 @@ export type StrudelTabId =
 export type StrudelSoundEntry = {
   name: string
   type: string
+  tag: string
   sampleCount: number
 }
+
+export type StrudelSoundFilter = 'all' | 'samples' | 'drum-machines' | 'synths' | 'wavetables'
+
+export type StrudelSoundsStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+/** Strudel ships untyped JS, so every function read off one of its modules starts as this. */
+export type StrudelUnknownCallable = (...callArguments: unknown[]) => unknown
 
 export type StrudelLogEntry = {
   id: number

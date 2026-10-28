@@ -16,7 +16,8 @@ import type {
   StrudelFlowEdge,
   StrudelFlowNode as StrudelFlowNodeType,
   StrudelFlowNodeData,
-  StrudelFlowNodeKind
+  StrudelFlowNodeKind,
+  StrudelFlowSoundGroup
 } from '../types'
 
 const props = defineProps<{
@@ -24,6 +25,8 @@ const props = defineProps<{
   edges: StrudelFlowEdge[]
   beatsPerMinute: number
   beatsPerCycle: number
+  /** Every sample the host can play, for the Samples and Beats nodes to pick from. */
+  sampleGroups?: StrudelFlowSoundGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -128,6 +131,7 @@ const openRadialMenu = (): void => {
           :id="nodeProperties.id"
           :data="nodeProperties.data"
           :selected="nodeProperties.selected"
+          :sample-groups="sampleGroups ?? []"
           @update="onNodeUpdated(nodeProperties.id, $event)"
           @remove="onNodeRemoved"
         />

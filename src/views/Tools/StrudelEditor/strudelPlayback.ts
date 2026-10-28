@@ -1,20 +1,22 @@
 import {
   DEFAULT_CPS,
-  STRUDEL_BANK_ALIASES_URL,
   STRUDEL_DRAW_TIME,
   STRUDEL_NO_DRAW_TIME,
-  STRUDEL_SAMPLE_BANKS
+  STRUDEL_SOUND_PREVIEW_LEAD_SECONDS,
+  STRUDEL_SOUND_PREVIEW_NOTE,
+  STRUDEL_SOUND_PREVIEW_SECONDS
 } from './config'
 import { downloadWavFile, renderStrudelPatternToWav } from './strudelOfflineRender'
+import { isRecordModule, requireCallable, requireRecordModule, toCallable } from './strudelModules'
+import { loadStrudelSoundLibrary } from './strudelSoundLibrary'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
   StrudelExportOptions,
   StrudelPlayback,
-  StrudelPlaybackHooks
+  StrudelPlaybackHooks,
+  StrudelUnknownCallable
 } from './types'
-
-type UnknownCallable = (...callArguments: unknown[]) => unknown
 
 type ReplCallbacks = {
   beforeEval: () => void
@@ -24,34 +26,15 @@ type ReplCallbacks = {
 }
 
 type StrudelEngine = {
-  replFactory: UnknownCallable
-  scopeInitializer: UnknownCallable
-  audioInitializer: UnknownCallable
-  synthRegistrar: UnknownCallable
-  soundfontRegistrar: UnknownCallable
-  sampleBankLoader: UnknownCallable
-  bankAliasLoader: UnknownCallable
-  contextGetter: UnknownCallable
+  replFactory: StrudelUnknownCallable
+  scopeInitializer: StrudelUnknownCallable
+  audioInitializer: StrudelUnknownCallable
+  contextGetter: StrudelUnknownCallable
   audioModule: Record<string, unknown>
-  contextSetter: UnknownCallable
+  contextSetter: StrudelUnknownCallable
   scheduleHandler: unknown
   codeTranspiler: unknown
   scopeModules: unknown[]
-}
-
-const isRecordModule = (moduleValue: unknown): moduleValue is Record<string, unknown> =>
-  typeof moduleValue === 'object' && moduleValue !== null
-
-const toCallable = (callableValue: unknown): UnknownCallable | undefined =>
-  // Strudel ships untyped JS, so the shape is checked before calling.
-  typeof callableValue === 'function' ? (callableValue as UnknownCallable) : undefined
-
-const requireCallable = (callableValue: unknown): UnknownCallable => {
-  const callable = toCallable(callableValue)
-  if (callable === undefined) {
-    throw new Error('Strudel modules failed to load')
-  }
-  return callable
 }
 
 const readAudioTime = (audioContext: unknown): number => {
@@ -152,8 +135,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     tonalModule,
     transpilerModule,
     drawModule,
-    midiModule,
-    soundfontsModule
+    midiModule
   ]: unknown[] = await Promise.all([
     import('@strudel/core'),
     import('@strudel/mini'),
@@ -161,10 +143,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     import('@strudel/tonal'),
     import('@strudel/transpiler'),
     import('@strudel/draw'),
-    import('@strudel/midi/midi.mjs'),
-    // Pinned to the release built on the same webaudio: a mismatch installs a second copy,
-    // and the fonts register in a sound map playback never reads, failing silently.
-    import('@strudel/soundfonts')
+    import('@strudel/midi/midi.mjs')
   ])
   // Importing the editor module registers _pianoroll, _scope and the other inline widgets
   // with the transpiler, and supplies the sliderWithID that slider() is rewritten into.
@@ -172,8 +151,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
   if (
     !isRecordModule(coreModule) ||
     !isRecordModule(webaudioModule) ||
-    !isRecordModule(transpilerModule) ||
-    !isRecordModule(soundfontsModule)
+    !isRecordModule(transpilerModule)
   ) {
     throw new Error('Strudel modules failed to load')
   }
@@ -187,10 +165,6 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     replFactory: requireCallable(coreModule.repl),
     scopeInitializer: requireCallable(coreModule.evalScope),
     audioInitializer: requireCallable(webaudioModule.initAudio),
-    synthRegistrar: requireCallable(webaudioModule.registerSynthSounds),
-    soundfontRegistrar: requireCallable(soundfontsModule.registerSoundfonts),
-    sampleBankLoader: requireCallable(webaudioModule.samples),
-    bankAliasLoader: requireCallable(webaudioModule.aliasBank),
     contextGetter: requireCallable(webaudioModule.getAudioContext),
     audioModule: webaudioModule,
     contextSetter: requireCallable(webaudioModule.setAudioContext),
@@ -206,20 +180,6 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
       { slider, sliderWithID }
     ]
   }
-}
-
-/**
- * Registers every sample bank, then the drum machine aliases, which only rename banks already
- * registered. A bank that fails to load is left out rather than keeping the editor silent.
- * @param engine - the loaded Strudel modules
- */
-const loadSampleBanks = async (engine: StrudelEngine): Promise<void> => {
-  await Promise.allSettled(
-    STRUDEL_SAMPLE_BANKS.map(({ manifestUrl, baseUrl }) =>
-      engine.sampleBankLoader(manifestUrl, baseUrl)
-    )
-  )
-  await Promise.allSettled([engine.bankAliasLoader(STRUDEL_BANK_ALIASES_URL)])
 }
 
 /**
@@ -276,11 +236,9 @@ export const loadDefaultStrudelPlayback = async (
     engine.contextSetter(gestureAudioContext)
   }
   await engine.audioInitializer()
-  engine.synthRegistrar()
-  engine.soundfontRegistrar()
   const audioContext: unknown = engine.contextGetter()
   await resumeAudioContext(audioContext)
-  await loadSampleBanks(engine)
+  await loadStrudelSoundLibrary()
   await engine.scopeInitializer(...engine.scopeModules)
   const drawer = await createPlaybackDrawer(hooks)
   const cleanupVisuals = await createVisualsCleanup(hooks)
@@ -363,4 +321,34 @@ export const loadDefaultStrudelPlayback = async (
       }
     }
   }
+}
+
+/**
+ * Plays one sound on its own, as clicking a name in strudel.cc's sounds tab does. Unlocks the
+ * page's audio first, inside the click, for the same iOS reason Play does.
+ * @param soundName - a registered sound, such as "bd" or "gm_piano"
+ * @param soundType - its registration type; synths and soundfonts are given a note to play
+ */
+export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
+  const gestureAudioContext = unlockPageAudioContext()
+  const webaudioModule = requireRecordModule(await import('@strudel/webaudio'))
+  if (gestureAudioContext !== null) {
+    requireCallable(webaudioModule.setAudioContext)(gestureAudioContext)
+  }
+  await requireCallable(webaudioModule.initAudio)()
+  await loadStrudelSoundLibrary()
+  const needsNote = soundType === 'synth' || soundType === 'soundfont'
+  const soundValue = {
+    s: soundName,
+    note: needsNote ? STRUDEL_SOUND_PREVIEW_NOTE : undefined,
+    clip: 1
+  }
+  const startTime =
+    readAudioTime(requireCallable(webaudioModule.getAudioContext)()) +
+    STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
+  await requireCallable(webaudioModule.superdough)(
+    soundValue,
+    startTime,
+    STRUDEL_SOUND_PREVIEW_SECONDS
+  )
 }

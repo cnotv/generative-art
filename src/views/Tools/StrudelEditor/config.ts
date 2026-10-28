@@ -6,6 +6,7 @@ import type {
   StrudelMusicStyle,
   StrudelPatternIdea,
   StrudelSampleBank,
+  StrudelSoundFilter,
   StrudelTabId,
   StrudelVisualName,
   TranscriptionStage
@@ -363,11 +364,13 @@ export const STRUDEL_SAMPLE_BANKS: StrudelSampleBank[] = [
   },
   {
     manifestUrl: 'https://strudel.b-cdn.net/tidal-drum-machines.json',
-    baseUrl: 'https://strudel.b-cdn.net/tidal-drum-machines/machines/'
+    baseUrl: 'https://strudel.b-cdn.net/tidal-drum-machines/machines/',
+    tag: 'drum-machines'
   },
   {
     manifestUrl: 'https://strudel.b-cdn.net/uzu-drumkit.json',
-    baseUrl: 'https://strudel.b-cdn.net/uzu-drumkit/'
+    baseUrl: 'https://strudel.b-cdn.net/uzu-drumkit/',
+    tag: 'drum-machines'
   },
   {
     manifestUrl: 'https://strudel.b-cdn.net/uzu-wavetables.json',
@@ -375,9 +378,31 @@ export const STRUDEL_SAMPLE_BANKS: StrudelSampleBank[] = [
   },
   {
     manifestUrl: 'https://strudel.b-cdn.net/mridangam.json',
-    baseUrl: 'https://strudel.b-cdn.net/mrid/'
+    baseUrl: 'https://strudel.b-cdn.net/mrid/',
+    tag: 'drum-machines'
   }
 ]
+
+/** The sounds tab's filters, the ones strudel.cc's sounds tab offers. */
+export const STRUDEL_SOUND_FILTERS: { id: StrudelSoundFilter; label: string }[] = [
+  { id: 'all', label: 'all' },
+  { id: 'samples', label: 'samples' },
+  { id: 'drum-machines', label: 'drum machines' },
+  { id: 'synths', label: 'synths' },
+  { id: 'wavetables', label: 'wavetables' }
+]
+
+/** The tag strudel.cc gives drum machine banks, which the filters split from other samples. */
+export const STRUDEL_DRUM_MACHINES_TAG = 'drum-machines'
+
+/** How long a sound plays when its name is clicked in the sounds tab, in seconds. */
+export const STRUDEL_SOUND_PREVIEW_SECONDS = 0.5
+
+/** The note a synth or soundfont previews at, A3, since unlike a sample it has no pitch of its own. */
+export const STRUDEL_SOUND_PREVIEW_NOTE = 57
+
+/** Lead time before a preview starts, so the first scheduled sample is not clipped. */
+export const STRUDEL_SOUND_PREVIEW_LEAD_SECONDS = 0.05
 
 /** Short names such as `.bank("TR909")` for the drum machines, applied once they are loaded. */
 export const STRUDEL_BANK_ALIASES_URL = 'https://strudel.b-cdn.net/tidal-drum-machines-alias.json'
@@ -404,6 +429,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'hints', label: 'hints' },
   { id: 'welcome', label: 'welcome' },
   { id: 'patterns', label: 'patterns' },
+  { id: 'sounds', label: 'sounds' },
   { id: 'import', label: 'import' },
   { id: 'midi', label: 'midi' },
   { id: 'reference', label: 'reference' },
