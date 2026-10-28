@@ -116,6 +116,7 @@ const onFilesChosen = (files: FileList): void => {
             {{ instrument.sourceName }}, {{ instrument.transcription.bars.length }} bars
           </span>
           <Button
+            class="strudel-import__instrument-remove"
             size="sm"
             variant="outline"
             :aria-label="`Remove ${instrument.label} ${instrument.sourceName}`"
@@ -221,20 +222,31 @@ const onFilesChosen = (files: FileList): void => {
 }
 
 .strudel-import__instrument {
-  display: flex;
+  display: grid;
+  grid-template-areas:
+    'label remove'
+    'source remove';
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: 0 var(--spacing-3);
   font-size: var(--font-size-md);
 }
 
 .strudel-import__instrument-label {
+  grid-area: label;
   font-weight: 600;
   color: var(--color-foreground);
 }
 
 .strudel-import__instrument-source {
-  flex: 1;
+  grid-area: source;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
   color: var(--color-muted-foreground);
+}
+
+.strudel-import__instrument-remove {
+  grid-area: remove;
 }
 
 .strudel-import__warnings {
