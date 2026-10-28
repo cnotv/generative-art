@@ -106,7 +106,7 @@ previous edge is ignored. A double bar line counts once.
 | Dotted notes, other tuplets, half notes | None occur in the sample, so none were verified against real data.                 |
 | Slides, bends, vibrato, ghost notes     | Read as a note without the effect, or skipped with a warning.                      |
 | Photos, scans, handwriting              | The geometry is no longer straight and clean, which every detector here relies on. |
-| Standard notation                       | Only tab staves with four or six lines are recognised.                             |
+| Standard notation                       | Read separately, see [reading a piano score](./strudel-piano-score-import.md).     |
 
 The shape of the result is the reason this stayed small. It writes its own note pattern with
 lengths and ties, so the audio and MIDI import, which keeps one bass note per sixteenth, did not
