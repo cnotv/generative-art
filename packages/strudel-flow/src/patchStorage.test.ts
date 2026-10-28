@@ -378,4 +378,40 @@ describe('parseStrudelFlowPatch', () => {
     // Assert
     expect(patch?.edges.map((edge) => edge.id)).toEqual(['same', 'beats-filter'])
   })
+
+  it('reads the calls chained onto a node and an Effect node stored with one call', () => {
+    // Arrange
+    const storedValue = storePatch({
+      nodes: [
+        {
+          id: 'notes',
+          position: { x: 0, y: 0 },
+          data: {
+            kind: 'notes',
+            pattern: 'c3',
+            calls: [{ method: 'mask', argument: '"1 0"' }, { method: 7 }, 'fast']
+          }
+        },
+        {
+          id: 'effect',
+          position: { x: 300, y: 0 },
+          data: { kind: 'effect', method: 'jux', argument: 'rev' }
+        }
+      ]
+    })
+
+    // Act
+    const patch = parseStrudelFlowPatch(storedValue)
+
+    // Assert
+    expect(patch?.nodes[0]?.data).toEqual({
+      kind: 'notes',
+      pattern: 'c3',
+      calls: [{ method: 'mask', argument: '"1 0"' }]
+    })
+    expect(patch?.nodes[1]?.data).toEqual({
+      kind: 'effect',
+      calls: [{ method: 'jux', argument: 'rev' }]
+    })
+  })
 })

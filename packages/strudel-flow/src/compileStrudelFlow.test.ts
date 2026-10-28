@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compileStrudelFlow } from './compileStrudelFlow'
+import { compileStrudelFlow, getStrudelFlowVisualizerWidgetIds } from './compileStrudelFlow'
 import { createStrudelFlowDrumRow, createStrudelFlowNodeData } from './nodeDefaults'
 import type {
   StrudelFlowEdge,
@@ -253,7 +253,10 @@ describe('compileStrudelFlow', () => {
     // Arrange
     const notes = createNode('notes', { kind: 'notes', pattern: 'c3 e3' })
     const voice = createNode('voice', { kind: 'voice', sound: 'sawtooth' })
-    const effect = createNode('effect', { kind: 'effect', method: 'jux', argument: 'rev' })
+    const effect = createNode('effect', {
+      kind: 'effect',
+      calls: [{ method: 'jux', argument: 'rev' }]
+    })
     const samples = createNode('samples', { kind: 'samples', pattern: 'bd*2 sd' })
 
     // Act
@@ -303,5 +306,66 @@ describe('compileStrudelFlow', () => {
     expect(compilation.code).toContain(
       '$: stack(note("c3").sound("triangle"), s("bd")).lpf(1500).lpq(1)'
     )
+  })
+
+  it("chains an instrument's own calls before muting it", () => {
+    // Arrange
+    const notes = createNode('notes', {
+      kind: 'notes',
+      pattern: 'c3',
+      muted: true,
+      calls: [{ method: 'mask', argument: '"1 0"' }]
+    })
+    const samples = createNode('samples', { kind: 'samples', pattern: 'bd' })
+
+    // Act
+    const compilation = compile([notes, samples], [])
+
+    // Assert
+    expect(compilation.code).toContain('_$: note("c3").mask("1 0")')
+  })
+})
+
+describe('getStrudelFlowVisualizerWidgetIds', () => {
+  const visualizer = (
+    id: string,
+    visual: 'scope' | 'pianoroll',
+    placement: 'inline' | 'background'
+  ): StrudelFlowNode => createNode(id, { kind: 'visualizer', visual, placement, options: '' })
+
+  it('names the canvas each inline visual draws on, counted per visual in code order', () => {
+    // Arrange
+    const nodes = [
+      createNode('notes', { kind: 'notes', pattern: 'c3' }),
+      createNode('samples', { kind: 'samples', pattern: 'bd' }),
+      visualizer('notesScope', 'scope', 'inline'),
+      visualizer('samplesScope', 'scope', 'inline'),
+      visualizer('sharedRoll', 'pianoroll', 'inline'),
+      visualizer('behind', 'scope', 'background'),
+      createNode('bass', { kind: 'notes', pattern: 'c2' }),
+      visualizer('bassScope', 'scope', 'inline')
+    ]
+    const edges = [
+      createEdge('notes', 'notesScope'),
+      createEdge('samples', 'samplesScope'),
+      createEdge('notesScope', 'sharedRoll'),
+      createEdge('samplesScope', 'sharedRoll'),
+      createEdge('sharedRoll', 'behind'),
+      createEdge('bass', 'bassScope')
+    ]
+
+    // Act
+    const widgetIds = getStrudelFlowVisualizerWidgetIds(nodes, edges)
+
+    // Assert
+    expect(compile(nodes, edges).code).toContain(
+      '$: stack(note("c3")._scope(), s("bd")._scope())._pianoroll().scope()\n$: note("c2")._scope()'
+    )
+    expect(widgetIds).toEqual({
+      notesScope: '_widget__scope_0',
+      samplesScope: '_widget__scope_1',
+      sharedRoll: '_widget__pianoroll_0',
+      bassScope: '_widget__scope_2'
+    })
   })
 })

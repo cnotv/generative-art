@@ -171,3 +171,9 @@ export const STRUDEL_FLOW_DRUM_SOUND_GROUPS = [
     sounds: ['perc', 'tabla', 'tok', 'tink', 'click', 'stomp', 'glasstap', 'can', 'bottle']
   }
 ]
+
+/**
+ * Strudel names the canvas of an inline visual `<evaluation id>_widget_<call>_<index>`. The
+ * editor evaluates without an id, so the name starts at the underscore.
+ */
+export const STRUDEL_FLOW_WIDGET_ID_PREFIX = '_widget_'

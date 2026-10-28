@@ -54,7 +54,7 @@ type EffectKind = 'filter' | 'delay' | 'space' | 'level' | 'envelope'
 
 type EffectCall = { kind: EffectKind; field: string }
 
-type EffectChainState = { effects: StrudelFlowNodeData[]; fieldsOnLast: string[] }
+type EffectChainState = ParsedChain & { fieldsOnLast: string[] }
 
 type BuildState = {
   nodes: StrudelFlowNode[]
@@ -64,6 +64,9 @@ type BuildState = {
 }
 
 const ROW_GAP = 48
+const CALL_ROW_HEIGHT = 40
+// The Calls label above the rows and the Add call button under them.
+const CALL_LIST_HEIGHT = 64
 const COLUMN_SPACING = 96
 const DEFAULT_SCALE: Scale = { key: 'C', octave: 3, scaleType: 'major' }
 const REST_TOKEN = '~'
@@ -309,7 +312,8 @@ const singleBeats = (branch: Branch): StrudelFlowBeatsData | null => {
   return branch.instruments.length === 1 &&
     branch.effects.length === 0 &&
     instrument?.kind === 'beats' &&
-    instrument.muted !== true
+    instrument.muted !== true &&
+    (instrument.calls ?? []).length === 0
     ? instrument
     : null
 }
@@ -440,11 +444,48 @@ const setEffectField = (
   value: number
 ): StrudelFlowNodeData => Object.assign({}, effect, { [field]: value })
 
+const withCall = (data: StrudelFlowNodeData, call: Call): StrudelFlowNodeData =>
+  Object.assign({}, data, {
+    calls: [...(data.calls ?? []), { method: call.name, argument: call.argument }]
+  })
+
+const replaceLast = (list: StrudelFlowNodeData[], data: StrudelFlowNodeData) => [
+  ...list.slice(0, -1),
+  data
+]
+
+// A call no dedicated node covers sits on the node it follows: the last effect, or the one
+// instrument it starts from. After a stack with nothing chained yet there is no such node, so
+// the calls there gather on one Effect node.
+const addGenericCall = (state: EffectChainState, call: Call): EffectChainState => {
+  const lastEffect = state.effects.at(-1)
+  if (lastEffect !== undefined) {
+    return { ...state, effects: replaceLast(state.effects, withCall(lastEffect, call)) }
+  }
+  const [onlyBranch] = state.branches
+  const branchEnd = onlyBranch?.effects.at(-1) ?? onlyBranch?.instruments[0]
+  if (state.branches.length !== 1 || onlyBranch === undefined || branchEnd === undefined) {
+    return { ...state, effects: [withCall({ kind: 'effect', calls: [] }, call)] }
+  }
+  if (onlyBranch.effects.length > 0) {
+    return {
+      ...state,
+      branches: [
+        { ...onlyBranch, effects: replaceLast(onlyBranch.effects, withCall(branchEnd, call)) }
+      ]
+    }
+  }
+  return onlyBranch.instruments.length === 1
+    ? { ...state, branches: [{ ...onlyBranch, instruments: [withCall(branchEnd, call)] }] }
+    : { ...state, effects: [withCall({ kind: 'effect', calls: [] }, call)] }
+}
+
 // Consecutive calls of one effect, such as `.lpf(800).lpq(4)`, share a node until a field
-// repeats; a call with a pattern or a slider for its argument keeps that argument verbatim.
+// repeats; a call with a pattern or a slider for its argument stays a call on the node before.
 const addEffectCall = (state: EffectChainState, call: Call): EffectChainState => {
   if (VOICE_CALLS.has(call.name) && isStringLiteral(call.argument)) {
     return {
+      ...state,
       effects: [...state.effects, { kind: 'voice', sound: readStringLiteral(call.argument) }],
       fieldsOnLast: []
     }
@@ -452,6 +493,7 @@ const addEffectCall = (state: EffectChainState, call: Call): EffectChainState =>
   const visual = VISUAL_CALLS.get(call.name)
   if (visual !== undefined) {
     return {
+      ...state,
       effects: [
         ...state.effects,
         {
@@ -467,19 +509,18 @@ const addEffectCall = (state: EffectChainState, call: Call): EffectChainState =>
   const descriptor = EFFECT_CALLS[call.name]
   const value = readNumber(call.argument)
   if (descriptor === undefined || value === null) {
-    return {
-      effects: [...state.effects, { kind: 'effect', method: call.name, argument: call.argument }],
-      fieldsOnLast: []
-    }
+    return addGenericCall(state, call)
   }
   const last = state.effects.at(-1)
   if (last?.kind === descriptor.kind && !state.fieldsOnLast.includes(descriptor.field)) {
     return {
-      effects: [...state.effects.slice(0, -1), setEffectField(last, descriptor.field, value)],
+      ...state,
+      effects: replaceLast(state.effects, setEffectField(last, descriptor.field, value)),
       fieldsOnLast: [...state.fieldsOnLast, descriptor.field]
     }
   }
   return {
+    ...state,
     effects: [
       ...state.effects,
       setEffectField(createStrudelFlowNodeData(descriptor.kind), descriptor.field, value)
@@ -488,38 +529,41 @@ const addEffectCall = (state: EffectChainState, call: Call): EffectChainState =>
   }
 }
 
+const applyCalls = (chain: ParsedChain, calls: Call[]): ParsedChain => {
+  const muted = calls.some((call) => call.name === 'hush')
+  const applied = calls
+    .filter((call) => call.name !== 'hush')
+    .reduce(addEffectCall, { ...chain, fieldsOnLast: [] })
+  return { branches: muteBranches(applied.branches, muted), effects: applied.effects }
+}
+
 /**
- * Reads one pattern expression into its instrument branches and the effects after them. Every
- * chained call becomes a node: a dedicated one when the editor has it, a generic Effect node
- * otherwise, and a head it cannot read stays a Code instrument.
+ * Reads one pattern expression into its instrument branches and the effects after them. A
+ * call the editor has a node for becomes that node, any other call sits on the node it
+ * follows, and a head it cannot read stays a Code instrument.
  * @param expression - one pattern, such as `note("c e").lpf(800).fast(2)`
  * @returns the branches and the shared effects in signal order
  */
 const readChain = (expression: string): ParsedChain => {
   const segments = splitTopLevel(expression, '.')
-  const inner = segments.length > 0 ? unwrapParentheses(segments[0]) : null
-  if (inner !== null) {
-    const innerChain = readChain(inner)
-    const outerChain = readChain(['silence', ...segments.slice(1)].join('.'))
-    return {
-      branches: innerChain.branches,
-      effects: [...innerChain.effects, ...outerChain.effects]
-    }
-  }
   const calls = segments.slice(1).map(readCall)
   if (segments.length === 0 || calls.some((call) => call === null)) {
     return { branches: [instrumentBranch(codeInstrument(expression))], effects: [] }
   }
   const chainedCalls = calls.filter((call): call is Call => call !== null)
-  const muted = chainedCalls.some((call) => call.name === 'hush')
+  const inner = unwrapParentheses(segments[0])
+  if (inner !== null) {
+    return applyCalls(readChain(inner), chainedCalls)
+  }
   const head = readHead(
     segments[0],
     chainedCalls.filter((call) => call.name !== 'hush')
   )
-  return {
-    branches: muteBranches(head.branches, muted),
-    effects: head.remaining.reduce(addEffectCall, { effects: [], fieldsOnLast: [] }).effects
-  }
+  const isMuted = chainedCalls.some((call) => call.name === 'hush')
+  return applyCalls(
+    { branches: head.branches, effects: [] },
+    isMuted ? [...head.remaining, { name: 'hush', argument: '' }] : head.remaining
+  )
 }
 
 const readTempoValue = (argument: string): number[] =>
@@ -631,8 +675,13 @@ const connect = (state: BuildState, source: string, target: string): BuildState 
   edges: [...state.edges, { id: `${source}-${target}`, source, target }]
 })
 
+const callListHeight = (data: StrudelFlowNodeData): number => {
+  const callCount = data.calls?.length ?? 0
+  return callCount === 0 ? 0 : CALL_LIST_HEIGHT + callCount * CALL_ROW_HEIGHT
+}
+
 const heightOf = (data: StrudelFlowNodeData): number =>
-  getStrudelFlowNodeSize(data.kind).height + ROW_GAP
+  getStrudelFlowNodeSize(data.kind).height + callListHeight(data) + ROW_GAP
 
 const branchHeight = (branch: Branch): number =>
   Math.max(

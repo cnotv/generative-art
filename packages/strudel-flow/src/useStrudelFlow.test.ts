@@ -142,7 +142,7 @@ describe('useStrudelFlow', () => {
     expect(flow.compilation.value.code).toBe(compiledCode)
   })
 
-  it('keeps an unrecognized pattern head as a Code node and its calls as effects', () => {
+  it('keeps an unrecognized pattern head as a Code node with its calls', () => {
     // Arrange
     const flow = createFlow()
     const source = ['setcpm(120/4)', '$: n(run(8)).fast(2)'].join('\n')
@@ -151,7 +151,7 @@ describe('useStrudelFlow', () => {
     flow.loadCode(source)
 
     // Assert
-    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['code', 'effect'])
+    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['code'])
     expect(flow.compilation.value.code).toBe('setcpm(120/4)\n$: (n(run(8))).fast(2)')
   })
 

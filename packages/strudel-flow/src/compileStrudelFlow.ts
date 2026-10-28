@@ -1,3 +1,4 @@
+import { STRUDEL_FLOW_WIDGET_ID_PREFIX } from './config'
 import { isStrudelFlowInstrumentKind } from './nodeDefaults'
 import { generateStrudelFlowNodePattern } from './nodePatterns'
 import { normalizeStrudelFlowBeatsPerCycle, normalizeStrudelFlowBeatsPerMinute } from './tempo'
@@ -173,13 +174,15 @@ const applyEffects = (
 
 type InstrumentPath = { pattern: string; effectIds: string[] }
 
+type ComponentPlan = { label: string; branches: InstrumentPath[]; sharedIds: string[] }
+
 // Each instrument only goes through the effects downstream of it. The effects every path shares
 // are chained once after the stack; the rest stay on their own branch inside it.
-const compileComponent = (
+const planComponent = (
   componentIds: string[],
   edges: StrudelFlowEdge[],
   nodesById: Map<string, StrudelFlowNode>
-): string[] => {
+): ComponentPlan | null => {
   const instruments = instrumentsInComponent(componentIds, nodesById)
   const isComponentMuted = instruments.length > 0 && instruments.every(isMuted)
   const outgoing = buildOutgoingMap(edges, componentIds)
@@ -198,30 +201,38 @@ const compileComponent = (
     ]
   })
   if (paths.length === 0) {
-    return []
+    return null
   }
   const sharedLength = commonSuffixLength(paths.map((path) => path.effectIds))
-  const sharedIds = paths[0].effectIds.slice(paths[0].effectIds.length - sharedLength)
-  const branches = paths.map((path) =>
-    applyEffects(
-      path.pattern,
-      path.effectIds.slice(0, path.effectIds.length - sharedLength),
-      nodesById
-    )
-  )
-  const label = isComponentMuted ? '_$:' : '$:'
-  return [`${label} ${applyEffects(stackPatterns(branches), sharedIds, nodesById)}`]
+  return {
+    label: isComponentMuted ? '_$:' : '$:',
+    branches: paths.map((path) => ({
+      pattern: path.pattern,
+      effectIds: path.effectIds.slice(0, path.effectIds.length - sharedLength)
+    })),
+    sharedIds: paths[0].effectIds.slice(paths[0].effectIds.length - sharedLength)
+  }
 }
+
+const compilePlan = (plan: ComponentPlan, nodesById: Map<string, StrudelFlowNode>): string => {
+  const branches = plan.branches.map((branch) =>
+    applyEffects(branch.pattern, branch.effectIds, nodesById)
+  )
+  return `${plan.label} ${applyEffects(stackPatterns(branches), plan.sharedIds, nodesById)}`
+}
+
+const planComponents = (
+  nodes: StrudelFlowNode[],
+  edges: StrudelFlowEdge[],
+  nodesById: Map<string, StrudelFlowNode>
+): ComponentPlan[] =>
+  findComponents(nodes, edges).flatMap((componentIds) => {
+    const plan = planComponent(componentIds, edges, nodesById)
+    return plan === null ? [] : [plan]
+  })
 
 const stackPatterns = (patterns: string[]): string =>
   patterns.length === 1 ? patterns[0] : `stack(${patterns.join(', ')})`
-
-const compileComponents = (
-  components: string[][],
-  edges: StrudelFlowEdge[],
-  nodesById: Map<string, StrudelFlowNode>
-): string[] =>
-  components.flatMap((componentIds) => compileComponent(componentIds, edges, nodesById))
 
 /**
  * Turns a flow patch into one Strudel program: a tempo, the setup statements, then one `$:` block per connected
@@ -255,7 +266,9 @@ export const compileStrudelFlow = (patch: StrudelFlowPatch): StrudelFlowCompilat
       errorMessage: 'Remove the loop from the flow: an effect cannot feed back into itself.'
     }
   }
-  const blocks = compileComponents(components, patch.edges, nodesById)
+  const blocks = planComponents(patch.nodes, patch.edges, nodesById).map((plan) =>
+    compilePlan(plan, nodesById)
+  )
   if (blocks.length === 0) {
     return {
       code: '',
@@ -269,4 +282,36 @@ export const compileStrudelFlow = (patch: StrudelFlowPatch): StrudelFlowCompilat
     code: [tempo, ...(setup.length > 0 ? [setup] : []), ...blocks].join('\n'),
     errorMessage: null
   }
+}
+
+/**
+ * The canvas each inline visual such as `._scope()` draws on, which Strudel names after the
+ * call and how many calls of that visual come before it in the code.
+ * ponytail: a `_scope()` written inside a Code node shifts the count; read the transpiler's
+ * widget positions instead if that case ever matters.
+ * @param nodes - the patch's nodes
+ * @param edges - the patch's cables
+ * @returns the canvas element id for every inline Visualizer node that makes it into the code
+ */
+export const getStrudelFlowVisualizerWidgetIds = (
+  nodes: StrudelFlowNode[],
+  edges: StrudelFlowEdge[]
+): Record<string, string> => {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]))
+  const inlineVisualizers = planComponents(nodes, edges, nodesById)
+    .flatMap((plan) => [...plan.branches.flatMap((branch) => branch.effectIds), ...plan.sharedIds])
+    .flatMap((nodeId) => {
+      const data = nodesById.get(nodeId)?.data
+      return data?.kind === 'visualizer' && data.placement === 'inline'
+        ? [{ nodeId, call: `_${data.visual}` }]
+        : []
+    })
+  return Object.fromEntries(
+    inlineVisualizers.map(({ nodeId, call }, position) => {
+      const index = inlineVisualizers
+        .slice(0, position)
+        .filter((earlier) => earlier.call === call).length
+      return [nodeId, `${STRUDEL_FLOW_WIDGET_ID_PREFIX}${call}_${index}`]
+    })
+  )
 }

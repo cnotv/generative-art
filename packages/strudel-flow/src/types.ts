@@ -99,11 +99,21 @@ export type StrudelFlowVoiceData = {
   sound: string
 }
 
-/** Any chained call no dedicated effect covers, such as `.fast(2)` or `.jux(rev)`. */
-export type StrudelFlowEffectData = {
-  kind: 'effect'
+/** One chained call kept as written, such as `.mask("<1 0>")` or `.jux(rev)`. */
+export type StrudelFlowCall = {
   method: string
   argument: string
+}
+
+/** Calls no dedicated node covers, chained after the node they follow in the code. */
+export type StrudelFlowCallList = {
+  calls?: StrudelFlowCall[]
+}
+
+/** Chained calls with no single node to sit on, such as the ones after a whole `stack(...)`. */
+export type StrudelFlowEffectData = {
+  kind: 'effect'
+  calls: StrudelFlowCall[]
 }
 
 export type StrudelFlowFilterData = {
@@ -160,21 +170,23 @@ export type StrudelFlowVisualizerData = {
   options: string
 }
 
-export type StrudelFlowNodeData =
-  | StrudelFlowPadData
-  | StrudelFlowBeatsData
-  | StrudelFlowChordsData
-  | StrudelFlowNotesData
-  | StrudelFlowSamplesData
-  | StrudelFlowCodeData
-  | StrudelFlowVoiceData
-  | StrudelFlowFilterData
-  | StrudelFlowDelayData
-  | StrudelFlowSpaceData
-  | StrudelFlowLevelData
-  | StrudelFlowEnvelopeData
-  | StrudelFlowVisualizerData
-  | StrudelFlowEffectData
+export type StrudelFlowNodeData = StrudelFlowCallList &
+  (
+    | StrudelFlowPadData
+    | StrudelFlowBeatsData
+    | StrudelFlowChordsData
+    | StrudelFlowNotesData
+    | StrudelFlowSamplesData
+    | StrudelFlowCodeData
+    | StrudelFlowVoiceData
+    | StrudelFlowFilterData
+    | StrudelFlowDelayData
+    | StrudelFlowSpaceData
+    | StrudelFlowLevelData
+    | StrudelFlowEnvelopeData
+    | StrudelFlowVisualizerData
+    | StrudelFlowEffectData
+  )
 
 export type StrudelFlowNodePosition = {
   x: number

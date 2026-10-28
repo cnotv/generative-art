@@ -64,8 +64,5 @@ const onOptionsInput = (event: Event): void => {
         @input="onOptionsInput"
       />
     </label>
-    <p class="strudel-flow-visualizer__hint">
-      Draws in the code editor; switch to Code to watch it.
-    </p>
   </div>
 </template>

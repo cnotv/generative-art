@@ -98,8 +98,7 @@ export const STRUDEL_FLOW_VOICE_DEFAULTS: StrudelFlowVoiceData = {
 
 export const STRUDEL_FLOW_EFFECT_DEFAULTS: StrudelFlowEffectData = {
   kind: 'effect',
-  method: 'fast',
-  argument: '2'
+  calls: [{ method: 'fast', argument: '2' }]
 }
 
 export const STRUDEL_FLOW_FILTER_DEFAULTS: StrudelFlowFilterData = {
@@ -187,7 +186,10 @@ const NODE_DATA_FACTORIES: { [Kind in StrudelFlowNodeKind]: () => StrudelFlowNod
   level: () => ({ ...STRUDEL_FLOW_LEVEL_DEFAULTS }),
   envelope: () => ({ ...STRUDEL_FLOW_ENVELOPE_DEFAULTS }),
   visualizer: () => ({ ...STRUDEL_FLOW_VISUALIZER_DEFAULTS }),
-  effect: () => ({ ...STRUDEL_FLOW_EFFECT_DEFAULTS })
+  effect: () => ({
+    ...STRUDEL_FLOW_EFFECT_DEFAULTS,
+    calls: STRUDEL_FLOW_EFFECT_DEFAULTS.calls.map((call) => ({ ...call }))
+  })
 }
 
 /**

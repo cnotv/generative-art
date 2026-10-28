@@ -22,7 +22,6 @@ import {
   STRUDEL_FLOW_CHORDS_DEFAULTS,
   STRUDEL_FLOW_CODE_DEFAULTS,
   STRUDEL_FLOW_DELAY_DEFAULTS,
-  STRUDEL_FLOW_EFFECT_DEFAULTS,
   STRUDEL_FLOW_ENVELOPE_DEFAULTS,
   STRUDEL_FLOW_FILTER_DEFAULTS,
   STRUDEL_FLOW_LEVEL_DEFAULTS,
@@ -40,6 +39,8 @@ import {
   readStoredString
 } from './readStoredValue'
 import type {
+  StrudelFlowCall,
+  StrudelFlowCallList,
   StrudelFlowChordsData,
   StrudelFlowDrumRow,
   StrudelFlowNodeData,
@@ -207,6 +208,22 @@ const readChords = (raw: Record<string, unknown>): StrudelFlowChordsData => {
   }
 }
 
+const isStoredCall = (value: unknown): value is StrudelFlowCall =>
+  isStoredRecord(value) && typeof value.method === 'string' && typeof value.argument === 'string'
+
+const readCalls = (value: unknown): StrudelFlowCall[] =>
+  Array.isArray(value)
+    ? value.filter(isStoredCall).map((call) => ({ method: call.method, argument: call.argument }))
+    : []
+
+const readCallList = (
+  kind: StrudelFlowNodeKind,
+  raw: Record<string, unknown>
+): StrudelFlowCallList => {
+  const calls = readCalls(raw.calls)
+  return kind === 'effect' || calls.length === 0 ? {} : { calls }
+}
+
 type NodeDataReader = (raw: Record<string, unknown>) => StrudelFlowNodeData
 
 const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
@@ -298,10 +315,13 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
     placement: raw.placement === 'background' ? 'background' : 'inline',
     options: readStoredString(raw.options, '')
   }),
+  // An Effect node stored before calls had a list held its one call as `method` and `argument`.
   effect: (raw) => ({
     kind: 'effect',
-    method: readStoredString(raw.method, STRUDEL_FLOW_EFFECT_DEFAULTS.method),
-    argument: readStoredString(raw.argument, STRUDEL_FLOW_EFFECT_DEFAULTS.argument)
+    calls:
+      raw.calls === undefined && typeof raw.method === 'string'
+        ? [{ method: raw.method, argument: readStoredString(raw.argument, '') }]
+        : readCalls(raw.calls)
   })
 }
 
@@ -315,4 +335,7 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
 export const readStrudelFlowNodeData = (
   kind: StrudelFlowNodeKind,
   rawData: unknown
-): StrudelFlowNodeData => NODE_DATA_READERS[kind](isStoredRecord(rawData) ? rawData : {})
+): StrudelFlowNodeData => {
+  const raw = isStoredRecord(rawData) ? rawData : {}
+  return { ...NODE_DATA_READERS[kind](raw), ...readCallList(kind, raw) }
+}
