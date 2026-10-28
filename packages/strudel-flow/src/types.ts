@@ -77,7 +77,7 @@ export type StrudelFlowChordsData = StrudelFlowMuteFlag & {
 }
 
 /** How a Notes node draws its notes: picked from the sound it plays, or one chosen by hand. */
-export type StrudelFlowNotation = 'auto' | 'guitar' | 'bass' | 'piano' | 'names'
+export type StrudelFlowNotation = 'auto' | 'guitar' | 'bass' | 'sheet' | 'piano' | 'names'
 
 /** The view a notation resolves to once Auto has looked at the sound. */
 export type StrudelFlowNotationView = Exclude<StrudelFlowNotation, 'auto'>
@@ -118,6 +118,84 @@ export type StrudelFlowNotationContext = {
 
 export type StrudelFlowTabInstrument = 'bass' | 'guitar'
 
+/** A note as written: its letter, the semitones its accidentals add, its octave and its pitch. */
+export type StrudelFlowSpelledNote = {
+  letter: string
+  alteration: number
+  octave: number
+  midiNote: number
+}
+
+export type StrudelFlowSheetClef = 'treble' | 'bass'
+
+export type StrudelFlowSheetAccidental = 'sharp' | 'flat' | 'natural'
+
+/** One five line staff: its clef, its top and bottom line, and the step its bottom line sits on. */
+export type StrudelFlowSheetStaff = {
+  clef: StrudelFlowSheetClef
+  topY: number
+  bottomY: number
+  /** Diatonic steps from C0 to the note on the bottom line: E4 for treble, G2 for bass. */
+  bottomStep: number
+}
+
+export type StrudelFlowSheetPoint = {
+  x: number
+  y: number
+}
+
+export type StrudelFlowSheetHead = {
+  y: number
+  /** The accidental written before the head, or null when the bar already implies it. */
+  accidental: StrudelFlowSheetAccidental | null
+  /** Short lines through or under a head above or below the staff. */
+  ledgerYs: number[]
+}
+
+/** The notes of one staff struck together, drawn as heads on one stem. */
+export type StrudelFlowSheetChord = {
+  x: number
+  staffIndex: number
+  heads: StrudelFlowSheetHead[]
+  /** A filled head is a quarter or shorter; an open one a half or a whole. */
+  filled: boolean
+  stem: StrudelFlowTabSegment | null
+  flags: string[]
+  dots: StrudelFlowSheetPoint[]
+  isTriplet: boolean
+  /** The heads ring on into the next chord of this staff, joined by ties. */
+  tiedForward: boolean
+}
+
+/** A rest, drawn as a path, and the length its shape stands for. */
+export type StrudelFlowSheetRest = {
+  x: number
+  staffIndex: number
+  beats: number
+  dotted: boolean
+  isTriplet: boolean
+  path: string
+  /** A whole or half rest is a filled block; the others are strokes. */
+  solid: boolean
+}
+
+/** Every mark of a piano sheet, in drawing units, ready for an SVG. */
+export type StrudelFlowSheetLayout = {
+  width: number
+  height: number
+  lineGap: number
+  staves: StrudelFlowSheetStaff[]
+  staffStartX: number
+  staffEndX: number
+  /** Where each bar ends; the bar lines run through every staff. */
+  barEndXs: number[]
+  chords: StrudelFlowSheetChord[]
+  rests: StrudelFlowSheetRest[]
+  ties: string[]
+  brackets: StrudelFlowTabBracket[]
+  bracketLabelY: number
+}
+
 /** Where a note is played: the staff line counted from the top (highest string), and the fret. */
 export type StrudelFlowFretPosition = {
   lineIndex: number
@@ -128,6 +206,8 @@ export type StrudelFlowFretPosition = {
 export type StrudelFlowTabFret = StrudelFlowFretPosition & {
   x: number
   y: number
+  /** Each digit's own centre, so two digits keep their gap whatever the font's spacing. */
+  digits: { x: number; digit: string }[]
 }
 
 export type StrudelFlowTabSegment = {

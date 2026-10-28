@@ -4,6 +4,7 @@ import { useNodeId } from '@vue-flow/core'
 import StrudelFlowSelect from '../controls/StrudelFlowSelect.vue'
 import StrudelFlowNoteNames from './StrudelFlowNoteNames.vue'
 import StrudelFlowPianoRoll from './StrudelFlowPianoRoll.vue'
+import StrudelFlowSheet from './StrudelFlowSheet.vue'
 import StrudelFlowTabStaff from './StrudelFlowTabStaff.vue'
 import { STRUDEL_FLOW_NOTATION_CONTEXT } from './notationContextKey'
 import { STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE, STRUDEL_FLOW_NOTATION_OPTIONS } from '../../config'
@@ -76,6 +77,7 @@ const onNotationChange = (value: string): void => {
       :instrument="view"
       :beats-per-bar="beatsPerCycle"
     />
+    <StrudelFlowSheet v-else-if="view === 'sheet'" :bars="bars" :beats-per-bar="beatsPerCycle" />
     <StrudelFlowPianoRoll
       v-else-if="view === 'piano'"
       :bars="bars"

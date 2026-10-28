@@ -83,7 +83,9 @@ const label = computed(
         font-weight="700"
         :font-size="STRUDEL_FLOW_TAB_DIGIT_SIZE * layout.lineGap"
       >
-        {{ fret.fret }}
+        <tspan v-for="(digit, digitIndex) in fret.digits" :key="digitIndex" :x="digit.x">
+          {{ digit.digit }}
+        </tspan>
       </text>
       <rect
         v-for="(rest, restIndex) in layout.rests"

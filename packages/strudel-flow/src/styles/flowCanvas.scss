@@ -530,6 +530,7 @@
 /* A Notes node's notation: lines and ties faint, numbers and rhythm marks at full ink, and
    anything wider than the node scrolls inside it. */
 .strudel-flow-tab-staff,
+.strudel-flow-sheet,
 .strudel-flow-piano-roll,
 .strudel-flow-note-names {
   overflow-x: auto;
@@ -543,6 +544,7 @@
   overflow-y: auto;
 }
 
+.strudel-flow-sheet svg,
 .strudel-flow-tab-staff svg,
 .strudel-flow-piano-roll svg {
   display: block;
@@ -567,6 +569,38 @@
 .strudel-flow-tab-staff__fret,
 .strudel-flow-tab-staff__bracket-label {
   fill: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__line,
+.strudel-flow-sheet__bar-line,
+.strudel-flow-sheet__ledger {
+  stroke: color-mix(in srgb, var(--sf-muted-foreground) 70%, transparent);
+}
+
+.strudel-flow-sheet__stem,
+.strudel-flow-sheet__flag,
+.strudel-flow-sheet__tie,
+.strudel-flow-sheet__bracket,
+.strudel-flow-sheet__rest {
+  fill: none;
+  stroke: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__rest--solid,
+.strudel-flow-sheet__head,
+.strudel-flow-sheet__dot,
+.strudel-flow-sheet__clef,
+.strudel-flow-sheet__accidental,
+.strudel-flow-sheet__bracket-label {
+  fill: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__head {
+  stroke: var(--sf-card-foreground);
+}
+
+.strudel-flow-sheet__head--open {
+  fill: none;
 }
 
 .strudel-flow-piano-roll__black-key {

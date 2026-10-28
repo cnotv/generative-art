@@ -228,6 +228,7 @@ export const STRUDEL_FLOW_NOTATION_OPTIONS: { value: StrudelFlowNotation; label:
   { value: 'auto', label: 'Auto' },
   { value: 'guitar', label: 'Guitar tab' },
   { value: 'bass', label: 'Bass tab' },
+  { value: 'sheet', label: 'Piano sheet' },
   { value: 'piano', label: 'Piano roll' },
   { value: 'names', label: 'Note names' }
 ]
@@ -236,13 +237,12 @@ export const STRUDEL_FLOW_NOTATION_OPTIONS: { value: StrudelFlowNotation; label:
 export const STRUDEL_FLOW_NOTATION_BY_SOUND: { word: string; view: StrudelFlowNotationView }[] = [
   { word: 'bass', view: 'bass' },
   { word: 'guitar', view: 'guitar' },
-  { word: 'piano', view: 'piano' },
-  { word: 'keys', view: 'piano' },
-  { word: 'organ', view: 'piano' },
-  { word: 'epiano', view: 'piano' },
-  { word: 'rhodes', view: 'piano' },
-  { word: 'harpsichord', view: 'piano' },
-  { word: 'clavinet', view: 'piano' }
+  { word: 'piano', view: 'sheet' },
+  { word: 'keys', view: 'sheet' },
+  { word: 'organ', view: 'sheet' },
+  { word: 'rhodes', view: 'sheet' },
+  { word: 'harpsichord', view: 'sheet' },
+  { word: 'clavinet', view: 'sheet' }
 ]
 
 /** The tab staff's drawing unit: the gap between two staff lines. */
@@ -262,6 +262,8 @@ export const STRUDEL_FLOW_TAB_BEAM_STEP = 0.4
 export const STRUDEL_FLOW_TAB_FLAG_LENGTH = 0.8
 export const STRUDEL_FLOW_TAB_BRACKET_Y = 3.4
 export const STRUDEL_FLOW_TAB_DIGIT_WIDTH = 0.62
+/** Centre to centre of the digits in a two digit fret; wider than a digit so they never touch. */
+export const STRUDEL_FLOW_TAB_DIGIT_PITCH = 0.68
 export const STRUDEL_FLOW_TAB_DIGIT_CLEARANCE = 0.15
 /** A tie leaves its number this far below the line, sags to the second depth, and stops short. */
 export const STRUDEL_FLOW_TAB_TIE_TOP = 0.2
@@ -311,3 +313,60 @@ export const STRUDEL_FLOW_DEFAULT_OCTAVE = 3
 export const STRUDEL_FLOW_SHARP_SIGNS = ['#', 's']
 /** The finest note length written as a fraction: a 24th of a beat covers sixteenth triplets. */
 export const STRUDEL_FLOW_MAX_LENGTH_DENOMINATOR = 24
+
+/** Note letters in staff order, from C up. */
+export const STRUDEL_FLOW_NOTE_LETTERS = ['c', 'd', 'e', 'f', 'g', 'a', 'b']
+/** How a MIDI number is spelled on a staff, one name per semitone above C. */
+export const STRUDEL_FLOW_SHARP_SPELLINGS = [
+  { letter: 'c', alteration: 0 },
+  { letter: 'c', alteration: 1 },
+  { letter: 'd', alteration: 0 },
+  { letter: 'd', alteration: 1 },
+  { letter: 'e', alteration: 0 },
+  { letter: 'f', alteration: 0 },
+  { letter: 'f', alteration: 1 },
+  { letter: 'g', alteration: 0 },
+  { letter: 'g', alteration: 1 },
+  { letter: 'a', alteration: 0 },
+  { letter: 'a', alteration: 1 },
+  { letter: 'b', alteration: 0 }
+]
+/** Middle C and up go on the treble staff, everything lower on the bass staff. */
+export const STRUDEL_FLOW_SHEET_TREBLE_LOWEST_NOTE = 60
+/** The step counted from C0 of each clef's bottom line: E4 and G2. */
+export const STRUDEL_FLOW_SHEET_BOTTOM_STEPS = { treble: 30, bass: 18 }
+/** Each written note value: its length in beats and how it looks. */
+export const STRUDEL_FLOW_SHEET_VALUES = [
+  { beats: 4, filled: false, stem: false, flags: 0 },
+  { beats: 2, filled: false, stem: true, flags: 0 },
+  { beats: 1, filled: true, stem: true, flags: 0 },
+  { beats: 0.5, filled: true, stem: true, flags: 1 },
+  { beats: 0.25, filled: true, stem: true, flags: 2 },
+  { beats: 0.125, filled: true, stem: true, flags: 3 }
+]
+/** A dot adds half the value again. */
+export const STRUDEL_FLOW_SHEET_DOT_FACTOR = 1.5
+export const STRUDEL_FLOW_SHEET_CLEF_GLYPHS = { treble: '\u{1D11E}', bass: '\u{1D122}' }
+export const STRUDEL_FLOW_SHEET_ACCIDENTAL_GLYPHS = { sharp: '♯', flat: '♭', natural: '♮' }
+/** The sheet's drawing unit: the gap between two staff lines. Lengths below are in gaps. */
+export const STRUDEL_FLOW_SHEET_LINE_GAP = 8
+export const STRUDEL_FLOW_SHEET_TOP_MARGIN = 5
+export const STRUDEL_FLOW_SHEET_BOTTOM_MARGIN = 4
+/** Top line of the treble staff to the top line of the bass staff in a grand staff. */
+export const STRUDEL_FLOW_SHEET_STAFF_DISTANCE = 10
+export const STRUDEL_FLOW_SHEET_CLEF_SPACE = 4.5
+export const STRUDEL_FLOW_SHEET_COLUMN_SPACE = 2.4
+export const STRUDEL_FLOW_SHEET_SPACE_PER_BEAT = 2.5
+export const STRUDEL_FLOW_SHEET_ACCIDENTAL_SPACE = 1.4
+export const STRUDEL_FLOW_SHEET_MIN_BAR_WIDTH = 6
+export const STRUDEL_FLOW_SHEET_HEAD_RADIUS_X = 0.65
+export const STRUDEL_FLOW_SHEET_HEAD_RADIUS_Y = 0.45
+export const STRUDEL_FLOW_SHEET_STEM_LENGTH = 3.5
+export const STRUDEL_FLOW_SHEET_FLAG_STEP = 0.8
+export const STRUDEL_FLOW_SHEET_LEDGER_HALF_WIDTH = 1
+export const STRUDEL_FLOW_SHEET_ACCIDENTAL_OFFSET = 1.4
+export const STRUDEL_FLOW_SHEET_DOT_OFFSET = 1.1
+export const STRUDEL_FLOW_SHEET_TIE_OFFSET = 0.7
+export const STRUDEL_FLOW_SHEET_TIE_SAG = 0.7
+export const STRUDEL_FLOW_SHEET_BRACKET_RISE = 3
+export const STRUDEL_FLOW_SHEET_STROKE_WIDTH = 0.12

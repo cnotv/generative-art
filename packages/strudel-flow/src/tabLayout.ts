@@ -10,6 +10,7 @@ import {
   STRUDEL_FLOW_TAB_BRACKET_OVERHANG,
   STRUDEL_FLOW_TAB_BRACKET_Y,
   STRUDEL_FLOW_TAB_DIGIT_CLEARANCE,
+  STRUDEL_FLOW_TAB_DIGIT_PITCH,
   STRUDEL_FLOW_TAB_DIGIT_WIDTH,
   STRUDEL_FLOW_TAB_FLAG_LENGTH,
   STRUDEL_FLOW_TAB_LINE_GAP,
@@ -29,6 +30,7 @@ import {
   STRUDEL_FLOW_TAB_TRIPLET_NUMERATOR
 } from './config'
 import { placeStrudelFlowFrets } from './fretPlacement'
+import { groupStrudelFlowRuns, sequenceStrudelFlowNoteBar } from './notationSequence'
 import { readStrudelFlowMidiNote } from './noteValues'
 import type {
   StrudelFlowFretPosition,
@@ -127,17 +129,8 @@ const stemUnitsOf = (event: StrudelFlowNoteEvent): StemUnit[] => {
     : [{ start: event.start, beats: event.beats, beams: SHORTEST_BEAMS, isTriplet: false }]
 }
 
-// Strudel can overlap two notes that do not start together; a tab plays one after the other.
-const sequencedEvents = (bar: StrudelFlowNoteBar): StrudelFlowNoteEvent[] => {
-  const sorted = bar.toSorted((first, second) => first.start - second.start)
-  return sorted.map((event, index) => {
-    const nextStart = sorted[index + 1]?.start ?? Infinity
-    return { ...event, beats: Math.min(event.beats, nextStart - event.start) }
-  })
-}
-
 const placeEvents = (bars: StrudelFlowNoteBar[], openStrings: number[]): PlacedEvent[][] => {
-  const sequenced = bars.map(sequencedEvents)
+  const sequenced = bars.map(sequenceStrudelFlowNoteBar)
   const chords = sequenced.flat().map((event) =>
     event.notes.flatMap((note) => {
       const midiNote = readStrudelFlowMidiNote(note)
@@ -226,14 +219,6 @@ const drawBars = (bars: PlacedEvent[][], staffStartX: number, beatsPerBar: numbe
     return [...drawings, { units: drawn.units, restXs: drawn.restXs, endX }]
   }, [])
 
-const groupRuns = <Item>(items: Item[], joins: (previous: Item, item: Item) => boolean): Item[][] =>
-  items.reduce<Item[][]>((runs, item, index) => {
-    const previous = items[index - 1]
-    return previous !== undefined && joins(previous, item)
-      ? [...runs.slice(0, -1), [...runs.at(-1)!, item]]
-      : [...runs, [item]]
-  }, [])
-
 const beamY = (stemBottom: number, level: number): number =>
   stemBottom -
   (STRUDEL_FLOW_TAB_BEAM_THICKNESS / 2 + (level - 1) * STRUDEL_FLOW_TAB_BEAM_STEP) * GAP
@@ -243,7 +228,7 @@ const beamY = (stemBottom: number, level: number): number =>
 const beamsOfGroup = (group: DrawnUnit[], stemBottom: number): StrudelFlowTabSegment[] =>
   Array.from({ length: SHORTEST_BEAMS }, (_, offset) => offset + 1).flatMap((level) => {
     const y = beamY(stemBottom, level)
-    const runs = groupRuns(
+    const runs = groupStrudelFlowRuns(
       group,
       (previous, unit) => previous.beams >= level && unit.beams >= level
     ).filter((run) => run[0].beams >= level)
@@ -262,7 +247,7 @@ const beamsOfGroup = (group: DrawnUnit[], stemBottom: number): StrudelFlowTabSeg
   })
 
 const beamsOf = (units: DrawnUnit[], stemBottom: number): StrudelFlowTabSegment[] =>
-  groupRuns(
+  groupStrudelFlowRuns(
     units,
     (previous, unit) =>
       previous.beams > 0 &&
@@ -274,7 +259,7 @@ const beamsOf = (units: DrawnUnit[], stemBottom: number): StrudelFlowTabSegment[
     .flatMap((group) => beamsOfGroup(group, stemBottom))
 
 const bracketsOf = (units: DrawnUnit[], bracketY: number): StrudelFlowTabBracket[] =>
-  groupRuns(
+  groupStrudelFlowRuns(
     units,
     (previous, unit) => previous.isTriplet && unit.isTriplet && previous.barIndex === unit.barIndex
   )
@@ -300,6 +285,17 @@ const tiePath = (fromX: number, toX: number, y: number): string => {
   const startX = fromX + STRUDEL_FLOW_TAB_DIGIT_WIDTH * GAP
   const endX = toX - STRUDEL_FLOW_TAB_TIE_END_GAP * GAP
   return `M ${startX} ${top} Q ${(startX + endX) / 2} ${sag} ${endX} ${top}`
+}
+
+// Some fonts set the digits of a two digit fret so close they touch, and a reader then sees one
+// mark too wide for a digit, so each digit gets its own place.
+const digitsOf = (fret: number, x: number): { x: number; digit: string }[] => {
+  const digits = [...String(fret)]
+  const firstX = x - ((digits.length - 1) * STRUDEL_FLOW_TAB_DIGIT_PITCH * GAP) / 2
+  return digits.map((digit, index) => ({
+    digit,
+    x: firstX + index * STRUDEL_FLOW_TAB_DIGIT_PITCH * GAP
+  }))
 }
 
 const digitHalfWidth = (fret: number): number =>
@@ -356,7 +352,12 @@ export const layoutStrudelFlowTab = (
   const frets = units
     .filter((unit) => unit.tiedFromX === null)
     .flatMap((unit) =>
-      unit.positions.map((position) => ({ ...position, x: unit.x, y: lineYs[position.lineIndex] }))
+      unit.positions.map((position) => ({
+        ...position,
+        x: unit.x,
+        y: lineYs[position.lineIndex],
+        digits: digitsOf(position.fret, unit.x)
+      }))
     )
   const ties = units.flatMap((unit) =>
     unit.tiedFromX === null

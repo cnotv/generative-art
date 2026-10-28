@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import StrudelFlowNotation from './StrudelFlowNotation.vue'
 import StrudelFlowTabStaff from './StrudelFlowTabStaff.vue'
 import { STRUDEL_FLOW_NOTATION_CONTEXT } from './notationContextKey'
+import { STRUDEL_FLOW_TAB_DIGIT_PITCH, STRUDEL_FLOW_TAB_LINE_GAP } from '../../config'
 import type {
   StrudelFlowNotation as StrudelFlowNotationName,
   StrudelFlowNoteBar,
@@ -77,9 +78,21 @@ describe('StrudelFlowNotation', () => {
     ).toHaveLength(6)
   })
 
-  it('draws a piano as a roll with one block per note', async () => {
+  it('draws a piano as sheet music with one head per note', async () => {
     // Arrange
     const wrapper = mountNotation('auto', 'piano')
+
+    // Act
+    await flushPromises()
+
+    // Assert
+    expect(wrapper.findAll('svg[data-notation="sheet"] .strudel-flow-sheet__staff')).toHaveLength(1)
+    expect(wrapper.findAll('.strudel-flow-sheet__head')).toHaveLength(4)
+  })
+
+  it('draws a piano roll when picked, one block per note', async () => {
+    // Arrange
+    const wrapper = mountNotation('piano', 'piano')
 
     // Act
     await flushPromises()
@@ -210,6 +223,22 @@ describe('StrudelFlowTabStaff', () => {
     // Assert
     expect(wrapper.findAll('.strudel-flow-tab-staff__rest')).toHaveLength(2)
     expect(wrapper.findAll('.strudel-flow-tab-staff__stem')).toHaveLength(2)
+  })
+
+  it('gives each digit of a two digit fret its own place, whatever the font', () => {
+    // Arrange: g4 only fits on the bass's G string at fret 24
+    const bars: StrudelFlowNoteBar[] = [[{ notes: ['g4'], start: 0, beats: 4 }]]
+
+    // Act
+    const wrapper = mount(StrudelFlowTabStaff, {
+      props: { bars, instrument: 'bass', beatsPerBar: 4 }
+    })
+
+    // Assert
+    const digits = wrapper.findAll('.strudel-flow-tab-staff__fret tspan')
+    const [firstX, secondX] = digits.map((digit) => Number(digit.attributes('x')))
+    expect(digits.map((digit) => digit.text())).toEqual(['2', '4'])
+    expect(secondX - firstX).toBeCloseTo(STRUDEL_FLOW_TAB_DIGIT_PITCH * STRUDEL_FLOW_TAB_LINE_GAP)
   })
 
   it('stacks the frets of a chord on one stem', () => {

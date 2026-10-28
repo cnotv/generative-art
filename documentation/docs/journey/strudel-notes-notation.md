@@ -8,7 +8,8 @@ The flow editor's Notes node used to show its pattern only as mini notation, a l
 `<[a2@6 a2@3 e3@6 ...] [f2@2 f2 ...]>`. It is exact, and nobody can read it as music. The tab
 import could already turn a screenshot of a bass tab into exactly such a line, so the editor took
 a tab in but could not show one back. The node now draws its notes the way a player of that
-instrument reads them: a guitar or bass tab, a piano roll, or plain note names for anything else.
+instrument reads them: a guitar or bass tab, piano sheet music, a piano roll, or plain note names
+for anything else.
 
 ![A Notes node playing an electric bass, drawn as a four string tab](/img/strudel-flow/notes-bass-tab.webp)
 
@@ -35,7 +36,8 @@ flowchart LR
   B --> C{notation}
   C -->|bass or guitar| D[fret placement]
   D --> E[tab staff]
-  C -->|piano| F[piano roll]
+  C -->|piano| S[sheet music]
+  C -->|picked by hand| F[piano roll]
   C -->|anything else| G[note names]
 ```
 
@@ -44,7 +46,7 @@ flowchart LR
 Auto looks at the sound the notes play. That is the sound of the first Voice node the node's
 cables reach, or failing that an `.s()` call kept on the node itself. A table in the package
 config matches a word in the sound's name: bass gives a bass tab, guitar a guitar tab, and piano,
-keys, organ and their relatives a piano roll. Everything else, a sawtooth or a sample bank, falls
+keys, organ and their relatives sheet music. Everything else, a sawtooth or a sample bank, falls
 back to note names, which suit any sound. A picker on the node overrides Auto, and the choice is
 per node so a bass line and a guitar part in one patch each get their own staff. The picker's
 Auto entry names what it chose, so it never looks like a guess.
@@ -133,12 +135,39 @@ The test found nothing to fix in the reader, which is the point: the drawing spe
 language because both follow the same geometry, measured in multiples of the gap between two
 staff lines.
 
+## Piano sheet
+
+A pianist reads a staff, so piano sounds get one. Every note is placed by its spelling, not just
+its pitch: a written `eb4` is an E with a flat, sitting on the bottom line, while `d#4` is a D
+with a sharp, a step below it. A MIDI number has no spelling of its own and is written with
+sharps.
+
+| Decision    | Rule                                                                                                         |
+| ----------- | ------------------------------------------------------------------------------------------------------------ |
+| Clef        | middle C and up on a treble staff, lower notes on a bass staff; both, as a grand staff, when needed          |
+| Position    | the letter and octave as diatonic steps above the clef's bottom line, ledger lines beyond the staff          |
+| Accidentals | written when a note differs from what the bar has said so far about its line or space, reset each bar        |
+| Length      | the fewest written values, dotted where a dot saves a tie, tied together; two thirds of a value is a triplet |
+| Silence     | a rest of the same values; on a grand staff, a staff with nothing to play at that moment rests               |
+| Stem        | down from a note on or above the middle line, up below it                                                    |
+
+![A piano part on a grand staff with a dotted chord, accidentals and a triplet](/img/strudel-flow/notes-piano-sheet.webp)
+
+There is no sheet music reader to close a round trip with, so the test brings its own: it reads
+the layout the way a player reads the page, taking pitch from where each head sits on its staff
+and from the accidentals written earlier in the bar, and length from head, stem, flags and dot.
+It never sees the notes the layout was made from. The opening of the sample bass tab and a piano
+part across both clefs, with chords, accidentals, a triplet and rests, must read back note for
+note and length for length. Taking accidentals out of the layout makes that test fail, so it
+measures something.
+
+Beams, a time signature, a key signature and seconds in a chord set side by side are left for
+later: flags carry the same lengths, every bar is in C, and a second's heads overlap slightly.
+
 ## Piano roll and note names
 
-The piano roll is the first answer to the piano case because Strudel already speaks it: one row
-per semitone, black key rows shaded, a C labelled per octave, notes as blocks along the bars. A
-five line staff is its own follow up; it needs clefs, ledger lines and accidentals, none of
-which a roll does.
+The piano roll stays as a second piano view, picked by hand: one row per semitone, black key
+rows shaded, a C labelled per octave, notes as blocks along the bars.
 
 ![A piano part as a roll](/img/strudel-flow/notes-piano-roll.webp)
 

@@ -205,7 +205,7 @@ the beats in one cycle (**B/C**).
 | **Pad**        | instrument | an eight-note grid, arpeggio or chord mode, key, scale and octave                  |
 | **Beats**      | instrument | up to eight drum tracks of any sample on up to sixteen steps                       |
 | **Chords**     | instrument | a chord progression with preset shapes and editable notes                          |
-| **Notes**      | instrument | a `note("…")` line in mini notation, drawn as a tab, piano roll or note names      |
+| **Notes**      | instrument | a `note("…")` line in mini notation, drawn as a tab, sheet music or note names     |
 | **Samples**    | instrument | an `s("…")` line in mini notation                                                  |
 | **Code**       | instrument | any Strudel expression, for what the controls do not cover                         |
 | **Filter**     | effect     | `lpf` and `lpq`                                                                    |
@@ -219,8 +219,8 @@ the beats in one cycle (**B/C**).
 
 A Notes node draws its notes above the text so they read as music. **Auto** picks the notation
 from the sound the notes play: a bass sound gets a four string bass tab, a guitar a six string
-guitar tab, a piano, keys or organ a piano roll, and any other sound a list of note names with
-their lengths. The **Notation** picker on the node overrides it, one node at a time, and its Auto
+guitar tab, a piano, keys or organ sheet music on a treble and a bass staff, and any other sound a
+list of note names with their lengths. **Piano roll** is there to pick by hand. The **Notation** picker on the node overrides it, one node at a time, and its Auto
 entry says what it chose. A tab places each note on the string that moves the hand least from the
 last one, within 24 frets, and draws the rhythm under the staff the way the tab import reads it,
 so a tab screenshot imported and shown again looks like the page it came from. A staff wider than
@@ -231,9 +231,13 @@ the node scrolls inside it. Why it works this way is in
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | ![Bass tab of an imported line](/img/strudel-flow/notes-bass-tab.webp) | ![Guitar tab with chords](/img/strudel-flow/notes-guitar-tab.webp) |
 
-| Piano roll                                                             | Note names                                                                |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| ![Piano roll of a piano part](/img/strudel-flow/notes-piano-roll.webp) | ![Note names of a sawtooth line](/img/strudel-flow/notes-note-names.webp) |
+| Piano sheet                                                              | Piano roll                                                             |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| ![Piano part on a grand staff](/img/strudel-flow/notes-piano-sheet.webp) | ![Piano roll of a piano part](/img/strudel-flow/notes-piano-roll.webp) |
+
+| Note names                                                                |
+| ------------------------------------------------------------------------- |
+| ![Note names of a sawtooth line](/img/strudel-flow/notes-note-names.webp) |
 
 The Beats node has a sample picker on each track, grouped into kicks, snares, hi-hats, claps,
 toms, cymbals and percussion from the loaded kit. Its **Shape** footer sets how many steps play,

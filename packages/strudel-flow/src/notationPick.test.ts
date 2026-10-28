@@ -25,10 +25,10 @@ describe('pickStrudelFlowNotation', () => {
     ['gm_synth_bass_1', 'bass'],
     ['gm_acoustic_guitar_nylon', 'guitar'],
     ['gm_electric_guitar_clean', 'guitar'],
-    ['piano', 'piano'],
-    ['gm_epiano1', 'piano'],
-    ['gm_church_organ', 'piano'],
-    ['GM_Acoustic_Grand_Piano', 'piano'],
+    ['piano', 'sheet'],
+    ['gm_epiano1', 'sheet'],
+    ['gm_church_organ', 'sheet'],
+    ['GM_Acoustic_Grand_Piano', 'sheet'],
     ['sawtooth', 'names'],
     ['', 'names']
   ])('draws %s as %s', (sound, view) => {
