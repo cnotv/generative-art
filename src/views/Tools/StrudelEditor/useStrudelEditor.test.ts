@@ -155,7 +155,8 @@ const buildSuccessfulPlayback = (): StrudelPlayback => ({
   evaluateCode: vi.fn(async () => ({ success: true })),
   stopPlayback: vi.fn(async () => {}),
   renderToWav: vi.fn(async () => ({ success: true })),
-  renderToMidi: vi.fn(async () => ({ success: true }))
+  renderToMidi: vi.fn(async () => ({ success: true })),
+  measureRepetition: vi.fn(async () => 1)
 })
 
 describe('findStrudelExample', () => {
@@ -844,7 +845,8 @@ describe('useStrudelEditor', () => {
       evaluateCode: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' })),
       stopPlayback: vi.fn(async () => {}),
       renderToWav: vi.fn(async () => ({ success: true })),
-      renderToMidi: vi.fn(async () => ({ success: true }))
+      renderToMidi: vi.fn(async () => ({ success: true })),
+      measureRepetition: vi.fn(async () => 1)
     }
     const { playPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -901,7 +903,8 @@ describe('useStrudelEditor', () => {
         throw new Error('stop failed')
       }),
       renderToWav: vi.fn(async () => ({ success: true })),
-      renderToMidi: vi.fn(async () => ({ success: true }))
+      renderToMidi: vi.fn(async () => ({ success: true })),
+      measureRepetition: vi.fn(async () => 1)
     }
     const { playPattern, stopPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -1195,6 +1198,23 @@ describe('useStrudelEditor transcription', () => {
     // Assert
     expect(patternCode.value).toContain('setcps(100/60/4)')
     expect(patternCode.value).toContain('s("bd")')
+    expect(editorStatus.value).toBe('idle')
+  })
+
+  it('measures one repetition of the code on screen for the export', async () => {
+    // Arrange
+    const playback = { ...buildSuccessfulPlayback(), measureRepetition: vi.fn(async () => 0.5) }
+    const { patternCode, measureRepetition, repetitionCycles, editorStatus } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: vi.fn(async () => playback)
+    })
+
+    // Act
+    await measureRepetition()
+
+    // Assert
+    expect(playback.measureRepetition).toHaveBeenCalledWith(patternCode.value)
+    expect(repetitionCycles.value).toBe(0.5)
     expect(editorStatus.value).toBe('idle')
   })
 

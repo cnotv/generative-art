@@ -38,9 +38,10 @@ node scripts/strudel-export.mjs <name>.strudel --out <name>.mid --cycles <count>
 ```
 
 The extension picks the format. `--start` is the cycle to begin at and `--cycles` how many to
-export, one by default: at `setcpm(30)` one cycle is two seconds. A one-shot sound effect is one
-cycle, with the cycle sped up to the effect's length (`setcpm(240)` makes it a quarter of a
-second). Chromium runs headless with `--mute-audio` and the WAV renders offline.
+export, one by default: at `setcpm(30)` one cycle is two seconds. For a one-shot sound effect
+pass `--once` instead: it measures one repetition of the pattern and exports just that, so a
+pattern sped up with `fast(2)`, such as the Coin example, comes out as a single sound rather than
+two. Chromium runs headless with `--mute-audio` and the WAV renders offline.
 
 **Nothing may play aloud.** Never press Play in the browser pane and never run a browser test
 that starts audio unmuted: the user may be wearing headphones. A pattern error is printed by
