@@ -385,14 +385,24 @@ export type TranscriptionRunner = (
   onProgress: (progress: TranscriptionProgress) => void
 ) => Promise<TranscriptionOutput>
 
+/** One file the Import tab read, kept in the order it arrived. */
+export type ImportedTranscription = {
+  id: number
+  sourceName: string
+  result: TranscriptionOutput
+}
+
 export type StrudelTranscriptionState = {
   transcriptionStatus: Ref<TranscriptionStatus>
   transcriptionProgress: Ref<TranscriptionProgress | null>
-  transcriptionResult: Ref<TranscriptionOutput | null>
-  transcribedCode: Ref<string>
+  importedTranscriptions: Ref<ImportedTranscription[]>
+  transcribedCode: Readonly<Ref<string>>
+  transcriptionWarnings: Readonly<Ref<string[]>>
   transcriptionError: Ref<string>
-  transcribeFile: (chosenFile: File) => Promise<void>
+  transcribeFiles: (chosenFiles: File[]) => Promise<void>
+  removeTranscription: (transcriptionId: number) => void
   loadTranscription: () => void
+  addTranscription: () => void
 }
 
 export type MidiDeviceStatus = 'idle' | 'connecting' | 'ready' | 'unsupported' | 'denied'
@@ -427,6 +437,22 @@ export type TabTranscription = {
   beatsPerMinute: number
   instrument: TabInstrument
   bars: TabEvent[][]
+  warnings: string[]
+}
+
+/** A tab read from one file, before it joins a song. */
+export type TabSource = {
+  sourceName: string
+  transcription: TabTranscription
+}
+
+/** A tab in a song, named for its block: its instrument, numbered when another shares it. */
+export type TabSongInstrument = TabSource & { label: string }
+
+/** Several tabs played together on one tempo, the first tab's. */
+export type TabSong = {
+  beatsPerMinute: number
+  instruments: TabSongInstrument[]
   warnings: string[]
 }
 

@@ -360,6 +360,29 @@ read, the code starts at 120 BPM and you change the number in `setcps`. A mark i
 How it works and where it stops is in
 [Reading a tab screenshot without a model](../journey/strudel-tab-image-import.md).
 
+### Several tabs in one song
+
+Drop several tab screenshots at once, or one after another, and each becomes its own instrument
+in one song. The import tab lists them in the order they arrived, named bass, guitar, then
+bass 2 for a second bass, each with a **Remove** button. An audio file, a MIDI file or a piano
+score still stands alone and replaces the list.
+
+![The import tab holding a bass and a guitar tab: one tempo, a row per instrument with a Remove button, the code with a labelled block for each, and the Load into editor and Add to editor buttons](/img/strudel-editor/import-tab-instruments.webp)
+
+The song plays at the first tab's tempo. Each instrument is its own `$:` block, so Strudel plays
+them together, and the flow view shows a Notes node with its Voice for each one. Two notes go to
+the console tab and under the list:
+
+- a tab marked with another tempo, which still plays at the first one;
+- two instruments whose bar counts do not divide each other. Each block loops on its own, so a
+  20 bar bass and an 8 bar guitar line up again only every 40 bars. Nothing is padded or cut.
+
+**Load into editor** replaces the code, as before. **Add to editor** keeps the code that is there
+and appends the instruments as blocks, without a second tempo. Code that plays a single
+unlabelled expression, such as one tab loaded on its own, gets `$:` in front of that expression
+first, because Strudel stops playing it as soon as any labelled block appears. One tab loaded on
+its own writes exactly the code it always did.
+
 ## Turning a piano score into a pattern
 
 Drop a PNG, JPEG or WebP of piano music in standard notation on the same **import** tab: a

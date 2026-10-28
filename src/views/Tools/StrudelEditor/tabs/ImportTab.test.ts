@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ImportTab from './ImportTab.vue'
-import type { TabTranscription, TranscriptionResult } from '../types'
+import type {
+  ImportedTranscription,
+  ScoreTranscription,
+  TabTranscription,
+  TranscriptionResult
+} from '../types'
 
 const RESULT: TranscriptionResult = {
   kind: 'grid',
@@ -22,13 +27,30 @@ const TAB_RESULT: TabTranscription = {
   warnings: []
 }
 
+const SCORE_RESULT: ScoreTranscription = {
+  kind: 'score',
+  beatsPerMinute: 65,
+  beatsPerBar: 4,
+  bars: [{ rightHand: [{ notes: ['a5'], beats: 4 }], leftHand: [{ notes: ['f#3'], beats: 4 }] }],
+  warnings: []
+}
+
+const GUITAR_RESULT: TabTranscription = { ...TAB_RESULT, instrument: 'guitar' }
+
+const imported = (...results: TabTranscription[]): ImportedTranscription[] =>
+  results.map((result, index) => ({ id: index + 1, sourceName: `tab-${index + 1}.png`, result }))
+
+const findButton = (wrapper: ReturnType<typeof mountTab>, label: string) =>
+  wrapper.findAll('button').find((button) => button.text() === label)
+
 const mountTab = (overrides: Partial<InstanceType<typeof ImportTab>['$props']> = {}) =>
   mount(ImportTab, {
     props: {
       status: 'idle',
       progress: null,
-      result: null,
+      transcriptions: [],
       code: '',
+      warnings: [],
       errorMessage: '',
       ...overrides
     }
@@ -48,20 +70,31 @@ describe('ImportTab', () => {
     expect(wrapper.text()).toContain('Drop an MP3')
   })
 
-  it('emits the first chosen file', async () => {
+  it('emits every chosen file in order', async () => {
     // Arrange
     const wrapper = mountTab()
-    const audioFile = new File(['audio'], 'track.mp3', { type: 'audio/mpeg' })
+    const bassFile = new File(['image'], 'bass.png', { type: 'image/png' })
+    const guitarFile = new File(['image'], 'guitar.png', { type: 'image/png' })
     const fileInput = wrapper.find<HTMLInputElement>('input[type="file"]')
     Object.defineProperty(fileInput.element, 'files', {
-      value: { length: 1, item: () => audioFile, 0: audioFile }
+      value: {
+        length: 2,
+        item: (index: number) => [bassFile, guitarFile][index],
+        0: bassFile,
+        1: guitarFile,
+        [Symbol.iterator]: function* () {
+          yield bassFile
+          yield guitarFile
+        }
+      }
     })
 
     // Act
     await fileInput.trigger('change')
 
     // Assert
-    expect(wrapper.emitted('file')).toEqual([[audioFile]])
+    expect(fileInput.attributes('multiple')).toBeDefined()
+    expect(wrapper.emitted('files')).toEqual([[[bassFile, guitarFile]]])
   })
 
   it.each([
@@ -80,13 +113,14 @@ describe('ImportTab', () => {
 
   it('summarises a finished transcription and loads it on request', async () => {
     // Arrange
-    const wrapper = mountTab({ status: 'done', result: RESULT, code: 'setcps(126/60/4)' })
+    const wrapper = mountTab({
+      status: 'done',
+      transcriptions: [{ id: 1, sourceName: 'song.mp3', result: RESULT }],
+      code: 'setcps(126/60/4)'
+    })
 
     // Act
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Load into editor')
-      ?.trigger('click')
+    await findButton(wrapper, 'Load into editor')?.trigger('click')
 
     // Assert
     const summary = wrapper.find('.strudel-import__summary').text()
@@ -94,6 +128,7 @@ describe('ImportTab', () => {
     expect(summary).toContain('Am F')
     expect(wrapper.find('.strudel-import__code').text()).toBe('setcps(126/60/4)')
     expect(wrapper.emitted('load')).toHaveLength(1)
+    expect(findButton(wrapper, 'Add to editor')).toBeUndefined()
   })
 
   it('shows why a file failed', () => {
@@ -109,7 +144,11 @@ describe('ImportTab', () => {
 
   it('summarises a tab by tempo and bars, without a chord row', () => {
     // Arrange
-    const wrapper = mountTab({ status: 'done', result: TAB_RESULT, code: 'setcps(120/60/4)' })
+    const wrapper = mountTab({
+      status: 'done',
+      transcriptions: imported(TAB_RESULT),
+      code: 'setcps(120/60/4)'
+    })
 
     // Act
     const summary = wrapper.find('.strudel-import__summary').text()
@@ -117,6 +156,70 @@ describe('ImportTab', () => {
     // Assert
     expect(summary).toContain('120 BPM')
     expect(summary).not.toContain('Chords')
+  })
+
+  it('summarises a piano score by tempo and bars, with no chord row and no Add', () => {
+    // Arrange
+    const transcriptions = [{ id: 1, sourceName: 'river.png', result: SCORE_RESULT }]
+
+    // Act
+    const wrapper = mountTab({ status: 'done', transcriptions, code: '// right hand' })
+
+    // Assert
+    const summary = wrapper.find('.strudel-import__summary').text()
+    expect(summary).toContain('65 BPM')
+    expect(summary).not.toContain('Chords')
+    expect(findButton(wrapper, 'Load into editor')).toBeDefined()
+    expect(findButton(wrapper, 'Add to editor')).toBeUndefined()
+  })
+
+  it('lists every imported tab as an instrument with its own remove button', async () => {
+    // Arrange
+    const wrapper = mountTab({
+      status: 'done',
+      transcriptions: imported(TAB_RESULT, GUITAR_RESULT),
+      code: ''
+    })
+
+    // Act
+    await wrapper.find('button[aria-label="Remove guitar tab-2.png"]').trigger('click')
+
+    // Assert
+    const rows = wrapper.findAll('.strudel-import__instrument').map((row) => row.text())
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toContain('bass')
+    expect(rows[0]).toContain('tab-1.png')
+    expect(rows[1]).toContain('guitar')
+    expect(wrapper.emitted('remove')).toEqual([[2]])
+  })
+
+  it.each([
+    ['Load into editor', 'load'],
+    ['Add to editor', 'add']
+  ])('emits %s as %s for tabs', async (label, eventName) => {
+    // Arrange
+    const wrapper = mountTab({ status: 'done', transcriptions: imported(TAB_RESULT), code: '' })
+
+    // Act
+    await findButton(wrapper, label)?.trigger('click')
+
+    // Assert
+    expect(wrapper.emitted(eventName)).toHaveLength(1)
+  })
+
+  it('shows the song warnings', () => {
+    // Arrange
+    const warning = 'The bass (3 bars) and guitar (2 bars) loop at different lengths'
+
+    // Act
+    const wrapper = mountTab({
+      status: 'done',
+      transcriptions: imported(TAB_RESULT, GUITAR_RESULT),
+      warnings: [warning]
+    })
+
+    // Assert
+    expect(wrapper.find('.strudel-import__warnings').text()).toContain(warning)
   })
 
   it('accepts screenshots as well as audio', () => {

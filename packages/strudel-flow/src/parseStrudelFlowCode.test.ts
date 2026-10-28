@@ -3,7 +3,7 @@ import { compileStrudelFlow } from './compileStrudelFlow'
 import { createDefaultStrudelFlowPatch } from './defaultPatch'
 import { createStrudelFlowDrumRow, createStrudelFlowNodeData } from './nodeDefaults'
 import { generateStrudelFlowNodePattern } from './nodePatterns'
-import { parseStrudelFlowCode } from './parseStrudelFlowCode'
+import { appendStrudelFlowBlocks, parseStrudelFlowCode } from './parseStrudelFlowCode'
 import type { StrudelFlowEdge, StrudelFlowNode, StrudelFlowNodeData } from './types'
 
 const createNode = (id: string, data: StrudelFlowNodeData): StrudelFlowNode => ({
@@ -499,5 +499,62 @@ describe('parseStrudelFlowCode', () => {
     // Assert
     expect(parsed?.nodes[1]?.data).toEqual({ kind: 'visualizer', ...visualizer })
     expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
+  })
+})
+
+describe('parseStrudelFlowCode with imported tabs', () => {
+  it('reads every labelled note line as its own Notes node and voice', () => {
+    // Arrange
+    const code = [
+      '// Read from 2 tabs: bass "low.png", guitar "chords.png"',
+      'setcps(96/60/4)',
+      '// bass "low.png": 2 bars',
+      '$: note("<[a2@2 e3 ~] d3>").s("gm_electric_bass_finger")',
+      '// guitar "chords.png": 1 bars',
+      '$: note("[e4,g4]").s("gm_acoustic_guitar_nylon")'
+    ].join('\n')
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+    const recompiled = compileStrudelFlow(parsed!)
+
+    // Assert
+    expect(parsed?.nodes.map((node) => node.data.kind)).toEqual([
+      'notes',
+      'voice',
+      'notes',
+      'voice'
+    ])
+    expect(parsed?.edges).toHaveLength(2)
+    expect(parsed?.beatsPerMinute).toBe(96)
+    expect(compileStrudelFlow(parseStrudelFlowCode(recompiled.code)!).code).toBe(recompiled.code)
+  })
+})
+
+describe('appendStrudelFlowBlocks', () => {
+  const blocks = '// guitar\n$: note("e4").s("gm_acoustic_guitar_nylon")'
+
+  it.each([
+    ['empty code', '', blocks],
+    [
+      'code that already plays labelled blocks',
+      'setcps(1)\n$: s("bd")',
+      `setcps(1)\n$: s("bd")\n\n${blocks}`
+    ],
+    [
+      'a bare last expression, which Strudel would drop',
+      'setcps(1)\n// bass\nnote("a2")\n  .s("bass") // low',
+      `setcps(1)\n// bass\n$: note("a2")\n  .s("bass") // low\n\n${blocks}`
+    ],
+    ['code with no pattern', 'setcps(1)', `setcps(1)\n\n${blocks}`]
+  ])('appends to %s', (_description, code, expected) => {
+    // Arrange
+    const appended = blocks
+
+    // Act
+    const result = appendStrudelFlowBlocks(code, appended)
+
+    // Assert
+    expect(result).toBe(expected)
   })
 })

@@ -820,3 +820,43 @@ export const parseStrudelFlowCode = (
     setup: program.setup.join('\n')
   }
 }
+
+// Prefixes the statement Strudel plays with `$:`, matching it on the comment-free copy of the
+// code, whose lines keep their original starts.
+const labelPlayedExpression = (code: string): string => {
+  const commentFree = stripLineComments(code)
+  const statements = splitStatements(commentFree).filter(
+    (statement) => readTempo(statement) === null
+  )
+  const last = statements.at(-1)
+  if (
+    last === undefined ||
+    SETUP_PATTERN.test(last) ||
+    statements.some((statement) => LABEL_PATTERN.test(statement))
+  ) {
+    return code
+  }
+  const start = commentFree.lastIndexOf(last.split('\n')[0])
+  const lineIndex = commentFree.slice(0, start).split('\n').length - 1
+  const column = start - (commentFree.lastIndexOf('\n', start - 1) + 1)
+  const lines = code.split('\n')
+  const line = lines[lineIndex]
+  return [
+    ...lines.slice(0, lineIndex),
+    `${line.slice(0, column)}$: ${line.slice(column)}`,
+    ...lines.slice(lineIndex + 1)
+  ].join('\n')
+}
+
+/**
+ * Appends labelled blocks to a program so they play alongside what it already plays. Strudel
+ * drops an unlabelled last expression once any `$:` block exists, so that expression is
+ * labelled first.
+ * @param code - the program to extend
+ * @param blocks - `$:` blocks to play with it
+ * @returns the program followed by the blocks
+ */
+export const appendStrudelFlowBlocks = (code: string, blocks: string): string => {
+  const existing = code.trimEnd()
+  return existing.length === 0 ? blocks : `${labelPlayedExpression(existing)}\n\n${blocks}`
+}
