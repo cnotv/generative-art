@@ -15,8 +15,10 @@ edit the code, and press the play button above the editor.
   opens where you left off. An address naming a pattern opens that pattern instead, and picking
   one replaces the saved code.
 
-A panel carries six of the strudel.cc tabs plus an import tab:
+A panel opens on the hints tab, followed by six of the strudel.cc tabs, an import tab and the
+flow tab:
 
+- **hints**: what the pattern is missing for its style (below)
 - **welcome**: intro and about
 - **patterns**: your saved patterns, then the examples, then the shipped
   electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
@@ -25,17 +27,80 @@ A panel carries six of the strudel.cc tabs plus an import tab:
   pattern can open in a new tab. The name field at the top saves the code in the editor under
   that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under
   a name already used replaces it, and its cross deletes it.
-- **import**: turn an MP3 or other audio file into a pattern (below)
+- **import**: turn an MP3, other audio or a MIDI file into a pattern (below)
+- **midi**: play or drive MIDI devices (below)
 - **reference**: function quick list
-- **export**: WAV export settings
+- **export**: render the code offline to a WAV file (below)
 - **console**: evaluation log
 - **settings**: theme and panel position
+- **flow**: build a pattern from instrument and effect nodes (below)
+
+Every tab has its own anchor, so `/tools/StrudelEditor#midi` opens on the midi tab and
+`#flow` opens the flow canvas. Tabs and patterns share the anchor: a name that is a tab opens it,
+anything else loads the pattern it names.
 
 Audio starts on the first Play press, since browsers only allow sound after a user gesture.
+iOS is stricter: audio has to start inside the tap itself, and the engine download that follows
+outlasts it. So `strudelPlayback.ts` creates and resumes the page's one AudioContext before
+anything downloads, hands it to Strudel, and resumes it again on every Play or Update. It also
+asks for iOS's playback audio session, so an iPhone plays with the ring switch on silent.
 Patterns run on the Strudel engine (`@strudel/core`, `@strudel/mini`, `@strudel/transpiler`,
-`@strudel/webaudio`, `@strudel/tonal`, `@strudel/draw`), loaded lazily so the rest of the app
+`@strudel/webaudio`, `@strudel/tonal`, `@strudel/draw`, `@strudel/midi`), loaded lazily so the rest of the app
 never pays for it. Press the stop button to hush the output; leaving the view stops it too. A
 pattern that fails to evaluate shows its error under the editor instead of playing.
+
+## Hints
+
+The hints tab names the pattern's style and goes through the code in three groups, each hint
+saying why it matters and showing the code it changes:
+
+- **Review what is there**: layers to mute or visuals to remove, so the hints don't only ever
+  add.
+- **Missing for** the style: the tempo, instruments and visuals it is usually built with.
+- **Keep going**: variations to take a finished pattern further.
+
+Each hint's button (**Add**, **Mute** or **Remove**) makes the change. The list follows the code
+as you type.
+
+![The hints tab for a breakbeat pattern: layers to review, and ideas to keep going](/img/strudel-editor/hints-tab.webp)
+
+The style comes from the first of these that names one, and the tab says which:
+
+1. the **Style** picker at the top of the tab;
+2. the comment on the code's first line, such as `// deep house groove` or `// my first dnb tune`;
+3. a guess from the tempo the code plays at and the sounds it uses.
+
+There are eight styles: techno, house, drum and bass, hip hop, ambient, trance, dub and
+breakbeat. Each has a usual tempo range, the instruments it is built from, and the visuals that
+suit it. The table is `STRUDEL_MUSIC_STYLES` in the editor's `config.ts`, and nothing is sent
+anywhere.
+
+| Hint           | When it shows                                                  | What its button does                                                           |
+| -------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Review**     | a line draws more than one visual                              | removes all but the first, which would otherwise draw over each other          |
+|                | a `$:` block plays only instruments the style isn't built with | mutes it as `_$:`, which keeps it in the code; delete the `_` to bring it back |
+|                | a `$:` block plays only parts an earlier layer already plays   | mutes it the same way                                                          |
+| **Tempo**      | no `setcps` or `setcpm`, or one outside the style's range      | `setcps(<bpm>/60/4)`, replacing the tempo set or under the header comments     |
+| **Instrument** | none of the code's sounds or calls plays that part             | a new `$:` block with the layer                                                |
+| **Visual**     | the style suits it, and a layer it fits draws nothing yet      | `._punchcard()` or similar, chained onto that layer                            |
+| **Keep going** | a layer it suits doesn't have it yet; three at a time          | `.mask("<1 1 1 0>")` or similar, chained onto that layer                       |
+
+Each visual goes on the layer it suits: a punchcard on the drums, a pianoroll on the melody or
+chords, a scope on the bass. A layer that already draws something is never offered a second
+visual, so no two draw over each other. The ideas are a breakdown every fourth bar, a filter
+sweep, a phrase turned round, drum fills, swing, stereo spread and an echo; their table is
+`STRUDEL_PATTERN_IDEAS`. To keep a version you like, save it in the patterns tab and build a
+variation on a copy.
+
+Instruments are read from sound names in strings (`bd` is a kick, `hh` a hi-hat, `jvbass` a bass),
+from notes (octave 2 and below is bass, above is melody), and from calls (`chord` and `voicing`
+are chords, `scale` a melody). Words in comments name the style but never an instrument, so
+`// bass and hats` counts as neither. A muted block counts as nothing.
+
+Strudel plays only the `$:` blocks once any exists, so the first instrument added to a plain
+pattern turns that pattern into a block too, and both keep playing. Only `$:` blocks can be muted
+on their own, so a single plain pattern is never reviewed. Every snippet uses only the sounds the
+editor loads and Strudel's built-in synths.
 
 ## The code editor
 
@@ -76,10 +141,94 @@ visual feedback guide:
 The spiral, the pitch wheel and the spectrum size their drawing in canvas pixels, which is
 Strudel's own behaviour. They look smaller on a high-density screen than on a standard one.
 
+## The flow editor
+
+The **Code** and **Flow** switch above the editor changes what fills the left side. Choosing Flow
+also opens the flow tab in the player panel; choosing Code puts the code editor back. The player
+tabs keep working in either mode, so hints, patterns and settings stay one click away. The panel
+button beside the switch hides the player panel when the graph needs the width; the same button
+brings it back.
+
+Flow replaces typing with a small graph, after [Strudel Flow](https://xyflow.com/strudel-flow) by
+[xyflow](https://xyflow.com), the makers of React Flow: its node set, controls, radial menu and look
+follow theirs. Add a node from the
+palette or with the **+** button in the canvas; the **+** and a right-click both open the radial
+menu, split into Instruments, Effects and Sounds. A bar over the canvas sets the tempo in BPM and
+the beats in one cycle (**B/C**).
+
+![The starter patch: a Pad played by a Voice through a Filter, with the tempo bar above](/img/strudel-flow/flow-editor-dark.webp)
+
+| Node           | Kind       | What it plays                                                                      |
+| -------------- | ---------- | ---------------------------------------------------------------------------------- |
+| **Pad**        | instrument | an eight-note grid, arpeggio or chord mode, key, scale and octave                  |
+| **Beats**      | instrument | up to eight drum tracks of any sample on up to sixteen steps                       |
+| **Chords**     | instrument | a chord progression with preset shapes and editable notes                          |
+| **Notes**      | instrument | a `note("…")` line in mini notation                                                |
+| **Samples**    | instrument | an `s("…")` line in mini notation                                                  |
+| **Code**       | instrument | any Strudel expression, for what the controls do not cover                         |
+| **Filter**     | effect     | `lpf` and `lpq`                                                                    |
+| **Delay**      | effect     | `delay`, `delaytime` and `delayfeedback`                                           |
+| **Space**      | effect     | `room`, `roomsize`, `roomfade`, `roomlp` and `roomdim`                             |
+| **Level**      | effect     | `gain`, `pan` and `postgain`                                                       |
+| **Envelope**   | effect     | `attack`, `decay`, `sustain` and `release`                                         |
+| **Visualizer** | effect     | a pianoroll, punchcard, scope, spiral, pitch wheel or spectrum, picked from a list |
+| **Effect**     | effect     | any other chained call, such as `fast(2)` or `jux(rev)`                            |
+| **Voice**      | sound      | the synth or sample bank, written as `sound("…")`                                  |
+
+The Beats node has a sample picker on each track, grouped into kicks, snares, hi-hats, claps,
+toms, cymbals and percussion from the loaded kit. Its **Shape** footer sets how many steps play,
+how many tracks there are, and whether the variation picker shows under each step: `*2` repeats a
+hit within its step, `!2` repeats the step, `@2` stretches it and `/2` plays it every other cycle.
+Each track is written as a plain sample line, such as `s("~ cp ~ cp*2")`, so typing a line like
+that reads back as a Beats track too.
+
+![A Beats node with kick, clap and hi-hat tracks over eight steps, variations shown and the Shape footer open](/img/strudel-flow/beats-node.webp)
+
+All of Strudel's visuals live in one **Visualizer** node. Pick the type from its list, choose
+whether it draws **under the line** (`._punchcard()`) or **behind the code** (`.punchcard()`), and
+optionally give it options such as `{ labels: 1 }`. Any visual call in the code, with or without
+the underscore, reads back as a Visualizer with that type picked. The drawing itself appears in the
+code editor, so switch to Code to watch it.
+
+Each node header has a **…** menu with **View code**, which shows what the node writes, and
+**Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
+instrument of a group writes the whole block as `_$:`. Drag a node by its header to arrange the
+canvas. Connect an output dot to an input by dragging, or click the output and then the input.
+Delete or Backspace removes a selected node and its cables. An instrument has no input, a pair of
+nodes connects only once, an effect cannot feed an instrument, and a cable cannot close a loop.
+
+Each connected group of nodes compiles to one `$: <pattern>` block. An instrument passes only
+through the effects downstream of it: effects every instrument of the group shares are chained
+once after a `stack(...)`, and an effect only one instrument reaches stays on that instrument's
+branch inside the stack. The tempo bar writes `setcpm(<bpm>/<beats per cycle>)` above the blocks.
+A patch with no instrument, or one whose instrument makes no sound yet, says what to fix instead
+of writing code.
+
+The code is the source of truth, and the graph always shows it:
+
+- **Typing** rebuilds the graph each time the code pauses on something that parses as
+  JavaScript; while it has a syntax error the graph keeps its last good state.
+- **Every chained call becomes a node.** Calls with a dedicated node get it, any other call becomes
+  an Effect node with its arguments kept verbatim, and a `stack(...)` splits into its instruments.
+  A flat sample line of up to sixteen steps, such as `s("bd ~ [bd,cp] ~")`, becomes Beats tracks;
+  a richer one, with sub-sequences or euclidean rhythms, becomes a Samples node, and `note("…")`
+  becomes Notes. A head nothing reads, such as
+  `n(run(8))`, becomes a Code node.
+- Statements that are not patterns, such as `samples('…')` or `const cc = await midin('…')`, are
+  kept as setup lines and written back above the blocks. Without any `$:` block, the last
+  expression is the pattern, as in Strudel.
+- **Editing the canvas** writes the compiled code into the editor and re-plays it if it is
+  playing. Opening Flow never rewrites the code by itself.
+
+The graph is also saved in local storage, so node positions survive a visit. **Reset patch** loads
+the starter Pad into Voice into Filter at 120 BPM.
+
 ## Autocomplete
 
 Typing in the editor lists what can come next, and Ctrl+Space opens the list anywhere. Up and
-down move through it, Enter writes the selected option, and Escape closes it.
+down move through it, Enter writes the selected option, and Escape closes it. The list is narrow
+and tall, so the documentation beside it has room to be up to 800px wide. It drops under the
+list when the screen has no room beside it.
 
 ![Completing a function with its documentation beside the list, and a sound name inside s()](/img/strudel-editor/autocomplete.webp)
 
@@ -138,6 +287,48 @@ classifier. Edit the code from there. How the analysis works and where it fails 
 [Transcribing audio into a pattern](../journey/strudel-audio-transcription.md). Why the editor
 is assembled from parts rather than strudel.cc's ready-made one is in
 [Embedding the strudel.cc editor](../journey/strudel-editor-widgets.md).
+
+## Turning a MIDI file into a pattern
+
+Drop a `.mid` file on the same **import** tab. Notes are read straight from the file instead of
+heard, so the result is exact rather than a sketch:
+
+| Layer  | Read as                                                                            |
+| ------ | ---------------------------------------------------------------------------------- |
+| Drums  | General MIDI percussion keys on the drum channel, folded to kick, snare and hi-hat |
+| Bass   | the lowest note that starts on each sixteenth step                                 |
+| Chords | the major or minor triad closest to every note held across the bar                 |
+
+The tempo is the file's first tempo, and notes are placed by their ticks, so a tempo change inside
+the file never shifts them off the grid. Up to 64 bars are read. **Load into editor** replaces the
+code, as with audio.
+
+## MIDI devices
+
+![The midi tab with its Connect MIDI devices button and the three device snippets](/img/strudel-editor/midi-tab.webp)
+
+On the **midi** tab, **Connect MIDI devices** asks the browser for Web MIDI access and lists the
+inputs and outputs it finds, following devices as they are plugged in. Three snippets load
+straight into the editor, already naming the first device found:
+
+- **Play a keyboard**: `midikeys` plays an input's notes through a Strudel synth while a pattern
+  runs.
+- **Turn knobs**: `midin` reads an input's control changes into a running pattern.
+- **Drive a synth**: `.midi("<output>")` sends the pattern's notes to an output instead of the
+  browser.
+
+## Exporting a WAV file
+
+The **export** tab renders the code on screen offline, faster than real time, and downloads it as
+a 16-bit stereo WAV. Choose the start and end cycle and the sample rate; the file name defaults to
+the date. Playback stops while it renders, and Play works again as soon as the file is saved.
+Why the editor renders through its own path rather than Strudel's `renderPatternAudio` is in
+[Strudel's published builds and their audio clocks](../journey/strudel-published-builds.md).
+
+The flow editor follows [Strudel Flow](https://xyflow.com/strudel-flow) by
+[xyflow](https://xyflow.com), whose source is on
+[GitHub](https://github.com/xyflow/strudel-flow) under AGPL-3.0. The canvas, the flow tab and the
+welcome tab each link back to it.
 
 The electro tunes are ported from [strudel.cc](https://strudel.cc/) repl tunes by Felix Roos
 under CC BY-NC-SA 4.0.

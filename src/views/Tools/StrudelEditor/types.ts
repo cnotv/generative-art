@@ -14,14 +14,31 @@ export type StrudelSavedPattern = {
 
 export type StrudelEditorStatus = 'idle' | 'playing' | 'error'
 
+/** Which editor the left side shows: the code editor or the node canvas. */
+export type StrudelEditorMode = 'code' | 'flow'
+
 export type StrudelEvaluationResult = {
   success: boolean
   errorMessage?: string
 }
 
+export type StrudelExportOptions = {
+  startCycle: number
+  endCycle: number
+  sampleRate: number
+  fileName: string
+}
+
+export type StrudelExportStatus = 'idle' | 'rendering' | 'done' | 'error'
+
 export type StrudelPlayback = {
   evaluateCode: (patternCode: string) => Promise<StrudelEvaluationResult>
   stopPlayback: () => Promise<void>
+  /** Renders the cycles offline and downloads them as a WAV file. */
+  renderToWav: (
+    patternCode: string,
+    exportOptions: StrudelExportOptions
+  ) => Promise<StrudelEvaluationResult>
 }
 
 /** What the transpiler found in the evaluated code, in Strudel's own untyped shapes. */
@@ -91,14 +108,156 @@ export type StrudelCompletionVocabulary = {
   listSoundNames: () => Promise<string[]>
 }
 
+export type StrudelMusicStyleId =
+  | 'techno'
+  | 'house'
+  | 'drum-and-bass'
+  | 'hip-hop'
+  | 'ambient'
+  | 'trance'
+  | 'dub'
+  | 'breakbeat'
+
+/** What a layer of a pattern plays, as far as its sound names and calls tell. */
+export type StrudelInstrumentRole =
+  | 'kick'
+  | 'snare'
+  | 'clap'
+  | 'hihat'
+  | 'percussion'
+  | 'breaks'
+  | 'bass'
+  | 'chords'
+  | 'melody'
+
+/** A visual Strudel draws, by its method name without the inline underscore. */
+export type StrudelVisualName =
+  | 'pianoroll'
+  | 'punchcard'
+  | 'scope'
+  | 'spectrum'
+  | 'spiral'
+  | 'pitchwheel'
+
+/** An instrument a style expects, with the layer that adds it and why it belongs. */
+export type StrudelStyleInstrument = {
+  role: StrudelInstrumentRole
+  label: string
+  snippet: string
+  reason: string
+}
+
+export type StrudelMusicStyle = {
+  id: StrudelMusicStyleId
+  label: string
+  /** Words that name the style in a comment, lowercase. */
+  keywords: string[]
+  minBeatsPerMinute: number
+  maxBeatsPerMinute: number
+  /** The tempo a tempo hint sets. */
+  beatsPerMinute: number
+  instruments: StrudelStyleInstrument[]
+  visuals: StrudelVisualName[]
+}
+
+export type StrudelStyleSource = 'picker' | 'comment' | 'code'
+
+export type StrudelStyleDetection = {
+  style: StrudelMusicStyle
+  source: StrudelStyleSource
+}
+
+export type StrudelCodeRange = {
+  from: number
+  to: number
+}
+
+export type StrudelCodeTempo = {
+  /** Null when the tempo is set with an expression too complex to read. */
+  beatsPerMinute: number | null
+  statement: StrudelCodeRange
+}
+
+/** What the hints need to know about a piece of code, read from its syntax tree. */
+export type StrudelCodeFacts = {
+  /** The first line's comment text without its slashes, or null when it is not a comment. */
+  firstLineComment: string | null
+  /** Where the comments at the top of the code end, or 0 when it starts with code. */
+  headerEnd: number
+  tempo: StrudelCodeTempo | null
+  instrumentRoles: StrudelInstrumentRole[]
+  visualNames: StrudelVisualName[]
+  /** The top-level statements that make sound, `$:` blocks and plain expressions alike, muted blocks left out. */
+  patternStatements: StrudelPatternStatement[]
+  usesPatternBlocks: boolean
+}
+
+/** A top-level statement that makes sound, with what it alone plays and draws. */
+export type StrudelPatternStatement = StrudelCodeRange & {
+  /** The line the statement starts on, counting from 1. */
+  line: number
+  /** A `$:` block, which can be muted on its own, rather than the code's single pattern. */
+  isBlock: boolean
+  instrumentRoles: StrudelInstrumentRole[]
+  visualNames: StrudelVisualName[]
+  /** Each visual call chained on it, from its dot to its closing parenthesis. */
+  visualCalls: StrudelCodeRange[]
+  callNames: string[]
+}
+
+/** A variation a layer can take, chained onto the first layer playing one of its roles. */
+export type StrudelPatternIdea = {
+  id: string
+  title: string
+  reason: string
+  snippet: string
+  /** The call that shows a layer already has this variation. */
+  callName: string
+  targetRoles: StrudelInstrumentRole[]
+}
+
+/** What every hint is built from: the code, what was read from it, and its style. */
+export type StrudelHintContext = {
+  code: string
+  facts: StrudelCodeFacts
+  style: StrudelMusicStyle
+}
+
+export type StrudelCodeEdit = {
+  from: number
+  to: number
+  insert: string
+}
+
+/** Review what is there, fill what the style is missing, or keep going with an idea. */
+export type StrudelHintKind = 'review' | 'tempo' | 'instrument' | 'visual' | 'idea'
+
+/** What a hint's button does: add code, mute a layer with `_$:`, or remove code. */
+export type StrudelHintAction = 'Add' | 'Mute' | 'Remove'
+
+export type StrudelHint = {
+  id: string
+  kind: StrudelHintKind
+  title: string
+  reason: string
+  /** The code the hint shows. */
+  snippet: string
+  actionLabel: StrudelHintAction
+  /** What the button changes, worked out from the code the hint was built from. */
+  edits: StrudelCodeEdit[]
+}
+
 export type StrudelTabId =
+  | 'hints'
   | 'welcome'
   | 'patterns'
   | 'import'
+  | 'midi'
   | 'reference'
   | 'export'
   | 'console'
   | 'settings'
+  | 'flow'
 
 export type StrudelSoundEntry = {
   name: string
@@ -164,6 +323,22 @@ export type StrudelTranscriptionState = {
   transcriptionResult: Ref<TranscriptionResult | null>
   transcribedCode: Ref<string>
   transcriptionError: Ref<string>
-  transcribeAudioFile: (audioFile: File) => Promise<void>
+  transcribeFile: (chosenFile: File) => Promise<void>
   loadTranscription: () => void
+}
+
+export type MidiDeviceStatus = 'idle' | 'connecting' | 'ready' | 'unsupported' | 'denied'
+
+export type MidiDevicesState = {
+  midiDeviceStatus: Ref<MidiDeviceStatus>
+  midiInputNames: Ref<string[]>
+  midiOutputNames: Ref<string[]>
+  connectMidiDevices: () => Promise<void>
+}
+
+export type MidiSnippet = {
+  id: string
+  title: string
+  description: string
+  code: string
 }

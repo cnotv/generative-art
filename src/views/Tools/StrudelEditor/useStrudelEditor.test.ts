@@ -29,6 +29,7 @@ const {
   mockSynthRegistrar,
   mockSampleBankLoader,
   mockContextGetter,
+  mockContextSetter,
   mockResumeFunction,
   mockScheduleHandler,
   mockCodeTranspiler,
@@ -38,7 +39,9 @@ const {
   mockDrawerConstructor,
   mockCleanupDraw,
   mockSlider,
-  mockSliderWithId
+  mockSliderWithId,
+  mockOfflineRender,
+  mockWavDownload
 } = vi.hoisted(() => {
   const drawer = {
     start: vi.fn(),
@@ -62,11 +65,14 @@ const {
     mockSynthRegistrar: vi.fn(),
     mockSampleBankLoader: vi.fn(),
     mockContextGetter: vi.fn(),
+    mockContextSetter: vi.fn(),
     mockResumeFunction: vi.fn(),
     mockScheduleHandler: vi.fn(),
     mockCodeTranspiler: vi.fn(),
     mockEvaluateFunction: vi.fn(),
-    mockStopFunction: vi.fn()
+    mockStopFunction: vi.fn(),
+    mockOfflineRender: vi.fn(),
+    mockWavDownload: vi.fn()
   }
 })
 
@@ -80,9 +86,15 @@ vi.mock('@strudel/webaudio', () => ({
   registerSynthSounds: mockSynthRegistrar,
   samples: mockSampleBankLoader,
   getAudioContext: mockContextGetter,
+  setAudioContext: mockContextSetter,
   webaudioOutput: mockScheduleHandler
 }))
 vi.mock('@strudel/tonal', () => ({}))
+vi.mock('@strudel/midi/midi.mjs', () => ({}))
+vi.mock('./strudelOfflineRender', () => ({
+  renderStrudelPatternToWav: mockOfflineRender,
+  downloadWavFile: mockWavDownload
+}))
 vi.mock('@strudel/transpiler', () => ({
   transpiler: mockCodeTranspiler
 }))
@@ -94,6 +106,23 @@ vi.mock('@strudel/codemirror', () => ({
   slider: mockSlider,
   sliderWithID: mockSliderWithId
 }))
+
+type GestureAudioContext = {
+  resume: ReturnType<typeof vi.fn>
+  createBuffer: ReturnType<typeof vi.fn>
+  createBufferSource: ReturnType<typeof vi.fn>
+  destination: object
+}
+
+// jsdom has no Web Audio, so the context the loader creates in the tap is a recording stand-in.
+const createAudioContextStub = (createdContexts: GestureAudioContext[]) =>
+  function AudioContextStub(this: GestureAudioContext) {
+    this.resume = vi.fn(async () => undefined)
+    this.createBuffer = vi.fn(() => ({}))
+    this.createBufferSource = vi.fn(() => ({ connect: vi.fn(), start: vi.fn() }))
+    this.destination = {}
+    createdContexts.push(this)
+  }
 
 const buildPlaybackHooks = (): StrudelPlaybackHooks => ({
   onEvaluated: vi.fn(),
@@ -123,7 +152,8 @@ const buildExampleList = (): StrudelExample[] => [
 
 const buildSuccessfulPlayback = (): StrudelPlayback => ({
   evaluateCode: vi.fn(async () => ({ success: true })),
-  stopPlayback: vi.fn(async () => {})
+  stopPlayback: vi.fn(async () => {}),
+  renderToWav: vi.fn(async () => ({ success: true }))
 })
 
 describe('findStrudelExample', () => {
@@ -189,11 +219,41 @@ describe('loadDefaultStrudelPlayback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockEvaluateFunction.mockResolvedValue(undefined)
-    mockContextGetter.mockResolvedValue({ currentTime: 0, resume: mockResumeFunction })
+    mockContextGetter.mockReturnValue({ currentTime: 0, resume: mockResumeFunction })
     mockReplFactory.mockResolvedValue({
       evaluate: mockEvaluateFunction,
       stop: mockStopFunction
     })
+  })
+
+  it('renders the evaluated pattern offline at its tempo and downloads the file', async () => {
+    // Arrange
+    const pattern = { kind: 'pattern' }
+    const wavFile = new ArrayBuffer(8)
+    mockOfflineRender.mockResolvedValue(wavFile)
+    mockEvaluateFunction.mockResolvedValue(pattern)
+    mockReplFactory.mockResolvedValue({
+      evaluate: mockEvaluateFunction,
+      stop: mockStopFunction,
+      scheduler: { cps: 0.75 }
+    })
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+    const exportOptions = { startCycle: 1, endCycle: 3, sampleRate: 44100, fileName: 'loop' }
+
+    // Act
+    const result = await playback.renderToWav('s("bd")', exportOptions)
+
+    // Assert
+    expect(result).toEqual({ success: true })
+    expect(mockStopFunction).toHaveBeenCalled()
+    expect(mockEvaluateFunction).toHaveBeenCalledWith('s("bd")', false)
+    expect(mockOfflineRender).toHaveBeenCalledWith(
+      expect.objectContaining({ initAudio: mockAudioInitializer }),
+      pattern,
+      0.75,
+      exportOptions
+    )
+    expect(mockWavDownload).toHaveBeenCalledWith(wavFile, 'loop')
   })
 
   it('hands the scheduler output to the pinned core under defaultOutput', async () => {
@@ -222,9 +282,85 @@ describe('loadDefaultStrudelPlayback', () => {
     expect(mockResumeFunction).toHaveBeenCalledTimes(1)
   })
 
+  it('creates and resumes the audio context in the tap itself, before the engine downloads', async () => {
+    // Arrange: iOS only lets audio start inside the tap, which is over once the loader awaits.
+    const gestureContexts: GestureAudioContext[] = []
+    vi.stubGlobal('AudioContext', createAudioContextStub(gestureContexts))
+
+    try {
+      // Act
+      const loading = loadDefaultStrudelPlayback(buildPlaybackHooks())
+      const resumedBeforeFirstAwait = gestureContexts.map(
+        (context) => context.resume.mock.calls.length
+      )
+      await loading
+
+      // Assert
+      expect(resumedBeforeFirstAwait).toEqual([1])
+      expect(mockContextSetter).toHaveBeenCalledWith(gestureContexts[0])
+      expect(mockContextSetter.mock.invocationCallOrder[0]).toBeLessThan(
+        mockAudioInitializer.mock.invocationCallOrder[0] ?? 0
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps one audio context for the page, unlocking it again on a later load', async () => {
+    // Arrange: browsers cap how many contexts can be open, so a new one per visit would go silent.
+    const gestureContexts: GestureAudioContext[] = []
+    vi.stubGlobal('AudioContext', createAudioContextStub(gestureContexts))
+
+    try {
+      // Act
+      await loadDefaultStrudelPlayback(buildPlaybackHooks())
+      await loadDefaultStrudelPlayback(buildPlaybackHooks())
+
+      // Assert
+      const [firstContext, secondContext] = mockContextSetter.mock.calls.map(([context]) => context)
+      expect(secondContext).toBe(firstContext)
+      expect(gestureContexts.length).toBeLessThanOrEqual(1)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('asks iOS to play through the silent switch', async () => {
+    // Arrange
+    const audioSession = { type: 'auto' }
+    Object.defineProperty(navigator, 'audioSession', { value: audioSession, configurable: true })
+    vi.stubGlobal('AudioContext', createAudioContextStub([]))
+
+    try {
+      // Act
+      await loadDefaultStrudelPlayback(buildPlaybackHooks())
+
+      // Assert
+      expect(audioSession.type).toBe('playback')
+    } finally {
+      Reflect.deleteProperty(navigator, 'audioSession')
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('resumes the audio context on every evaluation, in case iOS suspended it', async () => {
+    // Arrange
+    const playback = await loadDefaultStrudelPlayback(buildPlaybackHooks())
+    mockResumeFunction.mockClear()
+
+    // Act
+    await playback.evaluateCode('s("bd sd")')
+
+    // Assert
+    expect(mockResumeFunction).toHaveBeenCalledTimes(1)
+    expect(mockResumeFunction.mock.invocationCallOrder[0]).toBeLessThan(
+      mockEvaluateFunction.mock.invocationCallOrder[0] ?? 0
+    )
+  })
+
   it('reads pattern time from the audio context clock', async () => {
     // Arrange
-    mockContextGetter.mockResolvedValue({ currentTime: 1.5, resume: mockResumeFunction })
+    mockContextGetter.mockReturnValue({ currentTime: 1.5, resume: mockResumeFunction })
 
     // Act
     await loadDefaultStrudelPlayback(buildPlaybackHooks())
@@ -673,7 +809,8 @@ describe('useStrudelEditor', () => {
     // Arrange
     const failingPlayback: StrudelPlayback = {
       evaluateCode: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' })),
-      stopPlayback: vi.fn(async () => {})
+      stopPlayback: vi.fn(async () => {}),
+      renderToWav: vi.fn(async () => ({ success: true }))
     }
     const { playPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -728,7 +865,8 @@ describe('useStrudelEditor', () => {
       evaluateCode: vi.fn(async () => ({ success: true })),
       stopPlayback: vi.fn(async () => {
         throw new Error('stop failed')
-      })
+      }),
+      renderToWav: vi.fn(async () => ({ success: true }))
     }
     const { playPattern, stopPattern, editorStatus, errorMessage } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -792,7 +930,7 @@ describe('useStrudelEditor', () => {
     expect(patternCode.value).toBe(codeBeforeSelection)
   })
 
-  it('starts on the welcome tab', () => {
+  it('starts on the hints tab', () => {
     // Arrange
     const { activeTab } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -803,7 +941,7 @@ describe('useStrudelEditor', () => {
     const tabId = activeTab.value
 
     // Assert
-    expect(tabId).toBe('welcome')
+    expect(tabId).toBe('hints')
   })
 
   it('switches tabs and tracks the active one', () => {
@@ -832,13 +970,16 @@ describe('useStrudelEditor', () => {
 
     // Assert
     expect(tabLabels).toEqual([
+      'hints',
       'welcome',
       'patterns',
       'import',
+      'midi',
       'reference',
       'export',
       'console',
-      'settings'
+      'settings',
+      'flow'
     ])
   })
 
@@ -874,16 +1015,19 @@ describe('useStrudelEditor', () => {
 })
 
 describe('STRUDEL_TABS', () => {
-  it('matches the strudel.cc player menu order, with import after patterns', () => {
+  it('puts hints first, then the strudel.cc player menu order with import after patterns', () => {
     // Arrange
     const expectedOrder = [
+      'hints',
       'welcome',
       'patterns',
       'import',
+      'midi',
       'reference',
       'export',
       'console',
-      'settings'
+      'settings',
+      'flow'
     ]
 
     // Act
@@ -1002,18 +1146,39 @@ describe('useStrudelEditor transcription', () => {
       beatsPerMinute: 100,
       bars: [{ steps: [{ drums: ['bd'], bassNote: null }], chord: null }]
     })
-    const { patternCode, editorStatus, transcribeAudioFile, loadTranscription } = useStrudelEditor({
+    const { patternCode, editorStatus, transcribeFile, loadTranscription } = useStrudelEditor({
       transcriptionRunner
     })
     editorStatus.value = 'error'
 
     // Act
-    await transcribeAudioFile(new File(['audio'], 'beat.mp3'))
+    await transcribeFile(new File(['audio'], 'beat.mp3'))
     loadTranscription()
 
     // Assert
     expect(patternCode.value).toContain('setcps(100/60/4)')
     expect(patternCode.value).toContain('s("bd")')
     expect(editorStatus.value).toBe('idle')
+  })
+
+  it.each([
+    [{ success: true }, 'done', ''],
+    [{ success: false, errorMessage: 'bad pattern' }, 'error', 'bad pattern']
+  ] as const)('exports the code on screen and reports %o', async (renderResult, status, error) => {
+    // Arrange
+    const playback = { ...buildSuccessfulPlayback(), renderToWav: vi.fn(async () => renderResult) }
+    const { patternCode, exportPattern, exportStatus, exportError } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: vi.fn(async () => playback)
+    })
+    const exportOptions = { startCycle: 0, endCycle: 2, sampleRate: 48000, fileName: '' }
+
+    // Act
+    await exportPattern(exportOptions)
+
+    // Assert
+    expect(playback.renderToWav).toHaveBeenCalledWith(patternCode.value, exportOptions)
+    expect(exportStatus.value).toBe(status)
+    expect(exportError.value).toBe(error)
   })
 })

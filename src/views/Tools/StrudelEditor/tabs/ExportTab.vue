@@ -1,86 +1,102 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { Download } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
+import { EXPORT_DEFAULT_OPTIONS, EXPORT_SAMPLE_RATE_OPTIONS } from '../config'
+import type { StrudelExportOptions, StrudelExportStatus } from '../types'
 
-const fileName = ref('')
-const startCycle = ref(0)
-const endCycle = ref(4)
-const sampleRate = ref(48000)
-const isExporting = ref(false)
-const exportProgress = ref(0)
+const props = defineProps<{
+  status: StrudelExportStatus
+  errorMessage: string
+}>()
 
-const canExport = () => !isExporting.value && endCycle.value > startCycle.value
+const emit = defineEmits<{
+  export: [exportOptions: StrudelExportOptions]
+}>()
 
-const onExport = async (): Promise<void> => {
-  if (!canExport()) {
+const fileName = ref(EXPORT_DEFAULT_OPTIONS.fileName)
+const startCycle = ref(EXPORT_DEFAULT_OPTIONS.startCycle)
+const endCycle = ref(EXPORT_DEFAULT_OPTIONS.endCycle)
+const sampleRate = ref(String(EXPORT_DEFAULT_OPTIONS.sampleRate))
+
+const isRendering = computed(() => props.status === 'rendering')
+const hasValidRange = computed(
+  () =>
+    Number.isFinite(startCycle.value) &&
+    Number.isFinite(endCycle.value) &&
+    startCycle.value >= 0 &&
+    endCycle.value > startCycle.value
+)
+
+const readCycle = (value: string | number): number => Math.floor(Number(value))
+
+const onExport = (): void => {
+  if (isRendering.value || !hasValidRange.value) {
     return
   }
-  isExporting.value = true
-  exportProgress.value = 0
-  const interval = setInterval(() => {
-    exportProgress.value = Math.min(exportProgress.value + 10, 90)
-  }, 200)
-  try {
-    // WAV export via OfflineAudioContext - would render pattern offline
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    exportProgress.value = 100
-  } finally {
-    clearInterval(interval)
-    setTimeout(() => {
-      isExporting.value = false
-      exportProgress.value = 0
-    }, 500)
-  }
+  emit('export', {
+    fileName: fileName.value,
+    startCycle: startCycle.value,
+    endCycle: endCycle.value,
+    sampleRate: Number(sampleRate.value)
+  })
 }
 </script>
 
 <template>
-  <div class="strudel-export">
-    <div class="strudel-export__field">
-      <label class="strudel-export__label" for="export-filename">File name</label>
-      <input
-        id="export-filename"
-        v-model="fileName"
-        class="strudel-export__input"
-        type="text"
-        :placeholder="isExporting ? '' : 'Leave empty for default'"
-      />
-    </div>
+  <section class="strudel-export">
+    <p class="strudel-export__intro">
+      Render the code on screen offline, faster than real time, and download it as a WAV file.
+      Playback stops while it renders.
+    </p>
+    <label class="strudel-export__field">
+      <span class="strudel-export__label">File name</span>
+      <Input v-model="fileName" placeholder="Leave empty for a dated name" />
+    </label>
     <div class="strudel-export__row">
-      <div class="strudel-export__field">
-        <label class="strudel-export__label" for="export-start">Start cycle</label>
-        <input
-          id="export-start"
-          v-model.number="startCycle"
-          class="strudel-export__input"
+      <label class="strudel-export__field">
+        <span class="strudel-export__label">Start cycle</span>
+        <Input
           type="number"
-          min="0"
+          :min="0"
+          :model-value="startCycle"
+          @update:model-value="startCycle = readCycle($event)"
         />
-      </div>
-      <div class="strudel-export__field">
-        <label class="strudel-export__label" for="export-end">End cycle</label>
-        <input
-          id="export-end"
-          v-model.number="endCycle"
-          class="strudel-export__input"
+      </label>
+      <label class="strudel-export__field">
+        <span class="strudel-export__label">End cycle</span>
+        <Input
           type="number"
           :min="startCycle + 1"
+          :model-value="endCycle"
+          @update:model-value="endCycle = readCycle($event)"
         />
-      </div>
+      </label>
     </div>
     <div class="strudel-export__field">
-      <label class="strudel-export__label" for="export-rate">Sample rate</label>
-      <select id="export-rate" v-model.number="sampleRate" class="strudel-export__select">
-        <option :value="44100">44100 Hz</option>
-        <option :value="48000">48000 Hz</option>
-        <option :value="96000">96000 Hz</option>
-      </select>
+      <span class="strudel-export__label">Sample rate</span>
+      <ButtonSelector v-model="sampleRate" :options="EXPORT_SAMPLE_RATE_OPTIONS" />
     </div>
-    <button class="strudel-export__button" :disabled="!canExport()" type="button" @click="onExport">
-      <template v-if="isExporting">Exporting... {{ exportProgress }}%</template>
-      <template v-else>Export to WAV</template>
-    </button>
-    <p v-if="isExporting" class="strudel-export__status">Rendering offline...</p>
-  </div>
+    <Button
+      class="strudel-export__button"
+      :disabled="isRendering || !hasValidRange"
+      @click="onExport"
+    >
+      <Download aria-hidden="true" />
+      {{ isRendering ? 'Rendering...' : 'Export to WAV' }}
+    </Button>
+    <p v-if="!hasValidRange" class="strudel-export__error" role="alert">
+      The end cycle has to come after the start cycle.
+    </p>
+    <p v-else-if="status === 'error'" class="strudel-export__error" role="alert">
+      {{ errorMessage }}
+    </p>
+    <p v-else-if="status === 'done'" class="strudel-export__status" role="status">
+      The WAV file was downloaded.
+    </p>
+  </section>
 </template>
 
 <style scoped>
@@ -91,6 +107,13 @@ const onExport = async (): Promise<void> => {
   padding: var(--spacing-4);
 }
 
+.strudel-export__intro,
+.strudel-export__status {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+}
+
 .strudel-export__field {
   display: flex;
   flex-direction: column;
@@ -98,12 +121,9 @@ const onExport = async (): Promise<void> => {
 }
 
 .strudel-export__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--spacing-3);
-}
-
-.strudel-export__row .strudel-export__field {
-  flex: 1;
 }
 
 .strudel-export__label {
@@ -112,37 +132,13 @@ const onExport = async (): Promise<void> => {
   color: var(--color-muted-foreground);
 }
 
-.strudel-export__input,
-.strudel-export__select {
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-md);
-  box-sizing: border-box;
-}
-
 .strudel-export__button {
-  padding: var(--spacing-2) var(--spacing-4);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  font-size: var(--font-size-md);
-  cursor: pointer;
-  margin-top: var(--spacing-2);
+  align-self: flex-start;
 }
 
-.strudel-export__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.strudel-export__status {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
+.strudel-export__error {
   margin: 0;
-  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-destructive);
 }
 </style>

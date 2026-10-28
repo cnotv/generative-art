@@ -30,7 +30,7 @@ describe('useStrudelTranscription', () => {
     const { transcription, applyCode } = setup(vi.fn().mockResolvedValue(RESULT))
 
     // Act
-    await transcription.transcribeAudioFile(createFile())
+    await transcription.transcribeFile(createFile())
 
     // Assert
     expect(transcription.transcriptionStatus.value).toBe('done')
@@ -43,7 +43,7 @@ describe('useStrudelTranscription', () => {
   it('writes the code into the editor and logs it when loaded', async () => {
     // Arrange
     const { transcription, applyCode, appendLog } = setup(vi.fn().mockResolvedValue(RESULT))
-    await transcription.transcribeAudioFile(createFile('loop.wav'))
+    await transcription.transcribeFile(createFile('loop.wav'))
 
     // Act
     transcription.loadTranscription()
@@ -74,7 +74,7 @@ describe('useStrudelTranscription', () => {
     const { transcription } = setup(runner)
 
     // Act
-    await transcription.transcribeAudioFile(createFile())
+    await transcription.transcribeFile(createFile())
 
     // Assert
     expect(transcription.transcriptionProgress.value).toEqual({ stage: 'tempo', fraction: 0.5 })
@@ -87,7 +87,7 @@ describe('useStrudelTranscription', () => {
     )
 
     // Act
-    await transcription.transcribeAudioFile(createFile('broken.mp3'))
+    await transcription.transcribeFile(createFile('broken.mp3'))
 
     // Assert
     expect(transcription.transcriptionStatus.value).toBe('error')
@@ -104,8 +104,8 @@ describe('useStrudelTranscription', () => {
         pendingResolvers.push(resolve)
       })
     const { transcription } = setup(runner)
-    const firstRun = transcription.transcribeAudioFile(createFile('first.mp3'))
-    const secondRun = transcription.transcribeAudioFile(createFile('second.mp3'))
+    const firstRun = transcription.transcribeFile(createFile('first.mp3'))
+    const secondRun = transcription.transcribeFile(createFile('second.mp3'))
 
     // Act
     pendingResolvers[1](RESULT)

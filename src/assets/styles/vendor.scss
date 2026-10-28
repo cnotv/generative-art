@@ -10,3 +10,59 @@
 [data-radix-vue-collection-item] {
   outline: none;
 }
+
+// Vue Flow overrides
+
+// The canvas is drawn on the app's own surfaces rather than Vue Flow's light theme.
+.vue-flow .vue-flow__background {
+  background-color: var(--color-background);
+}
+
+.vue-flow .vue-flow__edge-path,
+.vue-flow .vue-flow__connection-path {
+  stroke: var(--color-muted-foreground);
+  stroke-width: 2;
+}
+
+.vue-flow .vue-flow__edge.selected .vue-flow__edge-path,
+.vue-flow .vue-flow__edge:focus .vue-flow__edge-path,
+.vue-flow .vue-flow__edge:focus-visible .vue-flow__edge-path,
+.vue-flow .vue-flow__edge:hover .vue-flow__edge-path {
+  stroke: var(--color-primary);
+}
+
+.vue-flow .vue-flow__handle {
+  min-width: 0.625rem;
+  min-height: 0.625rem;
+  border: 2px solid var(--color-background);
+  background: var(--color-primary);
+}
+
+.vue-flow .vue-flow__handle.connectable:hover {
+  background: var(--color-ring);
+}
+
+.vue-flow .vue-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.vue-flow .vue-flow__controls-button {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+  fill: var(--color-foreground);
+}
+
+.vue-flow .vue-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.vue-flow .vue-flow__controls-button:hover {
+  background: var(--color-secondary);
+}
+
+.vue-flow .vue-flow__controls-button svg {
+  fill: var(--color-foreground);
+}

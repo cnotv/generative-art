@@ -1,8 +1,21 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import StrudelEditor from './StrudelEditor.vue'
 import { ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_SAVED_CODE_STORAGE_KEY } from './config'
 import type { StrudelCodeMirrorOptions } from './types'
+
+// Vue Flow needs a real layout engine; the browser tests mount it. This stand-in proves the
+// view switches between the editor and the canvas while the graph state stays in the view.
+vi.mock('@webgamekit/strudel-flow', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    StrudelFlowEditor: {
+      name: 'StrudelFlowEditorStub',
+      template: '<div class="strudel-flow-editor-stub" />'
+    }
+  }
+})
 
 // CodeMirror and the Strudel engine only load in a real browser; the browser tests cover
 // them. This stand-in keeps the code in a textarea so the view wiring can be checked.
@@ -48,6 +61,26 @@ const mountEditorView = async () => {
   return wrapper
 }
 
+const clickTab = async (
+  wrapper: Awaited<ReturnType<typeof mountEditorView>>,
+  label: string
+): Promise<void> => {
+  await wrapper
+    .findAll('.strudel-editor__tab')
+    .find((tab) => tab.text() === label)
+    ?.trigger('click')
+}
+
+const clickMode = async (
+  wrapper: Awaited<ReturnType<typeof mountEditorView>>,
+  label: string
+): Promise<void> => {
+  await wrapper
+    .findAll('.strudel-editor__mode button')
+    .find((button) => button.text() === label)
+    ?.trigger('click')
+}
+
 describe('StrudelEditor view', () => {
   afterEach(clearSavedState)
 
@@ -67,7 +100,7 @@ describe('StrudelEditor view', () => {
   })
 
   it.each([
-    ['an example menu', '[role="combobox"]'],
+    ['an example menu over the code', '.strudel-editor__code [role="combobox"]'],
     ['a status line', '.strudel-editor__status'],
     ['an error while nothing has failed', '.strudel-editor__error']
   ])('shows no %s', async (_part, selector) => {
@@ -104,7 +137,7 @@ describe('StrudelEditor view', () => {
     expect((codeField.element as HTMLTextAreaElement).value).toBe('s("hh*8")')
   })
 
-  it('renders the seven player menu tabs, without the empty sounds tab', async () => {
+  it('renders the hints tab and the eight player menu tabs, without the empty sounds tab', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
@@ -112,30 +145,33 @@ describe('StrudelEditor view', () => {
     const tabButtons = wrapper.findAll('.strudel-editor__tab')
 
     // Assert
-    expect(tabButtons.length).toBe(7)
+    expect(tabButtons.length).toBe(10)
     const tabLabels = tabButtons.map((tab) => tab.text())
     expect(tabLabels).toEqual([
+      'hints',
       'welcome',
       'patterns',
       'import',
+      'midi',
       'reference',
       'export',
       'console',
-      'settings'
+      'settings',
+      'flow'
     ])
   })
 
-  it('shows the welcome tab by default', async () => {
+  it('shows the hints tab by default', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
     const activeTab = wrapper.find('.strudel-editor__tab--active')
-    const welcomeContent = wrapper.find('.strudel-welcome')
+    const hintsContent = wrapper.find('.strudel-hints')
 
     // Assert
-    expect(activeTab.text()).toBe('welcome')
-    expect(welcomeContent.exists()).toBe(true)
+    expect(activeTab.text()).toBe('hints')
+    expect(hintsContent.exists()).toBe(true)
   })
 
   it('switches to the patterns tab and links the examples, then the tunes', async () => {
@@ -261,6 +297,31 @@ describe('StrudelEditor view', () => {
     expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
+  it('links every tab to its own anchor', async () => {
+    // Arrange / Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    const links = wrapper.findAll('.strudel-editor__tab').map((tab) => tab.attributes('href'))
+    expect(links).toContain('#midi')
+    expect(links).toContain('#export')
+  })
+
+  it.each([
+    ['#midi', 'midi'],
+    ['#export', 'export']
+  ])('opens the tab named by the anchor %s', async (hash, tabLabel) => {
+    // Arrange
+    window.history.replaceState(null, '', `${window.location.pathname}${hash}`)
+
+    // Act
+    const wrapper = await mountEditorView()
+
+    // Assert
+    expect(wrapper.find('.strudel-editor__tab--active').text()).toBe(tabLabel)
+    expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
+  })
+
   it('switches to the console tab', async () => {
     // Arrange
     const wrapper = await mountEditorView()
@@ -273,6 +334,98 @@ describe('StrudelEditor view', () => {
 
     // Assert
     expect(wrapper.find('.strudel-console').exists()).toBe(true)
+  })
+
+  it('opens flow mode on the code as it is and writes the code once the patch changes', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    const originalCode = readEditorCode(wrapper)
+
+    // Act
+    await clickTab(wrapper, 'flow')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
+    })
+    const codeOnOpen = readEditorCode(wrapper)
+    await wrapper.find('button[aria-label="Add Notes node"]').trigger('click')
+    await flushPromises()
+    const codeAfterAdd = readEditorCode(wrapper)
+    await clickMode(wrapper, 'Code')
+
+    // Assert
+    expect(codeOnOpen).toBe(originalCode)
+    expect(codeAfterAdd).toContain('$: s("bd sd, hh*8")')
+    expect(codeAfterAdd).toContain('$: note("c3 [e3 g3] a3 [g3 e3]")')
+    expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(false)
+    expect(readEditorCode(wrapper)).toBe(codeAfterAdd)
+  })
+
+  it('rebuilds the graph from code and keeps the same code when flow mode opens', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    const code = ['setcpm(100/4)', '$: n("[0 2] [4]").scale("D4:minor").sound("sine")'].join('\n')
+
+    // Act
+    await wrapper.find('.fake-strudel-code').setValue(code)
+    await clickTab(wrapper, 'flow')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
+    })
+    await clickMode(wrapper, 'Code')
+
+    // Assert
+    expect(readEditorCode(wrapper)).toBe(code)
+  })
+
+  it('shows a flow error in the main editor area instead of the side panel', async () => {
+    // Arrange
+    localStorage.setItem(STRUDEL_SAVED_CODE_STORAGE_KEY, '')
+    const wrapper = await mountEditorView()
+
+    // Act
+    await clickTab(wrapper, 'flow')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-editor__error').exists()).toBe(true)
+    })
+
+    // Assert
+    expect(wrapper.find('.strudel-editor__error').text()).toContain('instrument')
+    expect(wrapper.find('.strudel-flow-tab [role="alert"]').exists()).toBe(false)
+  })
+
+  it('collapses and reopens the side panel', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+
+    // Act
+    await wrapper.find('button[aria-label="Hide side panel"]').trigger('click')
+    const collapsed = wrapper.find('.strudel-editor').classes()
+    await wrapper.find('button[aria-label="Show side panel"]').trigger('click')
+
+    // Assert
+    expect(collapsed).toContain('strudel-editor--side-collapsed')
+    expect(wrapper.find('.strudel-editor').classes()).not.toContain(
+      'strudel-editor--side-collapsed'
+    )
+  })
+
+  it('returns to code mode when a listed pattern is picked from flow mode', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    await clickTab(wrapper, 'flow')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
+    })
+
+    // Act
+    await clickTab(wrapper, 'patterns')
+    const flowStayedOpen = wrapper.find('.strudel-flow-editor-stub').exists()
+    await wrapper.find('.strudel-patterns__link').trigger('click')
+
+    // Assert
+    expect(flowStayedOpen).toBe(true)
+    expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(false)
+    expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
   it('switches to the settings tab', async () => {

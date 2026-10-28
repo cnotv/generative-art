@@ -6,7 +6,7 @@ import '@/style.css'
 import '@/assets/styles/_variables.scss'
 import StrudelEditor from './StrudelEditor.vue'
 import { createDrumLoop } from './transcription/syntheticSignals'
-import { STRUDEL_EXAMPLES } from './config'
+import { STRUDEL_EXAMPLES, STRUDEL_MUSIC_STYLES } from './config'
 
 const WAV_SAMPLE_RATE = 22050
 const WAV_HEADER_BYTES = 44
@@ -33,6 +33,43 @@ const hasPaintedPixels = (canvas: HTMLCanvasElement | null): boolean => {
 
 const readExampleCode = (exampleId: string): string =>
   STRUDEL_EXAMPLES.find((example) => example.id === exampleId)?.code ?? ''
+
+// Longer than one cycle of the slowest style, so every layer has played at least once.
+const PLAYBACK_SETTLE_MS = 4000
+
+// Strudel reports a sound it cannot find, and any other error while playing, through its own
+// logger: a console.log and a strudel.log event on the document, never console.error.
+const collectEngineErrors = (): { engineErrors: string[]; stopCollecting: () => void } => {
+  const engineErrors: string[] = []
+  const recordEngineError = (event: Event): void => {
+    if (event instanceof CustomEvent && String(event.detail?.message).includes('error')) {
+      engineErrors.push(String(event.detail.message))
+    }
+  }
+  document.addEventListener('strudel.log', recordEngineError)
+  return {
+    engineErrors,
+    stopCollecting: () => document.removeEventListener('strudel.log', recordEngineError)
+  }
+}
+
+// More than any style offers, so a hint that never goes away fails instead of looping forever.
+const MAX_HINTS_APPLIED = 60
+
+const countHints = (): number => document.querySelectorAll('.strudel-hints__item').length
+
+const applyEveryHint = async (appliedCount = 0): Promise<number> => {
+  const addButton = document.querySelector<HTMLButtonElement>('.strudel-hints__item button')
+  if (addButton === null || appliedCount >= MAX_HINTS_APPLIED) {
+    return appliedCount
+  }
+  const codeBefore = readEditorCode()
+  await userEvent.click(addButton)
+  await vi.waitFor(() => {
+    expect(readEditorCode()).not.toBe(codeBefore)
+  })
+  return applyEveryHint(appliedCount + 1)
+}
 
 // Long enough for a leftover animation loop to have drawn several frames.
 const VISUAL_SETTLE_MS = 1000
@@ -69,8 +106,10 @@ const encodeMonoWav = (samples: Float32Array, sampleRate: number): Blob => {
 }
 
 describe('StrudelEditor audible playback', () => {
-  // The editor saves its code to local storage, which would carry one test's code into the next.
+  // The editor saves its code to local storage and reads the address, so both would carry one
+  // test's pattern into the next.
   beforeEach(() => {
+    window.history.replaceState(null, '', window.location.pathname)
     localStorage.clear()
   })
 
@@ -376,13 +415,15 @@ describe('StrudelEditor audible playback', () => {
           { timeout: 60000, interval: 250 }
         )
 
-        // Act
+        // Act: the label follows the edit once the editor reports it and the view re-renders,
+        // which can take a moment while other test files load the engine alongside.
         await codeEditor.fill('note("g3 b3").s("triangle")')
-        const labelAfterEdit = readPlayButtonLabel()
+        await vi.waitFor(() => {
+          expect(readPlayButtonLabel()).toBe('Update')
+        })
         await page.getByRole('button', { name: 'Update' }).click()
 
         // Assert
-        expect(labelAfterEdit).toBe('Update')
         await vi.waitFor(() => {
           expect(readPlayButtonLabel()).toBe('Stop')
         })
@@ -418,6 +459,285 @@ describe('StrudelEditor audible playback', () => {
       }
     }
   )
+
+  it(
+    'compiles a node added and connected on the flow canvas, and plays it',
+    { timeout: 90000 },
+    async () => {
+      // Arrange
+      let bufferStartCount = 0
+      const originalCreateBufferSource = AudioContext.prototype.createBufferSource
+      AudioContext.prototype.createBufferSource = function (
+        this: AudioContext,
+        ...creationArguments: []
+      ) {
+        const source = originalCreateBufferSource.apply(this, creationArguments)
+        const originalStart = source.start.bind(source)
+        source.start = (...startArguments: [number]) => {
+          bufferStartCount += 1
+          return originalStart(...startArguments)
+        }
+        return source
+      }
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        // Act: open flow on the starter patch, add Beats, and connect it to the Filter.
+        await page.getByRole('tab', { name: 'flow' }).click()
+        await page.getByRole('button', { name: 'Reset patch' }).click()
+        await vi.waitFor(
+          () => {
+            expect(
+              document.querySelector('.strudel-flow-node[data-node-kind="filter"]')
+            ).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+        await page.getByRole('button', { name: 'Add Beats node' }).click()
+        await vi.waitFor(
+          () => {
+            expect(
+              document.querySelector('.strudel-flow-node[data-node-kind="beats"]')
+            ).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+        const beatsOutput = document.querySelector(
+          '.strudel-flow-node[data-node-kind="beats"] .strudel-flow-node__handle--output'
+        )
+        const filterInput = document.querySelector(
+          '.strudel-flow-node[data-node-kind="filter"] .strudel-flow-node__handle--input'
+        )
+        expect(beatsOutput).not.toBeNull()
+        expect(filterInput).not.toBeNull()
+        if (beatsOutput === null || filterInput === null) {
+          return
+        }
+        await userEvent.click(beatsOutput)
+        await userEvent.click(filterInput)
+
+        // Assert: one stacked block; only the pad goes through the voice, both through the filter.
+        await vi.waitFor(
+          () => {
+            const blocks = readEditorCode()
+              .split('\n')
+              .filter((line) => line.startsWith('$:'))
+            expect(blocks).toHaveLength(1)
+            expect(blocks[0]).toContain(
+              'stack(n("[7] [5] [3] [1] [3] [2] [6] [3]").scale("C3:major").sound("triangle"), '
+            )
+            expect(blocks[0]).toContain('s("bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~")')
+            expect(blocks[0]).toContain(').lpf(1500)')
+          },
+          { timeout: 15000 }
+        )
+        await page.getByRole('button', { name: 'Play' }).click()
+        await vi.waitFor(
+          () => {
+            expect(bufferStartCount).toBeGreaterThan(0)
+          },
+          { timeout: 60000, interval: 500 }
+        )
+        await vi.waitFor(() => {
+          expect(readPlayButtonLabel()).toBe('Stop')
+        })
+      } finally {
+        AudioContext.prototype.createBufferSource = originalCreateBufferSource
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it('writes every pad grid click into the pattern', { timeout: 60000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Reset patch' }).click()
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+      const cell = document.querySelector<HTMLButtonElement>(
+        '.strudel-flow-node[data-node-kind="pad"] button[aria-label="Note 1, step 1"]'
+      )
+      expect(cell).not.toBeNull()
+      if (cell === null) {
+        return
+      }
+
+      // Act
+      await userEvent.click(cell)
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(readEditorCode()).toContain('n("[0 7] [5] [3] [1] [3] [2] [6] [3]")')
+        },
+        { timeout: 15000 }
+      )
+      expect(cell.getAttribute('aria-pressed')).toBe('true')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('writes an added chord tone into the pattern', { timeout: 60000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Reset patch' }).click()
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+      await page.getByRole('button', { name: 'Add Chords node' }).click()
+      await vi.waitFor(
+        () => {
+          expect(
+            document.querySelector('.strudel-flow-node[data-node-kind="chords"]')
+          ).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+      const degree = document.querySelector<HTMLButtonElement>(
+        '.strudel-flow-node[data-node-kind="chords"] button[aria-label^="Scale degree 1:"]'
+      )
+      expect(degree).not.toBeNull()
+      if (degree === null) {
+        return
+      }
+
+      // Act
+      await userEvent.click(degree)
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(readEditorCode()).toContain('<[0,1,2,4] [5,7,9] [3,5,7] [4,6,8]>')
+        },
+        { timeout: 15000 }
+      )
+      expect(degree.getAttribute('aria-pressed')).toBe('true')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('adds a Level node from the radial menu', { timeout: 60000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Reset patch' }).click()
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('.strudel-flow-node[data-node-kind="pad"]')).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+
+      // Act
+      await page.getByRole('button', { name: 'Add node' }).click()
+      const effectsCategory = document.querySelector<HTMLButtonElement>(
+        '.strudel-flow-radial__category[aria-label="Effects"]'
+      )
+      expect(effectsCategory).not.toBeNull()
+      if (effectsCategory === null) {
+        return
+      }
+      await userEvent.click(effectsCategory)
+      const levelItem = [
+        ...document.querySelectorAll<HTMLButtonElement>('.strudel-flow-radial__item')
+      ].find((item) => item.textContent?.includes('Level'))
+      expect(levelItem).not.toBeUndefined()
+      if (levelItem === undefined) {
+        return
+      }
+      await userEvent.click(levelItem)
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          expect(
+            document.querySelector('.strudel-flow-node[data-node-kind="level"]')
+          ).not.toBeNull()
+        },
+        { timeout: 15000 }
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it(
+    'shows every visual call as a Visualizer node with its type picked',
+    { timeout: 30000 },
+    async () => {
+      // Arrange
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await page
+          .getByRole('textbox', { name: 'Live code pattern' })
+          .fill('$: note("c3 e3")._punchcard()._scope()')
+
+        // Act
+        await page.getByRole('tab', { name: 'flow' }).click()
+
+        // Assert
+        await vi.waitFor(
+          () => {
+            const types = [
+              ...document.querySelectorAll<HTMLSelectElement>(
+                '.strudel-flow-node[data-node-kind="visualizer"] select[aria-label="Type"]'
+              )
+            ].map((select) => select.value)
+            expect(types).toEqual(['punchcard', 'scope'])
+          },
+          { timeout: 15000 }
+        )
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it('rebuilds the flow graph when the code changes', { timeout: 30000 }, async () => {
+    // Arrange
+    const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+    try {
+      // Act
+      await page
+        .getByRole('textbox', { name: 'Live code pattern' })
+        .fill(
+          'setcpm(120/4)\n$: n("[0 2] [4]").scale("A4:minor").sound("sine")\n$: note("c3 e3").lpf(800).fast(2)'
+        )
+      await page.getByRole('tab', { name: 'flow' }).click()
+
+      // Assert
+      await vi.waitFor(
+        () => {
+          const kinds = [...document.querySelectorAll<HTMLElement>('.strudel-flow-node')].map(
+            (node) => node.dataset.nodeKind
+          )
+          expect(kinds.sort()).toEqual(['effect', 'filter', 'notes', 'pad', 'voice'])
+        },
+        { timeout: 15000 }
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
 
   it(
     'puts the picked pattern in the address, and Back returns to the one before',
@@ -492,6 +812,103 @@ describe('StrudelEditor audible playback', () => {
         })
         expect(readEditorCode()).toContain('"Caverave"')
       } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it.each(STRUDEL_MUSIC_STYLES.map((style) => ({ styleId: style.id, keyword: style.keywords[0] })))(
+    'applies every $styleId hint and idea and plays the result with no missing sounds',
+    { timeout: 90000 },
+    async ({ keyword }) => {
+      // Arrange
+      const { engineErrors, stopCollecting } = collectEngineErrors()
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await page.getByRole('textbox', { name: 'Live code pattern' }).fill(`// ${keyword}`)
+        await vi.waitFor(() => {
+          expect(countHints()).toBeGreaterThan(0)
+        })
+
+        // Act
+        const appliedCount = await applyEveryHint()
+        await page.getByRole('button', { name: 'Play' }).click()
+
+        // Assert
+        expect(appliedCount).toBeLessThan(MAX_HINTS_APPLIED)
+        expect(document.querySelector('.strudel-hints')?.textContent).toContain('Nothing missing')
+        expect(countHints()).toBe(0)
+        await vi.waitFor(
+          () => {
+            expect(readPlayButtonLabel()).toBe('Stop')
+          },
+          { timeout: 60000, interval: 500 }
+        )
+        await new Promise((resolve) => setTimeout(resolve, PLAYBACK_SETTLE_MS))
+        expect(document.querySelector('.strudel-editor__error')).toBeNull()
+        expect(engineErrors).toEqual([])
+      } finally {
+        stopCollecting()
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it(
+    'reviews the layers a style switch leaves behind, then plays what is left',
+    { timeout: 90000 },
+    async () => {
+      // Arrange: a house pattern grown by following hints, then switched to Breakbeat.
+      const grownPattern = [
+        'setcps(124/60/4)',
+        '$: s("bd sd, hh*8")',
+        '$: s("~ cp ~ cp")',
+        '$: note("<c2 c2 eb2 f2>*4").s("sawtooth").lpf(600)',
+        '$: chord("<Cm7 Fm7>").voicing().s("triangle").gain(.4)._pianoroll()',
+        '$: s("perc(3,8)").gain(.5)._scope()._punchcard()',
+        '$: n("0 ~ 4 ~ 7 ~ 4 ~").scale("C:major").s("sine").slow(2).delay(.5)._spiral()._spectrum()',
+        '$: s("breaks125").fit()'
+      ].join('\n')
+      const { engineErrors, stopCollecting } = collectEngineErrors()
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await page.getByRole('textbox', { name: 'Live code pattern' }).fill(grownPattern)
+        await page.getByRole('combobox').click()
+        await page.getByRole('option', { name: 'Breakbeat' }).click()
+
+        // Act
+        const reviewTitles = [
+          ...document.querySelectorAll(
+            '.strudel-hints__section:first-of-type .strudel-hints__title'
+          )
+        ].map((title) => title.textContent)
+        await applyEveryHint()
+        await page.getByRole('button', { name: 'Play' }).click()
+
+        // Assert
+        expect(reviewTitles).toEqual([
+          'Keep one visual on line 6',
+          'Keep one visual on line 7',
+          'Mute the kick, snare and hi-hats on line 2',
+          'Mute the chords on line 5',
+          'Mute the melody on line 7'
+        ])
+        const finalCode = readEditorCode()
+        expect(finalCode).toContain('_$: s("bd sd, hh*8")')
+        expect(finalCode).toContain('$: s("perc(3,8)").gain(.5)._scope()')
+        expect(finalCode).not.toContain('._scope()._punchcard()')
+        await vi.waitFor(
+          () => {
+            expect(readPlayButtonLabel()).toBe('Stop')
+          },
+          { timeout: 60000, interval: 500 }
+        )
+        await new Promise((resolve) => setTimeout(resolve, PLAYBACK_SETTLE_MS))
+        expect(engineErrors).toEqual([])
+      } finally {
+        stopCollecting()
         wrapper.unmount()
       }
     }

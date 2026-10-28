@@ -26,7 +26,7 @@ const mountTab = (overrides: Partial<InstanceType<typeof ImportTab>['$props']> =
   })
 
 describe('ImportTab', () => {
-  it('offers a drop zone for audio files', () => {
+  it('offers a drop zone for audio and MIDI files', () => {
     // Arrange
     const wrapper = mountTab()
 
@@ -35,6 +35,7 @@ describe('ImportTab', () => {
 
     // Assert
     expect(fileInput.attributes('accept')).toContain('.mp3')
+    expect(fileInput.attributes('accept')).toContain('.mid')
     expect(wrapper.text()).toContain('Drop an MP3')
   })
 
