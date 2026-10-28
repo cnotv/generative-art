@@ -70,7 +70,8 @@ const {
   cyclesPerSecond,
   loopBars,
   loopMeasured,
-  seekToCycle
+  seekToCycle,
+  holdPlayingPosition
 } = useStrudelEditor()
 
 const {
@@ -219,6 +220,12 @@ const onStopRequested = (): void => {
   void stopPattern()
 }
 
+// A pause is a stop that keeps where it was, so the next Play carries on from there.
+const onPauseRequested = (): void => {
+  holdPlayingPosition()
+  onStopRequested()
+}
+
 // One button above the editor: Play when idle, Stop while playing, and Update once the code has
 // changed since it started, which swaps the old pattern for the new one.
 const playButtonAction = computed(() => {
@@ -352,7 +359,10 @@ onBeforeUnmount(() => {
         :cycles-per-second="cyclesPerSecond"
         :loop-bars="loopBars"
         :loop-measured="loopMeasured"
+        :is-playing="editorStatus === 'playing'"
         @seek="seekToCycle"
+        @play="onPlayRequested"
+        @pause="onPauseRequested"
       />
     </section>
 

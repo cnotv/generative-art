@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Pause, Play } from 'lucide-vue-next'
+import IconButton from '@/components/IconButton.vue'
 import { Slider } from '@/components/ui/slider'
 import { STRUDEL_TIMELINE_MAX_LOOP_BARS, STRUDEL_TIMELINE_SEEK_STEP } from '../config'
 
@@ -9,11 +11,24 @@ const props = defineProps<{
   cyclesPerSecond: number
   loopBars: number | null
   loopMeasured: boolean
+  isPlaying: boolean
 }>()
 
 const emit = defineEmits<{
   seek: [cycle: number]
+  play: []
+  pause: []
 }>()
+
+const playPauseLabel = computed(() => (props.isPlaying ? 'Pause' : 'Play from here'))
+
+const onPlayPausePressed = (): void => {
+  if (props.isPlaying) {
+    emit('pause')
+    return
+  }
+  emit('play')
+}
 
 const barStarts = computed(() =>
   Array.from({ length: props.timelineBars }, (_, barIndex) => ({
@@ -44,12 +59,24 @@ const onSliderMoved = (values: number[] | undefined): void => {
 
 <template>
   <section class="strudel-timeline" aria-label="Timeline">
+    <IconButton
+      class="strudel-timeline__play-pause"
+      size="md"
+      variant="outline"
+      :title="playPauseLabel"
+      :aria-label="playPauseLabel"
+      @click="onPlayPausePressed"
+    >
+      <Pause v-if="isPlaying" aria-hidden="true" />
+      <Play v-else aria-hidden="true" />
+    </IconButton>
     <p class="strudel-timeline__readout">
       <span>Bar {{ Math.floor(playheadCycle) + 1 }} of {{ timelineBars }}</span>
       <span>{{ formatSeconds(playheadCycle) }} s of {{ formatSeconds(timelineBars) }} s</span>
       <span class="strudel-timeline__loop">{{ loopLabel }}</span>
     </p>
     <Slider
+      class="strudel-timeline__track"
       :model-value="[playheadCycle]"
       :min="0"
       :max="timelineBars"
@@ -72,15 +99,30 @@ const onSliderMoved = (values: number[] | undefined): void => {
 
 <style scoped>
 .strudel-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-areas:
+    'play-pause readout'
+    'play-pause track'
+    '. bars';
+  align-items: center;
+  gap: var(--spacing-2) var(--spacing-3);
   padding: var(--spacing-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
 
+.strudel-timeline__play-pause {
+  grid-area: play-pause;
+  border-radius: var(--radius-full);
+}
+
+.strudel-timeline__track {
+  grid-area: track;
+}
+
 .strudel-timeline__readout {
+  grid-area: readout;
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-1) var(--spacing-4);
@@ -96,6 +138,7 @@ const onSliderMoved = (values: number[] | undefined): void => {
 }
 
 .strudel-timeline__bars {
+  grid-area: bars;
   position: relative;
   height: var(--spacing-4);
   margin: 0;

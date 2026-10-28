@@ -125,8 +125,12 @@ A timeline runs along the bottom of the left side, under the code editor or the 
 shows where the pattern is in its loop: the bar, the time in seconds and the loop's length. Its
 playhead follows the sound while the pattern plays.
 
-![Two instruments playing from bar 5: the timeline reads Bar 5 of 12 and Loops every 12 bars, and the boxed notes are the fifth bar's](/img/strudel-editor/timeline.webp)
+![Two instruments playing from bar 5: the Pause button beside the timeline, which reads Bar 5 of 12 and Loops every 12 bars, and the boxed notes are the fifth bar's](/img/strudel-editor/timeline.webp)
 
+- **The button beside it** plays from the picked time and, while the pattern plays, pauses it.
+  A pause stops the sound where it is and makes that the picked time, so the next Play, here or
+  above the editor, carries on from there. Stop above the editor goes back to the picked time
+  instead.
 - **Click or drag** the timeline to pick a time. While the pattern plays it carries on from there;
   while it is stopped, the next Play starts there. Stop puts the playhead back on the picked time.
   The arrow keys move it once the playhead has focus.

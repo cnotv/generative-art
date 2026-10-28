@@ -961,6 +961,29 @@ describe('useStrudelEditor', () => {
     expect(loopBars.value).toBe(2)
   })
 
+  it('pauses at the playing position and resumes from it on the next Play', async () => {
+    // Arrange
+    const playback = {
+      ...buildSuccessfulPlayback(),
+      readPosition: vi.fn(() => ({ cycle: 6.5, cyclesPerSecond: 0.5 }))
+    }
+    const { playPattern, stopPattern, holdPlayingPosition, editorStatus } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    await playPattern()
+
+    // Act
+    holdPlayingPosition()
+    await stopPattern()
+    await playPattern()
+
+    // Assert
+    expect(playback.stopPlayback).toHaveBeenCalledTimes(1)
+    expect(playback.seekToCycle).toHaveBeenLastCalledWith(6.5)
+    expect(editorStatus.value).toBe('playing')
+  })
+
   it('stops playback and returns to idle', async () => {
     // Arrange
     const playback = buildSuccessfulPlayback()

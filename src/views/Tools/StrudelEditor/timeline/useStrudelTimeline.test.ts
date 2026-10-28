@@ -129,6 +129,20 @@ describe('useStrudelTimeline', () => {
     expect(timeline.playheadCycle.value).toBe(1.5)
   })
 
+  it('holds the playing position as the start, so a pause resumes where it left off', () => {
+    // Arrange
+    const playback = buildPlayback(6.5, 4)
+    const { timeline } = buildTimeline(playback, 'playing')
+    timeline.measurePlayedPattern()
+
+    // Act
+    timeline.holdPlayingPosition()
+
+    // Assert
+    expect(timeline.startCycle.value).toBe(6.5)
+    expect(timeline.playheadCycle.value).toBe(2.5)
+  })
+
   it('returns the playhead to the start cycle when playback stops', async () => {
     // Arrange
     const playback = buildPlayback(2.25, 4)

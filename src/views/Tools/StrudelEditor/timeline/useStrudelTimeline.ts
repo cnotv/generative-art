@@ -28,6 +28,8 @@ type StrudelTimelineState = {
   applyStartCycle: () => void
   /** Reads the loop and tempo of the pattern that just started or updated. */
   measurePlayedPattern: () => void
+  /** Makes where playback is now the start, so stopping there is a pause that Play resumes. */
+  holdPlayingPosition: () => void
 }
 
 /**
@@ -101,6 +103,14 @@ export const useStrudelTimeline = (hooks: StrudelTimelineHooks): StrudelTimeline
     cyclesPerSecond.value = playback.readPosition().cyclesPerSecond
   }
 
+  const holdPlayingPosition = (): void => {
+    const position = hooks.getPlayback()?.readPosition()
+    if (position !== undefined) {
+      startCycle.value = position.cycle
+      playheadCycle.value = wrapIntoTimeline(position.cycle)
+    }
+  }
+
   return {
     startCycle,
     playheadCycle,
@@ -110,6 +120,7 @@ export const useStrudelTimeline = (hooks: StrudelTimelineHooks): StrudelTimeline
     timelineBars,
     seekToCycle,
     applyStartCycle,
-    measurePlayedPattern
+    measurePlayedPattern,
+    holdPlayingPosition
   }
 }
