@@ -26,6 +26,7 @@ import { useRhythmGameStore } from '@/stores/rhythmGame'
 import { useMarbleMadnessStore } from '@/stores/marbleMadness'
 import { useMarbleEditorStore } from '@/stores/marbleEditor'
 import { useRockRunnerStore } from '@/stores/rockRunner'
+import { useBrickBreakerStore } from '@/stores/brickBreaker'
 import LobbyPresence from './LobbyPresence.vue'
 import LobbyRoomList from './LobbyRoomList.vue'
 import { useLobbyStore } from '@/stores/lobby'
@@ -47,7 +48,8 @@ const gameStores: Record<GameType, { playerList: { id: string; name: string; col
     RhythmGame: useRhythmGameStore(),
     MarbleMadness: useMarbleMadnessStore(),
     MarbleEditor: useMarbleEditorStore(),
-    RockRunner: useRockRunnerStore()
+    RockRunner: useRockRunnerStore(),
+    BrickBreaker: useBrickBreakerStore()
   }
 
 const stored = loadProfile()
