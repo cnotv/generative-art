@@ -16,7 +16,7 @@ type StrudelExportHooks = {
 }
 
 /**
- * The WAV export: renders the code on screen offline through the playback engine and reports
+ * The WAV and MIDI export: renders the code on screen offline through the playback engine and reports
  * how it went.
  * @param hooks - the playback, the code and play state it works on, and the log
  * @returns the export status, its error, and the action that starts it
@@ -43,14 +43,15 @@ export const useStrudelExport = (
     hooks.appendLog(`Exporting cycles ${exportOptions.startCycle} to ${exportOptions.endCycle}...`)
     try {
       const playback = await hooks.loadPlayback()
-      const result = await playback.renderToWav(hooks.patternCode.value, exportOptions)
+      const render = exportOptions.format === 'midi' ? playback.renderToMidi : playback.renderToWav
+      const result = await render(hooks.patternCode.value, exportOptions)
       hooks.editorStatus.value = 'idle'
       if (!result.success) {
         fail(result.errorMessage ?? 'Pattern failed to evaluate')
         return
       }
       exportStatus.value = 'done'
-      hooks.appendLog('Exported WAV file')
+      hooks.appendLog(`Exported ${exportOptions.format === 'midi' ? 'MIDI' : 'WAV'} file`)
     } catch (error) {
       fail(error instanceof Error ? error.message : 'Export failed')
     }

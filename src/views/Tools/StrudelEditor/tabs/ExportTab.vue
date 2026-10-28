@@ -4,8 +4,12 @@ import { Download } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
-import { EXPORT_DEFAULT_OPTIONS, EXPORT_SAMPLE_RATE_OPTIONS } from '../config'
-import type { StrudelExportOptions, StrudelExportStatus } from '../types'
+import {
+  EXPORT_DEFAULT_OPTIONS,
+  EXPORT_FORMAT_OPTIONS,
+  EXPORT_SAMPLE_RATE_OPTIONS
+} from '../config'
+import type { StrudelExportFormat, StrudelExportOptions, StrudelExportStatus } from '../types'
 
 const props = defineProps<{
   status: StrudelExportStatus
@@ -16,30 +20,38 @@ const emit = defineEmits<{
   export: [exportOptions: StrudelExportOptions]
 }>()
 
+const format = ref<StrudelExportFormat>(EXPORT_DEFAULT_OPTIONS.format)
 const fileName = ref(EXPORT_DEFAULT_OPTIONS.fileName)
 const startCycle = ref(EXPORT_DEFAULT_OPTIONS.startCycle)
-const endCycle = ref(EXPORT_DEFAULT_OPTIONS.endCycle)
+// A length rather than an end cycle, so one play-through is simply 1 and can never be empty.
+const cycleCount = ref(EXPORT_DEFAULT_OPTIONS.endCycle - EXPORT_DEFAULT_OPTIONS.startCycle)
 const sampleRate = ref(String(EXPORT_DEFAULT_OPTIONS.sampleRate))
 
 const isRendering = computed(() => props.status === 'rendering')
+const formatLabel = computed(() => (format.value === 'midi' ? 'MIDI' : 'WAV'))
 const hasValidRange = computed(
   () =>
     Number.isFinite(startCycle.value) &&
-    Number.isFinite(endCycle.value) &&
+    Number.isFinite(cycleCount.value) &&
     startCycle.value >= 0 &&
-    endCycle.value > startCycle.value
+    cycleCount.value > 0
 )
 
 const readCycle = (value: string | number): number => Math.floor(Number(value))
+
+const onFormatChange = (nextFormat: string): void => {
+  format.value = nextFormat === 'midi' ? 'midi' : 'wav'
+}
 
 const onExport = (): void => {
   if (isRendering.value || !hasValidRange.value) {
     return
   }
   emit('export', {
+    format: format.value,
     fileName: fileName.value,
     startCycle: startCycle.value,
-    endCycle: endCycle.value,
+    endCycle: startCycle.value + cycleCount.value,
     sampleRate: Number(sampleRate.value)
   })
 }
@@ -48,9 +60,18 @@ const onExport = (): void => {
 <template>
   <section class="strudel-export">
     <p class="strudel-export__intro">
-      Render the code on screen offline, faster than real time, and download it as a WAV file.
-      Playback stops while it renders.
+      WAV is the sound as it plays, rendered offline and faster than real time. MIDI is its notes,
+      for a DAW or a synth: drum samples become General MIDI drums, other samples and effects are
+      left out. Playback stops while it renders.
     </p>
+    <div class="strudel-export__field">
+      <span class="strudel-export__label">Format</span>
+      <ButtonSelector
+        :model-value="format"
+        :options="EXPORT_FORMAT_OPTIONS"
+        @update:model-value="onFormatChange"
+      />
+    </div>
     <label class="strudel-export__field">
       <span class="strudel-export__label">File name</span>
       <Input v-model="fileName" placeholder="Leave empty for a dated name" />
@@ -66,35 +87,36 @@ const onExport = (): void => {
         />
       </label>
       <label class="strudel-export__field">
-        <span class="strudel-export__label">End cycle</span>
+        <span class="strudel-export__label">Cycles</span>
         <Input
           type="number"
-          :min="startCycle + 1"
-          :model-value="endCycle"
-          @update:model-value="endCycle = readCycle($event)"
+          :min="1"
+          :model-value="cycleCount"
+          @update:model-value="cycleCount = readCycle($event)"
         />
       </label>
     </div>
-    <div class="strudel-export__field">
+    <div v-if="format === 'wav'" class="strudel-export__field">
       <span class="strudel-export__label">Sample rate</span>
       <ButtonSelector v-model="sampleRate" :options="EXPORT_SAMPLE_RATE_OPTIONS" />
     </div>
     <Button
+      size="sm"
       class="strudel-export__button"
       :disabled="isRendering || !hasValidRange"
       @click="onExport"
     >
       <Download aria-hidden="true" />
-      {{ isRendering ? 'Rendering...' : 'Export to WAV' }}
+      {{ isRendering ? 'Rendering...' : `Export to ${formatLabel}` }}
     </Button>
     <p v-if="!hasValidRange" class="strudel-export__error" role="alert">
-      The end cycle has to come after the start cycle.
+      Export at least one cycle, from cycle 0 or later.
     </p>
     <p v-else-if="status === 'error'" class="strudel-export__error" role="alert">
       {{ errorMessage }}
     </p>
     <p v-else-if="status === 'done'" class="strudel-export__status" role="status">
-      The WAV file was downloaded.
+      The file was downloaded.
     </p>
   </section>
 </template>
@@ -134,6 +156,7 @@ const onExport = (): void => {
 
 .strudel-export__button {
   align-self: flex-start;
+  gap: var(--spacing-2);
 }
 
 .strudel-export__error {
