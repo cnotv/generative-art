@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Download } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,16 +14,20 @@ import type { StrudelExportFormat, StrudelExportOptions, StrudelExportStatus } f
 const props = defineProps<{
   status: StrudelExportStatus
   errorMessage: string
+  /** Cycles in one repetition of the code, once measured. */
+  repetitionCycles: number | null
 }>()
 
 const emit = defineEmits<{
   export: [exportOptions: StrudelExportOptions]
+  measureRepetition: []
 }>()
 
 const format = ref<StrudelExportFormat>(EXPORT_DEFAULT_OPTIONS.format)
 const fileName = ref(EXPORT_DEFAULT_OPTIONS.fileName)
 const startCycle = ref(EXPORT_DEFAULT_OPTIONS.startCycle)
-// A length rather than an end cycle, so one play-through is simply 1 and can never be empty.
+// A length rather than an end cycle, so one play-through is simply 1 and can never be empty. It
+// may be a fraction: a pattern sped up with `fast(2)` repeats twice inside one cycle.
 const cycleCount = ref(EXPORT_DEFAULT_OPTIONS.endCycle - EXPORT_DEFAULT_OPTIONS.startCycle)
 const sampleRate = ref(String(EXPORT_DEFAULT_OPTIONS.sampleRate))
 
@@ -38,6 +42,16 @@ const hasValidRange = computed(
 )
 
 const readCycle = (value: string | number): number => Math.floor(Number(value))
+const readCycleLength = (value: string | number): number => Number(value)
+
+watch(
+  () => props.repetitionCycles,
+  (measuredCycles) => {
+    if (measuredCycles !== null) {
+      cycleCount.value = measuredCycles
+    }
+  }
+)
 
 const onFormatChange = (nextFormat: string): void => {
   format.value = nextFormat === 'midi' ? 'midi' : 'wav'
@@ -62,7 +76,8 @@ const onExport = (): void => {
     <p class="strudel-export__intro">
       WAV is the sound as it plays, rendered offline and faster than real time. MIDI is its notes,
       for a DAW or a synth: drum samples become General MIDI drums, other samples and effects are
-      left out. Playback stops while it renders.
+      left out. One repetition sets the length to a single play of the pattern, so a coin sped up
+      with fast(2) comes out once. Playback stops while it renders.
     </p>
     <div class="strudel-export__field">
       <span class="strudel-export__label">Format</span>
@@ -90,12 +105,24 @@ const onExport = (): void => {
         <span class="strudel-export__label">Cycles</span>
         <Input
           type="number"
-          :min="1"
+          :step="0.25"
           :model-value="cycleCount"
-          @update:model-value="cycleCount = readCycle($event)"
+          @update:model-value="cycleCount = readCycleLength($event)"
         />
       </label>
     </div>
+    <Button
+      size="sm"
+      variant="secondary"
+      class="strudel-export__button"
+      :disabled="isRendering"
+      @click="emit('measureRepetition')"
+    >
+      One repetition
+    </Button>
+    <p v-if="repetitionCycles !== null" class="strudel-export__status" role="status">
+      One repetition lasts {{ repetitionCycles }} {{ repetitionCycles === 1 ? 'cycle' : 'cycles' }}.
+    </p>
     <div v-if="format === 'wav'" class="strudel-export__field">
       <span class="strudel-export__label">Sample rate</span>
       <ButtonSelector v-model="sampleRate" :options="EXPORT_SAMPLE_RATE_OPTIONS" />

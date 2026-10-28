@@ -55,6 +55,8 @@ const {
   exportStatus,
   exportError,
   exportPattern,
+  repetitionCycles,
+  measureRepetition,
   loadTranscription
 } = useStrudelEditor()
 
@@ -367,7 +369,9 @@ onBeforeUnmount(() => {
             v-else-if="activeTab === 'export'"
             :status="exportStatus"
             :error-message="exportError"
+            :repetition-cycles="repetitionCycles"
             @export="exportPattern"
+            @measure-repetition="measureRepetition"
           />
           <ConsoleTab
             v-else-if="activeTab === 'console'"

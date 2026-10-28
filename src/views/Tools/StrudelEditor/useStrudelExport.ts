@@ -27,9 +27,12 @@ export const useStrudelExport = (
   exportStatus: Ref<StrudelExportStatus>
   exportError: Ref<string>
   exportPattern: (exportOptions: StrudelExportOptions) => Promise<void>
+  repetitionCycles: Ref<number | null>
+  measureRepetition: () => Promise<void>
 } => {
   const exportStatus = ref<StrudelExportStatus>('idle')
   const exportError = ref('')
+  const repetitionCycles = ref<number | null>(null)
 
   const fail = (message: string): void => {
     exportStatus.value = 'error'
@@ -57,5 +60,18 @@ export const useStrudelExport = (
     }
   }
 
-  return { exportStatus, exportError, exportPattern }
+  const measureRepetition = async (): Promise<void> => {
+    exportError.value = ''
+    try {
+      const playback = await hooks.loadPlayback()
+      repetitionCycles.value = await playback.measureRepetition(hooks.patternCode.value)
+      hooks.editorStatus.value = 'idle'
+      hooks.appendLog(`One repetition: ${repetitionCycles.value} of a cycle`)
+    } catch (error) {
+      hooks.editorStatus.value = 'idle'
+      fail(error instanceof Error ? error.message : 'Pattern failed to evaluate')
+    }
+  }
+
+  return { exportStatus, exportError, exportPattern, repetitionCycles, measureRepetition }
 }
