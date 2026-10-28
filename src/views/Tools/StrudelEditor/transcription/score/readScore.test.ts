@@ -70,7 +70,11 @@ describe('readScore on the sample score', () => {
     const [pickup] = readScore(image).bars
 
     // Assert
-    expect(notesOf(pickup.rightHand).slice(-2)).toEqual([['a4'], ['c#5']])
+    expect(pickup.rightHand).toEqual([
+      { notes: [], beats: 3.5 },
+      { notes: ['a4'], beats: 0.25 },
+      { notes: ['c#5'], beats: 0.25 }
+    ])
     expect(beatsOf(pickup.rightHand)).toBe(4)
     expect(notesOf(pickup.leftHand).flat()).toEqual([])
   })

@@ -74,10 +74,18 @@ const rest = (beats: number): TabEvent[] => (beats > BEAT_TOLERANCE ? [{ notes: 
 
 // A bar that comes up short is filled with a rest so both hands stay in step: in front of the
 // notes for an opening pickup bar, after them anywhere else.
+const joinRests = (events: TabEvent[]): TabEvent[] =>
+  events.reduce<TabEvent[]>((joined, event) => {
+    const previous = joined.at(-1)
+    return previous !== undefined && previous.notes.length === 0 && event.notes.length === 0
+      ? [...joined.slice(0, -1), { notes: [], beats: previous.beats + event.beats }]
+      : [...joined, event]
+  }, [])
+
 const fillBar = (bar: ScoreBar, beatsPerBar: number, isPickup: boolean): ScoreBar => {
   const fill = (events: TabEvent[]): TabEvent[] => {
     const shortBy = beatsPerBar - beatsOf(events)
-    return isPickup ? [...rest(shortBy), ...events] : [...events, ...rest(shortBy)]
+    return joinRests(isPickup ? [...rest(shortBy), ...events] : [...events, ...rest(shortBy)])
   }
   return { rightHand: fill(bar.rightHand), leftHand: fill(bar.leftHand) }
 }
