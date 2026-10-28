@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Download } from 'lucide-vue-next'
+import { Download, Save } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion'
 import { Input } from '@/components/ui/input'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import {
@@ -21,10 +27,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   export: [exportOptions: StrudelExportOptions]
   measureRepetition: []
+  save: [name: string]
 }>()
 
 const format = ref<StrudelExportFormat>(EXPORT_DEFAULT_OPTIONS.format)
-const fileName = ref(EXPORT_DEFAULT_OPTIONS.fileName)
+// One name for the exported file and for a saved pattern, so naming a piece happens once.
+const name = ref(EXPORT_DEFAULT_OPTIONS.fileName)
+const hasName = computed(() => name.value.trim().length > 0)
 const startCycle = ref(EXPORT_DEFAULT_OPTIONS.startCycle)
 // A length rather than an end cycle, so one play-through is simply 1 and can never be empty. It
 // may be a fraction: a pattern sped up with `fast(2)` repeats twice inside one cycle.
@@ -57,13 +66,19 @@ const onFormatChange = (nextFormat: string): void => {
   format.value = nextFormat === 'midi' ? 'midi' : 'wav'
 }
 
+const onSave = (): void => {
+  if (hasName.value) {
+    emit('save', name.value)
+  }
+}
+
 const onExport = (): void => {
   if (isRendering.value || !hasValidRange.value) {
     return
   }
   emit('export', {
     format: format.value,
-    fileName: fileName.value,
+    fileName: name.value,
     startCycle: startCycle.value,
     endCycle: startCycle.value + cycleCount.value,
     sampleRate: Number(sampleRate.value)
@@ -73,12 +88,35 @@ const onExport = (): void => {
 
 <template>
   <section class="strudel-export">
-    <p class="strudel-export__intro">
-      WAV is the sound as it plays, rendered offline and faster than real time. MIDI is its notes,
-      for a DAW or a synth: drum samples become General MIDI drums, other samples and effects are
-      left out. One repetition sets the length to a single play of the pattern, so a coin sped up
-      with fast(2) comes out once. Playback stops while it renders.
-    </p>
+    <Accordion>
+      <AccordionItem value="about">
+        <AccordionTrigger>About exporting</AccordionTrigger>
+        <AccordionContent>
+          <p class="strudel-export__intro">
+            WAV is the sound as it plays, rendered offline and faster than real time. MIDI is its
+            notes, for a DAW or a synth: drum samples become General MIDI drums, other samples and
+            effects are left out. One repetition sets the length to a single play of the pattern, so
+            a coin sped up with fast(2) comes out once. Playback stops while it renders.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+    <label class="strudel-export__field">
+      <span class="strudel-export__label">Name</span>
+      <Input v-model="name" placeholder="Leave empty for a dated file name" />
+    </label>
+    <h3 class="strudel-export__heading">Save locally</h3>
+    <Button
+      size="sm"
+      variant="secondary"
+      class="strudel-export__button"
+      :disabled="!hasName"
+      @click="onSave"
+    >
+      <Save aria-hidden="true" />
+      Save pattern
+    </Button>
+    <h3 class="strudel-export__heading">Export</h3>
     <div class="strudel-export__field">
       <span class="strudel-export__label">Format</span>
       <ButtonSelector
@@ -87,10 +125,6 @@ const onExport = (): void => {
         @update:model-value="onFormatChange"
       />
     </div>
-    <label class="strudel-export__field">
-      <span class="strudel-export__label">File name</span>
-      <Input v-model="fileName" placeholder="Leave empty for a dated name" />
-    </label>
     <div class="strudel-export__row">
       <label class="strudel-export__field">
         <span class="strudel-export__label">Start cycle</span>
@@ -161,6 +195,11 @@ const onExport = (): void => {
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-muted-foreground);
+}
+
+.strudel-export__heading {
+  margin: 0;
+  font-size: var(--font-size-md);
 }
 
 .strudel-export__field {

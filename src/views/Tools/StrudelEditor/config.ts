@@ -191,102 +191,6 @@ stack(
 ).slow(2)`
   },
   {
-    id: 'good-times',
-    label: 'Good times',
-    code: `// "Good times" (adapted: .piano() replaced with triangle synth)
-// @license CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
-// @by Felix Roos
-
-const scale = cat('C3 dorian','Bb2 major').slow(4);
-stack(
-  n("2*4".add(12)).off(1/8, add(2))
-  .scale(scale)
-  .fast(2)
-  .add("<0 1 2 1>").hush(),
-  "<0 1 2 3>(3,8,2)".off(1/4, add("2,4"))
-  .n().scale(scale),
-  n("<0 4>(5,8,-1)").scale(scale).sub(note(12))
-)
-  .gain(".6 .7".fast(4))
-  .add(note(4))
-  .s('triangle')
-  .clip(2)
-  .mul(gain(.8))
-  .slow(2)`
-  },
-  {
-    id: 'flatrave',
-    label: 'Flatrave',
-    code: `// "Flatrave" (adapted: RolandTR909 bank replaced with default dirt-samples)
-// @license CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
-// @by Felix Roos
-
-useRNG('legacy')
-
-stack(
-  s("bd*2,~ [cp,sd]"),
-
-  s("hh:1*4").sometimes(fast("2"))
-  .rarely(x=>x.speed(".5").delay(.5))
-  .end(perlin.range(0.02,.05).slow(8))
-  .room(.5)
-  .gain("0.4,0.4(5,8,-1)"),
-
-  note("<0 2 5 3>".scale('G1 minor')).struct("x(5,8,-1)")
-  .s('sawtooth').decay(.1).sustain(0)
-  .lpa(.1).lpenv(-4).lpf(800).lpq(8),
-
-  note("<G4 A4 Bb4 A4>,Bb3,D3").struct("~ x*2").s('square').clip(1)
-  .cutoff(sine.range(500,4000).slow(16)).resonance(10)
-  .decay(sine.slow(15).range(.05,.2)).sustain(0)
-  .room(.5).gain(.3).delay(.2).mask("<0 1@3>/8"),
-
-  "0 5 3 2".sometimes(slow(2)).off(1/8,add(5)).scale('G4 minor').note()
-  .decay(.05).sustain(0).delay(.2).degradeBy(.5).mask("<0 1>/16")
-)`
-  },
-  {
-    id: 'amensister',
-    label: 'Amensister',
-    code: `// "Amensister" (adapted: custom samples replaced with default dirt-samples)
-// @license CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
-// @by Felix Roos
-
-useRNG('legacy')
-
-stack(
-  // amen break using default samples
-  n("0 1 2 3 4 5 6 7")
-  .sometimes(x=>x.ply(2))
-  .rarely(x=>x.speed("2 | -2"))
-  .sometimesBy(.4, x=>x.delay(".5"))
-  .s("sd")
-  .slow(2)
-  .room(.5)
-  ,
-  // bass
-  sine.add(saw.slow(4)).range(0,7).segment(8)
-  .superimpose(x=>x.add(.1))
-  .scale('G0 minor').note()
-  .s("sawtooth")
-  .gain(.4).decay(.1).sustain(0)
-  .lpa(.1).lpenv(-4).lpq(10)
-  .cutoff(perlin.range(300,3000).slow(8))
-  .degradeBy("0 0.1 .5 .1")
-  .rarely(add(note("12")))
-  ,
-  // chord
-  note("Bb3,D4".superimpose(x=>x.add(.2)))
-  .s('sawtooth').lpf(1000).struct("<~@3 [~ x]>")
-  .decay(.05).sustain(.0).delay(.8).delaytime(.125).room(.8)
-  ,
-  // hat texture
-  s("hh").room(1).shape(.6).chop(16).rev().mask("<x ~@7>")
-  ,
-  n("0 1").s("cp").delay(.5).degradeBy(.8).speed(rand.range(.5,1.5))
-).reset("<x@7 x(5,8,-1)>")`
-  },
-  {
     id: 'dinofunk',
     label: 'Dinofunk',
     code: `// "Dinofunk" (adapted: freesound URLs replaced with default dirt-samples)
@@ -313,26 +217,6 @@ stack(
   .delay(sine.range(0,.5).slow(32))
   .degradeBy(.4).room(1),
   note("<b4 eb4>").s('sd').delay(.8).slow(8).room(.5)
-)`
-  },
-  {
-    id: 'bike',
-    label: 'Bike (Autechre)',
-    code: `// "Bike" by Autechre, typed in from a songscription score
-// Approximate: 22 bars of 3/4 at 125 BPM, pitches read off the chord symbols
-// (Dm/A, Am, Dm, Am/C, Dm) rather than every printed note.
-
-setcps(125/60/3)
-
-stack(
-  // sampler: staccato sixteenth-note chord stabs
-  note("<[a4,d5,f5]!2 [a4,c5,e5]!4 [d5,f5,a5]!7 [c5,e5,a5]!4 [d5,f5,a5]!5>")
-  .struct("<[~ ~ ~ ~ ~ ~ ~ ~ x x x x] [x*12]!2 [x x x x x x x x x@3 x] [~ ~ x ~ ~ x x ~ ~ ~ x ~] [x*12]!9 [x x x x x x x x x ~ ~ x] [x ~ x ~ ~ x ~ x x x x x] [~ x@2 ~ x x x ~ x x ~ x] [x ~ x x ~ x ~ x ~ x x ~] [x x x ~ x x x x x x x x] [x x x x x x ~ x ~ ~ x ~] [~ x x ~ ~ x x x x x x x] [x x x ~ ~ ~ ~ ~ ~ ~ ~ ~]>")
-  .s("square").decay(.09).sustain(0).lpf(2800).gain(.35).room(.3),
-  // drums: hi-hats from bar 17, kick and snare in the last bar
-  s("<~!16 hh(5,12,2)!5 [bd hh sd hh bd sd ~ ~ ~ ~ ~ ~]>").gain(.8),
-  // bass: only in the last bar
-  note("<~!21 [d2 d2 d2 ~ a1 a1 ~ ~ ~ ~ ~ ~]>").s("sawtooth").lpf(500).gain(.6)
 )`
   },
   {
@@ -577,17 +461,14 @@ export const EXPORT_SAMPLE_RATE_OPTIONS = [
 export const FLOW_SYNC_DELAY_MS = 300
 
 export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
-  { id: 'hints', label: 'hints' },
-  { id: 'welcome', label: 'welcome' },
-  { id: 'patterns', label: 'patterns' },
-  { id: 'sounds', label: 'sounds' },
-  { id: 'import', label: 'import' },
-  { id: 'midi', label: 'midi' },
-  { id: 'reference', label: 'reference' },
-  { id: 'export', label: 'export' },
-  { id: 'console', label: 'console' },
-  { id: 'settings', label: 'settings' },
-  { id: 'flow', label: 'flow' }
+  { id: 'import', label: 'Import' },
+  { id: 'export', label: 'Export' },
+  { id: 'midi', label: 'MIDI' },
+  { id: 'sounds', label: 'Sounds' },
+  { id: 'console', label: 'Console' },
+  { id: 'settings', label: 'Settings' },
+  { id: 'flow', label: 'Nodes' },
+  { id: 'hints', label: 'Hints' }
 ]
 
 /** Analysis runs on mono audio resampled to this rate; it keeps hi-hats below Nyquist. */

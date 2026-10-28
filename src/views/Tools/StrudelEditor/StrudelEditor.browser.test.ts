@@ -16,10 +16,9 @@ const PCM_MAX_VALUE = 0x7fff
 const readEditorCode = (): string =>
   [...document.querySelectorAll('.cm-line')].map((line) => line.textContent).join('\n')
 
-// The play button above the editor reads Stop while a pattern plays, Update once its code is
-// edited, and Play otherwise.
+// The timeline button reads Pause while a pattern plays and Play from here otherwise.
 const readPlayButtonLabel = (): string | null =>
-  document.querySelector('.strudel-editor__play')?.getAttribute('aria-label') ?? null
+  document.querySelector('.strudel-timeline button')?.getAttribute('aria-label') ?? null
 
 const hasPaintedPixels = (canvas: HTMLCanvasElement | null): boolean => {
   const drawContext = canvas?.getContext('2d')
@@ -157,7 +156,7 @@ describe('StrudelEditor audible playback', () => {
 
     try {
       // Act: trusted click, so the browser grants the audio gesture.
-      await page.getByRole('button', { name: 'Play', exact: true }).click()
+      await page.getByRole('button', { name: 'Play from here' }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
@@ -167,7 +166,7 @@ describe('StrudelEditor audible playback', () => {
 
       // Assert
       await vi.waitFor(() => {
-        expect(readPlayButtonLabel()).toBe('Stop')
+        expect(readPlayButtonLabel()).toBe('Pause')
       })
       const failureMessages = [...consoleError.mock.calls, ...consoleWarn.mock.calls]
         .map((callArguments) => String(callArguments[0]))
@@ -203,9 +202,11 @@ describe('StrudelEditor audible playback', () => {
 
     try {
       // Act: switch to patterns tab, click Caverave, then play
-      await page.getByRole('tab', { name: 'patterns' }).click()
+      await page.getByRole('button', { name: 'Import', exact: true }).click()
+      await page.getByRole('button', { name: /^Examples/ }).click()
+      await page.getByRole('button', { name: /^Songs/ }).click()
       await page.getByRole('link', { name: 'Caverave' }).click()
-      await page.getByRole('button', { name: 'Play', exact: true }).click()
+      await page.getByRole('button', { name: 'Play from here' }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
@@ -215,7 +216,7 @@ describe('StrudelEditor audible playback', () => {
 
       // Assert
       await vi.waitFor(() => {
-        expect(readPlayButtonLabel()).toBe('Stop')
+        expect(readPlayButtonLabel()).toBe('Pause')
       })
       const failureMessages = [...consoleError.mock.calls, ...consoleWarn.mock.calls]
         .map((callArguments) => String(callArguments[0]))
@@ -253,12 +254,12 @@ describe('StrudelEditor audible playback', () => {
 
     try {
       // Act: decode and analyse through the real worker, load the code, then play it.
-      await page.getByRole('tab', { name: 'import' }).click()
+      await page.getByRole('button', { name: 'Import', exact: true }).click()
       const fileInput = wrapper.find<HTMLInputElement>('input[type="file"]').element
       await userEvent.upload(page.elementLocator(fileInput), audioFile)
       await page.getByRole('button', { name: 'Load', exact: true }).click({ timeout: 60000 })
       const editorCode = readEditorCode()
-      await page.getByRole('button', { name: 'Play', exact: true }).click()
+      await page.getByRole('button', { name: 'Play from here' }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
@@ -271,7 +272,7 @@ describe('StrudelEditor audible playback', () => {
       expect(editorCode).toMatch(/s\("[^"]*bd[^"]*"\)/)
       expect(editorCode).toMatch(/s\("[^"]*hh[^"]*"\)/)
       await vi.waitFor(() => {
-        expect(readPlayButtonLabel()).toBe('Stop')
+        expect(readPlayButtonLabel()).toBe('Pause')
       })
     } finally {
       AudioContext.prototype.createBufferSource = originalCreateBufferSource
@@ -293,7 +294,7 @@ describe('StrudelEditor audible playback', () => {
       // Act: type the code the way a player would, then press Play.
       const codeEditor = page.getByRole('textbox', { name: 'Live code pattern' })
       await codeEditor.fill(INLINE_WIDGET_CODE)
-      await page.getByRole('button', { name: 'Play', exact: true }).click()
+      await page.getByRole('button', { name: 'Play from here' }).click()
       await vi.waitFor(
         () => {
           expect(oscillatorCount).toBeGreaterThan(0)
@@ -303,7 +304,7 @@ describe('StrudelEditor audible playback', () => {
 
       // Assert
       await vi.waitFor(() => {
-        expect(readPlayButtonLabel()).toBe('Stop')
+        expect(readPlayButtonLabel()).toBe('Pause')
       })
       expect(readEditorCode()).toBe(INLINE_WIDGET_CODE)
       const sliderInput = document.querySelector<HTMLInputElement>('.cm-slider input[type="range"]')
@@ -335,7 +336,7 @@ describe('StrudelEditor audible playback', () => {
       try {
         // Act
         await page.getByRole('textbox', { name: 'Live code pattern' }).fill(exampleCode)
-        await page.getByRole('button', { name: 'Play', exact: true }).click()
+        await page.getByRole('button', { name: 'Play from here' }).click()
         await vi.waitFor(
           () => {
             expect(
@@ -347,7 +348,7 @@ describe('StrudelEditor audible playback', () => {
 
         // Assert
         expect(exampleCode).not.toBe('')
-        expect(readPlayButtonLabel()).toBe('Stop')
+        expect(readPlayButtonLabel()).toBe('Pause')
         await vi.waitFor(
           () => {
             expect(hasPaintedPixels(document.querySelector(canvasSelector))).toBe(true)
@@ -375,7 +376,7 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         await codeEditor.fill(visualCode)
-        await page.getByRole('button', { name: 'Play', exact: true }).click()
+        await page.getByRole('button', { name: 'Play from here' }).click()
         await vi.waitFor(
           () => {
             expect(hasPaintedPixels(backgroundCanvas())).toBe(true)
@@ -389,7 +390,7 @@ describe('StrudelEditor audible playback', () => {
         await new Promise((resolve) => setTimeout(resolve, VISUAL_SETTLE_MS))
 
         // Assert
-        expect(readPlayButtonLabel()).toBe('Stop')
+        expect(readPlayButtonLabel()).toBe('Pause')
         expect(hasPaintedPixels(backgroundCanvas())).toBe(false)
       } finally {
         wrapper.unmount()
@@ -398,7 +399,7 @@ describe('StrudelEditor audible playback', () => {
   )
 
   it(
-    'offers Update once the playing code is edited, and plays only the new code',
+    'plays the edited code again by itself, and only the new code',
     { timeout: 90000 },
     async () => {
       // Arrange
@@ -407,26 +408,21 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         await codeEditor.fill('note("c3 e3").s("triangle")')
-        await page.getByRole('button', { name: 'Play', exact: true }).click()
+        await page.getByRole('button', { name: 'Play from here' }).click()
         await vi.waitFor(
           () => {
-            expect(readPlayButtonLabel()).toBe('Stop')
+            expect(readPlayButtonLabel()).toBe('Pause')
           },
           { timeout: 60000, interval: 250 }
         )
 
-        // Act: the label follows the edit once the editor reports it and the view re-renders,
-        // which can take a moment while other test files load the engine alongside.
+        // Act: the edit plays by itself once typing pauses, as the flow canvas does.
         await codeEditor.fill('note("g3 b3").s("triangle")')
-        await vi.waitFor(() => {
-          expect(readPlayButtonLabel()).toBe('Update')
-        })
-        await page.getByRole('button', { name: 'Update' }).click()
+        await new Promise((resolve) => setTimeout(resolve, 1500))
 
         // Assert
-        await vi.waitFor(() => {
-          expect(readPlayButtonLabel()).toBe('Stop')
-        })
+        expect(readPlayButtonLabel()).toBe('Pause')
+        expect(wrapper.find('.strudel-editor__error').exists()).toBe(false)
       } finally {
         wrapper.unmount()
       }
@@ -443,7 +439,7 @@ describe('StrudelEditor audible playback', () => {
       try {
         // Act
         await page.getByRole('textbox', { name: 'Live code pattern' }).fill('s("bd sd"')
-        await page.getByRole('button', { name: 'Play', exact: true }).click()
+        await page.getByRole('button', { name: 'Play from here' }).click()
         await vi.waitFor(
           () => {
             expect(wrapper.find('.strudel-editor__error').exists()).toBe(true)
@@ -483,7 +479,8 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         // Act: open flow on the starter patch, add Beats, and connect it to the Filter.
-        await page.getByRole('tab', { name: 'flow' }).click()
+        await page.getByRole('button', { name: 'Flow', exact: true }).click()
+        await page.getByRole('button', { name: 'Nodes', exact: true }).click()
         await page.getByRole('button', { name: 'Reset patch' }).click()
         await vi.waitFor(
           () => {
@@ -531,7 +528,7 @@ describe('StrudelEditor audible playback', () => {
           },
           { timeout: 15000 }
         )
-        await page.getByRole('button', { name: 'Play', exact: true }).click()
+        await page.getByRole('button', { name: 'Play from here' }).click()
         await vi.waitFor(
           () => {
             expect(bufferStartCount).toBeGreaterThan(0)
@@ -539,7 +536,7 @@ describe('StrudelEditor audible playback', () => {
           { timeout: 60000, interval: 500 }
         )
         await vi.waitFor(() => {
-          expect(readPlayButtonLabel()).toBe('Stop')
+          expect(readPlayButtonLabel()).toBe('Pause')
         })
       } finally {
         AudioContext.prototype.createBufferSource = originalCreateBufferSource
@@ -553,7 +550,8 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Nodes', exact: true }).click()
       await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
         () => {
@@ -590,7 +588,8 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Nodes', exact: true }).click()
       await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
         () => {
@@ -636,7 +635,8 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Nodes', exact: true }).click()
       await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
         () => {
@@ -691,7 +691,8 @@ describe('StrudelEditor audible playback', () => {
           .fill('$: note("c3 e3")._punchcard()._scope()')
 
         // Act
-        await page.getByRole('tab', { name: 'flow' }).click()
+        await page.getByRole('button', { name: 'Flow', exact: true }).click()
+        await page.getByRole('button', { name: 'Nodes', exact: true }).click()
 
         // Assert
         await vi.waitFor(
@@ -722,7 +723,8 @@ describe('StrudelEditor audible playback', () => {
         .fill(
           'setcpm(120/4)\n$: n("[0 2] [4]").scale("A4:minor").sound("sine")\n$: note("c3 e3").lpf(800).fast(2)'
         )
-      await page.getByRole('tab', { name: 'flow' }).click()
+      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Nodes', exact: true }).click()
 
       // Assert
       await vi.waitFor(
@@ -753,7 +755,9 @@ describe('StrudelEditor audible playback', () => {
           },
           { timeout: 15000 }
         )
-        await page.getByRole('tab', { name: 'patterns' }).click()
+        await page.getByRole('button', { name: 'Import', exact: true }).click()
+        await page.getByRole('button', { name: /^Examples/ }).click()
+        await page.getByRole('button', { name: /^Songs/ }).click()
 
         // Act
         await page.getByRole('link', { name: 'Scope', exact: true }).click()
@@ -791,7 +795,9 @@ describe('StrudelEditor audible playback', () => {
           },
           { timeout: 15000 }
         )
-        await page.getByRole('tab', { name: 'patterns' }).click()
+        await page.getByRole('button', { name: 'Import', exact: true }).click()
+        await page.getByRole('button', { name: /^Examples/ }).click()
+        await page.getByRole('button', { name: /^Songs/ }).click()
         const editorView = document.querySelector('.strudel-editor')
         editorView?.scrollTo({ top: editorView.scrollHeight })
         // The fixed navigation covers the view's top padding, so code scrolled into it is hidden.
@@ -833,7 +839,7 @@ describe('StrudelEditor audible playback', () => {
 
         // Act
         const appliedCount = await applyEveryHint()
-        await page.getByRole('button', { name: 'Play', exact: true }).click()
+        await page.getByRole('button', { name: 'Play from here' }).click()
 
         // Assert
         expect(appliedCount).toBeLessThan(MAX_HINTS_APPLIED)
@@ -841,7 +847,7 @@ describe('StrudelEditor audible playback', () => {
         expect(countHints()).toBe(0)
         await vi.waitFor(
           () => {
-            expect(readPlayButtonLabel()).toBe('Stop')
+            expect(readPlayButtonLabel()).toBe('Pause')
           },
           { timeout: 60000, interval: 500 }
         )
@@ -885,7 +891,7 @@ describe('StrudelEditor audible playback', () => {
           )
         ].map((title) => title.textContent)
         await applyEveryHint()
-        await page.getByRole('button', { name: 'Play', exact: true }).click()
+        await page.getByRole('button', { name: 'Play from here' }).click()
 
         // Assert
         expect(reviewTitles).toEqual([
@@ -901,7 +907,7 @@ describe('StrudelEditor audible playback', () => {
         expect(finalCode).not.toContain('._scope()._punchcard()')
         await vi.waitFor(
           () => {
-            expect(readPlayButtonLabel()).toBe('Stop')
+            expect(readPlayButtonLabel()).toBe('Pause')
           },
           { timeout: 60000, interval: 500 }
         )
