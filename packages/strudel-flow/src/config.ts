@@ -230,7 +230,8 @@ export const STRUDEL_FLOW_NOTATION_OPTIONS: { value: StrudelFlowNotation; label:
   { value: 'bass', label: 'Bass tab' },
   { value: 'sheet', label: 'Piano sheet' },
   { value: 'piano', label: 'Piano roll' },
-  { value: 'names', label: 'Note names' }
+  { value: 'names', label: 'Note names' },
+  { value: 'text', label: 'Mini notation' }
 ]
 
 /** Auto's choice: the first entry whose word is in the sound's name wins; anything else is names. */

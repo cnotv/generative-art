@@ -416,6 +416,30 @@ describe('parseStrudelFlowPatch', () => {
     })
   })
 
+  it('keeps a Notes node showing its mini notation beside the drawing', () => {
+    // Arrange
+    const storedValue = storePatch({
+      nodes: [
+        {
+          id: 'notes',
+          position: { x: 0, y: 0 },
+          data: { kind: 'notes', pattern: 'c3', notation: 'sheet', showPattern: true }
+        }
+      ]
+    })
+
+    // Act
+    const patch = parseStrudelFlowPatch(storedValue)
+
+    // Assert
+    expect(patch?.nodes[0]?.data).toEqual({
+      kind: 'notes',
+      pattern: 'c3',
+      notation: 'sheet',
+      showPattern: true
+    })
+  })
+
   it.each([
     ['a patch saved before notations existed', undefined, 'auto'],
     ['a notation picked by hand', 'piano', 'piano'],

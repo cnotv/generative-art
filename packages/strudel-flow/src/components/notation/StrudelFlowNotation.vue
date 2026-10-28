@@ -55,6 +55,10 @@ watch(
   { immediate: true }
 )
 
+const onPatternToggle = (): void => {
+  emit('update', { ...props.data, showPattern: props.data.showPattern !== true })
+}
+
 const onNotationChange = (value: string): void => {
   const notation = STRUDEL_FLOW_NOTATION_OPTIONS.find((option) => option.value === value)?.value
   if (notation !== undefined) {
@@ -70,7 +74,20 @@ const onNotationChange = (value: string): void => {
     :options="options"
     @update:model-value="onNotationChange"
   />
-  <template v-if="bars.length > 0">
+  <div v-if="view !== 'text' && context?.readNoteBars" class="strudel-flow-field">
+    <span class="strudel-flow-field__label">Mini notation</span>
+    <button
+      type="button"
+      role="switch"
+      class="strudel-flow-switch nodrag"
+      :aria-checked="data.showPattern === true"
+      aria-label="Show mini notation"
+      @click="onPatternToggle"
+    >
+      <span class="strudel-flow-switch__thumb" aria-hidden="true" />
+    </button>
+  </div>
+  <template v-if="bars.length > 0 && view !== 'text'">
     <StrudelFlowTabStaff
       v-if="view === 'bass' || view === 'guitar'"
       :bars="bars"

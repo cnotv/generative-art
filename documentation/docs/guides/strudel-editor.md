@@ -217,11 +217,13 @@ the beats in one cycle (**B/C**).
 | **Effect**     | effect     | chained calls with no single node to sit on, such as after a whole `stack(...)`    |
 | **Voice**      | sound      | the synth or sample bank, written as `sound("…")`                                  |
 
-A Notes node draws its notes above the text so they read as music. **Auto** picks the notation
+A Notes node draws its notes so they read as music. **Auto** picks the notation
 from the sound the notes play: a bass sound gets a four string bass tab, a guitar a six string
 guitar tab, a piano, keys or organ sheet music on a treble and a bass staff, and any other sound a
 list of note names with their lengths. **Piano roll** is there to pick by hand. The **Notation** picker on the node overrides it, one node at a time, and its Auto
-entry says what it chose. A tab places each note on the string that moves the hand least from the
+entry says what it chose. While a notation is drawn the mini notation text is hidden; the
+**Mini notation** switch on the node shows it under the drawing, for editing, and the node remembers
+the switch. Picking **Mini notation** as the notation shows the text alone. A tab places each note on the string that moves the hand least from the
 last one, within 24 frets, and draws the rhythm under the staff the way the tab import reads it,
 so a tab screenshot imported and shown again looks like the page it came from. A staff wider than
 the node scrolls inside it. Why it works this way is in

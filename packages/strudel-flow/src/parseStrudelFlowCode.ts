@@ -664,7 +664,11 @@ const keepDrawingChoices = (
   reused: StrudelFlowNode | null
 ): StrudelFlowNodeData =>
   data.kind === 'notes' && reused?.data.kind === 'notes'
-    ? { ...data, notation: reused.data.notation }
+    ? {
+        ...data,
+        notation: reused.data.notation,
+        ...(reused.data.showPattern === true ? { showPattern: true } : {})
+      }
     : data
 
 const nextNodeId = (kind: StrudelFlowNodeKind, nodes: StrudelFlowNode[]): string => {
