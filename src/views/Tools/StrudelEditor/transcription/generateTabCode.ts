@@ -1,18 +1,17 @@
-import { STRUDEL_DEFAULT_BEATS_PER_MINUTE, TAB_SOUNDS } from '../config'
-import type {
-  ImportedTranscription,
-  TabEvent,
-  TabSong,
-  TabSongInstrument,
-  TabSource,
-  TabTranscription
-} from '../types'
+import { IMPORT_CODE_PLAIN, IMPORT_VISUAL_CALL, TAB_BEATS_PER_BAR, TAB_SOUNDS } from '../config'
+import type { ImportCodeOptions, TabEvent, TabTranscription } from '../types'
 import { formatBarSequence } from './generateStrudelCode'
 
 const REST = '~'
 const WEIGHT_UNITS_PER_BEAT = 24
 
-const greatestCommonDivisor = (first: number, second: number): number =>
+/**
+ * The largest whole number that divides both.
+ * @param first - a whole number
+ * @param second - another whole number
+ * @returns their greatest common divisor
+ */
+export const greatestCommonDivisor = (first: number, second: number): number =>
   second === 0 ? first : greatestCommonDivisor(second, first % second)
 
 const noteToken = (notes: string[]): string => {
@@ -43,125 +42,63 @@ export const formatTabBar = (events: TabEvent[]): string => {
 }
 
 /**
+ * A file name safe to put in a line comment.
+ * @param sourceName - the name of the imported file
+ * @returns the name with line breaks turned into spaces
+ */
+export const safeFileName = (sourceName: string): string => sourceName.replaceAll(/[\n\r]+/g, ' ')
+
+/**
+ * The tempo line that makes one bar last one cycle.
+ * @param beatsPerMinute - the tempo
+ * @param beatsPerBar - the beats in one bar
+ * @returns a `setcps` call
+ */
+export const tempoLine = (beatsPerMinute: number, beatsPerBar: number): string =>
+  `setcps(${beatsPerMinute}/60/${beatsPerBar})`
+
+/**
+ * Whether bars hold nothing but rests.
+ * @param bars - the bars of one instrument
+ * @returns true when no note is struck
+ */
+export const isSilentBars = (bars: TabEvent[][]): boolean =>
+  bars.every((bar) => bar.every((event) => event.notes.length === 0))
+
+/**
+ * One instrument's bars as a pattern on its sound, one bar per cycle, with the import visual
+ * under it when asked for. Rests alone become `silence`, which has nothing to draw.
+ * @param bars - the instrument's bars
+ * @param sound - the Strudel sound to play them on
+ * @param options - whether to draw the visual
+ * @returns the pattern expression
+ */
+export const instrumentPattern = (
+  bars: TabEvent[][],
+  sound: string,
+  options: ImportCodeOptions
+): string => {
+  if (isSilentBars(bars)) {
+    return 'silence'
+  }
+  const pattern = `note("${formatBarSequence(bars.map(formatTabBar))}").s("${sound}")`
+  return options.addVisualizer ? `${pattern}\n  ${IMPORT_VISUAL_CALL}` : pattern
+}
+
+/**
  * Strudel code that replays a tab: the tempo, then one bar per cycle on the instrument's sound.
  * @param transcription - the bars read from the tab image
  * @param sourceName - file name for the header comment
+ * @param options - whether to draw a visual under the line
  * @returns code ready for the editor
  */
-export const generateTabCode = (transcription: TabTranscription, sourceName: string): string =>
+export const generateTabCode = (
+  transcription: TabTranscription,
+  sourceName: string,
+  options: ImportCodeOptions = IMPORT_CODE_PLAIN
+): string =>
   [
     `// Read from the ${transcription.instrument} tab "${safeFileName(sourceName)}": ${transcription.bars.length} bars`,
-    tempoLine(transcription.beatsPerMinute),
-    tabPattern(transcription)
+    tempoLine(transcription.beatsPerMinute, TAB_BEATS_PER_BAR),
+    instrumentPattern(transcription.bars, TAB_SOUNDS[transcription.instrument], options)
   ].join('\n')
-
-const safeFileName = (sourceName: string): string => sourceName.replaceAll(/[\n\r]+/g, ' ')
-
-const tempoLine = (beatsPerMinute: number): string => `setcps(${beatsPerMinute}/60/4)`
-
-const tabPattern = (transcription: TabTranscription): string => {
-  const isSilent = transcription.bars.every((bar) => bar.every((event) => event.notes.length === 0))
-  if (isSilent) {
-    return 'silence'
-  }
-  const pattern = formatBarSequence(transcription.bars.map(formatTabBar))
-  return `note("${pattern}").s("${TAB_SOUNDS[transcription.instrument]}")`
-}
-
-const instrumentName = (instrument: TabSongInstrument): string =>
-  `${instrument.label} "${safeFileName(instrument.sourceName)}"`
-
-const labelInstruments = (sources: TabSource[]): TabSongInstrument[] =>
-  sources.map((source, index) => {
-    const kind = source.transcription.instrument
-    const sameKindBefore = sources
-      .slice(0, index)
-      .filter((earlier) => earlier.transcription.instrument === kind).length
-    return { ...source, label: sameKindBefore === 0 ? kind : `${kind} ${sameKindBefore + 1}` }
-  })
-
-const tempoWarnings = (instruments: TabSongInstrument[], beatsPerMinute: number): string[] =>
-  instruments
-    .filter((instrument) => instrument.transcription.beatsPerMinute !== beatsPerMinute)
-    .map(
-      (instrument) =>
-        `The ${instrument.label} tab "${safeFileName(instrument.sourceName)}" is marked ${instrument.transcription.beatsPerMinute} BPM; the song plays at ${beatsPerMinute} BPM, the first tab's tempo`
-    )
-
-// Each block loops on its own, so two lengths that do not divide line up again only every so often.
-const loopWarnings = (instruments: TabSongInstrument[]): string[] =>
-  instruments.flatMap((first, index) =>
-    instruments.slice(index + 1).flatMap((second) => {
-      const firstBars = first.transcription.bars.length
-      const secondBars = second.transcription.bars.length
-      const longer = Math.max(firstBars, secondBars)
-      const shorter = Math.min(firstBars, secondBars)
-      if (shorter === 0 || longer % shorter === 0) {
-        return []
-      }
-      const realignBars = (firstBars * secondBars) / greatestCommonDivisor(firstBars, secondBars)
-      return [
-        `The ${first.label} (${firstBars} bars) and ${second.label} (${secondBars} bars) loop at different lengths, so they line up again only every ${realignBars} bars`
-      ]
-    })
-  )
-
-/**
- * The imported files that are tabs, in import order, ready to become a song.
- * @param transcriptions - everything the Import tab read
- * @returns each tab with the name of the file it came from
- */
-export const toTabSources = (transcriptions: ImportedTranscription[]): TabSource[] =>
-  transcriptions.flatMap((entry) =>
-    entry.result.kind === 'tab'
-      ? [{ sourceName: entry.sourceName, transcription: entry.result }]
-      : []
-  )
-
-/**
- * Gathers tabs read from several files into one song: the first tab sets the tempo, and each
- * tab is named for the block it becomes.
- * @param sources - the tabs in the order they were imported
- * @returns the song with a warning for each tempo or loop length that does not fit
- */
-export const createTabSong = (sources: TabSource[]): TabSong => {
-  const instruments = labelInstruments(sources)
-  const beatsPerMinute =
-    sources[0]?.transcription.beatsPerMinute ?? STRUDEL_DEFAULT_BEATS_PER_MINUTE
-  return {
-    beatsPerMinute,
-    instruments,
-    warnings: [...tempoWarnings(instruments, beatsPerMinute), ...loopWarnings(instruments)]
-  }
-}
-
-/**
- * The song's tabs as labelled blocks, so Strudel plays them together, without a tempo line.
- * @param song - the tabs to write
- * @returns one commented `$:` block per instrument
- */
-export const generateTabSongBlocks = (song: TabSong): string =>
-  song.instruments
-    .map(
-      (instrument) =>
-        `// ${instrumentName(instrument)}: ${instrument.transcription.bars.length} bars\n$: ${tabPattern(instrument.transcription)}`
-    )
-    .join('\n')
-
-/**
- * Strudel code for a song of tabs: one tab is written exactly as a single import, several share
- * one tempo line and play as one labelled block each.
- * @param song - the tabs to write
- * @returns code ready for the editor
- */
-export const generateTabSongCode = (song: TabSong): string => {
-  const [onlyInstrument] = song.instruments
-  if (song.instruments.length === 1) {
-    return generateTabCode(onlyInstrument.transcription, onlyInstrument.sourceName)
-  }
-  return [
-    `// Read from ${song.instruments.length} tabs: ${song.instruments.map(instrumentName).join(', ')}`,
-    tempoLine(song.beatsPerMinute),
-    generateTabSongBlocks(song)
-  ].join('\n')
-}

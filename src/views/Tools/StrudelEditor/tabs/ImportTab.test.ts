@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import ImportTab from './ImportTab.vue'
 import type {
   ImportedTranscription,
@@ -43,6 +43,11 @@ const imported = (...results: TabTranscription[]): ImportedTranscription[] =>
 const findButton = (wrapper: ReturnType<typeof mountTab>, label: string) =>
   wrapper.findAll('button').find((button) => button.text() === label)
 
+const openSection = async (wrapper: ReturnType<typeof mountTab>, label: string) => {
+  await findButton(wrapper, label)?.trigger('click')
+  await flushPromises()
+}
+
 const mountTab = (overrides: Partial<InstanceType<typeof ImportTab>['$props']> = {}) =>
   mount(ImportTab, {
     props: {
@@ -52,6 +57,7 @@ const mountTab = (overrides: Partial<InstanceType<typeof ImportTab>['$props']> =
       code: '',
       warnings: [],
       errorMessage: '',
+      addVisualizer: true,
       ...overrides
     }
   })
@@ -120,15 +126,18 @@ describe('ImportTab', () => {
     })
 
     // Act
-    await findButton(wrapper, 'Load into editor')?.trigger('click')
+    const codeBeforeOpening = wrapper.find('.strudel-import__code').exists()
+    await openSection(wrapper, 'Code')
+    await findButton(wrapper, 'Load')?.trigger('click')
 
     // Assert
     const summary = wrapper.find('.strudel-import__summary').text()
     expect(summary).toContain('126 BPM')
     expect(summary).toContain('Am F')
+    expect(codeBeforeOpening).toBe(false)
     expect(wrapper.find('.strudel-import__code').text()).toBe('setcps(126/60/4)')
     expect(wrapper.emitted('load')).toHaveLength(1)
-    expect(findButton(wrapper, 'Add to editor')).toBeUndefined()
+    expect(findButton(wrapper, 'Add')).toBeUndefined()
   })
 
   it('shows why a file failed', () => {
@@ -158,19 +167,72 @@ describe('ImportTab', () => {
     expect(summary).not.toContain('Chords')
   })
 
-  it('summarises a piano score by tempo and bars, with no chord row and no Add', () => {
+  it('offers a pianoroll checkbox that reflects its state and reports a change', async () => {
     // Arrange
-    const transcriptions = [{ id: 1, sourceName: 'river.png', result: SCORE_RESULT }]
+    const wrapper = mountTab({ addVisualizer: true })
+    const visualizerCheckbox = wrapper.find('button[role="checkbox"]')
 
     // Act
-    const wrapper = mountTab({ status: 'done', transcriptions, code: '// right hand' })
+    await visualizerCheckbox.trigger('click')
 
     // Assert
-    const summary = wrapper.find('.strudel-import__summary').text()
-    expect(summary).toContain('65 BPM')
-    expect(summary).not.toContain('Chords')
-    expect(findButton(wrapper, 'Load into editor')).toBeDefined()
-    expect(findButton(wrapper, 'Add to editor')).toBeUndefined()
+    expect(visualizerCheckbox.attributes('aria-checked')).toBe('true')
+    expect(wrapper.find(`label[for="${visualizerCheckbox.attributes('id')}"]`).text()).toBe(
+      'Draw a pianoroll per instrument'
+    )
+    expect(wrapper.emitted('update:addVisualizer')).toEqual([[false]])
+  })
+
+  it.each([
+    ['Turn music into Strudel code', 'a MIDI file is read note for note'],
+    ['Read suggestions', 'is 120 when there is none']
+  ])('folds the long text under "%s", opening and closing on click', async (heading, detail) => {
+    // Arrange
+    const wrapper = mountTab()
+    const textBeforeOpening = wrapper.text()
+
+    // Act
+    await openSection(wrapper, heading)
+    const textWhileOpen = wrapper.text()
+    await openSection(wrapper, heading)
+
+    // Assert
+    expect(heading.split(' ').length).toBeLessThanOrEqual(5)
+    expect(textBeforeOpening).not.toContain(detail)
+    expect(textWhileOpen).toContain(detail)
+    expect(wrapper.text()).not.toContain(detail)
+  })
+
+  it('labels the pianoroll checkbox alone, with no info button', () => {
+    // Arrange
+    const wrapper = mountTab()
+
+    // Act
+    const option = wrapper.find('.strudel-import__option')
+
+    // Assert
+    expect(option.text()).toBe('Draw a pianoroll per instrument')
+    expect(option.findAll('button')).toHaveLength(1)
+  })
+
+  it('lists a piano score next to a tab as one row naming both hands', () => {
+    // Arrange
+    const transcriptions = [
+      ...imported(TAB_RESULT),
+      { id: 2, sourceName: 'river.png', result: SCORE_RESULT }
+    ]
+
+    // Act
+    const wrapper = mountTab({ status: 'done', transcriptions })
+
+    // Assert
+    const rows = wrapper.findAll('.strudel-import__instrument').map((row) => row.text())
+    expect(rows).toHaveLength(2)
+    expect(rows[1]).toContain('right hand and left hand')
+    expect(rows[1]).toContain('river.png, 1 bars')
+    expect(
+      wrapper.find('button[aria-label="Remove right hand and left hand river.png"]').exists()
+    ).toBe(true)
   })
 
   it('lists every imported tab as an instrument with its own remove button', async () => {
@@ -194,8 +256,8 @@ describe('ImportTab', () => {
   })
 
   it.each([
-    ['Load into editor', 'load'],
-    ['Add to editor', 'add']
+    ['Load', 'load'],
+    ['Add', 'add']
   ])('emits %s as %s for tabs', async (label, eventName) => {
     // Arrange
     const wrapper = mountTab({ status: 'done', transcriptions: imported(TAB_RESULT), code: '' })
@@ -207,18 +269,21 @@ describe('ImportTab', () => {
     expect(wrapper.emitted(eventName)).toHaveLength(1)
   })
 
-  it('shows the song warnings', () => {
+  it('folds the song warnings under a count until it is opened', async () => {
     // Arrange
     const warning = 'The bass (3 bars) and guitar (2 bars) loop at different lengths'
-
-    // Act
     const wrapper = mountTab({
       status: 'done',
       transcriptions: imported(TAB_RESULT, GUITAR_RESULT),
       warnings: [warning]
     })
+    const textBeforeOpening = wrapper.text()
+
+    // Act
+    await openSection(wrapper, '1 warning')
 
     // Assert
+    expect(textBeforeOpening).not.toContain(warning)
     expect(wrapper.find('.strudel-import__warnings').text()).toContain(warning)
   })
 

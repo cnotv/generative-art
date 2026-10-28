@@ -352,8 +352,9 @@ pnpm vitest run src/views/Tools/StrudelEditor/codeEditor/strudelDocumentation.te
 Open the **import** tab and drop an audio file on it, or click to browse. Anything the browser
 can decode works: MP3, WAV, OGG, M4A, FLAC. The file never leaves the browser. It is decoded to
 mono, analysed in a Web Worker, and summarised as a tempo, a bar count and a chord progression,
-with the generated code underneath. Press **Load into editor** to replace the editor's code
-with it, then Play.
+with the generated code folded under **Code**; open it to read it. The tab's own help sits under
+**Turn music into Strudel code** at the top and **Read suggestions** at the bottom, folded until you
+open them. Press **Load** to replace the editor's code with it, then Play.
 
 ![The import tab after transcribing a drum, bass and chord loop](/img/strudel-editor/import-tab.webp)
 
@@ -387,7 +388,7 @@ heard, so the result is exact rather than a sketch:
 | Chords | the major or minor triad closest to every note held across the bar                 |
 
 The tempo is the file's first tempo, and notes are placed by their ticks, so a tempo change inside
-the file never shifts them off the grid. Up to 64 bars are read. **Load into editor** replaces the
+the file never shifts them off the grid. Up to 64 bars are read. **Load** replaces the
 code, as with audio.
 
 ## Turning a tab screenshot into a pattern
@@ -408,29 +409,6 @@ tempo comes from a marker such as "= 96" above the first staff; with none, or on
 read, the code starts at 120 BPM and you change the number in `setcps`. A mark it cannot read, such as a slide sign, is skipped and listed in the console tab.
 How it works and where it stops is in
 [Reading a tab screenshot without a model](../journey/strudel-tab-image-import.md).
-
-### Several tabs in one song
-
-Drop several tab screenshots at once, or one after another, and each becomes its own instrument
-in one song. The import tab lists them in the order they arrived, named bass, guitar, then
-bass 2 for a second bass, each with a **Remove** button. An audio file, a MIDI file or a piano
-score still stands alone and replaces the list.
-
-![The import tab holding a bass and a guitar tab: one tempo, a row per instrument with a Remove button, the code with a labelled block for each, and the Load into editor and Add to editor buttons](/img/strudel-editor/import-tab-instruments.webp)
-
-The song plays at the first tab's tempo. Each instrument is its own `$:` block, so Strudel plays
-them together, and the flow view shows a Notes node with its Voice for each one. Two notes go to
-the console tab and under the list:
-
-- a tab marked with another tempo, which still plays at the first one;
-- two instruments whose bar counts do not divide each other. Each block loops on its own, so a
-  20 bar bass and an 8 bar guitar line up again only every 40 bars. Nothing is padded or cut.
-
-**Load into editor** replaces the code, as before. **Add to editor** keeps the code that is there
-and appends the instruments as blocks, without a second tempo. Code that plays a single
-unlabelled expression, such as one tab loaded on its own, gets `$:` in front of that expression
-first, because Strudel stops playing it as soon as any labelled block appears. One tab loaded on
-its own writes exactly the code it always did.
 
 ## Turning a piano score into a pattern
 
@@ -461,6 +439,51 @@ fifteen left hand bars and ten of the fifteen right hand bars add up to the metr
 six bars match the printed notes; the right hand bars that do not are passages with two voices on
 one staff or a grace note. How it works and where it stops is in [Reading a piano score without a
 model](../journey/strudel-piano-score-import.md).
+
+## Several tabs and scores in one song
+
+Drop several tab or score images at once, or one after another, and each becomes part of one
+song. A tab is one instrument; a piano score is two, its right hand and its left hand. The import
+tab lists the files in the order they arrived, named bass, guitar, then bass 2 for a second bass,
+or right hand and left hand for a score, each with a **Remove** button. An audio or MIDI file still
+stands alone and replaces the list.
+
+![The import tab holding a bass tab and a piano score: the pianoroll box ticked, one tempo, a row per file with a Remove button, the warnings and the code folded, and the Load and Add buttons](/img/strudel-editor/import-tab-instruments.webp)
+
+<video controls loop muted playsinline width="720" src="/video/strudel-editor/import-tab-walkthrough.webm">
+  A walkthrough of the import tab. The two help headings open and close on click. A bass tab and a
+  piano score are picked from the drop zone and become two rows. The warnings and the code open
+  from their headings, unticking the pianoroll box takes the pianoroll lines out of the code and
+  ticking it puts them back. Load fills the editor, Play draws a pianoroll under each instrument,
+  and the flow view shows a notes, voice and visualizer node for each one.
+</video>
+
+The song plays at the first file's tempo, with one bar per cycle in the first file's metre. Each
+instrument is its own `$:` block, so Strudel plays them together, and the flow view shows a Notes
+node with its Voice for each one. Three kinds of warning go to the console tab and fold under a
+count, such as **2 warnings**, below the list:
+
+- a file marked with another tempo, which still plays at the first one;
+- a score counting another number of beats to the bar. Each bar fills one cycle, so a waltz in a
+  song of four beats plays slower than marked;
+- two files whose bar counts do not divide each other. Each block loops on its own, so a 20 bar
+  bass and an 8 bar guitar line up again only every 40 bars. Nothing is padded or cut.
+
+**Load** replaces the code, as before. **Add** keeps the code that is there
+and appends the instruments as blocks, without a second tempo. Code that plays a single
+unlabelled expression, such as one tab loaded on its own, gets `$:` in front of that expression
+first, because Strudel stops playing it as soon as any labelled block appears.
+
+### A pianoroll under each instrument
+
+The **Draw a pianoroll per instrument** box above the list is ticked by default. While it is
+ticked, every instrument block a tab or score import
+writes ends with `._pianoroll()` on its own line, so each one draws its notes under its code as it
+plays, and the flow view gains a Visualizer node on each instrument. A block that only rests stays
+`silence`, with nothing to draw. Unticked, the code is exactly what the import wrote before, and
+one file on its own writes exactly its single import code either way. The audio and MIDI import is
+left alone: it writes one `stack(...)` of drums, bass and chords, where a pianoroll would draw the
+drums too.
 
 ## MIDI devices
 

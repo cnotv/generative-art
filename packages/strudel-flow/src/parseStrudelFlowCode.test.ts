@@ -544,6 +544,39 @@ describe('parseStrudelFlowCode with imported tabs', () => {
   })
 })
 
+describe('parseStrudelFlowCode with imported instruments and visuals', () => {
+  it('reads a pianoroll under each imported line as a visualizer on that branch', () => {
+    // Arrange
+    const code = [
+      '// Read from 2 images: bass "low.png", piano score "river.png"',
+      'setcps(96/60/4)',
+      '// bass "low.png": 2 bars',
+      '$: note("<[a2@2 e3 ~] d3>").s("gm_electric_bass_finger")',
+      '  ._pianoroll()',
+      '// right hand "river.png": 2 bars',
+      '$: note("<a5 e5>").s("gm_piano")',
+      '  ._pianoroll()'
+    ].join('\n')
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+    const recompiled = compileStrudelFlow(parsed!)
+
+    // Assert
+    expect(parsed?.nodes.map((node) => node.data.kind)).toEqual([
+      'notes',
+      'voice',
+      'visualizer',
+      'notes',
+      'voice',
+      'visualizer'
+    ])
+    expect(parsed?.edges).toHaveLength(4)
+    expect(recompiled.code.match(/_pianoroll\(\)/g)).toHaveLength(2)
+    expect(compileStrudelFlow(parseStrudelFlowCode(recompiled.code)!).code).toBe(recompiled.code)
+  })
+})
+
 describe('appendStrudelFlowBlocks', () => {
   const blocks = '// guitar\n$: note("e4").s("gm_acoustic_guitar_nylon")'
 

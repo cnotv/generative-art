@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  createTabSong,
-  formatTabBar,
-  generateTabCode,
-  generateTabSongBlocks,
-  generateTabSongCode
-} from './generateTabCode'
+import { formatTabBar, generateTabCode } from './generateTabCode'
 import type { TabTranscription } from '../types'
 
 const BASS_BAR = [
@@ -91,164 +85,32 @@ describe('generateTabCode', () => {
     // Assert
     expect(code).toContain('.s("gm_acoustic_guitar_nylon")')
   })
-})
-
-describe('createTabSong', () => {
-  const bass: TabTranscription = {
-    kind: 'tab',
-    beatsPerMinute: 96,
-    instrument: 'bass',
-    bars: [BASS_BAR, BASS_BAR],
-    warnings: []
-  }
-  const guitar: TabTranscription = { ...bass, instrument: 'guitar', bars: [BASS_BAR] }
-
-  it('names each instrument by its kind and numbers a repeated one', () => {
-    // Arrange
-    const sources = [
-      { sourceName: 'low.png', transcription: bass },
-      { sourceName: 'chords.png', transcription: guitar },
-      { sourceName: 'high.png', transcription: bass }
-    ]
-
-    // Act
-    const song = createTabSong(sources)
-
-    // Assert
-    expect(song.instruments.map((instrument) => instrument.label)).toEqual([
-      'bass',
-      'guitar',
-      'bass 2'
-    ])
-  })
-
-  it('keeps the first tempo and warns about a tab marked with another one', () => {
-    // Arrange
-    const sources = [
-      { sourceName: 'low.png', transcription: bass },
-      { sourceName: 'chords.png', transcription: { ...guitar, beatsPerMinute: 120 } }
-    ]
-
-    // Act
-    const song = createTabSong(sources)
-
-    // Assert
-    expect(song.beatsPerMinute).toBe(96)
-    expect(song.warnings).toContain(
-      'The guitar tab "chords.png" is marked 120 BPM; the song plays at 96 BPM, the first tab\'s tempo'
-    )
-  })
 
   it.each([
-    [2, 1, 0],
-    [4, 2, 0],
-    [3, 2, 1]
+    ['off', false, 'note("a2@2 [a2,e3] ~ d3@4").s("gm_electric_bass_finger")'],
+    ['on', true, 'note("a2@2 [a2,e3] ~ d3@4").s("gm_electric_bass_finger")\n  ._pianoroll()']
   ])(
-    'warns %#: %i and %i bars give %i loop warnings',
-    (bassBarCount, guitarBarCount, warningCount) => {
+    'draws a pianoroll under the line when the visualizer is %s',
+    (_state, addVisualizer, ending) => {
       // Arrange
-      const sources = [
-        {
-          sourceName: 'low.png',
-          transcription: { ...bass, bars: Array(bassBarCount).fill(BASS_BAR) }
-        },
-        {
-          sourceName: 'chords.png',
-          transcription: { ...guitar, bars: Array(guitarBarCount).fill(BASS_BAR) }
-        }
-      ]
+      const result = transcription
 
       // Act
-      const song = createTabSong(sources)
+      const code = generateTabCode(result, 'riff.png', { addVisualizer })
 
       // Assert
-      expect(song.warnings.filter((warning) => warning.includes('loop'))).toHaveLength(warningCount)
+      expect(code.endsWith(`setcps(96/60/4)\n${ending}`)).toBe(true)
     }
   )
-})
 
-describe('generateTabSongCode', () => {
-  const bass: TabTranscription = {
-    kind: 'tab',
-    beatsPerMinute: 96,
-    instrument: 'bass',
-    bars: [BASS_BAR, BASS_BAR],
-    warnings: []
-  }
-  const guitar: TabTranscription = {
-    ...bass,
-    instrument: 'guitar',
-    bars: [[{ notes: ['e4', 'g4'], beats: 4 }]]
-  }
-
-  it('writes a song of one tab exactly as a single import does', () => {
+  it('draws nothing under silence', () => {
     // Arrange
-    const song = createTabSong([{ sourceName: 'riff.png', transcription: bass }])
+    const empty: TabTranscription = { ...transcription, bars: [[{ notes: [], beats: 4 }]] }
 
     // Act
-    const code = generateTabSongCode(song)
+    const code = generateTabCode(empty, 'blank.png', { addVisualizer: true })
 
     // Assert
-    expect(code).toBe(generateTabCode(bass, 'riff.png'))
-  })
-
-  it('sets the tempo once and plays every tab as its own labelled block', () => {
-    // Arrange
-    const song = createTabSong([
-      { sourceName: 'low.png', transcription: bass },
-      { sourceName: 'chords.png', transcription: guitar }
-    ])
-
-    // Act
-    const code = generateTabSongCode(song)
-
-    // Assert
-    expect(code).toBe(
-      [
-        '// Read from 2 tabs: bass "low.png", guitar "chords.png"',
-        'setcps(96/60/4)',
-        '// bass "low.png": 2 bars',
-        '$: note("a2@2 [a2,e3] ~ d3@4").s("gm_electric_bass_finger")',
-        '// guitar "chords.png": 1 bars',
-        '$: note("[e4,g4]").s("gm_acoustic_guitar_nylon")'
-      ].join('\n')
-    )
-  })
-
-  it('keeps a silent tab as a silent block', () => {
-    // Arrange
-    const silent: TabTranscription = { ...guitar, bars: [[{ notes: [], beats: 4 }]] }
-    const song = createTabSong([
-      { sourceName: 'low.png', transcription: bass },
-      { sourceName: 'blank.png', transcription: silent }
-    ])
-
-    // Act
-    const code = generateTabSongCode(song)
-
-    // Assert
-    expect(code.endsWith('$: silence')).toBe(true)
-  })
-})
-
-describe('generateTabSongBlocks', () => {
-  it('writes only the labelled blocks, leaving the tempo to the code they join', () => {
-    // Arrange
-    const guitar: TabTranscription = {
-      kind: 'tab',
-      beatsPerMinute: 96,
-      instrument: 'guitar',
-      bars: [[{ notes: ['e4'], beats: 4 }]],
-      warnings: []
-    }
-    const song = createTabSong([{ sourceName: 'lead.png', transcription: guitar }])
-
-    // Act
-    const blocks = generateTabSongBlocks(song)
-
-    // Assert
-    expect(blocks).toBe(
-      ['// guitar "lead.png": 1 bars', '$: note("e4").s("gm_acoustic_guitar_nylon")'].join('\n')
-    )
+    expect(code.endsWith('silence')).toBe(true)
   })
 })

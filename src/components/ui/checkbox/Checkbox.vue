@@ -23,8 +23,8 @@ const emit = defineEmits<{
     :class="cn('checkbox', $props.class)"
     @update:checked="emit('update:modelValue', $event)"
   >
-    <CheckboxIndicator class="flex items-center justify-center">
-      <Check class="h-4 w-4" />
+    <CheckboxIndicator class="checkbox__indicator">
+      <Check class="checkbox__icon" />
     </CheckboxIndicator>
   </CheckboxRoot>
 </template>
@@ -38,6 +38,20 @@ const emit = defineEmits<{
   border: 1px solid var(--color-primary);
   background-color: transparent;
   cursor: pointer;
+  padding: 0;
+}
+
+.checkbox__indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.checkbox__icon {
+  width: 100%;
+  height: 100%;
 }
 
 .checkbox:focus-visible {

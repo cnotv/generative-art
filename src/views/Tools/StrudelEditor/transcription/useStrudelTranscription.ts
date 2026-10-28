@@ -2,19 +2,18 @@ import { computed, ref } from 'vue'
 import type {
   ImportedTranscription,
   StrudelTranscriptionState,
-  TabSong,
+  ImportedSong,
   TranscriptionProgress,
   TranscriptionRunner,
   TranscriptionStatus
 } from '../types'
-import { generateStrudelCode } from './generateStrudelCode'
-import { generateScoreCode } from './generateScoreCode'
 import {
-  createTabSong,
-  generateTabSongBlocks,
-  generateTabSongCode,
-  toTabSources
-} from './generateTabCode'
+  createImportedSong,
+  generateSongBlocks,
+  generateSongCode,
+  toSongSources
+} from './generateSongCode'
+import { generateStrudelCode } from './generateStrudelCode'
 
 type TranscriptionOptions = {
   runner: TranscriptionRunner
@@ -23,19 +22,20 @@ type TranscriptionOptions = {
   appendLog: (message: string, level?: 'info' | 'warn' | 'error') => void
 }
 
-// Tabs gather into one song; an audio, MIDI or score import stands alone and replaces the rest.
+// Tabs and scores gather into one song; an audio or MIDI import stands alone and replaces the rest.
 const withImported = (
   transcriptions: ImportedTranscription[],
   entry: ImportedTranscription
 ): ImportedTranscription[] =>
-  entry.result.kind === 'tab' && transcriptions.every((earlier) => earlier.result.kind === 'tab')
+  entry.result.kind !== 'grid' && transcriptions.every((earlier) => earlier.result.kind !== 'grid')
     ? [...transcriptions, entry]
     : [entry]
 
 /**
- * State for turning audio, MIDI or tab files into Strudel code: the analysis runs first, and the
- * code only reaches the editor when the user asks for it. Tabs collect into one song with a
- * block per instrument, read one file at a time in the order they were dropped.
+ * State for turning audio, MIDI, tab or score files into Strudel code: the analysis runs first,
+ * and the code only reaches the editor when the user asks for it. Tabs and scores collect into
+ * one song with a block per instrument, each with a pianoroll under it unless switched off, read
+ * one file at a time in the order they were dropped.
  * @param options - the analysis runner and the editor hooks to write code and log
  * @returns reactive transcription state and its actions
  */
@@ -46,25 +46,26 @@ export const useStrudelTranscription = (
   const transcriptionProgress = ref<TranscriptionProgress | null>(null)
   const importedTranscriptions = ref<ImportedTranscription[]>([])
   const transcriptionError = ref('')
+  const addVisualizer = ref(true)
   let nextId = 1
   let pendingReads = Promise.resolve()
 
-  const tabSong = computed<TabSong>(() => createTabSong(toTabSources(importedTranscriptions.value)))
+  const song = computed<ImportedSong>(() =>
+    createImportedSong(toSongSources(importedTranscriptions.value))
+  )
+  const codeOptions = computed(() => ({ addVisualizer: addVisualizer.value }))
 
   const transcribedCode = computed(() => {
     const [first] = importedTranscriptions.value
     if (first === undefined) {
       return ''
     }
-    if (first.result.kind === 'score') {
-      return generateScoreCode(first.result, first.sourceName)
-    }
     return first.result.kind === 'grid'
       ? generateStrudelCode(first.result, first.sourceName)
-      : generateTabSongCode(tabSong.value)
+      : generateSongCode(song.value, codeOptions.value)
   })
 
-  const transcriptionWarnings = computed(() => tabSong.value.warnings)
+  const transcriptionWarnings = computed(() => song.value.warnings)
 
   const sourceNames = (): string =>
     importedTranscriptions.value.map((entry) => entry.sourceName).join(', ')
@@ -129,10 +130,10 @@ export const useStrudelTranscription = (
   }
 
   const addTranscription = (): void => {
-    if (tabSong.value.instruments.length === 0) {
+    if (song.value.instruments.length === 0) {
       return
     }
-    options.appendCode(generateTabSongBlocks(tabSong.value))
+    options.appendCode(generateSongBlocks(song.value, codeOptions.value))
     logWarnings()
     options.appendLog(`Added ${sourceNames()} to the editor`)
   }
@@ -144,6 +145,7 @@ export const useStrudelTranscription = (
     transcribedCode,
     transcriptionWarnings,
     transcriptionError,
+    addVisualizer,
     transcribeFiles,
     removeTranscription,
     loadTranscription,

@@ -12,13 +12,13 @@ paths:
 `src/components/` is not one bucket. It holds five tiers with different rules, and
 "reuse what is in `src/components/`" means finding the right tier before writing anything.
 
-| Tier                | Holds                                                                                                                                                                                             | Reach for it when                                                                                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `ui/`               | design-system primitives: `Button`, `Input`, `Select`, `Checkbox`, `Switch`, `Slider`, `Tabs`, `Toggle`, `Accordion`, `Sheet`, `ColorPicker`, `CoordinateInput`, `ButtonSelector`, `BezierPicker` | you need any interactive control in app chrome — panels, tools, editors, forms                       |
-| `LobbyUI/`          | the `LobbyUI*` overlay kit                                                                                                                                                                        | the UI sits over a game scene: HUDs, dialogs, countdowns, editor palettes                            |
-| `panels/`           | the panel system itself: `GenericPanel`, `ConfigPanel`, `ElementsPanel`, `TimelinePanel`, `PanelContainer`                                                                                        | never directly from a view — register content with `registerViewConfig` and let the panels render it |
-| `<Feature>/`        | self-contained features with co-located `use*.ts`: `AvatarEditor/`, `CanvasEditor/`, `Chat/`, `ControlsMapper/`, `DrawingToolbar/`                                                                | a view needs a whole interactive surface rather than one control                                     |
-| `*.vue` at the root | shared components used across unrelated views (below)                                                                                                                                             | the concern already exists — never make a second copy for your game                                  |
+| Tier                | Holds                                                                                                                                                                                   | Reach for it when                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ui/`               | design-system primitives: `Button`, `Input`, `Select`, `Checkbox`, `Slider`, `Tabs`, `Toggle`, `Accordion`, `Sheet`, `ColorPicker`, `CoordinateInput`, `ButtonSelector`, `BezierPicker` | you need any interactive control in app chrome — panels, tools, editors, forms                       |
+| `LobbyUI/`          | the `LobbyUI*` overlay kit                                                                                                                                                              | the UI sits over a game scene: HUDs, dialogs, countdowns, editor palettes                            |
+| `panels/`           | the panel system itself: `GenericPanel`, `ConfigPanel`, `ElementsPanel`, `TimelinePanel`, `PanelContainer`                                                                              | never directly from a view — register content with `registerViewConfig` and let the panels render it |
+| `<Feature>/`        | self-contained features with co-located `use*.ts`: `AvatarEditor/`, `CanvasEditor/`, `Chat/`, `ControlsMapper/`, `DrawingToolbar/`                                                      | a view needs a whole interactive surface rather than one control                                     |
+| `*.vue` at the root | shared components used across unrelated views (below)                                                                                                                                   | the concern already exists — never make a second copy for your game                                  |
 
 ### The shared root components
 
@@ -59,13 +59,13 @@ Only a concern that is genuinely shared by unrelated views earns a new root comp
 - Vue SFCs with `<script setup lang="ts">`. Never plain JavaScript.
 - **Never hand-roll a control that `src/components/ui/` already provides.** A raw `<button>`
   or `<input>` in a view or component is a bug: use `Button` and `Input`, and likewise
-  `Select`, `Checkbox`, `Switch`, `Slider`, `Accordion`, `Tabs`, `Toggle`, `ColorPicker`,
+  `Select`, `Checkbox`, `Slider`, `Accordion`, `Tabs`, `Toggle`, `ColorPicker`,
   `CoordinateInput`, `ButtonSelector` and `Sheet`. They carry the focus, disabled and
   theming behaviour that a bare element does not, so a hand-written one drifts from the rest
   of the app and has to be restyled on every token change. List `src/components/ui/` before
   writing markup for anything interactive: the barrel is incomplete, so `index.ts` is not
-  proof a control is missing. `BezierPicker`, `Switch`, `Tabs` and `Toggle` import from their
-  own folder (`@/components/ui/switch`), and `ButtonSelector`, which has no `index.ts`,
+  proof a control is missing. `BezierPicker`, `Tabs` and `Toggle` import from their
+  own folder (`@/components/ui/tabs`), and `ButtonSelector`, which has no `index.ts`,
   imports the file directly (`@/components/ui/button-selector/ButtonSelector.vue`).
 
   Raw elements are acceptable only for genuinely structural or non-interactive markup
