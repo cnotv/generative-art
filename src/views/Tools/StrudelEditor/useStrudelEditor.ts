@@ -70,7 +70,8 @@ type StrudelEditorState = StrudelTranscriptionState & {
   examples: StrudelExample[]
   electroTunes: StrudelExample[]
   logEntries: Ref<StrudelLogEntry[]>
-  activeTab: Ref<StrudelTabId>
+  /** The tab open in the drawer, or null while it is closed. */
+  activeTab: Ref<StrudelTabId | null>
   tabList: { id: StrudelTabId; label: string }[]
   selectExample: (exampleId: string) => void
   selectElectroTune: (tuneId: string) => void
@@ -91,7 +92,7 @@ type StrudelEditorState = StrudelTranscriptionState & {
   /** Cycles in one repetition of the code, once measured for the export tab. */
   repetitionCycles: Ref<number | null>
   measureRepetition: () => Promise<void>
-  setActiveTab: (tabId: StrudelTabId) => void
+  setActiveTab: (tabId: StrudelTabId | null) => void
   clearLogEntries: () => void
   attachEditor: (editorHandle: StrudelEditorHandle | null) => void
 }
@@ -146,7 +147,7 @@ export const useStrudelEditor = (
   const editorStatus = ref<StrudelEditorStatus>('idle')
   const errorMessage = ref('')
   const playbackReference = ref<StrudelPlayback | null>(null)
-  const activeTab = ref<StrudelTabId>('hints')
+  const activeTab = ref<StrudelTabId | null>(null)
   const { logEntries, appendLog, clearLogEntries } = useStrudelLog()
   const playingCode = ref('')
   const hasUnplayedChanges = computed(
@@ -214,6 +215,7 @@ export const useStrudelEditor = (
     patternCode.value = nextCode
     editorStatus.value = 'idle'
     errorMessage.value = ''
+    timeline.seekToCycle(0)
   }
 
   const loadListedPattern = (pattern: StrudelExample | undefined): boolean => {
@@ -262,7 +264,7 @@ export const useStrudelEditor = (
     appendLog
   })
 
-  const setActiveTab = (tabId: StrudelTabId): void => {
+  const setActiveTab = (tabId: StrudelTabId | null): void => {
     activeTab.value = tabId
   }
 

@@ -1042,7 +1042,13 @@ describe('useStrudelEditor', () => {
     // Assert
     expect(tuneCount).toBe(ELECTRO_TUNES.length)
     expect(electroTunes.map((tune) => tune.id)).toContain('caverave')
-    expect(electroTunes.map((tune) => tune.id)).toContain('flatrave')
+    expect(electroTunes.map((tune) => tune.label)).toEqual([
+      'Caverave',
+      'Dinofunk',
+      'Megalovania riff (Toby Fox)',
+      'Breakfast in America (Supertramp)',
+      'Come as You Are riff (Nirvana)'
+    ])
   })
 
   it('loads an electro tune into the editor when selected', () => {
@@ -1077,7 +1083,22 @@ describe('useStrudelEditor', () => {
     expect(patternCode.value).toBe(codeBeforeSelection)
   })
 
-  it('starts on the hints tab', () => {
+  it('resets the timeline to the start when another pattern is loaded', () => {
+    // Arrange
+    const { seekToCycle, selectExample, startCycle, playheadCycle } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => buildSuccessfulPlayback()
+    })
+    seekToCycle(3)
+
+    // Act
+    selectExample(buildExampleList()[1].id)
+
+    // Assert
+    expect([startCycle.value, playheadCycle.value]).toEqual([0, 0])
+  })
+
+  it('starts with the drawer closed', () => {
     // Arrange
     const { activeTab } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -1088,7 +1109,7 @@ describe('useStrudelEditor', () => {
     const tabId = activeTab.value
 
     // Assert
-    expect(tabId).toBe('hints')
+    expect(tabId).toBeNull()
   })
 
   it('switches tabs and tracks the active one', () => {
@@ -1099,13 +1120,13 @@ describe('useStrudelEditor', () => {
     })
 
     // Act
-    setActiveTab('patterns')
+    setActiveTab('export')
 
     // Assert
-    expect(activeTab.value).toBe('patterns')
+    expect(activeTab.value).toBe('export')
   })
 
-  it('exposes the full tab list matching strudel.cc', () => {
+  it('exposes the drawer tab list', () => {
     // Arrange
     const { tabList } = useStrudelEditor({
       initialExamples: buildExampleList(),
@@ -1117,17 +1138,14 @@ describe('useStrudelEditor', () => {
 
     // Assert
     expect(tabLabels).toEqual([
-      'hints',
-      'welcome',
-      'patterns',
-      'sounds',
       'import',
-      'midi',
-      'reference',
       'export',
+      'midi',
+      'sounds',
       'console',
       'settings',
-      'flow'
+      'flow',
+      'hints'
     ])
   })
 
@@ -1163,20 +1181,17 @@ describe('useStrudelEditor', () => {
 })
 
 describe('STRUDEL_TABS', () => {
-  it('puts hints first, then the strudel.cc player menu order with import after patterns', () => {
+  it('lists the toolbar drawers in order, hints last', () => {
     // Arrange
     const expectedOrder = [
-      'hints',
-      'welcome',
-      'patterns',
-      'sounds',
       'import',
-      'midi',
-      'reference',
       'export',
+      'midi',
+      'sounds',
       'console',
       'settings',
-      'flow'
+      'flow',
+      'hints'
     ]
 
     // Act

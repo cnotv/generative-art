@@ -102,14 +102,11 @@ const mountEditorView = async () => {
   return wrapper
 }
 
-const clickTab = async (
+const openDrawer = async (
   wrapper: Awaited<ReturnType<typeof mountEditorView>>,
   label: string
 ): Promise<void> => {
-  await wrapper
-    .findAll('.strudel-editor__tab')
-    .find((tab) => tab.text() === label)
-    ?.trigger('click')
+  await wrapper.find(`button[aria-label="${label}"]`).trigger('click')
 }
 
 const clickMode = async (
@@ -125,18 +122,19 @@ const clickMode = async (
 describe('StrudelEditor view', () => {
   afterEach(clearSavedState)
 
-  it('renders the code, one play button above it and the license note', async () => {
+  it('renders the code with no top play button, and keeps the license note in the drawer', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    const playButtons = wrapper.findAll('.strudel-editor__play')
+    const playButtonsBefore = wrapper.findAll('.strudel-editor__play')
+    const drawerBefore = wrapper.find('.strudel-editor__drawer').exists()
+    await openDrawer(wrapper, 'Settings')
 
     // Assert
     expect(wrapper.find('.fake-strudel-code').exists()).toBe(true)
-    expect(playButtons).toHaveLength(1)
-    expect(wrapper.find('.strudel-editor__code-header .strudel-editor__play').exists()).toBe(true)
-    expect(playButtons[0]?.attributes('aria-label')).toBe('Play')
+    expect(playButtonsBefore).toHaveLength(0)
+    expect(drawerBefore).toBe(false)
     expect(wrapper.find('.strudel-editor__license').text()).toContain('AGPL-3.0')
   })
 
@@ -178,37 +176,31 @@ describe('StrudelEditor view', () => {
     expect((codeField.element as HTMLTextAreaElement).value).toBe('s("hh*8")')
   })
 
-  it('renders the hints tab and the player menu tabs, sounds after patterns', async () => {
+  it('puts the tools in the toolbar as icons, with the help button for hints', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    const tabButtons = wrapper.findAll('.strudel-editor__tab')
+    const toolLabels = wrapper
+      .findAll('.strudel-editor__toolbar button')
+      .map((button) => button.attributes('aria-label'))
 
     // Assert
-    expect(tabButtons.length).toBe(11)
-    const tabLabels = tabButtons.map((tab) => tab.text())
-    expect(tabLabels).toEqual([
-      'hints',
-      'welcome',
-      'patterns',
-      'sounds',
-      'import',
-      'midi',
-      'reference',
-      'export',
-      'console',
-      'settings',
-      'flow'
+    expect(toolLabels).toEqual([
+      'Import',
+      'Export',
+      'MIDI',
+      'Sounds',
+      'Console',
+      'Settings',
+      'Hints'
     ])
   })
 
   it('lists the sounds by group and readable name, filters them, and previews one', async () => {
     // Arrange
     const wrapper = await mountEditorView()
-    await clickTab(wrapper, 'sounds')
-    // The tab link moves the hash a task later; wait, or it lands after the cleanup.
-    await vi.waitFor(() => expect(window.location.hash).toBe('#sounds'))
+    await openDrawer(wrapper, 'Sounds')
     await flushPromises()
     const readSoundGroups = (): string[][] =>
       wrapper
@@ -236,33 +228,35 @@ describe('StrudelEditor view', () => {
     expect(mockPreviewSound).toHaveBeenCalledWith('rolandtr909_bd', 'sample')
   })
 
-  it('shows the hints tab by default', async () => {
+  it('opens the hints in a drawer from the help button and closes it again', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    const activeTab = wrapper.find('.strudel-editor__tab--active')
-    const hintsContent = wrapper.find('.strudel-hints')
+    const hintsBefore = wrapper.find('.strudel-hints').exists()
+    await openDrawer(wrapper, 'Hints')
+    const hintsOpen = wrapper.find('.strudel-hints').exists()
+    await openDrawer(wrapper, 'Hints')
 
     // Assert
-    expect(activeTab.text()).toBe('hints')
-    expect(hintsContent.exists()).toBe(true)
+    expect(hintsBefore).toBe(false)
+    expect(hintsOpen).toBe(true)
+    expect(wrapper.find('.strudel-editor__drawer').exists()).toBe(false)
   })
 
-  it('switches to the patterns tab and links the examples, then the tunes', async () => {
+  it('lists examples and songs as collapsible groups in the import drawer', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    const patternsTab = wrapper
-      .findAll('.strudel-editor__tab')
-      .find((tab) => tab.text() === 'patterns')
-    await patternsTab?.trigger('click')
+    await openDrawer(wrapper, 'Import')
+    const triggers = wrapper.findAll('.strudel-patterns button[aria-expanded]')
+    await Promise.all(triggers.map((trigger) => trigger.trigger('click')))
 
     // Assert
-    expect(wrapper.findAll('.strudel-patterns__group-title').map((title) => title.text())).toEqual([
-      'Examples',
-      'Tunes'
+    expect(triggers.map((trigger) => trigger.text())).toEqual([
+      `Examples (${STRUDEL_EXAMPLES.length})`,
+      `Songs (${ELECTRO_TUNES.length})`
     ])
     expect(
       wrapper
@@ -273,46 +267,44 @@ describe('StrudelEditor view', () => {
     )
   })
 
-  it('saves the code under a name, lists it first, and deletes it', async () => {
+  it('keeps exactly the five songs', () => {
+    // Arrange / Act
+    const labels = ELECTRO_TUNES.map((song) => song.label)
+
+    // Assert
+    expect(labels).toEqual([
+      'Caverave',
+      'Dinofunk',
+      'Megalovania riff (Toby Fox)',
+      'Breakfast in America (Supertramp)',
+      'Come as You Are riff (Nirvana)'
+    ])
+  })
+
+  it('saves the code under the export name, lists it first in import, and deletes it', async () => {
     // Arrange
     const wrapper = await mountEditorView()
-    await wrapper
-      .findAll('.strudel-editor__tab')
-      .find((tab) => tab.text() === 'patterns')
-      ?.trigger('click')
     await wrapper.find('.fake-strudel-code').setValue('s("cp*3")')
+    await openDrawer(wrapper, 'Export')
+    const saveButton = wrapper
+      .findAll('.strudel-export__button')
+      .find((button) => button.text() === 'Save pattern')
+    const disabledWithoutName = saveButton?.attributes('disabled') !== undefined
 
     // Act
-    await wrapper.find('input[aria-label="Pattern name"]').setValue('My beat')
-    await wrapper.find('.strudel-patterns__save').trigger('submit')
-    const groupsAfterSave = wrapper
-      .findAll('.strudel-patterns__group-title')
-      .map((title) => title.text())
+    await wrapper.find('.strudel-export input').setValue('My beat')
+    await saveButton?.trigger('click')
+    await openDrawer(wrapper, 'Import')
+    const savedTrigger = wrapper.find('.strudel-patterns button[aria-expanded]')
+    await savedTrigger.trigger('click')
     const savedLink = wrapper.find('.strudel-patterns__link')
     await wrapper.find('button[aria-label="Delete My beat"]').trigger('click')
 
     // Assert
-    expect(groupsAfterSave).toEqual(['Saved', 'Examples', 'Tunes'])
+    expect(disabledWithoutName).toBe(true)
+    expect(savedTrigger.text()).toBe('Saved (1)')
     expect([savedLink.text(), savedLink.attributes('href')]).toEqual(['My beat', '#saved-my-beat'])
-    expect(wrapper.findAll('.strudel-patterns__group-title').map((title) => title.text())).toEqual([
-      'Examples',
-      'Tunes'
-    ])
-  })
-
-  it('keeps Save disabled until the pattern has a name', async () => {
-    // Arrange
-    const wrapper = await mountEditorView()
-    await wrapper
-      .findAll('.strudel-editor__tab')
-      .find((tab) => tab.text() === 'patterns')
-      ?.trigger('click')
-
-    // Act
-    await wrapper.find('input[aria-label="Pattern name"]').setValue('   ')
-
-    // Assert
-    expect(wrapper.find('.strudel-patterns__save button').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('button[aria-label="Delete My beat"]').exists()).toBe(false)
   })
 
   it.each([
@@ -372,20 +364,10 @@ describe('StrudelEditor view', () => {
     expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
-  it('links every tab to its own anchor', async () => {
-    // Arrange / Act
-    const wrapper = await mountEditorView()
-
-    // Assert
-    const links = wrapper.findAll('.strudel-editor__tab').map((tab) => tab.attributes('href'))
-    expect(links).toContain('#midi')
-    expect(links).toContain('#export')
-  })
-
   it.each([
-    ['#midi', 'midi'],
-    ['#export', 'export']
-  ])('opens the tab named by the anchor %s', async (hash, tabLabel) => {
+    ['#midi', 'MIDI'],
+    ['#export', 'Export']
+  ])('opens the drawer named by the anchor %s', async (hash, drawerTitle) => {
     // Arrange
     window.history.replaceState(null, '', `${window.location.pathname}${hash}`)
 
@@ -393,19 +375,16 @@ describe('StrudelEditor view', () => {
     const wrapper = await mountEditorView()
 
     // Assert
-    expect(wrapper.find('.strudel-editor__tab--active').text()).toBe(tabLabel)
+    expect(wrapper.find('.strudel-editor__drawer-title').text()).toBe(drawerTitle)
     expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
-  it('switches to the console tab', async () => {
+  it('opens the console drawer', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    const consoleTab = wrapper
-      .findAll('.strudel-editor__tab')
-      .find((tab) => tab.text() === 'console')
-    await consoleTab?.trigger('click')
+    await openDrawer(wrapper, 'Console')
 
     // Assert
     expect(wrapper.find('.strudel-console').exists()).toBe(true)
@@ -417,10 +396,11 @@ describe('StrudelEditor view', () => {
     const originalCode = readEditorCode(wrapper)
 
     // Act
-    await clickTab(wrapper, 'flow')
+    await clickMode(wrapper, 'Flow')
     await vi.waitFor(() => {
       expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
     })
+    await openDrawer(wrapper, 'Nodes')
     const codeOnOpen = readEditorCode(wrapper)
     // The palette renders with the flow tab, which can land a tick after the canvas on a slow run.
     await vi.waitFor(() => {
@@ -446,7 +426,7 @@ describe('StrudelEditor view', () => {
 
     // Act
     await wrapper.find('.fake-strudel-code').setValue(code)
-    await clickTab(wrapper, 'flow')
+    await clickMode(wrapper, 'Flow')
     await vi.waitFor(() => {
       expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
     })
@@ -462,7 +442,7 @@ describe('StrudelEditor view', () => {
     const wrapper = await mountEditorView()
 
     // Act
-    await clickTab(wrapper, 'flow')
+    await clickMode(wrapper, 'Flow')
     await vi.waitFor(() => {
       expect(wrapper.find('.strudel-editor__error').exists()).toBe(true)
     })
@@ -472,33 +452,18 @@ describe('StrudelEditor view', () => {
     expect(wrapper.find('.strudel-flow-tab [role="alert"]').exists()).toBe(false)
   })
 
-  it('collapses and reopens the side panel', async () => {
-    // Arrange
-    const wrapper = await mountEditorView()
-
-    // Act
-    await wrapper.find('button[aria-label="Hide side panel"]').trigger('click')
-    const collapsed = wrapper.find('.strudel-editor').classes()
-    await wrapper.find('button[aria-label="Show side panel"]').trigger('click')
-
-    // Assert
-    expect(collapsed).toContain('strudel-editor--side-collapsed')
-    expect(wrapper.find('.strudel-editor').classes()).not.toContain(
-      'strudel-editor--side-collapsed'
-    )
-  })
-
   it('returns to code mode when a listed pattern is picked from flow mode', async () => {
     // Arrange
     const wrapper = await mountEditorView()
-    await clickTab(wrapper, 'flow')
+    await clickMode(wrapper, 'Flow')
     await vi.waitFor(() => {
       expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
     })
 
     // Act
-    await clickTab(wrapper, 'patterns')
+    await openDrawer(wrapper, 'Import')
     const flowStayedOpen = wrapper.find('.strudel-flow-editor-stub').exists()
+    await wrapper.find('.strudel-patterns button[aria-expanded]').trigger('click')
     await wrapper.find('.strudel-patterns__link').trigger('click')
 
     // Assert
@@ -507,17 +472,28 @@ describe('StrudelEditor view', () => {
     expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
   })
 
-  it('switches to the settings tab', async () => {
+  it('opens the settings drawer', async () => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    const settingsTab = wrapper
-      .findAll('.strudel-editor__tab')
-      .find((tab) => tab.text() === 'settings')
-    await settingsTab?.trigger('click')
+    await openDrawer(wrapper, 'Settings')
 
     // Assert
     expect(wrapper.find('.strudel-settings').exists()).toBe(true)
+  })
+
+  it('shows the Nodes tool only in flow mode', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+
+    // Act
+    const inCodeMode = wrapper.find('button[aria-label="Nodes"]').exists()
+    await clickMode(wrapper, 'Flow')
+    const inFlowMode = wrapper.find('button[aria-label="Nodes"]').exists()
+
+    // Assert
+    expect(inCodeMode).toBe(false)
+    expect(inFlowMode).toBe(true)
   })
 })

@@ -294,16 +294,12 @@ export type StrudelHint = {
 
 export type StrudelTabId =
   | 'hints'
-  | 'welcome'
-  | 'patterns'
-  | 'sounds'
   | 'import'
   | 'midi'
-  | 'reference'
+  | 'sounds'
   | 'export'
   | 'console'
   | 'settings'
-  | 'flow'
 
 export type StrudelSoundEntry = {
   /** What code plays it by, as in `s("rolandtr909_bd")`. */
