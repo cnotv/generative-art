@@ -104,6 +104,28 @@ describe('StrudelFlowNotation', () => {
     ])
   })
 
+  it('lists a rest between notes and at the end of the bar', async () => {
+    // Arrange
+    const bars: StrudelFlowNoteBar[] = [
+      [
+        { notes: ['c3', 'e3'], start: 0, beats: 1 },
+        { notes: ['g3'], start: 1.5, beats: 1 }
+      ]
+    ]
+    const wrapper = mountNotation('names', 'sawtooth', bars)
+
+    // Act
+    await flushPromises()
+
+    // Assert
+    expect(wrapper.findAll('.strudel-flow-note-names__note').map((note) => note.text())).toEqual([
+      'c3,e3 1',
+      '~ 1/2',
+      'g3 1',
+      '~ 3/2'
+    ])
+  })
+
   it('says which notation Auto picked', async () => {
     // Arrange
     const wrapper = mountNotation('auto', 'gm_electric_bass_finger')
@@ -159,7 +181,9 @@ describe('StrudelFlowTabStaff', () => {
     ]
 
     // Act
-    const wrapper = mount(StrudelFlowTabStaff, { props: { bars, instrument: 'bass' } })
+    const wrapper = mount(StrudelFlowTabStaff, {
+      props: { bars, instrument: 'bass', beatsPerBar: 4 }
+    })
 
     // Assert
     expect(wrapper.findAll('.strudel-flow-tab-staff__stem')).toHaveLength(7)
@@ -169,12 +193,33 @@ describe('StrudelFlowTabStaff', () => {
     expect(wrapper.findAll('.strudel-flow-tab-staff__tie')).toHaveLength(1)
   })
 
+  it('marks a rest between notes and one that ends the bar', () => {
+    // Arrange
+    const bars: StrudelFlowNoteBar[] = [
+      [
+        { notes: ['a2'], start: 0, beats: 1 },
+        { notes: ['c3'], start: 2, beats: 1 }
+      ]
+    ]
+
+    // Act
+    const wrapper = mount(StrudelFlowTabStaff, {
+      props: { bars, instrument: 'bass', beatsPerBar: 4 }
+    })
+
+    // Assert
+    expect(wrapper.findAll('.strudel-flow-tab-staff__rest')).toHaveLength(2)
+    expect(wrapper.findAll('.strudel-flow-tab-staff__stem')).toHaveLength(2)
+  })
+
   it('stacks the frets of a chord on one stem', () => {
     // Arrange
     const bars: StrudelFlowNoteBar[] = [[{ notes: ['e2', 'b2', 'e3'], start: 0, beats: 4 }]]
 
     // Act
-    const wrapper = mount(StrudelFlowTabStaff, { props: { bars, instrument: 'guitar' } })
+    const wrapper = mount(StrudelFlowTabStaff, {
+      props: { bars, instrument: 'guitar', beatsPerBar: 4 }
+    })
 
     // Assert
     const fretXs = wrapper

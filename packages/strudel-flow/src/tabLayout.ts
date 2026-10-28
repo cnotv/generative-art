@@ -14,6 +14,8 @@ import {
   STRUDEL_FLOW_TAB_FLAG_LENGTH,
   STRUDEL_FLOW_TAB_LINE_GAP,
   STRUDEL_FLOW_TAB_MIN_BAR_WIDTH,
+  STRUDEL_FLOW_TAB_REST_HEIGHT,
+  STRUDEL_FLOW_TAB_REST_WIDTH,
   STRUDEL_FLOW_TAB_SIDE_MARGIN,
   STRUDEL_FLOW_TAB_SPACE_PER_BEAT,
   STRUDEL_FLOW_TAB_STEM_BOTTOM,
@@ -61,7 +63,7 @@ type DrawnUnit = StemUnit & {
   tiedFromX: number | null
 }
 
-type BarDrawing = { units: DrawnUnit[]; endX: number }
+type BarDrawing = { units: DrawnUnit[]; restXs: number[]; endX: number }
 
 const beatOf = (unit: StemUnit): number => Math.floor(unit.start + EPSILON)
 
@@ -151,59 +153,77 @@ const placeEvents = (bars: StrudelFlowNoteBar[], openStrings: number[]): PlacedE
   )
 }
 
+type BarProgress = { beat: number; x: number; units: DrawnUnit[]; restXs: number[] }
+
+const unitWidth = (beats: number): number =>
+  (STRUDEL_FLOW_TAB_STEM_SPACE + STRUDEL_FLOW_TAB_SPACE_PER_BEAT * beats) * GAP
+
+// A rest takes a stem's room and gets a mark inside the staff, where the tab import never looks.
+const withRest = (progress: BarProgress, beats: number): BarProgress =>
+  beats > EPSILON
+    ? {
+        ...progress,
+        x: progress.x + unitWidth(beats),
+        restXs: [...progress.restXs, progress.x + (STRUDEL_FLOW_TAB_STEM_SPACE / 2) * GAP]
+      }
+    : progress
+
+const drawEvent = (progress: BarProgress, event: PlacedEvent, barIndex: number): BarProgress => {
+  const afterGap = withRest(progress, event.start - progress.beat)
+  const nextBeat = event.start + event.beats
+  if (event.positions.length === 0) {
+    return { ...withRest(afterGap, event.beats), beat: nextBeat }
+  }
+  const placed = stemUnitsOf(event).reduce<{ x: number; units: DrawnUnit[] }>(
+    (unitDrawing, unit, unitIndex) => ({
+      x: unitDrawing.x + unitWidth(unit.beats),
+      units: [
+        ...unitDrawing.units,
+        {
+          ...unit,
+          x: unitDrawing.x + (STRUDEL_FLOW_TAB_STEM_SPACE / 2) * GAP,
+          barIndex,
+          positions: event.positions,
+          tiedFromX: unitIndex === 0 ? null : (unitDrawing.units.at(-1)?.x ?? null)
+        }
+      ]
+    }),
+    { x: afterGap.x, units: [] }
+  )
+  return {
+    ...afterGap,
+    beat: nextBeat,
+    x: placed.x,
+    units: [...afterGap.units, ...placed.units]
+  }
+}
+
 const drawBar = (
   events: PlacedEvent[],
   barIndex: number,
-  contentX: number
-): { x: number; units: DrawnUnit[] } =>
-  events.reduce<{ beat: number; x: number; units: DrawnUnit[] }>(
-    (drawing, event) => {
-      const startX =
-        drawing.x + Math.max(0, event.start - drawing.beat) * STRUDEL_FLOW_TAB_SPACE_PER_BEAT * GAP
-      const nextBeat = event.start + event.beats
-      if (event.positions.length === 0) {
-        return {
-          beat: nextBeat,
-          x: startX + event.beats * STRUDEL_FLOW_TAB_SPACE_PER_BEAT * GAP,
-          units: drawing.units
-        }
-      }
-      const placed = stemUnitsOf(event).reduce<{ x: number; units: DrawnUnit[] }>(
-        (unitDrawing, unit, unitIndex) => ({
-          x:
-            unitDrawing.x +
-            (STRUDEL_FLOW_TAB_STEM_SPACE + STRUDEL_FLOW_TAB_SPACE_PER_BEAT * unit.beats) * GAP,
-          units: [
-            ...unitDrawing.units,
-            {
-              ...unit,
-              x: unitDrawing.x + (STRUDEL_FLOW_TAB_STEM_SPACE / 2) * GAP,
-              barIndex,
-              positions: event.positions,
-              tiedFromX: unitIndex === 0 ? null : (unitDrawing.units.at(-1)?.x ?? null)
-            }
-          ]
-        }),
-        { x: startX, units: [] }
-      )
-      return { beat: nextBeat, x: placed.x, units: [...drawing.units, ...placed.units] }
-    },
-    { beat: 0, x: contentX, units: [] }
+  contentX: number,
+  beatsPerBar: number
+): BarProgress => {
+  const drawn = events.reduce<BarProgress>(
+    (progress, event) => drawEvent(progress, event, barIndex),
+    { beat: 0, x: contentX, units: [], restXs: [] }
   )
+  return withRest(drawn, beatsPerBar - drawn.beat)
+}
 
-const drawBars = (bars: PlacedEvent[][], staffStartX: number): BarDrawing[] =>
+const drawBars = (bars: PlacedEvent[][], staffStartX: number, beatsPerBar: number): BarDrawing[] =>
   bars.reduce<BarDrawing[]>((drawings, events, barIndex) => {
     const barStartX = drawings.at(-1)?.endX ?? staffStartX
     const isFirst = barIndex === 0
     const isLast = barIndex === bars.length - 1
     // The staff's own ends need clear line around them, or a reader takes a number for the edge.
     const contentX = barStartX + (isFirst ? STRUDEL_FLOW_TAB_SIDE_MARGIN * GAP : 0)
-    const drawn = drawBar(events, barIndex, contentX)
+    const drawn = drawBar(events, barIndex, contentX, beatsPerBar)
     const endX = Math.max(
       drawn.x + (isLast ? STRUDEL_FLOW_TAB_SIDE_MARGIN * GAP : 0),
       barStartX + STRUDEL_FLOW_TAB_MIN_BAR_WIDTH * GAP
     )
-    return [...drawings, { units: drawn.units, endX }]
+    return [...drawings, { units: drawn.units, restXs: drawn.restXs, endX }]
   }, [])
 
 const groupRuns = <Item>(items: Item[], joins: (previous: Item, item: Item) => boolean): Item[][] =>
@@ -316,17 +336,19 @@ const stringSegments = (
  * and triplet brackets. Rests are left as space.
  * @param bars - the notes of each bar
  * @param instrument - bass for four strings, guitar for six
+ * @param beatsPerBar - how long a bar is, so a bar that ends early shows its closing rest
  * @returns every mark of the staff in drawing units
  */
 export const layoutStrudelFlowTab = (
   bars: StrudelFlowNoteBar[],
-  instrument: StrudelFlowTabInstrument
+  instrument: StrudelFlowTabInstrument,
+  beatsPerBar: number
 ): StrudelFlowTabLayout => {
   const openStrings = STRUDEL_FLOW_OPEN_STRINGS[instrument]
   const lineYs = openStrings.map((_, lineIndex) => (STRUDEL_FLOW_TAB_TOP_MARGIN + lineIndex) * GAP)
   const bottomY = lineYs.at(-1)!
   const staffStartX = GAP / 2
-  const drawings = drawBars(placeEvents(bars, openStrings), staffStartX)
+  const drawings = drawBars(placeEvents(bars, openStrings), staffStartX, beatsPerBar)
   const staffEndX = drawings.at(-1)?.endX ?? staffStartX + STRUDEL_FLOW_TAB_MIN_BAR_WIDTH * GAP
   const units = drawings.flatMap((drawing) => drawing.units)
   const stemBottom = bottomY + STRUDEL_FLOW_TAB_STEM_BOTTOM * GAP
@@ -358,6 +380,14 @@ export const layoutStrudelFlowTab = (
     })),
     frets,
     stems: units.map((unit) => ({ x: unit.x })),
+    rests: drawings
+      .flatMap((drawing) => drawing.restXs)
+      .map((x) => ({
+        x: x - (STRUDEL_FLOW_TAB_REST_WIDTH / 2) * GAP,
+        y: (lineYs[0] + bottomY - STRUDEL_FLOW_TAB_REST_HEIGHT * GAP) / 2,
+        width: STRUDEL_FLOW_TAB_REST_WIDTH * GAP,
+        height: STRUDEL_FLOW_TAB_REST_HEIGHT * GAP
+      })),
     beams: beamsOf(units, stemBottom),
     ties,
     brackets: bracketsOf(units, bracketY),

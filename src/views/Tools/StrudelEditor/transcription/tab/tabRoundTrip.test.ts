@@ -4,6 +4,7 @@ import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
 import { STRUDEL_FLOW_OPEN_STRINGS, StrudelFlowTabStaff } from '@webgamekit/strudel-flow'
 import type { StrudelFlowNoteBar, StrudelFlowTabInstrument } from '@webgamekit/strudel-flow'
+import { TAB_BEATS_PER_BAR } from '../../config'
 import type { TabEvent } from '../../types'
 import { buildTabImage } from './buildTabImage'
 import { readTab } from './readTab'
@@ -32,8 +33,9 @@ const themedSvg = (svg: string, theme: (typeof THEMES)['light']): string =>
     `<svg$1><style>
       .strudel-flow-tab-staff__string line, .strudel-flow-tab-staff__bar-line, .strudel-flow-tab-staff__tie {
         stroke: ${theme.faint}; fill: none }
+      .strudel-flow-tab-staff__rest { fill: ${theme.faint} }
       .strudel-flow-tab-staff__stem, .strudel-flow-tab-staff__beam, .strudel-flow-tab-staff__bracket {
-        stroke: ${theme.ink}; fill: ${theme.ink} }
+        stroke: ${theme.ink}; fill: none }
       .strudel-flow-tab-staff__bracket-label, .strudel-flow-tab-staff__fret { fill: ${theme.ink} }
     </style>`
   )
@@ -43,7 +45,9 @@ const renderAndRead = async (
   instrument: StrudelFlowTabInstrument,
   theme: (typeof THEMES)['light']
 ) => {
-  const wrapper = mount(StrudelFlowTabStaff, { props: { bars: toNoteBars(bars), instrument } })
+  const wrapper = mount(StrudelFlowTabStaff, {
+    props: { bars: toNoteBars(bars), instrument, beatsPerBar: TAB_BEATS_PER_BAR }
+  })
   const svg = themedSvg(wrapper.get('svg').html(), theme)
   const { data, info } = await sharp(Buffer.from(svg), { density: RASTER_DENSITY })
     .flatten({ background: theme.page })

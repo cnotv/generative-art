@@ -74,12 +74,13 @@ const onNotationChange = (value: string): void => {
       v-if="view === 'bass' || view === 'guitar'"
       :bars="bars"
       :instrument="view"
+      :beats-per-bar="beatsPerCycle"
     />
     <StrudelFlowPianoRoll
       v-else-if="view === 'piano'"
       :bars="bars"
       :beats-per-bar="beatsPerCycle"
     />
-    <StrudelFlowNoteNames v-else :bars="bars" />
+    <StrudelFlowNoteNames v-else :bars="bars" :beats-per-bar="beatsPerCycle" />
   </template>
 </template>

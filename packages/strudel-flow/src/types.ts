@@ -142,6 +142,14 @@ export type StrudelFlowTabStem = {
   x: number
 }
 
+/** A block in the middle of the staff for a rest, faint so a tab reader passes over it. */
+export type StrudelFlowTabRest = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 /** A triplet bracket under the stems it groups, and where its 3 goes. */
 export type StrudelFlowTabBracket = {
   path: string
@@ -158,6 +166,7 @@ export type StrudelFlowTabLayout = {
   barLines: StrudelFlowTabSegment[]
   frets: StrudelFlowTabFret[]
   stems: StrudelFlowTabStem[]
+  rests: StrudelFlowTabRest[]
   /** Beams and flags; a flag is a beam reaching from one stem only. */
   beams: StrudelFlowTabSegment[]
   /** Arcs from a fret number to the stem where the note goes on ringing. */

@@ -538,6 +538,11 @@
   background: var(--sf-muted);
 }
 
+.strudel-flow-piano-roll {
+  max-height: 10rem;
+  overflow-y: auto;
+}
+
 .strudel-flow-tab-staff svg,
 .strudel-flow-piano-roll svg {
   display: block;
@@ -555,6 +560,10 @@
   stroke: var(--sf-card-foreground);
 }
 
+.strudel-flow-tab-staff__rest {
+  fill: color-mix(in srgb, var(--sf-muted-foreground) 70%, transparent);
+}
+
 .strudel-flow-tab-staff__fret,
 .strudel-flow-tab-staff__bracket-label {
   fill: var(--sf-card-foreground);
@@ -570,7 +579,7 @@
 
 .strudel-flow-piano-roll__label {
   fill: var(--sf-muted-foreground);
-  font-size: 6px;
+  font-size: 7px;
 }
 
 .strudel-flow-piano-roll__note {

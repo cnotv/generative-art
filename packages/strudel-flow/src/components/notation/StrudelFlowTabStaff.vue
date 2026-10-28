@@ -14,12 +14,13 @@ import type { StrudelFlowNoteBar, StrudelFlowTabInstrument } from '../../types'
 const props = defineProps<{
   bars: StrudelFlowNoteBar[]
   instrument: StrudelFlowTabInstrument
+  beatsPerBar: number
 }>()
 
 // Arial first: the tab import's digit templates were sampled from it, so the drawing reads back.
 const FRET_FONT = 'Arial, Helvetica, sans-serif'
 
-const layout = computed(() => layoutStrudelFlowTab(props.bars, props.instrument))
+const layout = computed(() => layoutStrudelFlowTab(props.bars, props.instrument, props.beatsPerBar))
 const strokeWidth = computed(() => STRUDEL_FLOW_TAB_STROKE_WIDTH * layout.value.lineGap)
 const label = computed(
   () => `${props.instrument === 'bass' ? 'Bass' : 'Guitar'} tab, ${props.bars.length} bars`
@@ -84,6 +85,15 @@ const label = computed(
       >
         {{ fret.fret }}
       </text>
+      <rect
+        v-for="(rest, restIndex) in layout.rests"
+        :key="`rest-${restIndex}`"
+        class="strudel-flow-tab-staff__rest"
+        :x="rest.x"
+        :y="rest.y"
+        :width="rest.width"
+        :height="rest.height"
+      />
       <line
         v-for="(stem, stemIndex) in layout.stems"
         :key="`stem-${stemIndex}`"
