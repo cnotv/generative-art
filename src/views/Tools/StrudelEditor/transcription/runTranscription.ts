@@ -35,3 +35,38 @@ export const runTranscriptionInWorker: TranscriptionRunner = async (audioFile, o
     worker.postMessage({ samples, sampleRate: TRANSCRIPTION_SAMPLE_RATE }, [samples.buffer])
   })
 }
+
+const MIDI_FILE_PATTERN = /\.midi?$/i
+
+/**
+ * Whether a chosen file is a Standard MIDI File rather than recorded audio.
+ * @param chosenFile - the uploaded file
+ * @returns true for a .mid or .midi file
+ */
+export const isMidiFile = (chosenFile: File): boolean =>
+  MIDI_FILE_PATTERN.test(chosenFile.name) || chosenFile.type.includes('midi')
+
+/**
+ * Reads a MIDI file's notes straight onto the grid. The parser is imported on demand, keeping
+ * it out of the view chunk.
+ * @param midiFile - the uploaded .mid file
+ * @param onProgress - called as each stage finishes
+ * @returns the transcription
+ */
+export const runMidiTranscription: TranscriptionRunner = async (midiFile, onProgress) => {
+  onProgress({ stage: 'decoding', fraction: 0 })
+  const [{ transcribeMidi }, buffer] = await Promise.all([import('./midi'), midiFile.arrayBuffer()])
+  onProgress({ stage: 'done', fraction: 1 })
+  return transcribeMidi(buffer)
+}
+
+/**
+ * The editor's runner: MIDI files are read note for note, anything else is analysed as audio.
+ * @param chosenFile - the uploaded file
+ * @param onProgress - called as each stage finishes
+ * @returns the transcription
+ */
+export const runTranscription: TranscriptionRunner = (chosenFile, onProgress) =>
+  isMidiFile(chosenFile)
+    ? runMidiTranscription(chosenFile, onProgress)
+    : runTranscriptionInWorker(chosenFile, onProgress)

@@ -140,15 +140,13 @@
   cursor: grab;
 }
 
-.strudel-flow-node__title-group {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: var(--spacing-2);
-  min-width: 0;
+.strudel-flow-node__header {
+  position: relative;
 }
 
 .strudel-flow-node__title {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   overflow: hidden;
   font-size: var(--font-size-xs); /* 11px */
@@ -159,19 +157,94 @@
   white-space: nowrap;
 }
 
-.strudel-flow-node__remove {
-  color: var(--sf-muted-foreground);
-}
-
-.strudel-flow-node .strudel-flow-node__remove.btn--icon {
+/* Header icon buttons: the reference's mute toggle and options menu. */
+.strudel-flow-node__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--sf-muted-foreground);
+  cursor: pointer;
 }
 
-.strudel-flow-node__remove:hover,
-.strudel-flow-node__remove:focus-visible {
+.strudel-flow-node__action svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.strudel-flow-node__action:hover,
+.strudel-flow-node__action:focus-visible,
+.strudel-flow-node__action[aria-expanded='true'] {
   background: var(--sf-muted);
   color: var(--sf-card-foreground);
+}
+
+.strudel-flow-node__menu {
+  position: absolute;
+  top: 2.5rem;
+  right: var(--spacing-3);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 9rem;
+  padding: var(--spacing-1);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--radius-md);
+  background: var(--sf-card);
+  box-shadow: var(--sf-shadow);
+  cursor: default;
+}
+
+.strudel-flow-node__menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sf-card-foreground);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.strudel-flow-node__menu-item svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.strudel-flow-node__menu-item:hover,
+.strudel-flow-node__menu-item:focus-visible {
+  background: var(--sf-muted);
+}
+
+.strudel-flow-node__menu-item--danger {
+  color: var(--color-destructive);
+}
+
+.strudel-flow-node__code {
+  margin: 0 var(--spacing-3) var(--spacing-2);
+  padding: var(--spacing-2);
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--sf-muted);
+  color: var(--sf-card-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+  user-select: text;
+}
+
+.strudel-flow-node--muted .strudel-flow-node__body {
+  opacity: 0.45;
 }
 
 /* Node body (the inner rounded card). */
@@ -263,56 +336,76 @@
   box-shadow: 0 0 0 2px var(--sf-ring);
 }
 
-/* Beats step grid (large reference cells: w-12 h-10). */
-.strudel-flow-steps {
+/* Beats: a sample picker per track beside its step cells, as in the reference. */
+.strudel-flow-beats {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
 }
 
-.strudel-flow-steps__row {
+.strudel-flow-beats__tracks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--sf-muted) 40%, transparent);
+}
+
+.strudel-flow-beats__track {
   display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: start;
   gap: var(--spacing-2);
 }
 
-.strudel-flow-steps__cells {
+.strudel-flow-beats__steps {
   display: grid;
-  grid-template-columns: repeat(16, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(var(--beats-steps), minmax(0, 1fr));
+  gap: var(--spacing-1);
 }
 
-.strudel-flow-steps__cell {
-  height: 2.5rem; /* h-10 */
+.strudel-flow-field__label--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* On/off switch (reference: a pill with a dark thumb). */
+.strudel-flow-switch {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
   padding: 0;
-  border: 1px solid hsl(0deg 0% 100% / 5%);
-  border-radius: var(--radius-md);
+  border: 0;
+  border-radius: var(--radius-full);
   background: var(--sf-muted);
   cursor: pointer;
-  transition:
-    background-color 150ms ease-out,
-    transform 150ms ease-out;
 }
 
-.strudel-flow-steps__cell:hover {
-  background: color-mix(in srgb, var(--sf-muted-foreground) 0.3, transparent);
-}
-
-.strudel-flow-steps__cell:active {
-  transform: scale(0.95);
-}
-
-.strudel-flow-steps__cell--active {
-  border-color: hsl(0deg 0% 100% / 5%);
+.strudel-flow-switch[aria-checked='true'] {
   background: var(--sf-accent);
 }
 
-.strudel-flow-steps__cell--active:hover {
-  background: color-mix(in srgb, var(--sf-accent) 0.85, transparent);
+.strudel-flow-switch__thumb {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-full);
+  background: var(--sf-card);
+  transition: transform 150ms ease-out;
 }
 
-.strudel-flow-steps__cell:focus-visible {
+.strudel-flow-switch[aria-checked='true'] .strudel-flow-switch__thumb {
+  transform: translateX(1.25rem);
+}
+
+.strudel-flow-switch:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--sf-ring);
 }
@@ -337,54 +430,49 @@
 
 .strudel-flow-knob__dial {
   position: relative;
-  display: grid;
-  width: 5rem; /* size-20 */
-  height: 5rem;
+  display: block;
+  width: 5.5rem;
+  height: 5.5rem;
   border-radius: var(--radius-full);
-  background: var(--sf-card);
-  box-shadow: inset 0 0 0 1px var(--sf-border);
-  place-items: center;
 }
 
 .strudel-flow-knob__dial:focus-within {
-  box-shadow:
-    inset 0 0 0 1px var(--sf-border),
-    0 0 0 2px var(--sf-ring);
+  box-shadow: 0 0 0 2px var(--sf-ring);
 }
 
-.strudel-flow-knob__arc {
-  position: absolute;
-  inset: 0;
+.strudel-flow-knob__graphic {
+  display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
-.strudel-flow-knob__arc circle {
+/* The full sweep in a quiet grey, filled in the accent up to the value. */
+.strudel-flow-knob__track,
+.strudel-flow-knob__fill {
   fill: none;
-  stroke: var(--sf-accent);
   stroke-linecap: round;
-  stroke-width: 3;
+  stroke-width: 4;
+}
+
+.strudel-flow-knob__track {
+  stroke: color-mix(in srgb, var(--sf-muted-foreground) 30%, transparent);
+}
+
+.strudel-flow-knob__fill {
+  stroke: var(--sf-accent);
 }
 
 .strudel-flow-knob__face {
-  position: relative;
-  width: 3.5rem; /* size-14 */
-  height: 3.5rem;
-  border: 1px solid color-mix(in srgb, var(--sf-accent) 12%, transparent);
-  border-radius: var(--radius-full);
-  background: var(--sf-secondary, var(--sf-muted));
+  fill: color-mix(in srgb, var(--sf-accent) 20%, var(--sf-canvas));
+  stroke: color-mix(in srgb, var(--sf-accent) 12%, transparent);
+  stroke-width: 1;
 }
 
 .strudel-flow-knob__indicator {
-  position: absolute;
-  top: 12%;
-  left: 50%;
-  width: 1.5px;
-  height: 38%;
-  border-radius: var(--radius-full);
-  background: var(--sf-accent);
-  transform-origin: 50% 100%;
+  stroke: var(--sf-accent);
+  stroke-linecap: round;
+  stroke-width: 3;
 }
 
 .strudel-flow-knob__input {
@@ -398,17 +486,11 @@
 }
 
 .strudel-flow-knob__value {
+  margin-top: var(--spacing-2);
   font-family: var(--font-mono);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: 600;
   line-height: 1;
-}
-
-.strudel-flow-knob__unit {
-  margin-left: 0.125rem;
-  color: var(--sf-muted-foreground);
-  font-size: var(--font-size-xs);
-  font-weight: 500;
 }
 
 .strudel-flow-knob__label {
@@ -569,8 +651,26 @@
   width: 26rem;
 }
 
-.strudel-flow-node[data-node-kind='scope'] {
+.strudel-flow-node[data-node-kind='beats'] {
+  width: 44rem;
+}
+
+.strudel-flow-node[data-node-kind='visualizer'],
+.strudel-flow-node[data-node-kind='voice'],
+.strudel-flow-node[data-node-kind='filter'],
+.strudel-flow-node[data-node-kind='effect'] {
   width: 20rem;
+}
+
+.strudel-flow-node[data-node-kind='notes'],
+.strudel-flow-node[data-node-kind='samples'] {
+  width: 24rem;
+}
+
+.strudel-flow-effect {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-2);
 }
 
 .strudel-flow-node[data-node-kind='level'],
@@ -1140,27 +1240,17 @@
   opacity: 0.4;
 }
 
-/* Scope canvas. */
-.strudel-flow-scope {
+/* Visualizer: type, placement and options for one of Strudel's visuals. */
+.strudel-flow-visualizer {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
 }
 
-/* The app's global canvas rule pins canvases to the page; keep this one in the card. */
-.strudel-flow-scope__canvas {
-  position: relative;
-  top: auto;
-  left: auto;
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  height: 7rem;
-  border: 1px solid var(--sf-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--sf-card-foreground) 5%, var(--sf-card));
-  color: var(--sf-accent);
+.strudel-flow-visualizer__hint {
+  margin: 0;
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
 }
 
 /* Radial add-node menu. */
@@ -1299,4 +1389,97 @@
 .strudel-flow-radial__close svg {
   width: 1rem;
   height: 1rem;
+}
+
+/* The tempo bar floats over the top of the canvas, as the reference's transport does. */
+.strudel-flow-toolbar {
+  position: absolute;
+  top: var(--spacing-4);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--radius-lg);
+  background: var(--sf-card);
+  box-shadow: var(--sf-shadow);
+  color: var(--sf-card-foreground);
+  transform: translateX(-50%);
+}
+
+.strudel-flow-toolbar__field {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-1);
+}
+
+.strudel-flow-toolbar__tempo {
+  width: 3.5ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-lg);
+  appearance: textfield;
+}
+
+.strudel-flow-toolbar__tempo::-webkit-inner-spin-button,
+.strudel-flow-toolbar__tempo::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.strudel-flow-toolbar__unit {
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.08em;
+}
+
+.strudel-flow-toolbar__cycle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.strudel-flow-toolbar__cycle select {
+  padding: 0 1.25rem 0 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  appearance: none;
+  cursor: pointer;
+}
+
+.strudel-flow-toolbar__cycle svg {
+  position: absolute;
+  right: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  pointer-events: none;
+}
+
+/* Credit to the editor this one follows, in the corner Vue Flow leaves free. */
+.strudel-flow-credit {
+  position: absolute;
+  right: var(--spacing-3);
+  bottom: var(--spacing-2);
+  z-index: 5;
+  margin: 0;
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
+}
+
+.strudel-flow-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.strudel-flow-credit a:hover {
+  color: var(--sf-card-foreground);
 }

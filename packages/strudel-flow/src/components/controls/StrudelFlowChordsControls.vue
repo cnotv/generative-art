@@ -16,7 +16,6 @@ import StrudelFlowAccordion from './StrudelFlowAccordion.vue'
 import StrudelFlowChordEditor from './StrudelFlowChordEditor.vue'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 import StrudelFlowStepper from './StrudelFlowStepper.vue'
-import StrudelFlowVoiceControls from './StrudelFlowVoiceControls.vue'
 
 const props = defineProps<{
   data: StrudelFlowChordsData
@@ -204,7 +203,6 @@ const cardName = (index: number): string => {
           @update:model-value="update({ octave: $event })"
         />
       </div>
-      <StrudelFlowVoiceControls :sound="data.sound" @update:sound="update({ sound: $event })" />
     </StrudelFlowAccordion>
   </div>
 </template>

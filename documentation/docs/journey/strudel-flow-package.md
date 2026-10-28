@@ -6,7 +6,9 @@ sidebar_position: 1
 
 The Strudel editor's flow tab moved from `src/views/Tools/StrudelEditor/flow/` into a new
 workspace package, `@webgamekit/strudel-flow`, and its visuals were ported to match
-[Strudel Flow by xyflow](https://xyflow.com/strudel-flow) rather than adapted from the
+[Strudel Flow](https://xyflow.com/strudel-flow) by [xyflow](https://xyflow.com), the makers of React
+Flow, whose source is [xyflow/strudel-flow](https://github.com/xyflow/strudel-flow) under AGPL-3.0,
+rather than adapted from the
 existing editor cards.
 
 ## Why a package, and why Vue
@@ -72,9 +74,28 @@ global `canvas { position: absolute }` rule would otherwise pull it over the nod
 Fixed row gaps did not survive the taller cards: a new node could hide underneath a Pad. The
 canvas now measures each Vue Flow node and `layout.ts` finds the first free slot with the real
 heights, then frames the graph after an add. Code edits travel back through
-`parseStrudelFlowCode`; recognised calls become nodes and anything else becomes a Code node,
-so a hand edit never silently loses its sound. The known gap is a stack of instruments: it is
-kept as one Code node rather than split into separate instrument nodes.
+`parseStrudelFlowCode`.
+
+## The third pass: code is the source of truth
+
+The second pass parsed only the code the editor itself wrote. Anything else, including a single
+`s("bd").struct(...)` row the compiler emitted itself, fell back to one Code node holding the whole
+block, so the graph stopped describing the code as soon as someone typed. Opening Flow also
+recompiled the stored graph over the editor's code, which replaced a freshly loaded pattern with an
+older patch.
+
+Three decisions came out of fixing that:
+
+- **Every chained call is a node.** Calls without a dedicated control become a generic Effect node
+  that keeps its name and argument verbatim, so a pattern can always be drawn and compiled back
+  without losing a sound. A dedicated node is a nicer editor for a call, never a requirement for it.
+- **Effects belong to the instruments upstream of them.** The first compiler applied every effect
+  in a connected group to every instrument in it. With a separate Voice node that was audibly wrong:
+  drums wired straight into a filter came out as a triangle synth because a pad's voice sat in the
+  same group. Each instrument now passes only through what is downstream of it, and only the shared
+  tail is written after the `stack(...)`, which is also exactly the shape the parser reads back.
+- **The code wins every disagreement.** The graph follows the code whenever typing pauses on code
+  that parses, and is written back to the code only when the canvas itself changes.
 
 ## Workflow compliance gap
 

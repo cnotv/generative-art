@@ -26,7 +26,7 @@ export { default as StrudelFlowFilterControls } from './components/controls/Stru
 export { default as StrudelFlowSpaceControls } from './components/controls/StrudelFlowSpaceControls.vue'
 export { default as StrudelFlowLevelControls } from './components/controls/StrudelFlowLevelControls.vue'
 export { default as StrudelFlowEnvelopeControls } from './components/controls/StrudelFlowEnvelopeControls.vue'
-export { default as StrudelFlowScopeControls } from './components/controls/StrudelFlowScopeControls.vue'
+export { default as StrudelFlowVisualizerControls } from './components/controls/StrudelFlowVisualizerControls.vue'
 export { default as StrudelFlowKnob } from './components/controls/StrudelFlowKnob.vue'
 export { default as StrudelFlowSelect } from './components/controls/StrudelFlowSelect.vue'
 export { default as StrudelFlowStepper } from './components/controls/StrudelFlowStepper.vue'

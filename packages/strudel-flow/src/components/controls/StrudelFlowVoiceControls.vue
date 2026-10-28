@@ -1,14 +1,29 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { STRUDEL_FLOW_SOUND_OPTIONS } from '../../config'
+import type { StrudelFlowVoiceData } from '../../types'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 
-defineProps<{
-  sound: string
+const props = defineProps<{
+  data: StrudelFlowVoiceData
 }>()
 
 const emit = defineEmits<{
-  'update:sound': [sound: string]
+  update: [data: StrudelFlowVoiceData]
 }>()
+
+const sound = computed(() => props.data.sound)
+
+// A sound read from code, such as a sample bank, stays selectable next to the synths.
+const soundOptions = computed(() =>
+  STRUDEL_FLOW_SOUND_OPTIONS.some((option) => option.value === sound.value)
+    ? STRUDEL_FLOW_SOUND_OPTIONS
+    : [...STRUDEL_FLOW_SOUND_OPTIONS, { value: sound.value, label: sound.value }]
+)
+
+const setSound = (nextSound: string): void => {
+  emit('update', { kind: 'voice', sound: nextSound })
+}
 
 const WAVEFORMS = [
   { value: 'sine', label: 'Sine', path: 'M2 16 C8 0 12 0 18 16 S28 32 34 16' },
@@ -30,7 +45,7 @@ const WAVEFORMS = [
         :aria-label="waveform.label"
         :title="waveform.label"
         :aria-pressed="sound === waveform.value"
-        @click="emit('update:sound', waveform.value)"
+        @click="setSound(waveform.value)"
       >
         <svg viewBox="0 0 36 32" aria-hidden="true">
           <path :d="waveform.path" />
@@ -40,8 +55,8 @@ const WAVEFORMS = [
     <StrudelFlowSelect
       label="Voice"
       :model-value="sound"
-      :options="STRUDEL_FLOW_SOUND_OPTIONS"
-      @update:model-value="emit('update:sound', $event)"
+      :options="soundOptions"
+      @update:model-value="setSound"
     />
   </div>
 </template>

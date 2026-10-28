@@ -20,7 +20,9 @@ export default mergeConfig(
       },
       browser: {
         enabled: true,
-        provider: playwright(),
+        // Playback tests start real audio; muted, they still count buffers without reaching
+        // whoever is wearing headphones.
+        provider: playwright({ launchOptions: { args: ['--mute-audio'] } }),
         instances: [
           {
             browser: 'chromium'

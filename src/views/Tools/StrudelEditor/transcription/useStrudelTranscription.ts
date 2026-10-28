@@ -15,7 +15,7 @@ type TranscriptionOptions = {
 }
 
 /**
- * State for turning an audio file into Strudel code: the analysis runs first, and the
+ * State for turning an audio or MIDI file into Strudel code: the analysis runs first, and the
  * code only replaces the editor's when the user asks for it.
  * @param options - the analysis runner and the editor hooks to write code and log
  * @returns reactive transcription state and its actions
@@ -31,16 +31,16 @@ export const useStrudelTranscription = (
   const sourceName = ref('')
   let latestRequest = 0
 
-  const transcribeAudioFile = async (audioFile: File): Promise<void> => {
+  const transcribeFile = async (chosenFile: File): Promise<void> => {
     latestRequest += 1
     const requestNumber = latestRequest
     const isCurrent = (): boolean => requestNumber === latestRequest
     transcriptionStatus.value = 'working'
     transcriptionProgress.value = null
     transcriptionError.value = ''
-    options.appendLog(`Transcribing ${audioFile.name}...`)
+    options.appendLog(`Transcribing ${chosenFile.name}...`)
     try {
-      const result = await options.runner(audioFile, (progress) => {
+      const result = await options.runner(chosenFile, (progress) => {
         if (isCurrent()) {
           transcriptionProgress.value = progress
         }
@@ -49,11 +49,11 @@ export const useStrudelTranscription = (
         return
       }
       transcriptionResult.value = result
-      transcribedCode.value = generateStrudelCode(result, audioFile.name)
-      sourceName.value = audioFile.name
+      transcribedCode.value = generateStrudelCode(result, chosenFile.name)
+      sourceName.value = chosenFile.name
       transcriptionStatus.value = 'done'
       options.appendLog(
-        `Transcribed ${audioFile.name}: ${result.beatsPerMinute} BPM, ${result.bars.length} bars`
+        `Transcribed ${chosenFile.name}: ${result.beatsPerMinute} BPM, ${result.bars.length} bars`
       )
     } catch (error) {
       if (!isCurrent()) {
@@ -80,7 +80,7 @@ export const useStrudelTranscription = (
     transcriptionResult,
     transcribedCode,
     transcriptionError,
-    transcribeAudioFile,
+    transcribeFile,
     loadTranscription
   }
 }

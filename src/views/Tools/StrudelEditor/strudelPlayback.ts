@@ -1,12 +1,15 @@
 import {
+  DEFAULT_CPS,
   STRUDEL_BANK_ALIASES_URL,
   STRUDEL_DRAW_TIME,
   STRUDEL_NO_DRAW_TIME,
   STRUDEL_SAMPLE_BANKS
 } from './config'
+import { downloadWavFile, renderStrudelPatternToWav } from './strudelOfflineRender'
 import type {
   StrudelEvaluationMeta,
   StrudelEvaluationResult,
+  StrudelExportOptions,
   StrudelPlayback,
   StrudelPlaybackHooks
 } from './types'
@@ -29,6 +32,7 @@ type StrudelEngine = {
   sampleBankLoader: UnknownCallable
   bankAliasLoader: UnknownCallable
   contextGetter: UnknownCallable
+  audioModule: Record<string, unknown>
   contextSetter: UnknownCallable
   scheduleHandler: unknown
   codeTranspiler: unknown
@@ -68,6 +72,8 @@ const resumeAudioContext = async (audioContext: unknown): Promise<void> => {
   await resumeFunction.call(audioContext)
 }
 
+const readCyclesPerSecond = (scheduler: unknown): number =>
+  isRecordModule(scheduler) && typeof scheduler.cps === 'number' ? scheduler.cps : DEFAULT_CPS
 // iOS mutes Web Audio while the ring switch is on silent unless the page declares itself a
 // player. Safari 17 added this switch; older browsers have no audioSession and keep the default.
 const requestPlaybackAudioSession = (): void => {
@@ -146,6 +152,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     tonalModule,
     transpilerModule,
     drawModule,
+    midiModule,
     soundfontsModule
   ]: unknown[] = await Promise.all([
     import('@strudel/core'),
@@ -154,6 +161,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     import('@strudel/tonal'),
     import('@strudel/transpiler'),
     import('@strudel/draw'),
+    import('@strudel/midi/midi.mjs'),
     import('@strudel/soundfonts')
   ])
   // Importing the editor module registers _pianoroll, _scope and the other inline widgets
@@ -182,6 +190,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
     sampleBankLoader: requireCallable(webaudioModule.samples),
     bankAliasLoader: requireCallable(webaudioModule.aliasBank),
     contextGetter: requireCallable(webaudioModule.getAudioContext),
+    audioModule: webaudioModule,
     contextSetter: requireCallable(webaudioModule.setAudioContext),
     scheduleHandler: webaudioModule.webaudioOutput,
     codeTranspiler: transpilerModule.transpiler,
@@ -191,6 +200,7 @@ const loadStrudelEngine = async (): Promise<StrudelEngine> => {
       tonalModule,
       coreModule,
       drawModule,
+      midiModule,
       { slider, sliderWithID }
     ]
   }
@@ -266,7 +276,7 @@ export const loadDefaultStrudelPlayback = async (
   await engine.audioInitializer()
   engine.synthRegistrar()
   engine.soundfontRegistrar()
-  const audioContext: unknown = await engine.contextGetter()
+  const audioContext: unknown = engine.contextGetter()
   await resumeAudioContext(audioContext)
   await loadSampleBanks(engine)
   await engine.scopeInitializer(...engine.scopeModules)
@@ -326,6 +336,29 @@ export const loadDefaultStrudelPlayback = async (
     },
     stopPlayback: async (): Promise<void> => {
       await stopFunction()
+    },
+    renderToWav: async (
+      patternCode: string,
+      exportOptions: StrudelExportOptions
+    ): Promise<StrudelEvaluationResult> => {
+      await stopFunction()
+      latestEvaluationError = null
+      const pattern: unknown = await evaluateFunction(patternCode, false)
+      if (latestEvaluationError !== null || pattern === undefined) {
+        return { success: false, errorMessage: describeError(latestEvaluationError) }
+      }
+      try {
+        const wavFile = await renderStrudelPatternToWav(
+          engine.audioModule,
+          pattern,
+          readCyclesPerSecond(replScheduler),
+          exportOptions
+        )
+        downloadWavFile(wavFile, exportOptions.fileName)
+        return { success: true }
+      } catch (error) {
+        return { success: false, errorMessage: describeError(error) }
+      }
     }
   }
 }

@@ -1,17 +1,9 @@
 <script setup lang="ts">
-import {
-  computed,
-  defineAsyncComponent,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch
-} from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { PanelRightClose, PanelRightOpen, Play, RefreshCw, Square } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
-import { STRUDEL_LICENSE_NOTE } from './config'
+import { FLOW_SYNC_DELAY_MS, STRUDEL_LICENSE_NOTE } from './config'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import { useStrudelFlow } from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
@@ -21,6 +13,7 @@ import HintsTab from './tabs/HintsTab.vue'
 import WelcomeTab from './tabs/WelcomeTab.vue'
 import PatternsTab from './tabs/PatternsTab.vue'
 import ImportTab from './tabs/ImportTab.vue'
+import MidiTab from './tabs/MidiTab.vue'
 import StrudelCodeEditor from './StrudelCodeEditor.vue'
 import ReferenceTab from './tabs/ReferenceTab.vue'
 import ExportTab from './tabs/ExportTab.vue'
@@ -58,7 +51,10 @@ const {
   transcriptionResult,
   transcribedCode,
   transcriptionError,
-  transcribeAudioFile,
+  transcribeFile,
+  exportStatus,
+  exportError,
+  exportPattern,
   loadTranscription
 } = useStrudelEditor()
 
@@ -66,66 +62,80 @@ const {
   nodes: flowNodes,
   edges: flowEdges,
   beatsPerMinute: flowBeatsPerMinute,
+  beatsPerCycle: flowBeatsPerCycle,
   compilation: flowCompilation,
   addNode: addFlowNode,
   updateNodeData: updateFlowNodeData,
   removeNode: removeFlowNode,
   connectNodes: connectFlowNodes,
   setBeatsPerMinute: setFlowBeatsPerMinute,
+  setBeatsPerCycle: setFlowBeatsPerCycle,
   resetPatch: resetFlowPatch,
   loadCode: loadFlowCode
 } = useStrudelFlow()
 
 const editorMode = ref<StrudelEditorMode>('code')
 const sidePanelCollapsed = ref(false)
-// A flow edit writes the code editor; that echo must not parse itself back into the graph.
-const skipNextCodeParse = ref(false)
 let flowPlaybackTimer: number | null = null
+let codeParseTimer: number | null = null
+
+const clearTimer = (timer: number | null): null => {
+  if (timer !== null) {
+    window.clearTimeout(timer)
+  }
+  return null
+}
 
 const scheduleFlowPlayback = (): void => {
-  if (flowPlaybackTimer !== null) {
-    window.clearTimeout(flowPlaybackTimer)
-  }
+  flowPlaybackTimer = clearTimer(flowPlaybackTimer)
   flowPlaybackTimer = window.setTimeout(() => {
     flowPlaybackTimer = null
     if (editorStatus.value === 'playing') {
       void playPattern()
     }
-  }, 300)
+  }, FLOW_SYNC_DELAY_MS)
 }
 
-/**
- * Copies a valid flow compilation into the code editor and, when asked, swaps the playing
- * pattern for it. An invalid patch keeps the last playable code and reports its error instead.
- * @param play - whether to restart playback after the code changes
- */
-const syncFlowToCode = (play = false): void => {
-  const compilation = flowCompilation.value
-  if (compilation.errorMessage !== null) {
+// The flow writes its compilation into the code; that text is already the graph.
+const isFlowEcho = (code: string): boolean => code === flowCompilation.value.code
+
+// Code is the source of truth: once typing pauses on code that parses, the graph follows it.
+loadFlowCode(patternCode.value)
+watch(patternCode, (code) => {
+  codeParseTimer = clearTimer(codeParseTimer)
+  if (isFlowEcho(code)) {
     return
   }
-  if (compilation.code !== patternCode.value) {
-    skipNextCodeParse.value = true
-    updatePatternCode(compilation.code)
+  codeParseTimer = window.setTimeout(() => {
+    codeParseTimer = null
+    loadFlowCode(code)
+  }, FLOW_SYNC_DELAY_MS)
+})
+
+// Opening the canvas mid-pause shows the code as typed, never a graph a moment behind it.
+const openFlowMode = (): void => {
+  if (codeParseTimer !== null) {
+    codeParseTimer = clearTimer(codeParseTimer)
+    loadFlowCode(patternCode.value)
   }
-  if (play) {
+  editorMode.value = 'flow'
+}
+
+// Every change made on the canvas, keyboard deletes included, writes the code and re-plays it.
+// A patch that cannot compile keeps the last playable code and shows its error instead.
+watch(
+  () => flowCompilation.value.code,
+  (compiledCode) => {
+    if (editorMode.value !== 'flow' || compiledCode.length === 0) {
+      return
+    }
+    codeParseTimer = clearTimer(codeParseTimer)
+    if (compiledCode !== patternCode.value) {
+      updatePatternCode(compiledCode)
+    }
     scheduleFlowPlayback()
   }
-}
-
-const runFlowAction = (action: () => void): void => {
-  action()
-  void nextTick(() => syncFlowToCode(true))
-}
-
-// Code is the other source of truth: typing, hints and loaded patterns rebuild the graph.
-watch(patternCode, (code) => {
-  if (skipNextCodeParse.value) {
-    skipNextCodeParse.value = false
-    return
-  }
-  loadFlowCode(code)
-})
+)
 
 const flowErrorMessage = computed(() =>
   editorMode.value === 'flow' ? flowCompilation.value.errorMessage : null
@@ -136,11 +146,21 @@ const { musicStyles, pickedStyleId, styleDetection, hints, pickStyle, applyHint 
   updatePatternCode
 )
 
-const readAnchoredPatternId = (): string => decodeURIComponent(window.location.hash.slice(1))
+const readAnchor = (): string => decodeURIComponent(window.location.hash.slice(1))
 
-// Every pattern has its own anchor, so a pattern can be linked to, and Back steps through them.
-const loadAnchoredPattern = (): void => {
-  if (selectPattern(readAnchoredPatternId())) {
+const findTab = (anchor: string): StrudelTabId | undefined =>
+  tabList.find((tab) => tab.id === anchor)?.id
+
+// Every tab and every pattern has its own anchor, so either can be linked to, and Back steps
+// through them. Tab ids never collide with pattern ids, which saved patterns prefix.
+const loadAnchor = (): void => {
+  const anchor = readAnchor()
+  const tabId = findTab(anchor)
+  if (tabId !== undefined) {
+    onTabSelected(tabId)
+    return
+  }
+  if (selectPattern(anchor)) {
     editorMode.value = 'code'
   }
 }
@@ -152,8 +172,8 @@ const onPatternSelected = (patternId: string): void => {
 }
 
 onMounted(() => {
-  loadAnchoredPattern()
-  window.addEventListener('hashchange', loadAnchoredPattern)
+  loadAnchor()
+  window.addEventListener('hashchange', loadAnchor)
 })
 
 const onPlayRequested = (): void => {
@@ -184,64 +204,35 @@ const onPlayButtonPressed = (): void => {
   onPlayRequested()
 }
 
-const onAudioFileChosen = (audioFile: File): void => {
-  void transcribeAudioFile(audioFile)
+const onFileChosen = (chosenFile: File): void => {
+  void transcribeFile(chosenFile)
 }
 
 const onEditorModeChange = (mode: string): void => {
-  if (mode === 'flow') {
-    editorMode.value = 'flow'
-    setActiveTab('flow')
-    void nextTick(() => syncFlowToCode())
+  if (mode !== 'flow') {
+    editorMode.value = 'code'
     return
   }
-  editorMode.value = 'code'
+  openFlowMode()
+  setActiveTab('flow')
 }
 
-const onTabSelected = (tabId: string): void => {
-  const nextTabId = tabId as StrudelTabId
-  setActiveTab(nextTabId)
-  if (nextTabId === 'flow') {
-    editorMode.value = 'flow'
-    void nextTick(() => syncFlowToCode())
+const onTabSelected = (tabId: StrudelTabId): void => {
+  setActiveTab(tabId)
+  if (tabId === 'flow') {
+    openFlowMode()
   }
-}
-
-const onFlowNodeAdded = (kind: Parameters<typeof addFlowNode>[0]): void => {
-  runFlowAction(() => addFlowNode(kind))
-}
-
-const onFlowNodeUpdated = (
-  nodeId: string,
-  data: Parameters<typeof updateFlowNodeData>[1]
-): void => {
-  runFlowAction(() => updateFlowNodeData(nodeId, data))
-}
-
-const onFlowNodeRemoved = (nodeId: string): void => {
-  runFlowAction(() => removeFlowNode(nodeId))
 }
 
 const onFlowNodesConnected = (sourceNodeId: string, targetNodeId: string): void => {
-  runFlowAction(() => {
-    connectFlowNodes(sourceNodeId, targetNodeId)
-  })
-}
-
-const onFlowBeatsPerMinuteChange = (beatsPerMinute: number): void => {
-  runFlowAction(() => setFlowBeatsPerMinute(beatsPerMinute))
-}
-
-const onFlowReset = (): void => {
-  runFlowAction(resetFlowPatch)
+  connectFlowNodes(sourceNodeId, targetNodeId)
 }
 
 // Before unmounting, while the code editor and its canvas are still there to clear.
 onBeforeUnmount(() => {
-  window.removeEventListener('hashchange', loadAnchoredPattern)
-  if (flowPlaybackTimer !== null) {
-    window.clearTimeout(flowPlaybackTimer)
-  }
+  window.removeEventListener('hashchange', loadAnchor)
+  flowPlaybackTimer = clearTimer(flowPlaybackTimer)
+  codeParseTimer = clearTimer(codeParseTimer)
   void stopPattern()
 })
 </script>
@@ -298,10 +289,14 @@ onBeforeUnmount(() => {
         <StrudelFlowEditor
           v-model:nodes="flowNodes"
           v-model:edges="flowEdges"
+          :beats-per-minute="flowBeatsPerMinute"
+          :beats-per-cycle="flowBeatsPerCycle"
           @connect="onFlowNodesConnected"
-          @update-node="onFlowNodeUpdated"
-          @remove-node="onFlowNodeRemoved"
-          @add-node="onFlowNodeAdded"
+          @update-node="updateFlowNodeData"
+          @remove-node="removeFlowNode"
+          @add-node="addFlowNode"
+          @update:beats-per-minute="setFlowBeatsPerMinute"
+          @update:beats-per-cycle="setFlowBeatsPerCycle"
         />
       </div>
       <p v-if="editorMode === 'code'" class="strudel-editor__hint">
@@ -322,18 +317,18 @@ onBeforeUnmount(() => {
     <section class="strudel-editor__side" aria-label="Player">
       <div class="strudel-editor__panel">
         <div class="strudel-editor__tabs" role="tablist">
-          <button
+          <a
             v-for="tab in tabList"
             :key="tab.id"
             class="strudel-editor__tab"
             :class="{ 'strudel-editor__tab--active': activeTab === tab.id }"
             role="tab"
             :aria-selected="activeTab === tab.id"
-            type="button"
+            :href="`#${tab.id}`"
             @click="onTabSelected(tab.id)"
           >
             {{ tab.label }}
-          </button>
+          </a>
         </div>
         <div class="strudel-editor__panel-content">
           <HintsTab
@@ -363,11 +358,17 @@ onBeforeUnmount(() => {
             :result="transcriptionResult"
             :code="transcribedCode"
             :error-message="transcriptionError"
-            @file="onAudioFileChosen"
+            @file="onFileChosen"
             @load="loadTranscription"
           />
+          <MidiTab v-else-if="activeTab === 'midi'" @code="updatePatternCode" />
           <ReferenceTab v-else-if="activeTab === 'reference'" />
-          <ExportTab v-else-if="activeTab === 'export'" />
+          <ExportTab
+            v-else-if="activeTab === 'export'"
+            :status="exportStatus"
+            :error-message="exportError"
+            @export="exportPattern"
+          />
           <ConsoleTab
             v-else-if="activeTab === 'console'"
             :log-entries="logEntries"
@@ -375,10 +376,8 @@ onBeforeUnmount(() => {
           />
           <FlowTab
             v-else-if="activeTab === 'flow'"
-            :beats-per-minute="flowBeatsPerMinute"
-            @add-node="onFlowNodeAdded"
-            @update:beats-per-minute="onFlowBeatsPerMinuteChange"
-            @reset="onFlowReset"
+            @add-node="addFlowNode"
+            @reset="resetFlowPatch"
           />
           <SettingsTab v-else />
         </div>
@@ -524,6 +523,7 @@ onBeforeUnmount(() => {
 
 .strudel-editor__tab {
   padding: var(--spacing-2) var(--spacing-3);
+  text-decoration: none;
   border: none;
   background: transparent;
   color: var(--color-muted-foreground);

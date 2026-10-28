@@ -5,7 +5,7 @@ import { STRUDEL_FLOW_PATCH_STORAGE_KEY } from './config'
 import { compileStrudelFlow } from './compileStrudelFlow'
 import { parseStrudelFlowPatch } from './patchStorage'
 import { useStrudelFlow } from './useStrudelFlow'
-import type { StrudelFlowState } from './useStrudelFlow'
+import type { StrudelFlowState } from './types'
 
 const scopes: EffectScope[] = []
 
@@ -19,6 +19,8 @@ const createFlow = (): StrudelFlowState => {
   return flow
 }
 
+const STARTER_IDS = ['pad-starter', 'voice-starter', 'filter-starter']
+
 const readStoredPatch = (): ReturnType<typeof parseStrudelFlowPatch> =>
   parseStrudelFlowPatch(localStorage.getItem(STRUDEL_FLOW_PATCH_STORAGE_KEY))
 
@@ -31,13 +33,13 @@ describe('useStrudelFlow', () => {
     scopes.splice(0).forEach((scope) => scope.stop())
   })
 
-  it('starts from the pad and filter starter patch', () => {
+  it('starts from the pad, voice and filter starter patch', () => {
     // Arrange / Act
     const flow = createFlow()
 
     // Assert
-    expect(flow.nodes.value.map((node) => node.id)).toEqual(['pad-starter', 'filter-starter'])
-    expect(flow.edges.value).toHaveLength(1)
+    expect(flow.nodes.value.map((node) => node.id)).toEqual(STARTER_IDS)
+    expect(flow.edges.value).toHaveLength(2)
     expect(flow.beatsPerMinute.value).toBe(120)
     expect(flow.compilation.value.code).toContain('setcpm(120/4)')
     expect(flow.compilation.value.errorMessage).toBeNull()
@@ -58,8 +60,7 @@ describe('useStrudelFlow', () => {
               key: 'A',
               octave: 4,
               scaleType: 'minor',
-              chordProgression: [0, 5, 3, 4],
-              sound: 'sine'
+              chordProgression: [0, 5, 3, 4]
             }
           }
         ],
@@ -75,7 +76,7 @@ describe('useStrudelFlow', () => {
     expect(flow.nodes.value.map((node) => node.id)).toEqual(['chords-1'])
     expect(flow.beatsPerMinute.value).toBe(96)
     expect(flow.compilation.value.code).toContain(
-      'n("<[0,2,4] [5,7,9] [3,5,7] [4,6,8]>").scale("A4:minor").sound("sine")'
+      'n("<[0,2,4] [5,7,9] [3,5,7] [4,6,8]>").scale("A4:minor")'
     )
   })
 
@@ -90,8 +91,7 @@ describe('useStrudelFlow', () => {
 
     // Assert
     expect(flow.nodes.value.map((node) => node.id)).toEqual([
-      'pad-starter',
-      'filter-starter',
+      ...STARTER_IDS,
       'beats-1',
       'beats-2',
       'pad-1'
@@ -120,12 +120,11 @@ describe('useStrudelFlow', () => {
       key: 'G',
       scaleType: 'major',
       grid,
-      columnModifiers: {},
-      sound: 'sine'
+      columnModifiers: {}
     })
 
     // Assert
-    expect(flow.compilation.value.code).toContain('n("[0 2]").scale("G4:major").sound("sine")')
+    expect(flow.compilation.value.code).toContain('n("[0 2]").scale("G4:major").sound("triangle")')
   })
 
   it('rebuilds the graph from code and keeps the node positions', () => {
@@ -138,34 +137,39 @@ describe('useStrudelFlow', () => {
     flow.loadCode(compiledCode)
 
     // Assert
-    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['pad', 'filter'])
+    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['pad', 'voice', 'filter'])
     expect(flow.nodes.value[0]?.position).toEqual(firstPosition)
     expect(flow.compilation.value.code).toBe(compiledCode)
   })
 
-  it('keeps an unrecognized expression as a Code node', () => {
+  it('keeps an unrecognized pattern head as a Code node and its calls as effects', () => {
     // Arrange
     const flow = createFlow()
-    const source = ['setcpm(120/4)', '$: (', 'note("c3 e3").sound("sine").slow(2)', ')'].join('\n')
+    const source = ['setcpm(120/4)', '$: n(run(8)).fast(2)'].join('\n')
 
     // Act
     flow.loadCode(source)
 
     // Assert
-    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['code'])
-    expect(flow.compilation.value.code).toBe(source)
+    expect(flow.nodes.value.map((node) => node.data.kind)).toEqual(['code', 'effect'])
+    expect(flow.compilation.value.code).toBe('setcpm(120/4)\n$: (n(run(8))).fast(2)')
   })
 
-  it('leaves the graph alone when the code has nothing to parse', () => {
+  it('empties the graph for empty code and keeps it while the code has a syntax error', () => {
     // Arrange
     const flow = createFlow()
     const nodeIds = flow.nodes.value.map((node) => node.id)
 
     // Act
-    flow.loadCode('   ')
+    const loadedBrokenCode = flow.loadCode('$: note("c3"')
+    const nodeIdsAfterBrokenCode = flow.nodes.value.map((node) => node.id)
+    const loadedEmptyCode = flow.loadCode('   ')
 
     // Assert
-    expect(flow.nodes.value.map((node) => node.id)).toEqual(nodeIds)
+    expect(loadedBrokenCode).toBe(false)
+    expect(nodeIdsAfterBrokenCode).toEqual(nodeIds)
+    expect(loadedEmptyCode).toBe(true)
+    expect(flow.nodes.value).toEqual([])
   })
 
   it('connects a new instrument to the starter filter once', () => {
@@ -182,7 +186,7 @@ describe('useStrudelFlow', () => {
     expect(firstConnection).toBe(true)
     expect(duplicateConnection).toBe(false)
     expect(instrumentConnection).toBe(false)
-    expect(flow.edges.value).toHaveLength(2)
+    expect(flow.edges.value).toHaveLength(3)
     expect(flow.compilation.value.code).toContain('stack(')
     expect(flow.compilation.value.code).toContain('.lpf(1500)')
   })
@@ -198,12 +202,14 @@ describe('useStrudelFlow', () => {
 
     // Assert
     expect(closesLoop).toBe(false)
-    expect(flow.edges.value).toHaveLength(2)
+    expect(flow.edges.value).toHaveLength(3)
     expect(
       compileStrudelFlow({
         nodes: flow.nodes.value,
         edges: flow.edges.value,
-        beatsPerMinute: flow.beatsPerMinute.value
+        beatsPerMinute: flow.beatsPerMinute.value,
+        beatsPerCycle: flow.beatsPerCycle.value,
+        setup: ''
       }).errorMessage
     ).toBeNull()
   })
@@ -216,8 +222,8 @@ describe('useStrudelFlow', () => {
     flow.removeNode('filter-starter')
 
     // Assert
-    expect(flow.nodes.value.map((node) => node.id)).toEqual(['pad-starter'])
-    expect(flow.edges.value).toEqual([])
+    expect(flow.nodes.value.map((node) => node.id)).toEqual(['pad-starter', 'voice-starter'])
+    expect(flow.edges.value).toHaveLength(1)
   })
 
   it.each([
@@ -245,15 +251,20 @@ describe('useStrudelFlow', () => {
     flow.setBeatsPerMinute(140)
     await nextTick()
     const storedPatch = readStoredPatch()
-    flow.removeNode('pad-starter')
-    flow.removeNode('filter-starter')
+    STARTER_IDS.forEach(flow.removeNode)
     flow.removeNode('space-1')
     await nextTick()
 
     // Assert
     expect(storedPatch?.beatsPerMinute).toBe(140)
-    expect(storedPatch?.nodes).toHaveLength(3)
-    expect(readStoredPatch()).toEqual({ nodes: [], edges: [], beatsPerMinute: 140 })
+    expect(storedPatch?.nodes).toHaveLength(4)
+    expect(readStoredPatch()).toEqual({
+      nodes: [],
+      edges: [],
+      beatsPerMinute: 140,
+      beatsPerCycle: 4,
+      setup: ''
+    })
   })
 
   it('resets the patch and tempo to the starter state', async () => {
@@ -268,8 +279,8 @@ describe('useStrudelFlow', () => {
     await nextTick()
 
     // Assert
-    expect(flow.nodes.value.map((node) => node.id)).toEqual(['pad-starter', 'filter-starter'])
-    expect(flow.edges.value).toHaveLength(1)
+    expect(flow.nodes.value.map((node) => node.id)).toEqual(STARTER_IDS)
+    expect(flow.edges.value).toHaveLength(2)
     expect(flow.beatsPerMinute.value).toBe(120)
     expect(readStoredPatch()?.beatsPerMinute).toBe(120)
   })

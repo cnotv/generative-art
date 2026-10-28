@@ -24,8 +24,8 @@ describe('StrudelFlowKnob', () => {
     expect(input.attributes('max')).toBe('20000')
     expect(input.attributes('step')).toBe('10')
     expect(input.element.value).toBe('1500')
-    expect(wrapper.text()).toContain('1500')
-    expect(wrapper.text()).toContain('Hz')
+    expect(input.attributes('aria-valuetext')).toBe('1.50kHz')
+    expect(wrapper.get('.strudel-flow-knob__value').text()).toBe('1.50k')
   })
 
   it('emits the numeric value when the range input changes', async () => {
@@ -37,11 +37,13 @@ describe('StrudelFlowKnob', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([[4000]])
   })
 
-  it('turns the indicator to the value angle', () => {
+  it('turns the pointer to the value angle and fills the track up to it', () => {
     const wrapper = mountKnob()
     const indicator = wrapper.get('.strudel-flow-knob__indicator')
+    const fill = wrapper.get('.strudel-flow-knob__fill')
 
     // (1500 - 20) / (20000 - 20) through a 270-degree sweep that starts at -135.
-    expect(indicator.attributes('style')).toContain('rotate(-115deg)')
+    expect(indicator.attributes('transform')).toBe('rotate(-115 50 50)')
+    expect(Number.parseFloat(fill.attributes('stroke-dasharray') ?? '')).toBeCloseTo(7.41, 1)
   })
 })

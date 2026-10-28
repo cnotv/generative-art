@@ -9,6 +9,8 @@ import '@vue-flow/controls/dist/style.css'
 import '../styles/flowCanvas.scss'
 import StrudelFlowNode from './StrudelFlowNode.vue'
 import StrudelFlowRadialMenu from './StrudelFlowRadialMenu.vue'
+import StrudelFlowToolbar from './StrudelFlowToolbar.vue'
+import { STRUDEL_FLOW_REFERENCE } from '../config'
 import { canUseStrudelFlowConnection } from '../connections'
 import type {
   StrudelFlowEdge,
@@ -20,6 +22,8 @@ import type {
 const props = defineProps<{
   nodes: StrudelFlowNodeType[]
   edges: StrudelFlowEdge[]
+  beatsPerMinute: number
+  beatsPerCycle: number
 }>()
 
 const emit = defineEmits<{
@@ -29,6 +33,8 @@ const emit = defineEmits<{
   'update-node': [nodeId: string, data: StrudelFlowNodeData]
   'remove-node': [nodeId: string]
   'add-node': [kind: StrudelFlowNodeKind]
+  'update:beatsPerMinute': [beatsPerMinute: number]
+  'update:beatsPerCycle': [beatsPerCycle: number]
 }>()
 
 const DEFAULT_EDGE_OPTIONS = { type: 'default' }
@@ -127,6 +133,22 @@ const openRadialMenu = (): void => {
         />
       </template>
     </VueFlow>
+    <StrudelFlowToolbar
+      :beats-per-minute="beatsPerMinute"
+      :beats-per-cycle="beatsPerCycle"
+      @update:beats-per-minute="emit('update:beatsPerMinute', $event)"
+      @update:beats-per-cycle="emit('update:beatsPerCycle', $event)"
+    />
     <StrudelFlowRadialMenu ref="radialMenu" @add="onAddNode" />
+    <p class="strudel-flow-credit">
+      After
+      <a :href="STRUDEL_FLOW_REFERENCE.url" target="_blank" rel="noopener">
+        {{ STRUDEL_FLOW_REFERENCE.name }}
+      </a>
+      by
+      <a :href="STRUDEL_FLOW_REFERENCE.authorUrl" target="_blank" rel="noopener">
+        {{ STRUDEL_FLOW_REFERENCE.author }}
+      </a>
+    </p>
   </div>
 </template>
