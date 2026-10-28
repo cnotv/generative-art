@@ -211,8 +211,9 @@ All of Strudel's visuals live in one **Visualizer** node: the visual itself, a l
 type, and a toggle for whether it draws **under the line** (`._punchcard()`) or **behind the
 code** (`.punchcard()`). Any visual call in the code, with or without the underscore, reads back as
 a Visualizer with that type picked, and options such as `{ labels: 1 }` written in the code are
-kept. While the pattern plays the node draws the visual live; behind the code it shows the canvas
-every background visual shares. A visual only draws the pattern, so calls chained after it go on
+kept. While the pattern plays the node draws the visual live: under the line it sits in the node,
+and behind the code it fills the node's full width and height behind its controls, showing the
+canvas every background visual shares. A visual only draws the pattern, so calls chained after it go on
 an Effect node of their own rather than onto the Visualizer.
 
 A call with no dedicated node, such as `.mask("<1 1 1 0>")`, `.sometimesBy(.2, x => x.ply(2))` or

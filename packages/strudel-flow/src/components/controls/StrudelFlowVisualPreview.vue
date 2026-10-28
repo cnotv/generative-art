@@ -13,6 +13,9 @@ const previewCanvas = ref<HTMLCanvasElement | null>(null)
 const isMirroring = ref(false)
 let frameRequest: number | null = null
 
+// Behind the code, the visual fills the node behind its controls instead of sitting in them.
+const isBackdrop = computed(() => props.placement === 'background')
+
 const message = computed(() =>
   props.widgetId === null && props.placement === 'inline'
     ? 'Connect an instrument to draw its visual here.'
@@ -64,7 +67,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="strudel-flow-visual-preview">
+  <div
+    class="strudel-flow-visual-preview"
+    :class="{ 'strudel-flow-visual-preview--backdrop': isBackdrop }"
+  >
     <canvas
       v-show="isMirroring"
       ref="previewCanvas"
@@ -72,6 +78,6 @@ onBeforeUnmount(() => {
       role="img"
       aria-label="Live visual of the pattern"
     />
-    <p v-if="!isMirroring" class="strudel-flow-visualizer__hint">{{ message }}</p>
+    <p v-if="!isMirroring && !isBackdrop" class="strudel-flow-visualizer__hint">{{ message }}</p>
   </div>
 </template>

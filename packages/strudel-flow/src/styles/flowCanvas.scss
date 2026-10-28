@@ -1423,6 +1423,41 @@
   gap: var(--spacing-2);
 }
 
+/* Behind the code: the visual fills the node's full width, and its height follows the node. */
+.strudel-flow-visual-preview--backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.strudel-flow-visual-preview--backdrop .strudel-flow-visual-preview__canvas {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: fill;
+  border-radius: inherit;
+  background: transparent;
+  opacity: 0.55;
+}
+
+.strudel-flow-node[data-node-kind='visualizer'] {
+  position: relative;
+}
+
+.strudel-flow-node[data-node-kind='visualizer'] > .strudel-flow-node__header,
+.strudel-flow-node[data-node-kind='visualizer'] > .strudel-flow-node__body {
+  position: relative;
+  z-index: 1;
+}
+
+.strudel-flow-node[data-node-kind='visualizer']:has(.strudel-flow-visual-preview--backdrop)
+  .strudel-flow-node__body {
+  background: transparent;
+}
+
 /* The app pins every canvas full-size and absolute for its 3D views. */
 .strudel-flow-visual-preview__canvas {
   position: static;

@@ -118,6 +118,11 @@ const onRemove = (): void => {
     }"
     :data-node-kind="data.kind"
   >
+    <StrudelFlowVisualPreview
+      v-if="data.kind === 'visualizer' && data.placement === 'background'"
+      :placement="data.placement"
+      :widget-id="visualWidgetId"
+    />
     <Handle
       v-if="!isInstrument"
       type="target"
@@ -189,7 +194,7 @@ const onRemove = (): void => {
     <pre v-if="isCodeVisible" class="strudel-flow-node__code nodrag">{{ nodeCode }}</pre>
     <div class="strudel-flow-node__body nodrag">
       <StrudelFlowVisualPreview
-        v-if="data.kind === 'visualizer'"
+        v-if="data.kind === 'visualizer' && data.placement === 'inline'"
         :placement="data.placement"
         :widget-id="visualWidgetId"
       />
