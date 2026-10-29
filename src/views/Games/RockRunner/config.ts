@@ -507,3 +507,4 @@ export const ROLL_MIN_RATE = 0.7
 export const ROLL_MAX_RATE = 1.4
 export const BUMP_VOLUME = 0.7
 export const FALL_VOLUME = 1
+export const ROLL_LEVEL_STEPS = 20

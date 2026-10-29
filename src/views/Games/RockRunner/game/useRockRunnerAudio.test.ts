@@ -75,4 +75,15 @@ describe('useRockRunnerAudio', () => {
     expect(rumble.volume).toBe(SOUND_EFFECT_VOLUME)
     expect(rumble.playbackRate).toBeGreaterThan(1)
   })
+
+  it('leaves the rumble alone while the level has not moved a step', () => {
+    const audio = useRockRunnerAudio()
+    audio.setRolling(0.5)
+    const rumble = play.mock.contexts[0] as HTMLAudioElement
+    const settings = { volume: rumble.volume, rate: rumble.playbackRate }
+
+    audio.setRolling(0.501)
+
+    expect({ volume: rumble.volume, rate: rumble.playbackRate }).toEqual(settings)
+  })
 })

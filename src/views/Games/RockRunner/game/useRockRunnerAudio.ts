@@ -9,6 +9,7 @@ import {
   BUMP_VOLUME,
   FALL_VOLUME,
   ROLL_MAX_RATE,
+  ROLL_LEVEL_STEPS,
   ROLL_MIN_RATE,
   RUN_THEME_VOLUME,
   SOUND_EFFECT_VOLUME
@@ -33,10 +34,17 @@ export const useRockRunnerAudio = () => {
   const theme = createLoopingElement(runTheme, RUN_THEME_VOLUME)
   const rolling = createLoopingElement(rollSound, 0)
 
+  // Called every frame, but a media element is only touched when the level moves a step: setting
+  // playbackRate each frame makes the browser re-plan playback for no audible gain.
+  const lastRollingStep = { value: -1 }
   const setRolling = (level: number): void => {
-    rolling.volume = level * SOUND_EFFECT_VOLUME
-    rolling.playbackRate = ROLL_MIN_RATE + level * (ROLL_MAX_RATE - ROLL_MIN_RATE)
-    if (level > 0 && rolling.paused) rolling.play().catch(() => undefined)
+    const step = Math.round(level * ROLL_LEVEL_STEPS)
+    if (step === lastRollingStep.value) return
+    lastRollingStep.value = step
+    const steppedLevel = step / ROLL_LEVEL_STEPS
+    rolling.volume = steppedLevel * SOUND_EFFECT_VOLUME
+    rolling.playbackRate = ROLL_MIN_RATE + steppedLevel * (ROLL_MAX_RATE - ROLL_MIN_RATE)
+    if (step > 0 && rolling.paused) rolling.play().catch(() => undefined)
   }
 
   return {
