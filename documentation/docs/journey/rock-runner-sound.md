@@ -5,7 +5,8 @@ sidebar_position: 119
 # The sound of Rock Runner
 
 The first soundtrack was a square wave arpeggio over a drum machine, and the second, a slow
-pad drone, was too still for a platformer. The first was in tune and on the
+pad drone, was too still for a platformer, and a third at 112 beats a minute was still not
+energetic enough for a running game. The first was in tune and on the
 beat and it sounded like a different game: Rock Runner is a heavy stone rolling through a
 wood, drawn in ink on cream paper, and nothing about 8-bit chip music says any of that.
 This page fixes the atmosphere before any sound is made, so each sound can be judged against it
@@ -14,17 +15,17 @@ rather than against taste on the day.
 ## Atmosphere
 
 A **quiet forest, seen from low down, with a great weight moving through it**. Calm and
-slightly ominous, but always moving: the rock is unstoppable and a platformer needs forward
-drive. Soft and organic
+slightly ominous, but always moving: the rock is unstoppable and a running game needs forward
+drive and energy. Soft and organic
 rather than bright and electronic.
 
-| Quality        | Means                                                                                  | Rules out                                     |
-| -------------- | -------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Natural        | wind, wood, breath, bells of wood and glass, slow soft pads                            | square and saw leads, chip arpeggios          |
-| Spacious       | long attacks, long releases, a lot of reverb                                           | dry, tight, rhythmic loops                    |
-| Weighty        | low frequencies carry the rock; the highs are small and far away                       | thin or high sound for anything the rock does |
-| Moving         | about 112 beats a minute: soft wooden percussion and a rolling kalimba carry the pulse | a still drone the player outruns, a drum kit  |
-| Gently ominous | a minor, open harmony that never fully resolves                                        | bright major fanfares                         |
+| Quality        | Means                                                                                                                                            | Rules out                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Natural        | wind, wood, breath, bells of wood and glass, slow soft pads                                                                                      | square and saw leads, chip arpeggios            |
+| Spacious       | long attacks, long releases, a lot of reverb                                                                                                     | dry, tight, rhythmic loops                      |
+| Weighty        | low frequencies carry the rock; the highs are small and far away                                                                                 | thin or high sound for anything the rock does   |
+| Energetic      | about 140 beats a minute: a steady wooden pulse, a running bass and a fast kalimba arpeggio, so the song keeps pace with a player who is running | a still drone the player outruns, or a drum kit |
+| Gently ominous | a minor, open harmony that never fully resolves                                                                                                  | bright major fanfares                           |
 
 ## Two layers
 

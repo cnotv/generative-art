@@ -1,13 +1,14 @@
-setcpm(28)
+setcpm(35)
 stack(
   note("<[a2,e3,a3,c4] [f2,c3,f3,a3] [c3,g3,c4,e4] [g2,d3,g3,b3]>")
-    .s("gm_pad_warm").attack(0.3).release(1).gain(0.4).room(0.8).lpf(1800),
-  note("<a1 f1 c2 g1>").struct("x ~ x x").s("gm_acoustic_bass").gain(0.6).lpf(500),
-  note("c2 ~ ~ c2 ~ ~ c2 ~").s("gm_taiko_drum").gain(0.55).room(0.4),
-  note("~ c5 ~ c5").s("gm_woodblock").gain(0.25).room(0.3),
-  note("<[a3 c4 e4 a4] [f3 a3 c4 f4] [c4 e4 g4 c5] [g3 b3 d4 g4]>*2")
-    .s("gm_kalimba").gain(0.4).room(0.7),
-  note("~ e5 ~ ~ ~ ~ d5 ~ ~ ~ c5 ~ ~ ~ ~ ~ ~ a4 ~ ~ ~ ~ ~ ~ ~ ~ e5 ~ ~ ~ ~ ~")
-    .slow(4).s("gm_flute").gain(0.3).room(0.9).delay(0.35).delaytime(0.5).delayfeedback(0.4),
-  s("pink").lpf(sine.range(250, 900).slow(8)).gain(0.08).room(0.6)
+    .s("gm_pad_warm").attack(0.1).release(0.6).gain(0.35).room(0.6).lpf(2200),
+  note("<a1 f1 c2 g1>*8").s("gm_acoustic_bass").gain(0.6).lpf(600),
+  note("c2*4").s("gm_taiko_drum").gain(0.7).room(0.3),
+  note("[~ c5]*4").s("gm_woodblock").gain(0.35).room(0.2),
+  s("shaker_small*8").gain(0.3).hpf(2000),
+  note("<[a3 c4 e4 a4] [f3 a3 c4 f4] [c4 e4 g4 c5] [g3 b3 d4 g4]>*4")
+    .s("gm_kalimba").gain(0.4).room(0.5),
+  note("<[e5 ~ d5 e5] [c5 ~ a4 c5] [e5 g5 e5 d5] [d5 ~ b4 d5]>*2")
+    .s("gm_flute").gain(0.35).room(0.7).delay(0.3).delaytime(0.2).delayfeedback(0.35),
+  s("pink").lpf(sine.range(400, 1400).slow(4)).gain(0.05).room(0.5)
 )
