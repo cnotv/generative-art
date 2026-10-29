@@ -84,6 +84,35 @@ describe('useFullscreen', () => {
     expect(isFullscreen.value).toBe(true)
   })
 
+  it('enters fullscreen on the given element instead of the page', async () => {
+    // Arrange
+    const { requestFullscreen: pageRequest } = installFullscreenApi()
+    const target = document.createElement('div')
+    const targetRequest = vi.fn(() => Promise.resolve())
+    Object.defineProperty(target, 'requestFullscreen', { value: targetRequest })
+    const { toggleFullscreen } = useFullscreen(() => target)
+
+    // Act
+    await toggleFullscreen()
+
+    // Assert
+    expect(targetRequest).toHaveBeenCalledOnce()
+    expect(pageRequest).not.toHaveBeenCalled()
+  })
+
+  it('is not fullscreen when another element is the fullscreen one', () => {
+    // Arrange
+    installFullscreenApi()
+    const target = document.createElement('div')
+    setFullscreenElement(document.documentElement)
+
+    // Act
+    const { isFullscreen } = useFullscreen(() => target)
+
+    // Assert
+    expect(isFullscreen.value).toBe(false)
+  })
+
   it('does nothing when asked to toggle without support', async () => {
     // Arrange
     const { toggleFullscreen, isFullscreen } = useFullscreen()

@@ -1,19 +1,26 @@
 import { getCurrentScope, onScopeDispose, ref } from 'vue'
 
-const isDocumentFullscreen = (): boolean => document.fullscreenElement !== null
+const pageElement = (): HTMLElement => document.documentElement
 
 /**
- * Toggles fullscreen on the whole page, so overlays stay on top of the game.
+ * Toggles fullscreen on one element, the whole page by default so overlays stay on top.
  * The state follows the browser, which also leaves fullscreen on Escape.
- * @returns whether fullscreen is available, whether it is on, and a toggle
+ * @param getTarget - the element to show fullscreen; the page when omitted
+ * @returns whether fullscreen is available, whether the target is fullscreen, and a toggle
  */
-export const useFullscreen = () => {
+export const useFullscreen = (getTarget: () => HTMLElement | null = pageElement) => {
   // iPhone Safari has no Fullscreen API for pages; the button hides itself there.
   const isSupported = ref(document.fullscreenEnabled === true)
-  const isFullscreen = ref(isDocumentFullscreen())
+
+  const isTargetFullscreen = (): boolean => {
+    const target = getTarget()
+    return target !== null && document.fullscreenElement === target
+  }
+
+  const isFullscreen = ref(isTargetFullscreen())
 
   const syncState = (): void => {
-    isFullscreen.value = isDocumentFullscreen()
+    isFullscreen.value = isTargetFullscreen()
   }
 
   document.addEventListener('fullscreenchange', syncState)
@@ -22,10 +29,9 @@ export const useFullscreen = () => {
   }
 
   const toggleFullscreen = async (): Promise<void> => {
-    if (!isSupported.value) return
-    await (isDocumentFullscreen()
-      ? document.exitFullscreen()
-      : document.documentElement.requestFullscreen())
+    const target = getTarget()
+    if (!isSupported.value || target === null) return
+    await (isTargetFullscreen() ? document.exitFullscreen() : target.requestFullscreen())
   }
 
   return { isSupported, isFullscreen, toggleFullscreen }

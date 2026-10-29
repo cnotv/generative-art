@@ -4,6 +4,8 @@ import {
   Boxes,
   CircleHelp,
   Download,
+  Maximize,
+  Minimize,
   Music,
   Settings,
   Terminal,
@@ -16,6 +18,7 @@ import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { FLOW_SYNC_DELAY_MS, STRUDEL_LICENSE_NOTE } from './config'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import { useStrudelFlow } from '@webgamekit/strudel-flow'
+import { useFullscreen } from '@/composables/useFullscreen'
 import { useStrudelEditor } from './useStrudelEditor'
 import { useStrudelHints } from './hints/useStrudelHints'
 import { readStrudelNoteBars } from './noteBars'
@@ -268,6 +271,14 @@ const toolbarTools = [
   { id: 'hints', label: 'Hints', icon: CircleHelp }
 ] as const satisfies { id: StrudelTabId; label: string; icon: unknown }[]
 
+// Only the editor goes fullscreen, so the app navigation is left out of it.
+const editorRoot = ref<HTMLElement | null>(null)
+const {
+  isSupported: fullscreenSupported,
+  isFullscreen,
+  toggleFullscreen
+} = useFullscreen(() => editorRoot.value)
+
 const visibleTools = computed(() =>
   toolbarTools.filter((tool) => tool.id !== 'flow' || editorMode.value === 'flow')
 )
@@ -288,7 +299,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="strudel-editor" :class="{ 'strudel-editor--drawer-open': activeTab !== null }">
+  <div
+    ref="editorRoot"
+    class="strudel-editor"
+    :class="{
+      'strudel-editor--drawer-open': activeTab !== null,
+      'strudel-editor--fullscreen': isFullscreen
+    }"
+  >
     <section class="strudel-editor__code" aria-label="Code">
       <header class="strudel-editor__code-header">
         <div class="strudel-editor__toolbar" role="toolbar" aria-label="Editor tools">
@@ -304,6 +322,19 @@ onBeforeUnmount(() => {
             @click="toggleDrawer(tool.id)"
           >
             <component :is="tool.icon" aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            v-if="fullscreenSupported"
+            size="md"
+            variant="ghost"
+            :active="isFullscreen"
+            :title="isFullscreen ? 'Leave fullscreen' : 'Enter fullscreen'"
+            :aria-label="isFullscreen ? 'Leave fullscreen' : 'Enter fullscreen'"
+            :aria-pressed="isFullscreen"
+            @click="toggleFullscreen"
+          >
+            <Minimize v-if="isFullscreen" aria-hidden="true" />
+            <Maximize v-else aria-hidden="true" />
           </IconButton>
         </div>
         <div class="strudel-editor__mode" role="group" aria-label="Editor mode">
@@ -454,6 +485,12 @@ onBeforeUnmount(() => {
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: 'code';
   gap: var(--spacing-4);
+}
+
+/* The app navigation is not part of the fullscreen element, so its clearance goes too. */
+.strudel-editor--fullscreen {
+  padding-top: var(--spacing-4);
+  background: var(--color-background);
 }
 
 .strudel-editor--drawer-open {
