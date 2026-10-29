@@ -24,6 +24,7 @@ import { Video, LogOut } from 'lucide-vue-next'
 import { isMobile } from '@webgamekit/controls'
 import TouchControl from '@/components/TouchControl.vue'
 import { useRockRun } from './game/useRockRun'
+import { useRockRunnerAudio } from './game/useRockRunnerAudio'
 import { useRockRunnerSession } from './useRockRunnerSession'
 import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
 import RockRunnerRules from './wizard/RockRunnerRules.vue'
@@ -124,6 +125,8 @@ const sortedPeerIds = computed(() => Object.keys(store.players).sort())
 const spawnGateCount = computed(() => Math.max(1, sortedPeerIds.value.length))
 const spawnGateIndex = computed(() => Math.max(0, sortedPeerIds.value.indexOf(localId())))
 
+const audio = useRockRunnerAudio()
+
 const run = useRockRun({
   canvas: runCanvas,
   routeName: String(useRoute().name ?? 'RockRunner'),
@@ -137,6 +140,7 @@ const run = useRockRun({
   spawnGateCount,
   spawnGateIndex,
   onExit: () => requestExitGame(),
+  onJump: audio.playJump,
   onPositionUpdate: (pos) => {
     store.setDistance(localId(), pos.d)
     if (!store.solo) session.broadcastRockPos(pos)
@@ -265,6 +269,12 @@ const sidebarPlayers = computed((): MultiplayerPlayer[] =>
   }))
 )
 
+watch(phase, (newPhase, oldPhase) => {
+  if (newPhase === 'run') audio.startTheme()
+  else audio.stopTheme()
+  if (newPhase === 'summary' && oldPhase === 'run') audio.playFinish()
+})
+
 watch(phase, async (newPhase, oldPhase) => {
   if (newPhase === 'run') {
     if (oldPhase === 'run' || oldPhase === 'summary') run.destroy()
@@ -278,6 +288,8 @@ watch(phase, async (newPhase, oldPhase) => {
 })
 
 const RR_FONT_KEY = 'rr-font'
+
+onUnmounted(audio.stopTheme)
 
 onMounted(() => {
   store.reset()

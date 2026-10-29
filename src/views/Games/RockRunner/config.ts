@@ -494,3 +494,6 @@ export const DISTANCE_BROADCAST_MS = 120
 
 export const CONFIG_STORAGE_KEY = 'rock-runner-lobby-config'
 export const MATCHMAKER_ROOM = 'rock-runner-matchmaker'
+
+export const RUN_THEME_VOLUME = 0.35
+export const SOUND_EFFECT_VOLUME = 0.6

@@ -1,0 +1,8 @@
+setcpm(30)
+stack(
+  s("bd [~ bd] sd [~ bd]").bank("RolandTR808").gain(0.9),
+  s("hh*8").bank("RolandTR808").gain(0.35),
+  note("<c2 c2 ab1 bb1>*4").s("sawtooth").lpf(400).gain(0.5).release(0.15),
+  note("<[c4 eb4 g4 eb4] [c4 eb4 g4 bb4] [ab3 c4 eb4 c4] [bb3 d4 f4 d4]>*2")
+    .s("triangle").gain(0.4).release(0.2).room(0.3)
+)

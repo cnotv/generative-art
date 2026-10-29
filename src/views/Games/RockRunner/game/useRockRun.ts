@@ -156,6 +156,7 @@ export type UseRockRunDeps = {
   seed: Ref<number>
   onBack?: () => void
   onExit?: () => void
+  onJump?: () => void
   runStartTime?: Ref<number | null>
   onPositionUpdate?: (pos: RockPosPayload) => void
   localPlayerName?: Ref<string>
@@ -534,7 +535,7 @@ const createStageDriver = (state: RunState) => (): void => {
 }
 
 const createJumpAction =
-  (state: RunState) =>
+  (state: RunState, onJump?: () => void) =>
   (delta: number): void => {
     if (!state.rock || !state.controls || !state.path || !state.rockConfig) return
     const body = state.rock.userData.body
@@ -559,6 +560,7 @@ const createJumpAction =
     scratchImpulse.y = rock.jumpImpulse
     scratchImpulse.z = 0
     body.applyImpulse(scratchImpulse, true)
+    onJump?.()
     // Both graces are spent, or the same press would keep firing on the way up.
     state.jumpGate = { buffer: 0, coyote: 0, cooldown: rock.jumpCooldown }
   }
@@ -753,7 +755,7 @@ const createRunActions = (
 ) => {
   const startGate = createStartGate(state)
   const emitDebris = createDebrisEmitter(state)
-  const applyJump = createJumpAction(state)
+  const applyJump = createJumpAction(state, deps.onJump)
   const applyDrive = createDriveAction(state)
   const advanceStage = createStageDriver(state)
 

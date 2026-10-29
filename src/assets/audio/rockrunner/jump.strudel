@@ -1,0 +1,2 @@
+setcpm(60)
+note("c4 g4 c5").s("square").fast(3).lpf(2500).gain(0.35).release(0.08).slow(1)
