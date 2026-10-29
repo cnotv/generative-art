@@ -1,6 +1,6 @@
 setcpm(30)
 stack(
-  s("crackle").density(0.35).hpf(600).attack(0).release(0).gain(0.25),
-  s("pink").bpf(520).bpq(12).attack(0).release(0).gain(2.5),
-  s("brown").lpf(140).attack(0).release(0).gain(0.25)
+  s("brown").lpf(180).tremolo(7).tremolodepth(0.7).attack(0).release(0).gain(1.2),
+  note("a1").s("sawtooth").lpf(200).tremolo(5).tremolodepth(0.6).attack(0).release(0).gain(0.5),
+  s("brown").hpf(120).lpf(900).tremolo(9).tremolodepth(0.9).attack(0).release(0).gain(0.9)
 )

@@ -46,19 +46,21 @@ own motion, every frame, so a sound is always the size of the thing that happene
 
 ## What each rock sound is
 
-| Sound   | Made of                                                                     | Driven by                                        |
-| ------- | --------------------------------------------------------------------------- | ------------------------------------------------ |
-| Rolling | a pitched, gritty rattle: crackle clicks over a resonant noise band, looped | volume and pitch follow speed; silent in the air |
-| Bump    | a short wooden thud with a little stone grit                                | how much speed a single frame lost sideways      |
-| Fall    | a dry, dense thud: a short low sine, a stone crack and a brief tremble      | how fast the rock was falling when it landed     |
-| Finish  | a soft music box chime over a warm pad                                      | the run ending                                   |
+| Sound   | Made of                                                                      | Driven by                                        |
+| ------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
+| Rolling | a low rumble: dark noise pulsing like the rock turning, with a little gravel | volume and pitch follow speed; silent in the air |
+| Bump    | a short wooden thud with a little stone grit                                 | how much speed a single frame lost sideways      |
+| Fall    | a dry, dense thud: a short low sine, a stone crack and a brief tremble       | how fast the rock was falling when it landed     |
+| Finish  | a soft music box chime over a warm pad                                       | the run ending                                   |
 
 The fall is the big one, and it is easy to get wrong in two ways. A long pure low sine reads as
 a hollow drum, not a rock, and anything with a tail reads as an echo in a cave. A stone landing
 is dense and dry: a short low thump for the weight, a bright crack of noise for the stone, and a
-brief tremble, all over within about half a second. The rolling sound had the same trap: smooth
-filtered noise is a vacuum cleaner. Stone on ground is a rattle, so it is built from sharp
-clicks over a narrow resonant band of noise, which gives it a pitch that rises with speed.
+brief tremble, all over within about half a second. The rolling sound had two traps. Smooth filtered noise is a vacuum cleaner, and so is anything
+with a narrow resonant band, which whines at a steady pitch. A rock rolling is a rumble: dark
+low noise that swells and falls once per turn, with a little gravel on top and no hiss. The
+pulse speeds up with the pitch as the rumble is played faster, which is what makes it follow the
+rock's speed.
 
 ## Why detection comes from velocity
 
