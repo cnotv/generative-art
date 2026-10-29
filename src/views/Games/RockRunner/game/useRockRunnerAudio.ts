@@ -10,7 +10,7 @@ import { RUN_THEME_VOLUME, SOUND_EFFECT_VOLUME } from '../config'
  * @returns Controls to start and stop the theme and to play the jump and finish effects.
  */
 export const useRockRunnerAudio = () => {
-  const theme = new Audio(runTheme)
+  const theme = Object.assign(document.createElement('audio'), { src: runTheme })
   theme.loop = true
   theme.volume = RUN_THEME_VOLUME
 
