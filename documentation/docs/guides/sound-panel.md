@@ -19,6 +19,13 @@ rendered offline in the browser, faster than real time, and the result replaces 
 running game. **Reset** puts the sound the game ships with back. A sound that has been edited is
 marked in the list.
 
+A **Code** and **Flow** switch above the editor changes how the sound is edited. Flow shows the
+same code as the Strudel Editor's node canvas, so a sound can be built from instrument and effect
+nodes. Opening the flow does not touch the code; only a change on the canvas writes the compiled
+code back. Code with a syntax error cannot open as a flow, and says so. The canvas keeps its graph
+in the browser under the Strudel Editor's own key, so opening a sound in the flow replaces the
+graph the Strudel Editor last saved.
+
 The game never plays the Strudel code. Strudel only renders it to an audio file, the way the
 Strudel Editor's export tab does, and the game plays that file as it always does. The engine
 loads on the first Apply, not when the game starts, so a game that nobody edits carries no cost.

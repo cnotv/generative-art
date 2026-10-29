@@ -96,4 +96,32 @@ describe('SoundPanel', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toBe('bd is not defined')
   })
+
+  it('offers a code and flow switch, starting on code', () => {
+    const store = useSoundPanelStore()
+    store.register('Game', slots, vi.fn())
+    const wrapper = mountPanel()
+
+    const modes = wrapper
+      .findAll('button')
+      .filter((button) => ['Code', 'Flow'].includes(button.text()))
+
+    expect(modes.map((button) => button.text())).toEqual(['Code', 'Flow'])
+    expect(wrapper.find('textarea').isVisible()).toBe(true)
+  })
+
+  it('stays on code and shows why when the code cannot open as a flow', async () => {
+    const store = useSoundPanelStore()
+    store.register('Game', slots, vi.fn())
+    const wrapper = mountPanel()
+    await wrapper.find('textarea').setValue('nonsense(')
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Flow')
+      ?.trigger('click')
+
+    expect(wrapper.find('[role="alert"]').text()).toContain('syntax error')
+    expect(wrapper.find('textarea').isVisible()).toBe(true)
+  })
 })
