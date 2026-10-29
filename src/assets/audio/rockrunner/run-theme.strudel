@@ -1,5 +1,6 @@
 setcpm(35)
-stack(
+
+const sectionA = stack(
   note("<[a2,e3,a3,c4] [f2,c3,f3,a3] [c3,g3,c4,e4] [g2,d3,g3,b3]>")
     .s("gm_pad_warm").attack(0.1).release(0.6).gain(0.35).room(0.6).lpf(2200),
   note("<a1 f1 c2 g1>*8").s("gm_acoustic_bass").gain(0.6).lpf(600),
@@ -12,3 +13,19 @@ stack(
     .s("gm_flute").gain(0.35).room(0.7).delay(0.3).delaytime(0.2).delayfeedback(0.35),
   s("pink").lpf(sine.range(400, 1400).slow(4)).gain(0.05).room(0.5)
 )
+
+const sectionB = stack(
+  note("<[d2,a2,d3,f3] [f2,c3,f3,a3] [g2,d3,g3,b3] [e2,b2,e3,g#3]>")
+    .s("gm_pad_warm").attack(0.08).release(0.5).gain(0.4).room(0.5).lpf(2600),
+  note("<d2 f1 g1 e1>*8").s("gm_acoustic_bass").gain(0.65).lpf(700),
+  note("c2 c2 ~ c2 c2 ~ c2 [c2 c2]").s("gm_taiko_drum").gain(0.7).room(0.3),
+  note("[c5 c5]*4").s("gm_woodblock").gain(0.3).room(0.2),
+  s("shaker_small*16").gain(0.22).hpf(2500),
+  note("<[d4 f4 a4 d5] [f4 a4 c5 f5] [g4 b4 d5 g5] [e4 g#4 b4 e5]>*4")
+    .s("gm_kalimba").gain(0.38).room(0.5),
+  note("<[a5 ~ g5 f5] [a5 c6 a5 g5] [g5 ~ f5 g5] [e5 ~ g#5 b5]>*2")
+    .s("gm_flute").gain(0.35).room(0.7).delay(0.3).delaytime(0.2).delayfeedback(0.35),
+  s("pink").lpf(sine.range(600, 1800).slow(2)).gain(0.04).room(0.4)
+)
+
+arrange([16, sectionA], [16, sectionB])

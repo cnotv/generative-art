@@ -27,6 +27,15 @@ rather than bright and electronic.
 | Energetic      | about 140 beats a minute: a steady wooden pulse, a running bass and a fast kalimba arpeggio, so the song keeps pace with a player who is running | a still drone the player outruns, or a drum kit |
 | Gently ominous | a minor, open harmony that never fully resolves                                                                                                  | bright major fanfares                           |
 
+## The music has two sections
+
+One section repeated for half a minute is a loop you stop hearing. The theme is two sections of
+sixteen bars that swap forever: the first is the minor home (Am, F, C, G) with the flute
+carrying a calm tune, and the second lifts to a different harmony (Dm, F, G, E) with a
+syncopated taiko, doubled woodblock, sixteenth shaker and a higher kalimba and flute, so it
+pushes harder before falling back to the first. Both come from one file, so the join is always on a
+chord change and the whole loop is under a minute.
+
 ## Two layers
 
 The sound splits by who makes it, because they need different tools.
@@ -46,12 +55,12 @@ own motion, every frame, so a sound is always the size of the thing that happene
 
 ## What each rock sound is
 
-| Sound   | Made of                                                                    | Driven by                                        |
-| ------- | -------------------------------------------------------------------------- | ------------------------------------------------ |
-| Rolling | a heavy rumble: dark steady noise with slow uneven thuds and a few pebbles | volume and pitch follow speed; silent in the air |
-| Bump    | a short wooden thud with a little stone grit                               | how much speed a single frame lost sideways      |
-| Fall    | a dry, dense thud: a short low sine, a stone crack and a brief tremble     | how fast the rock was falling when it landed     |
-| Finish  | a soft music box chime over a warm pad                                     | the run ending                                   |
+| Sound   | Made of                                                                                                    | Driven by                                        |
+| ------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Rolling | a heavy rumble with hiccups: dark noise that drops out now and then, uneven thuds, small jolts and pebbles | volume and pitch follow speed; silent in the air |
+| Bump    | a short wooden thud with a little stone grit                                                               | how much speed a single frame lost sideways      |
+| Fall    | a dry, dense thud: a short low sine, a stone crack and a brief tremble                                     | how fast the rock was falling when it landed     |
+| Finish  | a soft music box chime over a warm pad                                                                     | the run ending                                   |
 
 The fall is the big one, and it is easy to get wrong in two ways. A long pure low sine reads as
 a hollow drum, not a rock, and anything with a tail reads as an echo in a cave. A stone landing
@@ -60,7 +69,8 @@ brief tremble, all over within about half a second. The rolling sound had four t
 band whines, a steady low pulse is an engine idling, as if the rock were a 4x4, and a swelling
 mid-range layer is a whoosh. Shaking the level hard at random, to avoid the engine, then reads as
 vibration. A boulder is heavy and mostly calm: dark low noise barely varying, a slow uneven thump
-each time a heavy side comes round, and a few pebbles. Playing it faster still makes it follow
+each time a heavy side comes round, a few pebbles, and the odd hiccup, where the noise drops
+out for a beat and a small jolt follows, as the rock skips over uneven ground. Playing it faster still makes it follow
 the rock's speed.
 
 ## Why detection comes from velocity
