@@ -38,6 +38,9 @@ export type StrudelEvaluationResult = {
   errorMessage?: string
 }
 
+/** A render that hands back the file instead of downloading it. */
+export type StrudelRenderResult = StrudelEvaluationResult & { file?: ArrayBuffer }
+
 export type StrudelExportFormat = 'wav' | 'midi'
 
 export type StrudelExportOptions = {
@@ -70,6 +73,11 @@ export type StrudelPlayback = {
     patternCode: string,
     exportOptions: StrudelExportOptions
   ) => Promise<StrudelEvaluationResult>
+  /** Renders the cycles offline and returns the WAV file instead of downloading it. */
+  renderToWavBytes: (
+    patternCode: string,
+    exportOptions: StrudelExportOptions
+  ) => Promise<StrudelRenderResult>
   /** How many cycles one repetition of the code lasts, read without playing it. */
   measureRepetition: (patternCode: string) => Promise<number>
   /** Downloads the notes that start inside the cycles as a standard MIDI file. */

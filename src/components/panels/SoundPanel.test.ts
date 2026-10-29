@@ -1,0 +1,99 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { defineComponent } from 'vue'
+import SoundPanel from './SoundPanel.vue'
+import { useSoundPanelStore } from '@/stores/soundPanel'
+import type { SoundSlot } from '@/types/soundPanel'
+
+const renderStrudelSound = vi.hoisted(() => vi.fn())
+vi.mock('@/utils/soundRender', () => ({ renderStrudelSound }))
+
+const slots: SoundSlot[] = [
+  { id: 'theme', label: 'Music', code: 'a', kind: 'loop', loopCycles: 4 },
+  { id: 'bump', label: 'Bump', code: 'b', kind: 'once' }
+]
+
+const GenericPanelStub = defineComponent({ template: '<section><slot /></section>' })
+const EditorStub = defineComponent({
+  props: ['code'],
+  emits: ['update:code', 'evaluate'],
+  template: '<textarea :value="code" @input="$emit(\'update:code\', $event.target.value)" />'
+})
+
+const mountPanel = () =>
+  mount(SoundPanel, {
+    global: {
+      stubs: { GenericPanel: GenericPanelStub, StrudelCodeEditor: EditorStub }
+    }
+  })
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+  renderStrudelSound.mockReset().mockResolvedValue(new ArrayBuffer(8))
+})
+
+describe('SoundPanel', () => {
+  it('says so when the view registered no sounds', () => {
+    const wrapper = mountPanel()
+
+    expect(wrapper.text()).toContain('No sounds registered for this view.')
+  })
+
+  it('lists every sound and shows the code of the selected one', async () => {
+    const store = useSoundPanelStore()
+    store.register('Game', slots, vi.fn())
+    const wrapper = mountPanel()
+
+    expect(wrapper.text()).toContain('Music')
+    expect(wrapper.text()).toContain('Bump')
+    expect(wrapper.find('textarea').element.value).toBe('a')
+
+    store.select('bump')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('textarea').element.value).toBe('b')
+  })
+
+  it('marks an edited sound in the list and enables Reset', async () => {
+    const store = useSoundPanelStore()
+    store.register('Game', slots, vi.fn())
+    const wrapper = mountPanel()
+
+    await wrapper.find('textarea').setValue('edited')
+
+    expect(wrapper.text()).toContain('Music (edited)')
+    const reset = wrapper.findAll('button').find((button) => button.text() === 'Reset')
+    expect(reset?.attributes('disabled')).toBeUndefined()
+  })
+
+  it('applies the edited code when Apply is pressed', async () => {
+    const store = useSoundPanelStore()
+    const onApply = vi.fn()
+    store.register('Game', slots, onApply)
+    const wrapper = mountPanel()
+    await wrapper.find('textarea').setValue('edited')
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Apply')
+      ?.trigger('click')
+    await vi.waitFor(() => expect(onApply).toHaveBeenCalled())
+
+    expect(renderStrudelSound).toHaveBeenCalledWith('edited', slots[0])
+  })
+
+  it('shows the error when the code does not render', async () => {
+    const store = useSoundPanelStore()
+    store.register('Game', slots, vi.fn())
+    renderStrudelSound.mockRejectedValue(new Error('bd is not defined'))
+    const wrapper = mountPanel()
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Apply')
+      ?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[role="alert"]').exists()).toBe(true))
+
+    expect(wrapper.find('[role="alert"]').text()).toBe('bd is not defined')
+  })
+})
