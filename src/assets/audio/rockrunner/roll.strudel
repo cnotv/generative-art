@@ -1,0 +1,5 @@
+setcpm(30)
+stack(
+  s("brown").lpf(sine.range(180, 320).fast(2)).attack(0).release(0).gain(0.9),
+  s("pink").hpf(700).lpf(2500).attack(0).release(0).gain(0.05)
+)

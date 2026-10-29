@@ -1,0 +1,6 @@
+setcpm(30)
+stack(
+  note("e1").s("sine").penv(24).pdecay(0.18).decay(1).sustain(0).gain(1),
+  note("a1").s("sawtooth").lpf(160).tremolo(14).tremolodepth(0.85).attack(0.05).decay(1.4).sustain(0).gain(0.8),
+  s("brown").lpf(500).decay(0.4).sustain(0).gain(1)
+)

@@ -141,6 +141,8 @@ const run = useRockRun({
   spawnGateIndex,
   onExit: () => requestExitGame(),
   onJump: audio.playJump,
+  onImpact: audio.playImpact,
+  onRolling: audio.setRolling,
   onPositionUpdate: (pos) => {
     store.setDistance(localId(), pos.d)
     if (!store.solo) session.broadcastRockPos(pos)

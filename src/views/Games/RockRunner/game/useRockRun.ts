@@ -65,13 +65,16 @@ import {
   wallStandoff,
   lateralOffset
 } from './rockMotion'
+import { detectImpact, rollingLevel } from './rockSounds'
 import type {
   CameraMode,
   CharacterType,
   DebrisField,
   LateralFogUniforms,
   JumpGate,
+  MotionFrame,
   RockConfig,
+  RockImpact,
   RunCameraConfig,
   RockSurface,
   RockPosPayload,
@@ -157,6 +160,8 @@ export type UseRockRunDeps = {
   onBack?: () => void
   onExit?: () => void
   onJump?: () => void
+  onImpact?: (impact: RockImpact) => void
+  onRolling?: (level: number) => void
   runStartTime?: Ref<number | null>
   onPositionUpdate?: (pos: RockPosPayload) => void
   localPlayerName?: Ref<string>
@@ -196,6 +201,7 @@ type RunState = {
   smoothedDirection: THREE.Vector3
   cameraActionHeld: boolean
   jumpActionHeld: boolean
+  lastMotion: MotionFrame | null
   jumpGate: JumpGate
   prevCameraMode: CameraMode
   cameraTransitionElapsed: number
@@ -534,6 +540,28 @@ const createStageDriver = (state: RunState) => (): void => {
   state.track?.setTerrainTint(stageColorAt(state.distance, TERRAIN_STAGE_TINTS))
 }
 
+const createSoundAction = (state: RunState, deps: UseRockRunDeps) => (): void => {
+  if (!state.rock || !state.path || !state.rockConfig) return
+  const body = state.rock.userData.body
+  const rock = state.rockConfig
+  const velocity = body.linvel()
+  const current: MotionFrame = {
+    grounded: isGrounded(
+      body.translation().y,
+      state.path.sampleAt(state.distance).position.y,
+      velocity.y,
+      groundProbeFor(rock.radius),
+      JUMP_RISING_TOLERANCE
+    ),
+    verticalSpeed: velocity.y,
+    horizontalSpeed: Math.hypot(velocity.x, velocity.z)
+  }
+  const impact = state.lastMotion ? detectImpact(state.lastMotion, current) : null
+  if (impact) deps.onImpact?.(impact)
+  deps.onRolling?.(rollingLevel(current, speedCapFor(rock, state.distance)))
+  state.lastMotion = current
+}
+
 const createJumpAction =
   (state: RunState, onJump?: () => void) =>
   (delta: number): void => {
@@ -757,6 +785,7 @@ const createRunActions = (
   const emitDebris = createDebrisEmitter(state)
   const applyJump = createJumpAction(state, deps.onJump)
   const applyDrive = createDriveAction(state)
+  const updateSound = createSoundAction(state, deps)
   const advanceStage = createStageDriver(state)
 
   const setCameraMode = (mode: CameraMode): void => {
@@ -846,6 +875,7 @@ const createRunActions = (
     updateDistance,
     pumpWorld,
     updateDebris: (delta: number) => state.debris?.update(delta),
+    updateSound,
     updateCountdown,
     broadcastPosition
   }
@@ -882,6 +912,12 @@ const buildRunTimeline = ({ camera, getDelta, orbit, state, refs, actions }: Tim
     category: 'game',
     start: 0,
     action: actions.pumpWorld
+  })
+  timeline.addAction({
+    name: 'rock-sound',
+    category: 'physics',
+    start: 0,
+    action: actions.updateSound
   })
   timeline.addAction({
     name: 'debris',
@@ -1119,6 +1155,7 @@ const createRunState = (): RunState => ({
   smoothedDirection: createSmoothedDirection(),
   cameraActionHeld: false,
   jumpActionHeld: false,
+  lastMotion: null,
   jumpGate: { buffer: 0, coyote: 0, cooldown: 0 },
   prevCameraMode: 'third',
   cameraTransitionElapsed: 0,
@@ -1163,6 +1200,7 @@ export const useRockRun = (deps: UseRockRunDeps) => {
     state.smoothedDirection.set(0, 0, -1)
     state.cameraActionHeld = false
     state.jumpActionHeld = false
+    state.lastMotion = null
     state.jumpCooldown = 0
     state.prevCameraMode = 'third'
     state.cameraTransitionElapsed = 0

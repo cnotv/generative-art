@@ -1,2 +1,5 @@
 setcpm(60)
-note("c4 g4 c5").s("square").fast(3).lpf(2500).gain(0.35).release(0.08).slow(1)
+stack(
+  s("pink").hpf(700).lpf(sine.range(1200, 3000)).attack(0.02).release(0.15).gain(0.25),
+  note("e3 b3").s("triangle").lpf(1400).gain(0.35).release(0.18).room(0.5)
+)

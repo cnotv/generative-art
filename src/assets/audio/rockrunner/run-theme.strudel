@@ -1,8 +1,10 @@
-setcpm(30)
+setcpm(16)
 stack(
-  s("bd [~ bd] sd [~ bd]").bank("RolandTR808").gain(0.9),
-  s("hh*8").bank("RolandTR808").gain(0.35),
-  note("<c2 c2 ab1 bb1>*4").s("sawtooth").lpf(400).gain(0.5).release(0.15),
-  note("<[c4 eb4 g4 eb4] [c4 eb4 g4 bb4] [ab3 c4 eb4 c4] [bb3 d4 f4 d4]>*2")
-    .s("triangle").gain(0.4).release(0.2).room(0.3)
+  note("<[a2,e3,a3,c4,e4] [f2,c3,f3,a3,c4] [c3,g3,c4,e4,g4] [g2,d3,g3,b3,d4]>")
+    .s("gm_pad_warm").attack(1.2).release(2).gain(0.5).room(0.9).lpf(1800),
+  note("a1").s("sine").attack(2).release(3).gain(0.35).slow(2),
+  s("pink").lpf(sine.range(250, 900).slow(8)).gain(0.1).room(0.6),
+  note("~ e5 ~ ~ ~ ~ d5 ~ ~ ~ c5 ~ ~ ~ ~ ~ ~ a4 ~ ~ ~ ~ ~ ~ ~ ~ e5 ~ ~ ~ ~ ~")
+    .slow(4).s("gm_flute").gain(0.3).room(0.9).delay(0.4).delaytime(0.75).delayfeedback(0.45),
+  note("<~ ~ [e6 ~ b5 ~] ~>").s("gm_kalimba").gain(0.18).room(0.9).slow(2)
 )

@@ -348,3 +348,16 @@ export type RrSessionCallbacks = {
   onRockPos: (peerId: string, pos: RockPosPayload) => void
   onSeedReceived: (seed: number) => void
 }
+
+/** What the rock was doing in one frame, as far as sound is concerned. */
+export type MotionFrame = {
+  grounded: boolean
+  verticalSpeed: number
+  horizontalSpeed: number
+}
+
+export type RockImpact = {
+  kind: 'fall' | 'bump'
+  /** 0 to 1: how hard, so a graze and a slam do not sound alike. */
+  strength: number
+}
