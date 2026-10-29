@@ -1,6 +1,7 @@
 setcpm(30)
 stack(
-  note("e1").s("sine").penv(24).pdecay(0.18).decay(1).sustain(0).gain(1),
-  note("a1").s("sawtooth").lpf(160).tremolo(14).tremolodepth(0.85).attack(0.05).decay(1.4).sustain(0).gain(0.8),
-  s("brown").lpf(500).decay(0.4).sustain(0).gain(1)
+  note("e1").s("sine").penv(12).pdecay(0.08).decay(0.35).sustain(0).gain(1),
+  s("brown").lpf(1400).decay(0.18).sustain(0).gain(1),
+  s("pink").hpf(900).lpf(4000).decay(0.05).sustain(0).gain(0.5),
+  note("a1").s("sawtooth").lpf(140).tremolo(14).tremolodepth(0.85).attack(0.02).decay(0.6).sustain(0).gain(0.7)
 )

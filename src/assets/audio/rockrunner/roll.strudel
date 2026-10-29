@@ -1,5 +1,6 @@
 setcpm(30)
 stack(
-  s("brown").lpf(sine.range(180, 320).fast(2)).attack(0).release(0).gain(0.9),
-  s("pink").hpf(700).lpf(2500).attack(0).release(0).gain(0.05)
+  s("crackle").density(0.35).hpf(600).attack(0).release(0).gain(0.25),
+  s("pink").bpf(520).bpq(12).attack(0).release(0).gain(2.5),
+  s("brown").lpf(140).attack(0).release(0).gain(0.25)
 )

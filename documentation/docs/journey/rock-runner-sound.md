@@ -38,7 +38,7 @@ flowchart LR
   C --> D[Rolling: continuous, follows speed]
   C --> E[Bump: a hit that loses speed]
   C --> F[Fall: a landing from the air]
-  C --> G[Jump: a short lift]
+  C --> G[Finish: a short chime]
 ```
 
 The music is a single looping file under the rest. Everything the rock does is made from its
@@ -46,16 +46,19 @@ own motion, every frame, so a sound is always the size of the thing that happene
 
 ## What each rock sound is
 
-| Sound   | Made of                                                             | Driven by                                        |
-| ------- | ------------------------------------------------------------------- | ------------------------------------------------ |
-| Rolling | low brown noise, a grinding rumble, looped without a seam           | volume and pitch follow speed; silent in the air |
-| Bump    | a short wooden thud with a little stone grit                        | how much speed a single frame lost sideways      |
-| Fall    | a deep sine that drops in pitch, a noise burst, then a slow tremble | how fast the rock was falling when it landed     |
-| Jump    | a short airy lift                                                   | the jump itself                                  |
+| Sound   | Made of                                                                     | Driven by                                        |
+| ------- | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| Rolling | a pitched, gritty rattle: crackle clicks over a resonant noise band, looped | volume and pitch follow speed; silent in the air |
+| Bump    | a short wooden thud with a little stone grit                                | how much speed a single frame lost sideways      |
+| Fall    | a dry, dense thud: a short low sine, a stone crack and a brief tremble      | how fast the rock was falling when it landed     |
+| Finish  | a soft music box chime over a warm pad                                      | the run ending                                   |
 
-The fall is the big one. A rock this size landing should be felt more than heard: a boom with
-most of its energy below what small speakers can play, followed by a tremble that decays over
-about a second, as the ground settles.
+The fall is the big one, and it is easy to get wrong in two ways. A long pure low sine reads as
+a hollow drum, not a rock, and anything with a tail reads as an echo in a cave. A stone landing
+is dense and dry: a short low thump for the weight, a bright crack of noise for the stone, and a
+brief tremble, all over within about half a second. The rolling sound had the same trap: smooth
+filtered noise is a vacuum cleaner. Stone on ground is a rattle, so it is built from sharp
+clicks over a narrow resonant band of noise, which gives it a pitch that rises with speed.
 
 ## Why detection comes from velocity
 

@@ -46,7 +46,7 @@ const setup = async () => {
   const fake = createFakeContext()
   const audio = useRockRunnerAudio(() => fake.context)
   audio.startTheme()
-  await vi.waitFor(() => expect(fake.raw.decodeAudioData).toHaveBeenCalledTimes(5))
+  await vi.waitFor(() => expect(fake.raw.decodeAudioData).toHaveBeenCalledTimes(4))
   await new Promise((resolve) => setTimeout(resolve))
   return { ...fake, audio }
 }
@@ -69,9 +69,9 @@ describe('useRockRunnerAudio theme', () => {
     expect(theme.loop).toBe(true)
     expect(theme.volume).toBe(RUN_THEME_VOLUME)
     expect(theme.currentTime).toBe(0)
-    expect(raw.decodeAudioData).toHaveBeenCalledTimes(5)
+    expect(raw.decodeAudioData).toHaveBeenCalledTimes(4)
     audio.startTheme()
-    expect(raw.decodeAudioData).toHaveBeenCalledTimes(5)
+    expect(raw.decodeAudioData).toHaveBeenCalledTimes(4)
   })
 
   it('pauses the theme when asked to stop', async () => {
@@ -109,14 +109,13 @@ describe('useRockRunnerAudio theme', () => {
 })
 
 describe('useRockRunnerAudio effects', () => {
-  it('plays the jump and finish effects at the effect volume', async () => {
+  it('plays the finish effect once', async () => {
     const { audio, sources } = await setup()
 
-    audio.playJump()
     audio.playFinish()
 
-    expect(sources).toHaveLength(2)
-    expect(sources.every((source) => source.start.mock.calls.length === 1)).toBe(true)
+    expect(sources).toHaveLength(1)
+    expect(sources[0].start).toHaveBeenCalledTimes(1)
   })
 
   it('plays an impact quieter when weak and at full volume when strong', async () => {
@@ -166,7 +165,7 @@ describe('useRockRunnerAudio effects', () => {
     const { audio, sources } = await setup()
     audio.settings.effects = false
 
-    audio.playJump()
+    audio.playFinish()
     audio.playImpact({ kind: 'fall', strength: 1 })
 
     expect(sources).toHaveLength(0)

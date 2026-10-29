@@ -1,6 +1,5 @@
 import { reactive, watch } from 'vue'
 import runTheme from '@/assets/audio/rockrunner/run-theme.mp3'
-import jumpSound from '@/assets/audio/rockrunner/jump.wav'
 import finishSound from '@/assets/audio/rockrunner/finish.wav'
 import fallSound from '@/assets/audio/rockrunner/fall.wav'
 import bumpSound from '@/assets/audio/rockrunner/bump.wav'
@@ -20,7 +19,6 @@ import {
 import type { RockImpact, SoundSettings } from '../types'
 
 const EFFECT_URLS = {
-  jump: jumpSound,
   finish: finishSound,
   fall: fallSound,
   bump: bumpSound,
@@ -163,7 +161,6 @@ export const useRockRunnerAudio = (createContext: () => AudioContext = createDef
         IMPACT_VOLUMES[kind] * (IMPACT_MIN_SHARE + (1 - IMPACT_MIN_SHARE) * strength)
       )
     },
-    playJump: (): void => playOneShot('jump', SOUND_EFFECT_VOLUME),
     playFinish: (): void => playOneShot('finish', SOUND_EFFECT_VOLUME)
   }
 }

@@ -1,5 +1,0 @@
-setcpm(60)
-stack(
-  s("pink").hpf(700).lpf(sine.range(1200, 3000)).attack(0.02).release(0.15).gain(0.25),
-  note("e3 b3").s("triangle").lpf(1400).gain(0.35).release(0.18).room(0.5)
-)
