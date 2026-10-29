@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 import { renderStrudelSound } from '@/utils/soundRender'
 import { playPreview } from '@/utils/soundPreview'
+import { readStorage, writeStorage } from '@/utils/storage'
+import { STRUDEL_SAVED_CODE_STORAGE_KEY } from '@/views/Tools/StrudelEditor/config'
 import type { SoundApplyHandler, SoundSlot, SoundSlotStatus } from '@/types/soundPanel'
 
 /**
@@ -17,6 +19,7 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
   const errors = ref<Record<string, string>>({})
   const selectedId = ref<string | null>(null)
   const playingId = ref<string | null>(null)
+  const editorSlotId = ref<string | null>(null)
   // A function is not state worth tracking in devtools, so it stays out of the reactive tree.
   let applyHandler: SoundApplyHandler | null = null
   let stopPreview: (() => void) | null = null
@@ -69,6 +72,7 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
   const unregister = (name: string): void => {
     if (routeName.value !== name) return
     stopPlayback()
+    editorSlotId.value = null
     renderCache.value = {}
     routeName.value = null
     slots.value = []
@@ -124,6 +128,20 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     }
   }
 
+  // The full editor opens on whatever code it saved last, so the sound's code is saved first.
+  const openEditor = (id: string): void => {
+    stopPlayback()
+    writeStorage(STRUDEL_SAVED_CODE_STORAGE_KEY, codeOf(id))
+    editorSlotId.value = id
+  }
+
+  const closeEditor = (takeCode: boolean): void => {
+    const id = editorSlotId.value
+    const editedCode = takeCode ? readStorage(STRUDEL_SAVED_CODE_STORAGE_KEY) : null
+    if (id !== null && editedCode !== null) setCode(id, editedCode)
+    editorSlotId.value = null
+  }
+
   const reset = async (id: string): Promise<void> => {
     const slot = findSlot(id)
     if (!slot) return
@@ -137,6 +155,7 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     slots,
     selectedId,
     playingId,
+    editorSlotId,
     selectedSlot,
     isAvailable,
     codeOf,
@@ -149,6 +168,8 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     setCode,
     apply,
     togglePreview,
+    openEditor,
+    closeEditor,
     reset
   }
 })

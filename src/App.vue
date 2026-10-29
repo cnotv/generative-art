@@ -9,6 +9,7 @@ import {
   ElementsPanel,
   TimelinePanel,
   SoundPanel,
+  SoundEditorOverlay,
   PanelContainer
 } from '@/components/panels'
 import GlobalNavigation from '@/components/GlobalNavigation.vue'
@@ -101,6 +102,7 @@ const handleStopRecording = () => {
   <DebugPanel />
   <TimelinePanel />
   <SoundPanel />
+  <SoundEditorOverlay />
   <ElementsPanel
     :is-recording="isRecording"
     @start="handleStartRecording"

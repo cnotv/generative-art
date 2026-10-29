@@ -297,6 +297,15 @@ const soundPanel = useSoundPanelStore()
 const soundRouteName = String(useRoute().name ?? 'RockRunner')
 soundPanel.register(soundRouteName, ROCK_RUNNER_SOUND_SLOTS, audio.replaceSound)
 
+// The full editor plays sound of its own, so the game's music steps aside while it is open.
+watch(
+  () => soundPanel.editorSlotId !== null,
+  (editorOpen) => {
+    if (editorOpen) audio.stopTheme()
+    else if (phase.value === 'run') audio.startTheme()
+  }
+)
+
 onUnmounted(() => {
   audio.stopTheme()
   soundPanel.unregister(soundRouteName)

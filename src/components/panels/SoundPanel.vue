@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { ExternalLink, Play, Square } from 'lucide-vue-next'
 import GenericPanel from './GenericPanel.vue'
 import { Button } from '@/components/ui/button'
@@ -9,9 +8,6 @@ import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import { readStrudelNoteBars } from '@/views/Tools/StrudelEditor/noteBars'
 import { useSoundPanelStore } from '@/stores/soundPanel'
 import { useSoundFlow } from './useSoundFlow'
-import { openInStrudelEditor } from './openInStrudelEditor'
-
-const STRUDEL_EDITOR_PATH = '/tools/StrudelEditor'
 
 // CodeMirror stays out of every game's bundle until the panel is opened.
 const StrudelCodeEditor = defineAsyncComponent(
@@ -24,7 +20,6 @@ const StrudelFlowEditor = defineAsyncComponent(() =>
 )
 
 const soundStore = useSoundPanelStore()
-const router = useRouter()
 
 const selectedId = computed(() => soundStore.selectedId ?? '')
 const isRendering = computed(() => soundStore.statusOf(selectedId.value) === 'rendering')
@@ -37,12 +32,6 @@ const soundFlow = useSoundFlow(
 watch(selectedId, soundFlow.reload)
 
 const isPlaying = computed(() => soundStore.playingId === selectedId.value)
-
-const openFullEditor = (): void =>
-  openInStrudelEditor(
-    soundStore.codeOf(selectedId.value),
-    router.resolve({ path: STRUDEL_EDITOR_PATH }).href
-  )
 
 const resetSound = async (): Promise<void> => {
   await soundStore.reset(selectedId.value)
@@ -134,7 +123,7 @@ const statusText = computed(
         >
           Reset
         </Button>
-        <Button size="sm" variant="outline" @click="openFullEditor">
+        <Button size="sm" variant="outline" @click="soundStore.openEditor(selectedId)">
           <ExternalLink class="sound-panel__icon" aria-hidden="true" />
           Open in Strudel Editor
         </Button>

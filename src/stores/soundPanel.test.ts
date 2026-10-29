@@ -4,6 +4,8 @@ import type { SoundSlot } from '@/types/soundPanel'
 
 const renderStrudelSound = vi.hoisted(() => vi.fn())
 const playPreview = vi.hoisted(() => vi.fn())
+const storage = vi.hoisted(() => ({ readStorage: vi.fn(), writeStorage: vi.fn() }))
+vi.mock('@/utils/storage', () => storage)
 vi.mock('@/utils/soundRender', () => ({ renderStrudelSound }))
 vi.mock('@/utils/soundPreview', () => ({ playPreview }))
 
@@ -19,6 +21,8 @@ beforeEach(() => {
   setActivePinia(createPinia())
   renderStrudelSound.mockReset().mockResolvedValue(wav)
   playPreview.mockReset().mockReturnValue(vi.fn())
+  storage.readStorage.mockReset()
+  storage.writeStorage.mockReset()
 })
 
 describe('soundPanel store registration', () => {
@@ -246,5 +250,75 @@ describe('soundPanel store preview', () => {
 
     expect(stop).toHaveBeenCalledTimes(1)
     expect(store.playingId).toBeNull()
+  })
+})
+
+describe('soundPanel store full editor', () => {
+  it('saves the sound code where the Strudel Editor reads it and marks the editor open', () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    store.setCode('bump', 'edited')
+
+    store.openEditor('bump')
+
+    expect(storage.writeStorage).toHaveBeenCalledWith('strudel-editor-code', 'edited')
+    expect(store.editorSlotId).toBe('bump')
+  })
+
+  it('takes the code from the editor back into the sound when asked', () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    store.openEditor('bump')
+    storage.readStorage.mockReturnValue('from the editor')
+
+    store.closeEditor(true)
+
+    expect(store.codeOf('bump')).toBe('from the editor')
+    expect(store.editorSlotId).toBeNull()
+  })
+
+  it('leaves the sound as it was when the editor is closed without taking the code', () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    store.openEditor('bump')
+    storage.readStorage.mockReturnValue('from the editor')
+
+    store.closeEditor(false)
+
+    expect(store.codeOf('bump')).toBe('bump code')
+    expect(store.editorSlotId).toBeNull()
+  })
+
+  it('keeps the sound code when the editor saved nothing', () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    store.openEditor('bump')
+    storage.readStorage.mockReturnValue(null)
+
+    store.closeEditor(true)
+
+    expect(store.codeOf('bump')).toBe('bump code')
+  })
+
+  it('stops a preview before opening the editor, so two sounds never play at once', async () => {
+    const store = useSoundPanelStore()
+    const stop = vi.fn()
+    playPreview.mockReturnValue(stop)
+    store.register('RockRunner', slots, vi.fn())
+    await store.togglePreview('theme')
+
+    store.openEditor('theme')
+
+    expect(stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the editor when the game unregisters', () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    store.openEditor('bump')
+
+    store.unregister('RockRunner')
+
+    expect(store.editorSlotId).toBeNull()
   })
 })
