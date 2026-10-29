@@ -46,21 +46,22 @@ own motion, every frame, so a sound is always the size of the thing that happene
 
 ## What each rock sound is
 
-| Sound   | Made of                                                                                 | Driven by                                        |
-| ------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| Rolling | a heavy tremble: dark noise shaking at random, with slow uneven thuds and a few pebbles | volume and pitch follow speed; silent in the air |
-| Bump    | a short wooden thud with a little stone grit                                            | how much speed a single frame lost sideways      |
-| Fall    | a dry, dense thud: a short low sine, a stone crack and a brief tremble                  | how fast the rock was falling when it landed     |
-| Finish  | a soft music box chime over a warm pad                                                  | the run ending                                   |
+| Sound   | Made of                                                                    | Driven by                                        |
+| ------- | -------------------------------------------------------------------------- | ------------------------------------------------ |
+| Rolling | a heavy rumble: dark steady noise with slow uneven thuds and a few pebbles | volume and pitch follow speed; silent in the air |
+| Bump    | a short wooden thud with a little stone grit                               | how much speed a single frame lost sideways      |
+| Fall    | a dry, dense thud: a short low sine, a stone crack and a brief tremble     | how fast the rock was falling when it landed     |
+| Finish  | a soft music box chime over a warm pad                                     | the run ending                                   |
 
 The fall is the big one, and it is easy to get wrong in two ways. A long pure low sine reads as
 a hollow drum, not a rock, and anything with a tail reads as an echo in a cave. A stone landing
 is dense and dry: a short low thump for the weight, a bright crack of noise for the stone, and a
-brief tremble, all over within about half a second. The rolling sound had three traps. Smooth filtered noise is a vacuum cleaner, a narrow
-resonant band whines, and a steady low pulse is an engine idling, as if the rock were a 4x4. A
-boulder is irregular: dark low noise that shakes at random levels, a slow uneven thump each
-time a heavy side comes round, and a few pebbles. Nothing in it repeats evenly, which is what
-separates a tremble from a motor. Playing it faster still makes it follow the rock's speed.
+brief tremble, all over within about half a second. The rolling sound had four traps. Smooth filtered noise is a vacuum cleaner, a narrow resonant
+band whines, a steady low pulse is an engine idling, as if the rock were a 4x4, and a swelling
+mid-range layer is a whoosh. Shaking the level hard at random, to avoid the engine, then reads as
+vibration. A boulder is heavy and mostly calm: dark low noise barely varying, a slow uneven thump
+each time a heavy side comes round, and a few pebbles. Playing it faster still makes it follow
+the rock's speed.
 
 ## Why detection comes from velocity
 
