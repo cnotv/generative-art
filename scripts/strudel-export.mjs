@@ -57,10 +57,12 @@ try {
     ([key, code]) => window.localStorage.setItem(key, code),
     [STORAGE_KEY, patternCode]
   )
-  await page.goto(`${values.url}/tools/StrudelEditor`)
-  await page.getByRole('tab', { name: 'export' }).click()
+  await page.goto(`${values.url}/tools/StrudelEditor#export`)
   await page.getByRole('button', { name: format === 'midi' ? 'MIDI' : 'WAV', exact: true }).click()
-  await page.getByLabel('File name').fill(basename(outputPath, extension))
+  await page
+    .locator('aside')
+    .getByLabel('Name', { exact: true })
+    .fill(basename(outputPath, extension))
   await page.getByLabel('Start cycle').fill(values.start)
   await page.getByLabel('Cycles').fill(values.cycles)
   if (values.once) {
