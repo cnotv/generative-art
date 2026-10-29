@@ -75,6 +75,7 @@ import type {
   MotionFrame,
   RockConfig,
   RockImpact,
+  SoundSettings,
   RunCameraConfig,
   RockSurface,
   RockPosPayload,
@@ -160,6 +161,7 @@ export type UseRockRunDeps = {
   onBack?: () => void
   onExit?: () => void
   onJump?: () => void
+  soundSettings?: SoundSettings
   onImpact?: (impact: RockImpact) => void
   onRolling?: (level: number) => void
   runStartTime?: Ref<number | null>
@@ -1077,7 +1079,8 @@ const buildRunWorld = async ({
     routeName: deps.routeName ?? 'RockRunner',
     getRock: () => state.rock ?? undefined,
     characterType,
-    stickmanConfig
+    stickmanConfig,
+    soundSettings: deps.soundSettings
   })
   state.rockConfig = rockPanel.config
   state.disposePanels = [

@@ -141,6 +141,7 @@ const run = useRockRun({
   spawnGateIndex,
   onExit: () => requestExitGame(),
   onJump: audio.playJump,
+  soundSettings: audio.settings,
   onImpact: audio.playImpact,
   onRolling: audio.setRolling,
   onPositionUpdate: (pos) => {

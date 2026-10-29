@@ -508,3 +508,6 @@ export const ROLL_MAX_RATE = 1.4
 export const BUMP_VOLUME = 0.7
 export const FALL_VOLUME = 1
 export const ROLL_LEVEL_STEPS = 20
+export const ROLL_EASE_SECONDS = 0.08
+export const IMPACT_COOLDOWN_MS = { fall: 350, bump: 150 }
+export const IMPACT_MIN_SHARE = 0.4

@@ -361,3 +361,9 @@ export type RockImpact = {
   /** 0 to 1: how hard, so a graze and a slam do not sound alike. */
   strength: number
 }
+
+/** What the Config panel can switch off. */
+export type SoundSettings = {
+  music: boolean
+  effects: boolean
+}

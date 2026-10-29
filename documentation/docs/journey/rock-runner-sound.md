@@ -4,7 +4,8 @@ sidebar_position: 119
 
 # The sound of Rock Runner
 
-The first soundtrack was a square wave arpeggio over a drum machine. It was in tune and on the
+The first soundtrack was a square wave arpeggio over a drum machine, and the second, a slow
+pad drone, was too still for a platformer. The first was in tune and on the
 beat and it sounded like a different game: Rock Runner is a heavy stone rolling through a
 wood, drawn in ink on cream paper, and nothing about 8-bit chip music says any of that.
 This page fixes the atmosphere before any sound is made, so each sound can be judged against it
@@ -13,16 +14,17 @@ rather than against taste on the day.
 ## Atmosphere
 
 A **quiet forest, seen from low down, with a great weight moving through it**. Calm and
-slightly ominous, never urgent: the rock is not racing, it is unstoppable. Soft and organic
+slightly ominous, but always moving: the rock is unstoppable and a platformer needs forward
+drive. Soft and organic
 rather than bright and electronic.
 
-| Quality        | Means                                                            | Rules out                                     |
-| -------------- | ---------------------------------------------------------------- | --------------------------------------------- |
-| Natural        | wind, wood, breath, bells of wood and glass, slow soft pads      | square and saw leads, chip arpeggios          |
-| Spacious       | long attacks, long releases, a lot of reverb                     | dry, tight, rhythmic loops                    |
-| Weighty        | low frequencies carry the rock; the highs are small and far away | thin or high sound for anything the rock does |
-| Slow           | roughly 64 beats a minute, a drifting pulse rather than a beat   | drum kits, a kick on the beat                 |
-| Gently ominous | a minor, open harmony that never fully resolves                  | bright major fanfares                         |
+| Quality        | Means                                                                                  | Rules out                                     |
+| -------------- | -------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Natural        | wind, wood, breath, bells of wood and glass, slow soft pads                            | square and saw leads, chip arpeggios          |
+| Spacious       | long attacks, long releases, a lot of reverb                                           | dry, tight, rhythmic loops                    |
+| Weighty        | low frequencies carry the rock; the highs are small and far away                       | thin or high sound for anything the rock does |
+| Moving         | about 112 beats a minute: soft wooden percussion and a rolling kalimba carry the pulse | a still drone the player outruns, a drum kit  |
+| Gently ominous | a minor, open harmony that never fully resolves                                        | bright major fanfares                         |
 
 ## Two layers
 
@@ -62,3 +64,13 @@ landing is the frame where the rock goes from airborne to resting while moving d
 is a frame where horizontal speed drops sharply without a landing. A threshold keeps ordinary
 rolling over the slope from sounding like hits, and the loudness scales with the size of the
 change so a graze and a slam are not the same sound.
+
+## Playing it without stutter
+
+Every sound is rendered once and shipped as a file, so the game never runs Strudel. A first
+version played each impact by creating a fresh audio element, and a rock grinding along a wall
+could trigger a bump on many frames in a row; the browser decoded the same file over and over
+and the sound stuttered. The effects are now decoded once into memory and played from there,
+each kind has a short cooldown so a burst of detections is one sound, and the rumble is one
+looping source whose volume and pitch are eased toward their target. Only the music, the one
+long file, streams. Music and sound effects can each be switched off from the Config panel.
