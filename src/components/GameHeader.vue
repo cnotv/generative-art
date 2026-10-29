@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LobbyUIButton, LobbyUIConfirm } from '@/components/LobbyUI'
+import { Maximize, Minimize } from 'lucide-vue-next'
+import { LobbyUIButton, LobbyUIConfirm, LobbyUIIconButton } from '@/components/LobbyUI'
+import { useFullscreen } from '@/composables/useFullscreen'
 import { useMenuNavigation } from '@/composables/useMenuNavigation'
 import '@/assets/styles/lobby-ui.scss'
 
@@ -25,6 +27,7 @@ const route = useRoute()
 const router = useRouter()
 const fromLobby = computed(() => !!route.query.game)
 const confirmOpen = ref(false)
+const { isSupported: fullscreenSupported, isFullscreen, toggleFullscreen } = useFullscreen()
 
 // Embedded in the Lobby view: clearing the query returns to it. Standalone
 // route: navigate to the Lobby view, so every game always has a way back.
@@ -70,6 +73,17 @@ useMenuNavigation((action) => {
       <code class="game-header__room-id">{{ roomId.slice(0, 8) }}</code>
       <LobbyUIButton variant="primary" @click="emit('copyLink')">Copy link</LobbyUIButton>
     </div>
+    <LobbyUIIconButton
+      v-if="fullscreenSupported"
+      size="md"
+      :title="isFullscreen ? 'Leave fullscreen' : 'Enter fullscreen'"
+      :aria-label="isFullscreen ? 'Leave fullscreen' : 'Enter fullscreen'"
+      :aria-pressed="isFullscreen"
+      @click="toggleFullscreen"
+    >
+      <Minimize v-if="isFullscreen" class="game-header__icon" aria-hidden="true" />
+      <Maximize v-else class="game-header__icon" aria-hidden="true" />
+    </LobbyUIIconButton>
     <LobbyUIConfirm
       v-if="confirmOpen"
       message="Leave the game?"
@@ -94,6 +108,11 @@ useMenuNavigation((action) => {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+}
+
+.game-header__icon {
+  width: 1.5em;
+  height: 1.5em;
 }
 
 .game-header__room-label {
