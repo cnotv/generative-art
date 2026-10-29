@@ -26,6 +26,8 @@ code back. Code with a syntax error cannot open as a flow, and says so. The canv
 in the browser under the Strudel Editor's own key, so opening a sound in the flow replaces the
 graph the Strudel Editor last saved.
 
+![The Sound panel on the fall sound in Flow mode, showing its code as nodes](/img/rock-runner/sound-panel-flow.webp)
+
 The game never plays the Strudel code. Strudel only renders it to an audio file, the way the
 Strudel Editor's export tab does, and the game plays that file as it always does. The engine
 loads on the first Apply, not when the game starts, so a game that nobody edits carries no cost.
