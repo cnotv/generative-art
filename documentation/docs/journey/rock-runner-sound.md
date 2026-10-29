@@ -77,4 +77,6 @@ could trigger a bump on many frames in a row; the browser decoded the same file 
 and the sound stuttered. The effects are now decoded once into memory and played from there,
 each kind has a short cooldown so a burst of detections is one sound, and the rumble is one
 looping source whose volume and pitch are eased toward their target. Only the music, the one
-long file, streams. Music and sound effects can each be switched off from the Config panel.
+long file, streams. Music and sound effects can each be switched off with the two icons in the top left corner of the run, a plain icon when on and a barred one when off.
+
+![The two sound icons in the top left corner of a run, both barred: music and sound effects are off](/img/rock-runner/sound-toggles.webp)

@@ -4,7 +4,7 @@ import { useDebugSceneStore } from '@/stores/debugScene'
 import { registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { attachRockStroke } from '../elements/rockStroke'
 import { RR_STICKMAN_CONTROLS } from './stickmanPanel'
-import type { CharacterType, RockConfig, SoundSettings, StickmanConfig } from '../types'
+import type { CharacterType, RockConfig, StickmanConfig } from '../types'
 import {
   BASE_MAX_SPEED,
   FORWARD_IMPULSE,
@@ -119,12 +119,6 @@ export const RR_ROCK_PHYSICS_CONTROLS = {
   autopilot: RR_ROCK_CONTROLS.autopilot
 }
 
-/** Music and effects switches, shown in the Config panel only. */
-export const RR_SOUND_CONTROLS = {
-  music: { boolean: true, label: 'Music' },
-  effects: { boolean: true, label: 'Sound effects' }
-}
-
 export type RockPanelOptions = {
   /** Route the config panel keys its entry by. */
   routeName: string
@@ -140,8 +134,6 @@ export type RockPanelOptions = {
    * the elements and config panels entirely for a plain rock run.
    */
   stickmanConfig: StickmanConfig | null
-  /** The run's audio switches, folded into the config panel as a nested "Sound" group. */
-  soundSettings?: SoundSettings
 }
 
 export type RockPanel = {
@@ -296,18 +288,12 @@ export const registerRockElements = (options: RockPanelOptions): RockPanel => {
 
   // Handed the same reactive object the elements panel edits, not a copy of it,
   // so the two rows cannot disagree and a change from either reaches the body.
-  const configSchema = {
-    ...RR_ROCK_PHYSICS_CONTROLS,
-    ...(stickmanConfig ? { stickman: RR_STICKMAN_CONTROLS } : {}),
-    ...(options.soundSettings ? { sound: RR_SOUND_CONTROLS } : {})
-  }
-  if (options.soundSettings) {
-    ;(config as RockConfig & { sound?: SoundSettings }).sound = options.soundSettings
-  }
   registerViewConfig(
     options.routeName,
     ref(config) as Ref<Record<string, unknown>>,
-    configSchema,
+    stickmanConfig
+      ? { ...RR_ROCK_PHYSICS_CONTROLS, stickman: RR_STICKMAN_CONTROLS }
+      : RR_ROCK_PHYSICS_CONTROLS,
     apply
   )
 
