@@ -1,6 +1,7 @@
 setcpm(30)
 stack(
-  s("brown").lpf(180).tremolo(7).tremolodepth(0.7).attack(0).release(0).gain(1.2),
-  note("a1").s("sawtooth").lpf(200).tremolo(5).tremolodepth(0.6).attack(0).release(0).gain(0.5),
-  s("brown").hpf(120).lpf(900).tremolo(9).tremolodepth(0.9).attack(0).release(0).gain(0.9)
+  s("brown*24").lpf(220).gain(rand.range(0.3, 1)).attack(0.02).release(0.06),
+  s("brown*10").hpf(150).lpf(800).gain(perlin.range(0, 0.7)).attack(0.03).release(0.08),
+  s("brown").lpf(100).decay(0.3).sustain(0).struct("x ~ x x ~ x ~ ~").gain(1.3),
+  s("crackle").density(0.06).lpf(900).gain(0.5)
 )
