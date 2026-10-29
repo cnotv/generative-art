@@ -19,6 +19,16 @@ rendered offline in the browser, faster than real time, and the result replaces 
 running game. **Reset** puts the sound the game ships with back. A sound that has been edited is
 marked in the list.
 
+**Play** renders the code and plays it in the panel without touching the game, so a sound can be
+heard before it is applied: a loop plays until **Stop**, a one-shot plays once. The panel and the
+game play through separate audio, so the game's own music keeps going; switch it off with its
+corner icon to hear the preview alone. The render is kept, so Play then Apply renders once.
+
+**Open in Strudel Editor** opens the full editor in a new tab with the sound's code in it, for
+everything the panel leaves out (the sounds list, patterns, the timeline, MIDI, hints). The game
+stays open in the first tab with any edits not yet applied. The editor opens on the code it last
+saved, so this replaces whatever it had saved.
+
 A **Code** and **Flow** switch above the editor changes how the sound is edited. Flow shows the
 same code as the Strudel Editor's node canvas, so a sound can be built from instrument and effect
 nodes. Opening the flow does not touch the code; only a change on the canvas writes the compiled
@@ -61,4 +71,4 @@ game should go back to its own file. Rock Runner's is `replaceSound` in
 `game/useRockRunnerAudio.ts`, and its slots are in `soundSlots.ts`.
 
 Source files: `src/stores/soundPanel.ts`, `src/components/panels/SoundPanel.vue`,
-`src/utils/soundRender.ts`, `src/types/soundPanel.ts`.
+`src/utils/soundRender.ts`, `src/utils/soundPreview.ts`, `src/types/soundPanel.ts`.

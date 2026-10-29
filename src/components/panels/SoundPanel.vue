@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { ExternalLink, Play, Square } from 'lucide-vue-next'
 import GenericPanel from './GenericPanel.vue'
 import { Button } from '@/components/ui/button'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
@@ -7,6 +9,9 @@ import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import { readStrudelNoteBars } from '@/views/Tools/StrudelEditor/noteBars'
 import { useSoundPanelStore } from '@/stores/soundPanel'
 import { useSoundFlow } from './useSoundFlow'
+import { openInStrudelEditor } from './openInStrudelEditor'
+
+const STRUDEL_EDITOR_PATH = '/tools/StrudelEditor'
 
 // CodeMirror stays out of every game's bundle until the panel is opened.
 const StrudelCodeEditor = defineAsyncComponent(
@@ -19,6 +24,7 @@ const StrudelFlowEditor = defineAsyncComponent(() =>
 )
 
 const soundStore = useSoundPanelStore()
+const router = useRouter()
 
 const selectedId = computed(() => soundStore.selectedId ?? '')
 const isRendering = computed(() => soundStore.statusOf(selectedId.value) === 'rendering')
@@ -29,6 +35,14 @@ const soundFlow = useSoundFlow(
   (code) => soundStore.setCode(selectedId.value, code)
 )
 watch(selectedId, soundFlow.reload)
+
+const isPlaying = computed(() => soundStore.playingId === selectedId.value)
+
+const openFullEditor = (): void =>
+  openInStrudelEditor(
+    soundStore.codeOf(selectedId.value),
+    router.resolve({ path: STRUDEL_EDITOR_PATH }).href
+  )
 
 const resetSound = async (): Promise<void> => {
   await soundStore.reset(selectedId.value)
@@ -97,6 +111,16 @@ const statusText = computed(
         {{ soundFlow.flowError.value }}
       </p>
       <div class="sound-panel__actions">
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="isRendering"
+          @click="soundStore.togglePreview(selectedId)"
+        >
+          <Square v-if="isPlaying" class="sound-panel__icon" aria-hidden="true" />
+          <Play v-else class="sound-panel__icon" aria-hidden="true" />
+          {{ isPlaying ? 'Stop' : 'Play' }}
+        </Button>
         <Button size="sm" :disabled="isRendering" @click="soundStore.apply(selectedId)">
           {{ isRendering ? 'Rendering...' : 'Apply' }}
         </Button>
@@ -109,6 +133,10 @@ const statusText = computed(
           @click="resetSound"
         >
           Reset
+        </Button>
+        <Button size="sm" variant="outline" @click="openFullEditor">
+          <ExternalLink class="sound-panel__icon" aria-hidden="true" />
+          Open in Strudel Editor
         </Button>
         <span class="sound-panel__status">{{ statusText }}</span>
       </div>
@@ -141,7 +169,13 @@ const statusText = computed(
   overflow: hidden;
 }
 
+.sound-panel__icon {
+  width: 1em;
+  height: 1em;
+}
+
 .sound-panel__actions {
+  flex-wrap: wrap;
   display: flex;
   gap: var(--spacing-2);
   align-items: center;

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { renderStrudelSound } from '@/utils/soundRender'
+import { playPreview } from '@/utils/soundPreview'
 import type { SoundApplyHandler, SoundSlot, SoundSlotStatus } from '@/types/soundPanel'
 
 /**
@@ -15,8 +16,12 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
   const statuses = ref<Record<string, SoundSlotStatus>>({})
   const errors = ref<Record<string, string>>({})
   const selectedId = ref<string | null>(null)
+  const playingId = ref<string | null>(null)
   // A function is not state worth tracking in devtools, so it stays out of the reactive tree.
   let applyHandler: SoundApplyHandler | null = null
+  let stopPreview: (() => void) | null = null
+  // The last render of each sound and the code it came from, so Play then Apply renders once.
+  const renderCache = shallowRef<Record<string, { code: string; wav: ArrayBuffer }>>({})
 
   const isAvailable = computed(() => slots.value.length > 0)
   const selectedSlot = computed(() => slots.value.find((slot) => slot.id === selectedId.value))
@@ -32,6 +37,20 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     errors.value = { ...errors.value, [id]: error }
   }
 
+  const renderSlot = async (slot: SoundSlot, code: string): Promise<ArrayBuffer> => {
+    const cached = renderCache.value[slot.id]
+    if (cached?.code === code) return cached.wav
+    const wav = await renderStrudelSound(code, slot)
+    renderCache.value = { ...renderCache.value, [slot.id]: { code, wav } }
+    return wav
+  }
+
+  const stopPlayback = (): void => {
+    stopPreview?.()
+    stopPreview = null
+    playingId.value = null
+  }
+
   const register = (
     newRouteName: string,
     newSlots: SoundSlot[],
@@ -44,10 +63,13 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     errors.value = {}
     selectedId.value = newSlots[0]?.id ?? null
     applyHandler = onApply
+    renderCache.value = {}
   }
 
   const unregister = (name: string): void => {
     if (routeName.value !== name) return
+    stopPlayback()
+    renderCache.value = {}
     routeName.value = null
     slots.value = []
     codes.value = {}
@@ -70,9 +92,33 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     if (!slot || !applyHandler || statusOf(id) === 'rendering') return
     setStatus(id, 'rendering')
     try {
-      const wav = await renderStrudelSound(codeOf(id), slot)
+      const wav = await renderSlot(slot, codeOf(id))
       await applyHandler(id, wav)
       setStatus(id, 'applied')
+    } catch (error) {
+      setStatus(id, 'error', error instanceof Error ? error.message : 'The code did not render')
+    }
+  }
+
+  const togglePreview = async (id: string): Promise<void> => {
+    if (playingId.value === id) {
+      stopPlayback()
+      return
+    }
+    const slot = findSlot(id)
+    if (!slot || statusOf(id) === 'rendering') return
+    stopPlayback()
+    const statusBefore = statusOf(id)
+    setStatus(id, 'rendering')
+    try {
+      const wav = await renderSlot(slot, codeOf(id))
+      setStatus(id, statusBefore)
+      stopPreview = playPreview(wav, slot.kind === 'loop', () => {
+        if (playingId.value !== id) return
+        stopPreview = null
+        playingId.value = null
+      })
+      playingId.value = id
     } catch (error) {
       setStatus(id, 'error', error instanceof Error ? error.message : 'The code did not render')
     }
@@ -90,6 +136,7 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     routeName,
     slots,
     selectedId,
+    playingId,
     selectedSlot,
     isAvailable,
     codeOf,
@@ -101,6 +148,7 @@ export const useSoundPanelStore = defineStore('soundPanel', () => {
     select,
     setCode,
     apply,
+    togglePreview,
     reset
   }
 })

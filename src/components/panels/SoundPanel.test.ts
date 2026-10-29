@@ -7,7 +7,14 @@ import { useSoundPanelStore } from '@/stores/soundPanel'
 import type { SoundSlot } from '@/types/soundPanel'
 
 const renderStrudelSound = vi.hoisted(() => vi.fn())
+const playPreview = vi.hoisted(() => vi.fn())
+const openInStrudelEditor = vi.hoisted(() => vi.fn())
 vi.mock('@/utils/soundRender', () => ({ renderStrudelSound }))
+vi.mock('@/utils/soundPreview', () => ({ playPreview }))
+vi.mock('./openInStrudelEditor', () => ({ openInStrudelEditor }))
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ resolve: ({ path }: { path: string }) => ({ href: path }) })
+}))
 
 const slots: SoundSlot[] = [
   { id: 'theme', label: 'Music', code: 'a', kind: 'loop', loopCycles: 4 },
@@ -31,6 +38,8 @@ const mountPanel = () =>
 beforeEach(() => {
   setActivePinia(createPinia())
   renderStrudelSound.mockReset().mockResolvedValue(new ArrayBuffer(8))
+  playPreview.mockReset().mockReturnValue(vi.fn())
+  openInStrudelEditor.mockClear()
 })
 
 describe('SoundPanel', () => {
@@ -123,5 +132,36 @@ describe('SoundPanel', () => {
 
     expect(wrapper.find('[role="alert"]').text()).toContain('syntax error')
     expect(wrapper.find('textarea').isVisible()).toBe(true)
+  })
+
+  it('plays the sound without applying it, and offers Stop while it plays', async () => {
+    const store = useSoundPanelStore()
+    const onApply = vi.fn()
+    store.register('Game', slots, onApply)
+    const wrapper = mountPanel()
+    const find = (label: string) =>
+      wrapper.findAll('button').find((button) => button.text() === label)
+
+    await find('Play')?.trigger('click')
+    await vi.waitFor(() => expect(playPreview).toHaveBeenCalled())
+    await wrapper.vm.$nextTick()
+
+    expect(onApply).not.toHaveBeenCalled()
+    expect(find('Stop')).toBeDefined()
+    expect(find('Play')).toBeUndefined()
+  })
+
+  it('opens the sound in the full Strudel Editor with its current code', async () => {
+    const store = useSoundPanelStore()
+    store.register('Game', slots, vi.fn())
+    const wrapper = mountPanel()
+    await wrapper.find('textarea').setValue('edited')
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Open in Strudel Editor')
+      ?.trigger('click')
+
+    expect(openInStrudelEditor).toHaveBeenCalledWith('edited', '/tools/StrudelEditor')
   })
 })

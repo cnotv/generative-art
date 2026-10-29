@@ -3,7 +3,9 @@ import { setActivePinia, createPinia } from 'pinia'
 import type { SoundSlot } from '@/types/soundPanel'
 
 const renderStrudelSound = vi.hoisted(() => vi.fn())
+const playPreview = vi.hoisted(() => vi.fn())
 vi.mock('@/utils/soundRender', () => ({ renderStrudelSound }))
+vi.mock('@/utils/soundPreview', () => ({ playPreview }))
 
 import { useSoundPanelStore } from './soundPanel'
 
@@ -16,6 +18,7 @@ const wav = new ArrayBuffer(8)
 beforeEach(() => {
   setActivePinia(createPinia())
   renderStrudelSound.mockReset().mockResolvedValue(wav)
+  playPreview.mockReset().mockReturnValue(vi.fn())
 })
 
 describe('soundPanel store registration', () => {
@@ -128,5 +131,120 @@ describe('soundPanel store editing', () => {
     expect(store.isModified('bump')).toBe(false)
     expect(onApply).toHaveBeenLastCalledWith('bump', null)
     expect(store.statusOf('bump')).toBe('idle')
+  })
+})
+
+describe('soundPanel store preview', () => {
+  it('renders the code and plays it, a loop looping and a one-shot not', async () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+
+    await store.togglePreview('theme')
+    await store.togglePreview('bump')
+
+    expect(playPreview).toHaveBeenNthCalledWith(1, wav, true, expect.any(Function))
+    expect(playPreview).toHaveBeenNthCalledWith(2, wav, false, expect.any(Function))
+  })
+
+  it('does not touch the game while previewing', async () => {
+    const store = useSoundPanelStore()
+    const onApply = vi.fn()
+    store.register('RockRunner', slots, onApply)
+
+    await store.togglePreview('bump')
+
+    expect(onApply).not.toHaveBeenCalled()
+    expect(store.playingId).toBe('bump')
+  })
+
+  it('stops the preview when toggled again', async () => {
+    const store = useSoundPanelStore()
+    const stop = vi.fn()
+    playPreview.mockReturnValue(stop)
+    store.register('RockRunner', slots, vi.fn())
+
+    await store.togglePreview('bump')
+    await store.togglePreview('bump')
+
+    expect(stop).toHaveBeenCalledTimes(1)
+    expect(store.playingId).toBeNull()
+  })
+
+  it('stops one sound before playing another', async () => {
+    const store = useSoundPanelStore()
+    const stop = vi.fn()
+    playPreview.mockReturnValue(stop)
+    store.register('RockRunner', slots, vi.fn())
+
+    await store.togglePreview('theme')
+    await store.togglePreview('bump')
+
+    expect(stop).toHaveBeenCalledTimes(1)
+    expect(store.playingId).toBe('bump')
+  })
+
+  it('clears the playing state when a one-shot ends on its own', async () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    await store.togglePreview('bump')
+
+    playPreview.mock.calls[0][2]()
+
+    expect(store.playingId).toBeNull()
+  })
+
+  it('renders the same code only once across preview and apply', async () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+
+    await store.togglePreview('bump')
+    await store.apply('bump')
+
+    expect(renderStrudelSound).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders again once the code has changed', async () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    await store.apply('bump')
+
+    store.setCode('bump', 'changed')
+    await store.apply('bump')
+
+    expect(renderStrudelSound).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows the error and plays nothing when the code does not render', async () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    renderStrudelSound.mockRejectedValue(new Error('bd is not defined'))
+
+    await store.togglePreview('bump')
+
+    expect(playPreview).not.toHaveBeenCalled()
+    expect(store.errorOf('bump')).toBe('bd is not defined')
+  })
+
+  it('keeps the applied status after a preview', async () => {
+    const store = useSoundPanelStore()
+    store.register('RockRunner', slots, vi.fn())
+    await store.apply('bump')
+
+    await store.togglePreview('bump')
+
+    expect(store.statusOf('bump')).toBe('applied')
+  })
+
+  it('stops the preview when the game unregisters', async () => {
+    const store = useSoundPanelStore()
+    const stop = vi.fn()
+    playPreview.mockReturnValue(stop)
+    store.register('RockRunner', slots, vi.fn())
+    await store.togglePreview('theme')
+
+    store.unregister('RockRunner')
+
+    expect(stop).toHaveBeenCalledTimes(1)
+    expect(store.playingId).toBeNull()
   })
 })
