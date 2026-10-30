@@ -30,10 +30,13 @@ watch(
 </script>
 
 <template>
-  <template v-if="soundStore.editorSlotId !== null">
-    <div class="sound-editor-overlay" role="dialog" aria-label="Strudel Editor">
-      <StrudelEditor />
-    </div>
+  <div
+    v-if="soundStore.editorSlotId !== null"
+    class="sound-editor-overlay"
+    role="dialog"
+    aria-label="Strudel Editor"
+  >
+    <StrudelEditor />
     <div class="sound-editor-overlay__actions" role="group" aria-label="Strudel Editor actions">
       <Button size="sm" @click="soundStore.closeEditor(true)">
         <Check class="sound-editor-overlay__icon" aria-hidden="true" />
@@ -44,26 +47,25 @@ watch(
         Close
       </Button>
     </div>
-  </template>
+  </div>
 </template>
 
 <style scoped>
+/* Above the app's navigation bar, not below it: the bar slides in whenever the pointer nears the
+   top, and anything sharing that strip would be covered or would cover it. The editor is modal
+   anyway, and the strip it reserves for the bar holds this overlay's own buttons instead. */
 .sound-editor-overlay {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal);
+  z-index: calc(var(--z-nav) + 1);
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
 
-/* In the band the editor leaves free for the app's navigation bar, between its menu button and
-   its panel buttons. A sibling of the overlay rather than a child, because the overlay's own
-   stacking context would put it below the bar, which covers it whenever it appears. */
 .sound-editor-overlay__actions {
-  position: fixed;
+  position: absolute;
   top: 0;
-  left: calc(var(--spacing-4) * 3);
-  z-index: calc(var(--z-nav) + 1);
+  left: var(--spacing-4);
   display: flex;
   gap: var(--spacing-2);
   align-items: center;
