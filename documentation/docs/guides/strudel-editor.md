@@ -60,8 +60,10 @@ Every tab has its own anchor, so `/tools/StrudelEditor#midi` opens on the midi t
 `#flow` opens the flow canvas. Tabs and patterns share the anchor: a name that is a tab opens it,
 anything else loads the pattern it names.
 
-Audio starts on the first Play press, since browsers only allow sound after a user gesture.
-iOS is stricter: audio has to start inside the tap itself, and the engine download that follows
+Audio starts on the first Play press or the first click on a pattern, since browsers only allow
+sound after a user gesture. Clicking an example, a song or a saved pattern plays it at once from
+its start and replaces whatever was playing; opening a link to one, or moving with Back, only
+loads it. iOS is stricter: audio has to start inside the tap itself, and the engine download that follows
 outlasts it. So `strudelPlayback.ts` creates and resumes the page's one AudioContext before
 anything downloads, hands it to Strudel, and resumes it again on every Play or Update. It also
 asks for iOS's playback audio session, so an iPhone plays with the ring switch on silent.
@@ -370,7 +372,7 @@ can decode works: MP3, WAV, OGG, M4A, FLAC. The file never leaves the browser. I
 mono, analysed in a Web Worker, and summarised as a tempo, a bar count and a chord progression,
 with the generated code folded under **Code**; open it to read it. The tab's own help sits under
 **Turn music into Strudel code** at the top and **Read suggestions** at the bottom, folded until you
-open them. Press **Load** to replace the editor's code with it, then Play.
+open them. Press **Load** to replace the editor's code with it and play it.
 
 ![The import tab after transcribing a drum, bass and chord loop](/img/strudel-editor/import-tab.webp)
 

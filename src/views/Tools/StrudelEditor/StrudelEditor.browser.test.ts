@@ -201,12 +201,11 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      // Act: switch to patterns tab, click Caverave, then play
+      // Act: switch to patterns tab and click Caverave, which plays it
       await page.getByRole('button', { name: 'Import', exact: true }).click()
       await page.getByRole('button', { name: /^Examples/ }).click()
       await page.getByRole('button', { name: /^Songs/ }).click()
       await page.getByRole('link', { name: 'Caverave' }).click()
-      await page.getByRole('button', { name: 'Play from here' }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
