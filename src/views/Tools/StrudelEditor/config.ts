@@ -418,6 +418,106 @@ $: note("<[e1 ~ e2 ~ ~ e1 ~ g1] [e1 ~ e2 ~ ~ d2 ~ b1] [c2 ~ c3 ~ ~ c2 ~ d2] [b1 
   .s("sawtooth").lpf(600).decay(.2).sustain(.2).gain(.65).mask("<0!4 1!40 0!4>")._scope()
 $: s("~ cp ~ cp").gain(.45).mask("<0!8 1!20 0!4 1!12 0!4>")
 $: s("perc(5,8)").hpf(500).gain(.5).pan(sine.range(.3, .7).slow(4)).mask("<0!12 1!36>")`
+  },
+  {
+    id: 'neon-drive',
+    label: 'Neon Drive (synthwave)',
+    code: `// Neon Drive: a synthwave song in A minor
+// Forty-eight bars: chords alone, verse, chorus, chords alone. One number a bar.
+setcpm(100/4)
+
+$: chord("<Am F C G>").voicing().s("sawtooth").lpf("<700!8 1800!32 700!8>")
+  .decay(.3).sustain(0).gain(.22).room(.3)._pianoroll()
+$: s("bd*4, ~ cp ~ cp, [~ hh]*4").bank("RolandTR909").gain(.44)
+  .mask("<0!8 1!32 0!8>")
+$: note("<a1 a1 c2 g1>").s("sawtooth").lpf(500).decay(.18).sustain(0).gain(.7)
+  .mask("<0!8 1!32 0!8>")
+$: n("<0 2 4 7 4 2 0 2>").scale("A3:minor").s("triangle").delay(.3).delaytime(.375)
+  .delayfeedback(.35).gain(.31).mask("<0!24 1!16 0!8>")._spectrum()`
+  },
+  {
+    id: 'dust-and-diesel',
+    label: 'Dust and Diesel (stoner rock)',
+    code: `// Dust and Diesel: a stoner rock song in D minor
+// Forty-eight bars: riff, verse, chorus, riff. One number a bar.
+setcpm(80/4)
+
+$: chord("<Dm Bb C G>").voicing().s("gm_overdriven_guitar").lpf("<900!8 1600!32 900!8>")
+  .decay(.2).sustain(0).gain(.26).room(.25)._punchcard()
+$: s("bd ~ ~ bd ~ ~ bd ~, ~ ~ sd ~ ~ ~ sd ~, hh*8").gain(.38)
+  .mask("<0!8 1!32 0!8>")
+$: note("<d2 d2 f2 g2>").s("sawtooth").lpf(350).decay(.3).sustain(0).gain(.78)
+  .mask("<0!8 1!32 0!8>")._scope()
+$: note("<d4 f4 g4 a4>").s("gm_overdriven_guitar").gain(.33)
+  .mask("<0!24 1!16 0!8>")`
+  },
+  {
+    id: 'rust-and-rain',
+    label: 'Rust and Rain (grunge)',
+    code: `// Rust and Rain: a grunge song in E minor
+// Forty bars: quiet verse, loud chorus, bridge, chorus. One number a bar.
+setcpm(120/4)
+
+$: chord("<Em G D A>").voicing().s("gm_overdriven_guitar").lpf(1200).decay(.15).sustain(0)
+  .gain("<.11!8 .28!16 .18!8 .28!8>").room(.2)._punchcard()
+$: s("bd ~ bd ~ bd ~ ~ ~, ~ ~ sd ~ ~ ~ sd ~, hh*8").gain("<.22!8 .5!32>")
+  .mask("<1!40>")
+$: note("<e2 e2 g2 d2>").s("sawtooth").lpf(500).decay(.2).sustain(0)
+  .gain("<.45!8 .8!32>").mask("<1!40>")._scope()
+$: note("<e4 g4 a4 b4>").s("gm_overdriven_guitar").gain(.32)
+  .mask("<0!8 1!16 0!8 1!8>")`
+  },
+  {
+    id: 'winter-court',
+    label: 'Winter Court (classical)',
+    code: `// Winter Court: a classical piece in D minor
+// Thirty-two bars: theme, development, return, coda. One number a bar.
+setcpm(80/4)
+
+$: chord("<Dm Bb F C>").voicing().s("gm_string_ensemble_1").attack(.4).release(1.2)
+  .gain(.35).room(.4)._pianoroll()
+$: n("<0 2 4 7 4 2 0 -1>").scale("D4:minor").s("gm_violin").gain(.48)
+  .mask("<1!24 0!8>")._spiral()
+$: note("<d2 d2 bb1 a1>").s("gm_cello").gain(.56).mask("<1!32>")
+$: s("perc(3,8)").hpf(80).gain(.38).mask("<0!8 1!8 0!8 1!8>")`
+  },
+  {
+    id: 'uptown-strut',
+    label: 'Uptown Strut (funk)',
+    code: `// Uptown Strut: a funk song in E minor
+// Forty-eight bars: intro, verse, chorus, break. One number a bar.
+setcpm(105/4)
+
+$: stack(
+  s("bd ~ ~ bd ~ ~ bd ~"),
+  s("~ ~ sd ~ ~ sd ~ ~"),
+  s("hh*8").gain(.6),
+  s("perc(5,8)").hpf(600).gain(.4)
+).gain("<.4!8 .52!40>").mask("<1!48>")._punchcard()
+$: note("<e2 ~ e2 g2 ~ a2 ~ b2>").s("sawtooth").lpf(700).decay(.12).sustain(0).gain(.72)
+  .mask("<0!8 1!32 0!8>")
+$: chord("<E7 A7 D7 B7>").voicing().struct("~ x ~ x").s("gm_overdriven_guitar")
+  .decay(.08).sustain(0).gain(.2).mask("<0!16 1!24 0!8>")._pianoroll()
+$: n("<0 3 5 6 7 6 5 3>").scale("E3:minor:pentatonic").s("gm_brass_section").gain(.25)
+  .mask("<0!24 1!16 0!8>")`
+  },
+  {
+    id: 'blue-hour',
+    label: 'Blue Hour (jazz)',
+    code: `// Blue Hour: a jazz song in Bb major
+// Thirty-two bars: head, solo, head. One number a bar.
+setcpm(130/4)
+
+$: stack(
+  s("~ ~ bd ~ ~ ~ bd ~").gain(.25),
+  s("~ ~ sd ~ ~ ~ sd ~").gain(.2),
+  s("hh*8").gain(.55)
+).swingBy(1/3, 4).mask("<1!32>")
+$: note("<c2 e2 g2 a2>").s("gm_acoustic_bass").gain(.55).mask("<1!32>")
+$: chord("<Cm7 F7 Bb^7 Eb^7>").voicing().s("gm_epiano1").gain(.3)
+  .mask("<1!32>")._pianoroll()
+$: n("<0 2 4 5 7 9 7 4>").scale("Bb3:major").s("gm_vibraphone").gain(.35)
+  .mask("<1!16 0!8 1!8>")._pitchwheel()`
   }
 ]
 
@@ -1059,6 +1159,295 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       }
     ],
     visuals: ['punchcard', 'scope']
+  },
+  {
+    id: 'synthwave',
+    label: 'Synthwave',
+    keywords: ['synthwave', 'synth wave', 'retrowave', 'outrun', '80s synth'],
+    definingRoles: ['kick', 'bass'],
+    minBeatsPerMinute: 80,
+    maxBeatsPerMinute: 105,
+    beatsPerMinute: 100,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a four-on-the-floor kick',
+        snippet: 's("bd*4").gain(.5)',
+        reason: 'A steady kick drives the night-drive pulse.'
+      },
+      {
+        role: 'clap',
+        label: 'a gated clap on two and four',
+        snippet: 's("~ cp ~ cp").gain(.4)',
+        reason: 'A wide 80s clap answers the kick on the backbeat.'
+      },
+      {
+        role: 'hihat',
+        label: 'offbeat hi-hats',
+        snippet: 's("[~ hh]*4").gain(1.2)',
+        reason: 'Hats between the kicks keep the arpeggio moving.'
+      },
+      {
+        role: 'bass',
+        label: 'a driving octave bass',
+        snippet: 'note("<a1 a1 c2 g1>").s("sawtooth").lpf(500).decay(.18).sustain(0).gain(1.1)',
+        reason: 'A short saw bass under the chords carries the low end.'
+      },
+      {
+        role: 'chords',
+        label: 'wide minor chords',
+        snippet:
+          'chord("<Am F C G>").voicing().s("sawtooth").lpf(1800).decay(.3).sustain(0).gain(.3)',
+        reason: 'Open minor chords give synthwave its nostalgic lift.'
+      },
+      {
+        role: 'melody',
+        label: 'an arpeggiated lead',
+        snippet: 'n("<0 2 4 7 4 2>").scale("A3:minor").s("triangle").delay(.3).gain(.35)',
+        reason: 'A repeating arpeggio is the hook over the chord bed.'
+      }
+    ],
+    visuals: ['pianoroll', 'spectrum']
+  },
+  {
+    id: 'stoner-rock',
+    label: 'Stoner rock',
+    keywords: ['stoner rock', 'stoner', 'desert rock', 'fuzz rock', 'sludge'],
+    definingRoles: ['bass', 'chords'],
+    minBeatsPerMinute: 65,
+    maxBeatsPerMinute: 100,
+    beatsPerMinute: 80,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a heavy syncopated kick',
+        snippet: 's("bd ~ ~ bd ~ ~ bd ~").gain(.6)',
+        reason: 'A loose, heavy kick leaves room around the riff.'
+      },
+      {
+        role: 'snare',
+        label: 'a backbeat snare',
+        snippet: 's("~ ~ sd ~ ~ ~ sd ~").gain(.5)',
+        reason: 'The snare on two and four keeps the slow riff from dragging.'
+      },
+      {
+        role: 'hihat',
+        label: 'steady eighth-note hi-hats',
+        snippet: 's("hh*8").gain(1.1)',
+        reason: 'Steady hats hold the tempo under the fuzz.'
+      },
+      {
+        role: 'bass',
+        label: 'a fuzz bass',
+        snippet: 'note("<d2 d2 f2 g2>").s("sawtooth").lpf(350).decay(.3).sustain(0).gain(1.2)',
+        reason: 'A dark, short bass locks with the kick and the riff.'
+      },
+      {
+        role: 'chords',
+        label: 'fuzz guitar chords',
+        snippet:
+          'chord("<Dm Bb C G>").voicing().s("gm_overdriven_guitar").lpf(1400).decay(.2).sustain(0).gain(.35)',
+        reason: 'Overdriven chords are the wall the style is built on.'
+      },
+      {
+        role: 'melody',
+        label: 'a pentatonic lead',
+        snippet: 'note("<d3 f3 g3 a3>").s("gm_overdriven_guitar").gain(.5)',
+        reason: 'A short modal lead answers the riff without leaving the key.'
+      }
+    ],
+    visuals: ['punchcard', 'scope']
+  },
+  {
+    id: 'grunge',
+    label: 'Grunge',
+    keywords: ['grunge', 'seattle sound', '90s rock'],
+    definingRoles: ['kick', 'snare', 'chords'],
+    minBeatsPerMinute: 100,
+    maxBeatsPerMinute: 125,
+    beatsPerMinute: 120,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a driving kick',
+        snippet: 's("bd ~ bd ~ bd ~ ~ ~").gain(.6)',
+        reason: 'A pushy kick keeps the quiet verse moving.'
+      },
+      {
+        role: 'snare',
+        label: 'a hard backbeat snare',
+        snippet: 's("~ ~ sd ~ ~ ~ sd ~").gain(.55)',
+        reason: 'The snare on two and four is the loud half of the quiet-loud turn.'
+      },
+      {
+        role: 'hihat',
+        label: 'eighth-note hi-hats',
+        snippet: 's("hh*8").gain(1.1)',
+        reason: 'Hats fill the space between the heavy hits.'
+      },
+      {
+        role: 'bass',
+        label: 'a distorted bass',
+        snippet: 'note("<e2 e2 g2 d2>").s("sawtooth").lpf(500).decay(.2).sustain(0).gain(1.1)',
+        reason: 'A short, dirty bass follows the guitar chords.'
+      },
+      {
+        role: 'chords',
+        label: 'overdriven guitar chords',
+        snippet:
+          'chord("<Em G D A>").voicing().s("gm_overdriven_guitar").lpf(1200).decay(.15).sustain(0).gain(.4)',
+        reason: 'A distorted chord progression carries the quiet-loud dynamics.'
+      },
+      {
+        role: 'melody',
+        label: 'a shouted guitar hook',
+        snippet: 'note("<e4 g4 a4 b4>").s("gm_overdriven_guitar").gain(.45)',
+        reason: 'A simple repeated hook sits above the wall of chords.'
+      }
+    ],
+    visuals: ['punchcard', 'scope']
+  },
+  {
+    id: 'classical',
+    label: 'Classical',
+    keywords: ['classical', 'orchestral', 'baroque', 'romantic', 'chamber music'],
+    definingRoles: ['chords', 'melody', 'bass'],
+    minBeatsPerMinute: 60,
+    maxBeatsPerMinute: 100,
+    beatsPerMinute: 80,
+    instruments: [
+      {
+        role: 'chords',
+        label: 'a string section',
+        snippet:
+          'chord("<Dm Bb F C>").voicing().s("gm_string_ensemble_1").attack(.4).release(1.2).gain(.3)',
+        reason: 'Sustained strings are the body of a classical arrangement.'
+      },
+      {
+        role: 'melody',
+        label: 'a violin melody',
+        snippet: 'n("<0 2 4 7 4 2>").scale("D4:minor").s("gm_violin").gain(.4)',
+        reason: 'A singing upper line carries the theme.'
+      },
+      {
+        role: 'bass',
+        label: 'a cello bass',
+        snippet: 'note("<d2 d2 bb1 a1>").s("gm_cello").gain(.5)',
+        reason: 'The cello anchors the harmony below the strings.'
+      },
+      {
+        role: 'percussion',
+        label: 'timpani hits',
+        snippet: 's("perc(3,8)").hpf(80).gain(.35)',
+        reason: 'A few low hits mark the returns without turning into a drum kit.'
+      }
+    ],
+    visuals: ['pianoroll', 'spiral']
+  },
+  {
+    id: 'funk',
+    label: 'Funk',
+    keywords: ['funk', 'funky', 'p-funk', 'boogie'],
+    definingRoles: ['bass', 'chords', 'percussion'],
+    minBeatsPerMinute: 95,
+    maxBeatsPerMinute: 120,
+    beatsPerMinute: 105,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a syncopated kick',
+        snippet: 's("bd ~ ~ bd ~ ~ bd ~").gain(.55)',
+        reason: 'The kick lands around the beat, not only on it.'
+      },
+      {
+        role: 'snare',
+        label: 'a snare with ghost notes',
+        snippet: 's("~ ~ sd ~ ~ sd ~ ~").gain(.5)',
+        reason: 'A backbeat with extra taps is the funk pocket.'
+      },
+      {
+        role: 'hihat',
+        label: 'tight eighth-note hi-hats',
+        snippet: 's("hh*8").gain(1.2)',
+        reason: 'Tight hats keep the sixteenth-note feel readable.'
+      },
+      {
+        role: 'percussion',
+        label: 'hand percussion',
+        snippet: 's("perc(5,8)").hpf(600).gain(.5)',
+        reason: 'A shaker or conga line adds the upper rhythm.'
+      },
+      {
+        role: 'bass',
+        label: 'a slap bass',
+        snippet:
+          'note("<e2 ~ e2 g2 ~ a2 ~ b2>").s("sawtooth").lpf(700).decay(.12).sustain(0).gain(1.1)',
+        reason: 'Short, popping bass notes are the lead voice of funk.'
+      },
+      {
+        role: 'chords',
+        label: 'scratch guitar chords',
+        snippet:
+          'chord("<E7 A7 D7 B7>").voicing().struct("~ x ~ x").s("gm_overdriven_guitar").decay(.08).sustain(0).gain(.25)',
+        reason: 'Tight offbeat chords chop against the bass.'
+      },
+      {
+        role: 'melody',
+        label: 'a brass stab',
+        snippet:
+          'n("<0 3 5 6 7 6 5 3>").scale("E3:minor:pentatonic").s("gm_brass_section").gain(.35)',
+        reason: 'A short horn line answers the vocal space.'
+      }
+    ],
+    visuals: ['punchcard', 'pianoroll']
+  },
+  {
+    id: 'jazz',
+    label: 'Jazz',
+    keywords: ['jazz', 'bebop', 'swing', 'bossa nova', 'fusion'],
+    definingRoles: ['bass', 'chords', 'melody'],
+    minBeatsPerMinute: 126,
+    maxBeatsPerMinute: 170,
+    beatsPerMinute: 130,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a feathered kick',
+        snippet: 's("~ ~ bd ~ ~ ~ bd ~").gain(.25)',
+        reason: 'A quiet kick marks the pulse without dominating the ride.'
+      },
+      {
+        role: 'snare',
+        label: 'a brush-like snare',
+        snippet: 's("~ ~ sd ~ ~ ~ sd ~").gain(.2)',
+        reason: 'Soft backbeats leave room for the comping.'
+      },
+      {
+        role: 'hihat',
+        label: 'a ride-like hi-hat',
+        snippet: 's("hh*8").gain(1.1)',
+        reason: 'A steady cymbal line is the timekeeper in a small group.'
+      },
+      {
+        role: 'bass',
+        label: 'a walking bass',
+        snippet: 'note("<c2 e2 g2 a2>").s("gm_acoustic_bass").gain(.6)',
+        reason: 'A walking line spells the harmony and keeps the swing.'
+      },
+      {
+        role: 'chords',
+        label: 'comping seventh chords',
+        snippet: 'chord("<Cm7 F7 Bb^7 Eb^7>").voicing().s("gm_epiano1").gain(.3)',
+        reason: 'Short, syncopated seventh chords are the comping.'
+      },
+      {
+        role: 'melody',
+        label: 'a vibraphone head',
+        snippet: 'n("<0 2 4 5 7 9 7 4>").scale("Bb3:major").s("gm_vibraphone").gain(.35)',
+        reason: 'A vibraphone line states the head over the rhythm section.'
+      }
+    ],
+    visuals: ['pianoroll', 'pitchwheel']
   }
 ]
 
