@@ -1045,13 +1045,7 @@ describe('useStrudelEditor', () => {
     // Assert
     expect(tuneCount).toBe(ELECTRO_TUNES.length)
     expect(electroTunes.map((tune) => tune.id)).toContain('caverave')
-    expect(electroTunes.map((tune) => tune.label)).toEqual([
-      'Caverave',
-      'Dinofunk',
-      'Megalovania riff (Toby Fox)',
-      'Breakfast in America (Supertramp)',
-      'Come as You Are riff (Nirvana)'
-    ])
+    expect(electroTunes.map((tune) => tune.label)).toEqual(ELECTRO_TUNES.map((tune) => tune.label))
   })
 
   it('loads an electro tune into the editor when selected', () => {

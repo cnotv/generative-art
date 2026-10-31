@@ -7,6 +7,7 @@ const technoStyle: StrudelMusicStyle = {
   id: 'techno',
   label: 'Techno',
   keywords: ['techno'],
+  definingRoles: ['kick'],
   minBeatsPerMinute: 125,
   maxBeatsPerMinute: 140,
   beatsPerMinute: 130,
