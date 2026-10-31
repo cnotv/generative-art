@@ -36,6 +36,13 @@ syncopated taiko, doubled woodblock, sixteenth shaker and a higher kalimba and f
 pushes harder before falling back to the first. Both come from one file, so the join is always on a
 chord change and the whole loop is under a minute.
 
+Every part changes chord once a bar, together. The first version looped each part's chord list at
+its own speed, so the pad held one chord while the flute passed through two, the kalimba four and
+the bass eight, and over half the bass and kalimba notes sat outside the chord under them. In the
+second section that put the G sharp of its last chord over all the others. The two sections also
+differ in the flute now: one phrase a bar in the first, calm, and the same phrase twice in the
+second.
+
 ## Two layers
 
 The sound splits by who makes it, because they need different tools.
@@ -93,3 +100,14 @@ looping source whose volume and pitch are eased toward their target. Only the mu
 long file, streams. Music and sound effects can each be switched off with the two icons in the top left corner of the run, a plain icon when on and a barred one when off.
 
 ![The two sound icons in the top left corner of a run, both barred: music and sound effects are off](/img/rock-runner/sound-toggles.webp)
+
+## Where a render stops
+
+A render ends exactly at the end of its last cycle and cuts off whatever is still sounding, which
+did damage in two places. The rumble loop dropped from a third of full scale straight to silence
+on every repeat, a step 28 times larger than any inside the file. Its seam is now a 30 millisecond
+crossfade of the file's own end into its start, at constant power because the two are unrelated
+noise. That leaves the sound itself untouched and shortens the loop to 1.97 seconds, which nothing
+depends on, since its pitch follows the rock anyway. The finish chime stopped dead at full level
+for the same reason, so it is rendered with an empty second cycle for its reverb and release to
+ring out in.

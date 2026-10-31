@@ -2,5 +2,6 @@ setcpm(60)
 stack(
   note("g1").s("sine").penv(12).pdecay(0.06).decay(0.2).sustain(0).gain(0.9),
   s("brown").lpf(900).decay(0.1).sustain(0).gain(0.6),
-  note("c3").s("triangle").lpf(700).decay(0.07).sustain(0).gain(0.4)
+  note("c3").s("triangle").lpf(700).decay(0.07).sustain(0).gain(0.4),
+  s("pink").hpf(900).lpf(4000).decay(0.04).sustain(0).gain(0.5)
 )
