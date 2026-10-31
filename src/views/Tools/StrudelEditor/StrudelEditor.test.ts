@@ -295,7 +295,13 @@ describe('StrudelEditor view', () => {
       'Tideline (ambient)',
       'Lift Off (trance)',
       'Harbour Steps (dub)',
-      'Wire Fence (breakbeat)'
+      'Wire Fence (breakbeat)',
+      'Neon Drive (synthwave)',
+      'Dust and Diesel (stoner rock)',
+      'Rust and Rain (grunge)',
+      'Winter Court (classical)',
+      'Uptown Strut (funk)',
+      'Blue Hour (jazz)'
     ])
   })
 

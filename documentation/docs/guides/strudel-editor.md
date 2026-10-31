@@ -30,9 +30,11 @@ flow tab:
 - **patterns**: your saved patterns, then the examples, then the songs: the electro tunes
   Caverave and Dinofunk, three songs typed in from guitar tabs (the Megalovania riff, Breakfast
   in America by Supertramp and the Come as You Are riff by Nirvana, played on the General MIDI
-  guitars), and one original song for each hint style. Those eight are Concrete Hours (techno),
-  Second Floor (house), Long Way Down (drum and bass), Corner Store (hip hop), Tideline
-  (ambient), Lift Off (trance), Harbour Steps (dub) and Wire Fence (breakbeat). They are written
+  guitars), and one original song for each hint style. Those fourteen are Concrete Hours
+  (techno), Second Floor (house), Long Way Down (drum and bass), Corner Store (hip hop),
+  Tideline (ambient), Lift Off (trance), Harbour Steps (dub), Wire Fence (breakbeat), Neon Drive
+  (synthwave), Dust and Diesel (stoner rock), Rust and Rain (grunge), Winter Court (classical),
+  Uptown Strut (funk) and Blue Hour (jazz). They are written
   as `$:` layers with a `.mask` holding one number a bar, so each layer can be read, muted or
   rearranged on its own, and the hints tab finds nothing missing in them. Each is a link to its
   own anchor, so
@@ -92,14 +94,17 @@ The style comes from the first of these that names one, and the tab says which:
 1. the **Style** picker at the top of the tab;
 2. the comment on the code's first line, such as `// deep house groove` or `// my first dnb tune`;
 3. a guess from the code, which needs a tempo inside the style's range and the instruments that
-   define it: a kick for most, a snare too for drum and bass and hip hop, a bass too for dub,
-   chords for ambient and a sampled break for breakbeat.
+   define it: a kick for most; a snare too for drum and bass, hip hop and grunge; a bass too for
+   dub and synthwave; bass and chords for stoner rock; chords, melody and bass for classical and
+   jazz; bass, chords and percussion for funk; chords for ambient; and a sampled break for
+   breakbeat.
 
 Most songs are none of these, so a guitar riff at 120 BPM gets no style rather than the nearest
 one, and the tab asks you to name or pick it.
 
-There are eight styles: techno, house, drum and bass, hip hop, ambient, trance, dub and
-breakbeat. Each has a usual tempo range, the instruments it is built from, and the visuals that
+There are fourteen styles: techno, house, drum and bass, hip hop, ambient, trance, dub,
+breakbeat, synthwave, stoner rock, grunge, classical, funk and jazz. Each has a usual tempo
+range, the instruments it is built from, and the visuals that
 suit it. The table is `STRUDEL_MUSIC_STYLES` in the editor's `config.ts`, and nothing is sent
 anywhere.
 
