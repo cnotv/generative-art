@@ -81,6 +81,8 @@ onMounted(async () => {
   resizeCanvas()
   window.addEventListener('resize', resizeCanvas)
   controls = game.mountControls(gameContainer.value)
+  // Before the countdown, so the song is loaded and scheduled by the time it reaches its first beat.
+  game.init()
 
   const delay = Math.max(0, props.startAt - Date.now())
   if (delay >= 3000) countdownValue.value = 3
@@ -97,7 +99,6 @@ onMounted(async () => {
   countdownValue.value = 0
   await new Promise<void>((r) => setTimeout(r, 400))
   countdownValue.value = null
-  game.init()
 })
 
 onUnmounted(() => {

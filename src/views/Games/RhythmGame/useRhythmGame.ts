@@ -9,18 +9,18 @@ import {
   NOTE_RADIUS,
   LANE_COLORS,
   LANE_KEYS,
-  LANE_FREQS,
   CONTROLS_GAME_ID,
   CONTROLS_DEFAULT_MAPPING,
-  INSTRUMENT_PRESETS,
+  BACKING_VOLUME,
   type RgLane,
   type RhythmNote,
   type RgDifficulty,
   type RgSong,
-  type RgInstrument,
-  SONGS
+  type RgInstrument
 } from './config'
+import { fetchSongBacking, fetchSongNotes } from './loadRhythmSong'
 import {
+  buildScheduledNotes,
   evaluateHit,
   getHitScore,
   getComboMultiplier,
@@ -54,30 +54,10 @@ type GameDeps = {
   onSongEnd: () => void
 }
 
-const getSongNotes = (song: RgSong, difficulty: RgDifficulty): RhythmNote[] => {
-  const songDefinition = SONGS.find((s) => s.id === song)
-  return songDefinition ? songDefinition.notes[difficulty].map((n) => ({ ...n })) : []
-}
-
-const resolveNotes = (deps: GameDeps): RhythmNote[] =>
+const resolveNotes = async (deps: GameDeps): Promise<RhythmNote[]> =>
   deps.song === 'custom' && deps.customNotes?.length
     ? deps.customNotes.map((n) => ({ ...n }))
-    : getSongNotes(deps.song, deps.difficulty)
-
-const buildScheduledNotes = (
-  songNotes: RhythmNote[],
-  instrument: RgInstrument
-): ScheduledNote[] => {
-  const preset = INSTRUMENT_PRESETS[instrument]
-  return songNotes.map((n) => ({
-    time: n.time,
-    freq: LANE_FREQS[n.lane] * preset.freqMultiplier,
-    duration: preset.durationMs,
-    volume: preset.volume,
-    waveType: preset.waveType,
-    attackTime: preset.attackTimeSec
-  }))
-}
+    : fetchSongNotes(deps.song, deps.difficulty)
 
 const buildControlsMapping = (
   laneActive: Ref<boolean[]>,
@@ -337,6 +317,7 @@ export const useRhythmGame = (deps: GameDeps) => {
     result: 'perfect' as const
   }))
   let lastFrameTime = 0
+  let isDestroyed = false
   const lastHit = ref<'perfect' | 'good' | 'miss' | null>(null)
   const hitKey = ref(0)
   const progressPct = ref(0)
@@ -406,7 +387,9 @@ export const useRhythmGame = (deps: GameDeps) => {
       laneFlashes
     }
     particles = drawFrame(canvas, currentMs, dt, drawContext, particles)
-    if (songDurationMs.value > 0) progressPct.value = Math.min(1, currentMs / songDurationMs.value)
+    if (songDurationMs.value > 0) {
+      progressPct.value = Math.min(1, Math.max(0, currentMs) / songDurationMs.value)
+    }
 
     const lastNote = notes.at(-1)
     if (lastNote && currentMs > lastNote.time + 2000 && notes.every((n) => n.hit !== undefined)) {
@@ -418,8 +401,21 @@ export const useRhythmGame = (deps: GameDeps) => {
     rafId = requestAnimationFrame(gameLoop)
   }
 
-  const init = (): void => {
-    notes = resolveNotes(deps)
+  // A missing backing track is only a quieter round, so the notes play on without it.
+  const startBackingTrack = async (): Promise<void> => {
+    const backing = await fetchSongBacking(deps.song).catch(() => null)
+    if (backing === null || isDestroyed) return
+    await scheduler.startBacking(backing, BACKING_VOLUME).catch(() => undefined)
+  }
+
+  const init = async (): Promise<void> => {
+    const loadedNotes = await resolveNotes(deps).catch(() => null)
+    if (isDestroyed) return
+    if (loadedNotes === null) {
+      deps.onSongEnd()
+      return
+    }
+    notes = loadedNotes
     songDurationMs.value = Math.max(
       deps.backgroundNotes?.at(-1)?.time ?? 0,
       notes.at(-1)?.time ?? 0
@@ -429,11 +425,13 @@ export const useRhythmGame = (deps: GameDeps) => {
       ? [...gameNotes, ...deps.backgroundNotes]
       : gameNotes
     scheduler.start(allNotes, deps.startAt)
+    startBackingTrack()
     lastFrameTime = performance.now()
     rafId = requestAnimationFrame(gameLoop)
   }
 
   const destroy = (): void => {
+    isDestroyed = true
     cancelAnimationFrame(rafId)
     scheduler.destroy()
     clearCanvas(deps.canvas.value)

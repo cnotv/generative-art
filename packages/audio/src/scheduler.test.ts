@@ -29,9 +29,26 @@ describe('midiNoteToFreq', () => {
 
 describe('createNoteScheduler', () => {
   let mockFactory: AudioContextFactory
+  const mockBufferSource = {
+    buffer: null as unknown,
+    connect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn()
+  }
+  const decodedBacking = (leadingSilentSamples: number): AudioBuffer =>
+    ({
+      sampleRate: 1000,
+      getChannelData: () => {
+        const samples = new Float32Array(leadingSilentSamples + 1)
+        samples.fill(0.5, leadingSilentSamples)
+        return samples
+      }
+    }) as unknown as AudioBuffer
+  const decodeAudioData = vi.fn()
 
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.clearAllMocks()
 
     const mockOscillator = {
       connect: vi.fn(),
@@ -55,8 +72,11 @@ describe('createNoteScheduler', () => {
       resume: vi.fn().mockResolvedValue(undefined),
       suspend: vi.fn().mockResolvedValue(undefined),
       createOscillator: vi.fn().mockReturnValue(mockOscillator),
-      createGain: vi.fn().mockReturnValue(mockGain)
+      createGain: vi.fn().mockReturnValue(mockGain),
+      createBufferSource: vi.fn().mockReturnValue(mockBufferSource),
+      decodeAudioData
     }
+    decodeAudioData.mockResolvedValue(decodedBacking(0))
 
     mockFactory = () => mockContext as unknown as AudioContext
   })
@@ -111,5 +131,86 @@ describe('createNoteScheduler', () => {
     scheduler.start([], Date.now())
     expect(scheduler.isPlaying).toBe(true)
     scheduler.stop()
+  })
+
+  describe('startBacking', () => {
+    const backingData = new ArrayBuffer(1)
+
+    it('waits for the lookahead window before starting a backing track early', async () => {
+      // Arrange
+      const scheduler = createNoteScheduler(mockFactory)
+      scheduler.start([], Date.now() + 1000)
+
+      // Act
+      await scheduler.startBacking(backingData)
+      const isStartedEarly = mockBufferSource.start.mock.calls.length > 0
+      vi.advanceTimersByTime(900)
+
+      // Assert
+      expect(isStartedEarly).toBe(false)
+      expect(mockBufferSource.start).toHaveBeenCalledOnce()
+      expect(mockBufferSource.start.mock.calls[0][0]).toBeGreaterThan(0)
+      expect(mockBufferSource.start.mock.calls[0][1]).toBe(0)
+    })
+
+    it.each([
+      ['on time, with no padding', 0, 0, 0],
+      ['decoded with leading padding', 0, 25, 0.025],
+      ['started late', 400, 0, 0.4],
+      ['started late and decoded with padding', 400, 25, 0.425]
+    ])('skips to the right place when %s', async (_case, lateMs, silentSamples, expectedOffset) => {
+      // Arrange
+      decodeAudioData.mockResolvedValue(decodedBacking(silentSamples))
+      const scheduler = createNoteScheduler(mockFactory)
+      scheduler.start([], Date.now() - lateMs)
+
+      // Act
+      await scheduler.startBacking(backingData)
+
+      // Assert
+      expect(mockBufferSource.start.mock.calls[0][1]).toBeCloseTo(expectedOffset, 5)
+    })
+
+    it('stops a playing backing track with the scheduler', async () => {
+      // Arrange
+      const scheduler = createNoteScheduler(mockFactory)
+      scheduler.start([], Date.now())
+      await scheduler.startBacking(backingData)
+
+      // Act
+      scheduler.stop()
+
+      // Assert
+      expect(mockBufferSource.stop).toHaveBeenCalledOnce()
+    })
+
+    it('never starts a backing track that finishes decoding after a stop', async () => {
+      // Arrange
+      const scheduler = createNoteScheduler(mockFactory)
+      scheduler.start([], Date.now())
+      const decoding = scheduler.startBacking(backingData)
+
+      // Act
+      scheduler.stop()
+      await decoding
+
+      // Assert
+      expect(mockBufferSource.start).not.toHaveBeenCalled()
+    })
+
+    it('forgets a waiting backing track on stop', async () => {
+      // Arrange
+      const scheduler = createNoteScheduler(mockFactory)
+      scheduler.start([], Date.now() + 1000)
+      await scheduler.startBacking(backingData)
+
+      // Act
+      scheduler.stop()
+      scheduler.start([], Date.now())
+      vi.advanceTimersByTime(100)
+
+      // Assert
+      expect(mockBufferSource.start).not.toHaveBeenCalled()
+    })
   })
 })
