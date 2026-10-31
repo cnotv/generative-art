@@ -136,13 +136,13 @@ touched. Read one directly if you are working in its area without opening a matc
 
 ## Procedures
 
-The workflow skills, `start`, `start-issue`, `open-pr`, `verify`, `finish-change`, `journey-doc`
-and `security-audit`, come from agent-base's `workflow` plugin, which `.claude/settings.json`
-installs in every session, local or cloud. Never copy them into `.claude/skills/`, where both
-would load under two names. That folder holds only this repository's own skills:
+`.claude/settings.json` installs the workflow skills (`start`, `start-issue`, `open-pr`, `verify`,
+`finish-change`, `journey-doc`, `security-audit`) from agent-base in every session, local or cloud.
+Never copy them into `.claude/skills/`, which holds only this repository's own skills:
 
 | Skill           | Use when                                                        |
 | --------------- | --------------------------------------------------------------- |
 | `perf-check`    | a 3D scene or asset changed, or something is reported slow      |
 | `sync-docs`     | you changed a file that a tutorial documents                    |
 | `strudel-sound` | asked for music or a sound, or to save a pattern as WAV or MIDI |
+| `sound-design`  | deciding what a sound is made of, editing audio, or teaching it |
