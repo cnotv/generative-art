@@ -81,8 +81,16 @@ expected note count, drums on channel 9 (General MIDI channel 10), and the tempo
 | Use                            | Where                                                                                        |
 | ------------------------------ | -------------------------------------------------------------------------------------------- |
 | a game's sound effect or music | `src/assets/audio/`, imported from the view's `config.ts` (as ForestGame imports `jump.wav`) |
+| a built-in RhythmGame song     | `src/assets/audio/rhythmgame/`, listed in `SONGS` in the view's `config.ts`, as below        |
 | MIDI for the RhythmGame, a DAW | sent to the user; the RhythmGame loads MIDI from a file the player picks                     |
 | anything else                  | sent to the user, and committed only when asked                                              |
+
+A RhythmGame song is two patterns of the same length, both committed: `<song>.strudel` is the
+backing and `<song>.lead.strudel` the melody the player hits, which never goes in the backing.
+Render the backing to WAV, set its level with `ffmpeg` (about -16 LUFS, true peak under -1 dBFS,
+`alimiter` with `latency=1` so nothing shifts), and encode it with `-q:a 5`. Export the lead to
+`<song>.mid`, which is the chart. The backing's first sound must be on its very first beat, since
+the game skips to it, and its last chord has to die away within two seconds of the last note.
 
 Commit the `.strudel` source next to the file it renders, so it can be changed and rendered
 again. A WAV is about 11 MB a minute at 48 kHz stereo: anything longer than a short effect or

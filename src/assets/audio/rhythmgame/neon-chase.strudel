@@ -34,7 +34,8 @@ const breakdown = stack(synth(verseChords).lpf(600), riser)
 const lastVerse = stack(drop, verse, shimmer(verseChords))
 const ending = stack(
   s("<bd ~>").bank(kit),
-  note("<[e2,b2,e3,g3,b3,e4] ~>").s("sawtooth").lpf(1300).decay(3.4).sustain(0).room(.6).roomsize(4).gain(.3)
+  note("<[e2,b2,e3,g3,b3,e4] ~>").s("sawtooth").lpf(1300).decay(1.8).sustain(0).room(.25).roomsize(1).gain(.3)
 )
 
-arrange([4, intro], [8, verse], [8, lift], [4, breakdown], [8, lastVerse], [2, ending])
+// Headroom: the export clips what sums past full scale, and level is set after rendering.
+arrange([4, intro], [8, verse], [8, lift], [4, breakdown], [8, lastVerse], [2, ending]).postgain(.6)

@@ -113,6 +113,13 @@ const handleMidiParsed = (
   store.song = 'custom'
 }
 
+const handleSongPicked = (pickedSong: RgSong): void => {
+  store.customNotes = null
+  store.backgroundNotes = null
+  store.customSongName = ''
+  store.song = pickedSong
+}
+
 const handleStartGame = (): void => {
   const isSolo = playerList.value.length <= 1
   if (isSolo) {
@@ -201,6 +208,8 @@ onMounted(() => {
       :player-list="playerList"
       :rg-player-list="playerList"
       :room-id="roomId"
+      :song="song"
+      :difficulty="difficulty"
       :winner-id="winnerId"
       :local-peer-id="localPeerId || 'solo'"
       @update:player-name="playerName = $event"
@@ -211,6 +220,8 @@ onMounted(() => {
       @leave-room="handleLeaveRoom"
       @play-again="handleRestart"
       @midi-parsed="handleMidiParsed"
+      @song-picked="handleSongPicked"
+      @update:difficulty="store.difficulty = $event"
     />
 
     <RhythmGameGame
