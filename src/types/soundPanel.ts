@@ -4,9 +4,15 @@ export type SoundSlot = {
   label: string
   /** The shipped Strudel code, which Reset restores. */
   code: string
-  /** A loop is rendered for `loopCycles` cycles; a one-shot for exactly one repetition. */
+  /** A loop repeats; a one-shot plays once. */
   kind: 'loop' | 'once'
-  loopCycles?: number
+  /**
+   * How many cycles to render. A loop needs it; a one-shot without it is rendered for one
+   * measured repetition, which a sound with a silent tail for its reverb has to override.
+   */
+  cycles?: number
+  /** A loop of unrelated noise crossfades its own end into its start so the repeat does not click. */
+  crossfadeSeam?: boolean
 }
 
 export type SoundSlotStatus = 'idle' | 'rendering' | 'applied' | 'error'

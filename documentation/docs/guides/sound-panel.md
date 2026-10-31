@@ -45,9 +45,12 @@ The game never plays the Strudel code. Strudel only renders it to an audio file,
 Strudel Editor's export tab does, and the game plays that file as it always does. The engine
 loads on the first Apply, not when the game starts, so a game that nobody edits carries no cost.
 
-- A **loop** sound, such as the music, is rendered for a fixed number of cycles.
+- A **loop** sound, such as the music, is rendered for a fixed number of cycles, and one of noise,
+  such as the rolling rumble, has the end of its file blended into its start so the repeat does not
+  click.
 - A **one-shot** sound, such as a bump, is rendered for one repetition of its pattern, measured
-  from the code, so `fast(2)` does not render twice.
+  from the code, so `fast(2)` does not render twice. One with a silent tail for its reverb, such
+  as the finish chime, sets its cycles instead, as the shipped file does.
 - The result is scaled to a normal level, so a pattern that is quiet in the editor is not quiet in
   the game.
 - Code that does not run shows its error under the editor and leaves the game's sound alone.
@@ -61,13 +64,14 @@ into the sound's `.strudel` file and render it with `scripts/strudel-export.mjs`
 A view calls the store when it mounts and unregisters when it unmounts, as it does for the Config
 panel. Each slot gives the Strudel code the sound ships with, which also serves as Reset.
 
-| Field        | Meaning                                                      |
-| ------------ | ------------------------------------------------------------ |
-| `id`         | what the game's handler receives to know which sound changed |
-| `label`      | the button in the panel                                      |
-| `code`       | the shipped Strudel code                                     |
-| `kind`       | `loop` or `once`                                             |
-| `loopCycles` | for a loop, how many cycles to render                        |
+| Field           | Meaning                                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | what the game's handler receives to know which sound changed                                                                                    |
+| `label`         | the button in the panel                                                                                                                         |
+| `code`          | the shipped Strudel code                                                                                                                        |
+| `kind`          | `loop` or `once`                                                                                                                                |
+| `cycles`        | how many cycles to render: a loop needs it, a one-shot measures one repetition without it, so a sound with a silent tail for its reverb sets it |
+| `crossfadeSeam` | a loop of unrelated noise blends its end into its start so the repeat does not click                                                            |
 
 The handler receives the slot id and the new WAV bytes, or `null` when the slot was reset and the
 game should go back to its own file. Rock Runner's is `replaceSound` in

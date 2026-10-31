@@ -12,7 +12,7 @@ vi.mock('@/utils/soundRender', () => ({ renderStrudelSound }))
 vi.mock('@/utils/soundPreview', () => ({ playPreview }))
 
 const slots: SoundSlot[] = [
-  { id: 'theme', label: 'Music', code: 'a', kind: 'loop', loopCycles: 4 },
+  { id: 'theme', label: 'Music', code: 'a', kind: 'loop', cycles: 4 },
   { id: 'bump', label: 'Bump', code: 'b', kind: 'once' }
 ]
 

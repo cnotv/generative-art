@@ -12,7 +12,7 @@ vi.mock('@/utils/soundPreview', () => ({ playPreview }))
 import { useSoundPanelStore } from './soundPanel'
 
 const slots: SoundSlot[] = [
-  { id: 'theme', label: 'Theme', code: 'theme code', kind: 'loop', loopCycles: 8 },
+  { id: 'theme', label: 'Theme', code: 'theme code', kind: 'loop', cycles: 8 },
   { id: 'bump', label: 'Bump', code: 'bump code', kind: 'once' }
 ]
 const wav = new ArrayBuffer(8)
