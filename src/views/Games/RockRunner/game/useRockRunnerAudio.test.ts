@@ -225,3 +225,65 @@ describe('useRockRunnerAudio rumble', () => {
     expect(loops).toHaveLength(2)
   })
 })
+
+describe('useRockRunnerAudio replaceSound', () => {
+  const edited = new ArrayBuffer(16)
+
+  it('plays an edited effect from the buffer decoded out of the new file', async () => {
+    const { audio, raw, sources } = await setup()
+    const decoded = { edited: true }
+    raw.decodeAudioData.mockResolvedValueOnce(decoded)
+
+    await audio.replaceSound('bump', edited)
+    audio.playImpact({ kind: 'bump', strength: 1 })
+
+    expect(sources[0].buffer).toBe(decoded)
+  })
+
+  it('goes back to the shipped file when the sound is reset', async () => {
+    const { audio, raw } = await setup()
+    await audio.replaceSound('bump', edited)
+    raw.decodeAudioData.mockClear()
+
+    await audio.replaceSound('bump', null)
+
+    expect(raw.decodeAudioData).toHaveBeenCalledTimes(1)
+  })
+
+  it('restarts the rumble on the new buffer when the rolling sound is replaced', async () => {
+    const { audio, sources } = await setup()
+    audio.setRolling(1)
+
+    await audio.replaceSound('roll', edited)
+    audio.setRolling(1)
+
+    const loops = sources.filter((source) => source.loop)
+    expect(loops[0].stop).toHaveBeenCalledTimes(1)
+    expect(loops).toHaveLength(2)
+  })
+
+  it('swaps the theme for a blob of the new file and frees the one before', async () => {
+    const created = vi.fn(() => 'blob:first')
+    const revoked = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL: created, revokeObjectURL: revoked })
+    const { audio } = await setup()
+    const theme = play.mock.contexts[0] as HTMLAudioElement
+
+    await audio.replaceSound('theme', edited)
+    expect(theme.getAttribute('src')).toBe('blob:first')
+
+    await audio.replaceSound('theme', null)
+    expect(revoked).toHaveBeenCalledWith('blob:first')
+    expect(theme.getAttribute('src')).not.toBe('blob:first')
+    vi.unstubAllGlobals()
+  })
+
+  it('ignores a sound it does not have', async () => {
+    const { audio, raw } = await setup()
+    raw.decodeAudioData.mockClear()
+
+    await audio.replaceSound('nothing', edited)
+
+    expect(raw.decodeAudioData).not.toHaveBeenCalled()
+  })
+})

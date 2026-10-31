@@ -111,3 +111,5 @@ noise. That leaves the sound itself untouched and shortens the loop to 1.97 seco
 depends on, since its pitch follows the rock anyway. The finish chime stopped dead at full level
 for the same reason, so it is rendered with an empty second cycle for its reverb and release to
 ring out in.
+
+Every sound can be edited and re-rendered from the Sound panel while the game runs, see [the Sound panel guide](../guides/sound-panel.md).

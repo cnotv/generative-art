@@ -8,6 +8,7 @@ const buildPlayback = (cycle = 0, loopBars: number | null = 4): StrudelPlayback 
   evaluateCode: vi.fn(async () => ({ success: true })),
   stopPlayback: vi.fn(async () => {}),
   renderToWav: vi.fn(async () => ({ success: true })),
+  renderToWavBytes: vi.fn(async () => ({ success: true })),
   renderToMidi: vi.fn(async () => ({ success: true })),
   measureRepetition: vi.fn(async () => 1),
   readPosition: vi.fn(() => ({ cycle, cyclesPerSecond: 0.75 })),
