@@ -3,8 +3,17 @@ import type { ScheduledNote } from './types'
 const LOOKAHEAD_MS = 150
 const TICK_INTERVAL_MS = 30
 
+type WaitingBacking = { buffer: AudioBuffer; volume: number }
+
 export interface NoteScheduler {
   start(notes: ScheduledNote[], wallClockStartMs: number): void
+  /**
+   * Plays a recording in time with the notes, skipping forward if the start time has passed.
+   * @param audioData - The encoded file, which decoding takes ownership of
+   * @param volume - Playback volume, 1 for as recorded
+   * @returns A promise that settles once the track is decoded and scheduled
+   */
+  startBacking(audioData: ArrayBuffer, volume?: number): Promise<void>
   stop(): void
   destroy(): void
   readonly currentMs: number
@@ -12,6 +21,43 @@ export interface NoteScheduler {
 }
 
 export type AudioContextFactory = () => AudioContext
+
+const scheduleNote = (ctx: AudioContext, note: ScheduledNote, startAtSec: number): void => {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+
+  osc.type = note.waveType ?? 'sine'
+  osc.frequency.setValueAtTime(note.freq, startAtSec)
+
+  const vol = note.volume ?? 0.25
+  const dur = note.duration / 1000
+  const attack = note.attackTime ?? 0.005
+  gain.gain.setValueAtTime(0, startAtSec)
+  gain.gain.linearRampToValueAtTime(vol, startAtSec + attack)
+  gain.gain.exponentialRampToValueAtTime(0.001, startAtSec + dur - 0.01)
+
+  osc.start(startAtSec)
+  osc.stop(startAtSec + dur)
+}
+
+const playBacking = (
+  ctx: AudioContext,
+  { buffer, volume }: WaitingBacking,
+  elapsedMs: number
+): AudioBufferSourceNode => {
+  const source = ctx.createBufferSource()
+  const gain = ctx.createGain()
+  source.buffer = buffer
+  gain.gain.value = volume
+  source.connect(gain)
+  gain.connect(ctx.destination)
+  const delayFromNowSec = Math.max(0, -elapsedMs / 1000)
+  const lateSec = Math.max(0, elapsedMs / 1000)
+  source.start(ctx.currentTime + delayFromNowSec, lateSec)
+  return source
+}
 
 /**
  * Creates a note scheduler that uses the Web Audio API lookahead pattern for
@@ -30,6 +76,8 @@ export const createNoteScheduler = (
   let tickId: ReturnType<typeof setInterval> | null = null
   let playing = false
   let sortedNotes: ScheduledNote[] = []
+  let waitingBacking: WaitingBacking | null = null
+  let backingSource: AudioBufferSourceNode | null = null
 
   const getContext = (): AudioContext => {
     if (!audioContext) {
@@ -41,27 +89,14 @@ export const createNoteScheduler = (
     return audioContext
   }
 
-  const scheduleNote = (ctx: AudioContext, note: ScheduledNote, startAtSec: number): void => {
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-
-    osc.type = note.waveType ?? 'sine'
-    osc.frequency.setValueAtTime(note.freq, startAtSec)
-
-    const vol = note.volume ?? 0.25
-    const dur = note.duration / 1000
-    const attack = note.attackTime ?? 0.005
-    gain.gain.setValueAtTime(0, startAtSec)
-    gain.gain.linearRampToValueAtTime(vol, startAtSec + attack)
-    gain.gain.exponentialRampToValueAtTime(0.001, startAtSec + dur - 0.01)
-
-    osc.start(startAtSec)
-    osc.stop(startAtSec + dur)
+  const scheduleBacking = (ctx: AudioContext, elapsedMs: number): void => {
+    if (waitingBacking === null || elapsedMs + LOOKAHEAD_MS < 0) return
+    backingSource = playBacking(ctx, waitingBacking, elapsedMs)
+    waitingBacking = null
   }
 
   const schedulePendingNotes = (ctx: AudioContext, elapsedMs: number): void => {
+    scheduleBacking(ctx, elapsedMs)
     const scheduleUntilMs = elapsedMs + LOOKAHEAD_MS
     const toSchedule = sortedNotes
       .slice(nextNoteIndex)
@@ -89,6 +124,14 @@ export const createNoteScheduler = (
     schedulePendingNotes(ctx, Date.now() - startMs)
   }
 
+  const startBacking = async (audioData: ArrayBuffer, volume = 1): Promise<void> => {
+    const ctx = getContext()
+    const buffer = await ctx.decodeAudioData(audioData)
+    if (!playing) return
+    waitingBacking = { buffer, volume }
+    scheduleBacking(ctx, Date.now() - startMs)
+  }
+
   const stop = (): void => {
     playing = false
     if (tickId !== null) {
@@ -96,6 +139,9 @@ export const createNoteScheduler = (
       tickId = null
     }
     nextNoteIndex = 0
+    waitingBacking = null
+    backingSource?.stop()
+    backingSource = null
     if (audioContext?.state === 'running') {
       audioContext.suspend().catch(() => undefined)
     }
@@ -111,6 +157,7 @@ export const createNoteScheduler = (
 
   return {
     start,
+    startBacking,
     stop,
     destroy,
     get currentMs() {

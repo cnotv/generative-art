@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
+import { midiNoteToFreq } from '@webgamekit/audio'
 import {
+  buildScheduledNotes,
   evaluateHit,
   getHitScore,
   getComboMultiplier,
@@ -8,7 +10,25 @@ import {
   findHittableNote,
   findExpiredNotes
 } from './rhythmGameUtilities'
-import type { RhythmNote } from './config'
+import type { RgInstrument, RhythmNote } from './config'
+
+describe('buildScheduledNotes', () => {
+  it.each<[RgInstrument, number]>([
+    ['piano', 1],
+    ['bass', 0.5],
+    ['guitar', 1]
+  ])('plays the chart note at its own pitch on the %s', (instrument, octaveFactor) => {
+    // Arrange
+    const chartNote: RhythmNote = { lane: 0, midiNote: 69, time: 1500 }
+
+    // Act
+    const [scheduledNote] = buildScheduledNotes([chartNote], instrument)
+
+    // Assert
+    expect(scheduledNote.time).toBe(1500)
+    expect(scheduledNote.freq).toBeCloseTo(midiNoteToFreq(69) * octaveFactor)
+  })
+})
 
 describe('evaluateHit', () => {
   it.each([

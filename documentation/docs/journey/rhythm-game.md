@@ -119,7 +119,7 @@ sequenceDiagram
 
 ## Instrument simulation with Web Audio API
 
-Real instruments cannot be bundled as audio files without a CDN or large asset pipeline. Instead each "instrument" is approximated by a different oscillator configuration — a combination of wave shape, duration, frequency offset, and envelope.
+The notes the player plays are synthesised live rather than bundled as samples: each "instrument" is approximated by a different oscillator configuration — a combination of wave shape, duration, frequency offset, and envelope.
 
 ```mermaid
 flowchart LR
@@ -139,7 +139,7 @@ The three presets and their rationale:
 | Bass       | `triangle` | ×0.5      | 220 ms   | Same warmth, one octave lower, held longer                                   |
 | Guitar     | `sawtooth` | ×1        | 110 ms   | Sawtooth carries strong odd+even harmonics that read as "stringy"            |
 
-The frequency multiplier is applied uniformly to every lane's MIDI-derived frequency so the entire key layout shifts as a chord without reauthoring the song.
+The frequency multiplier is applied uniformly to every note's own pitch, so an instrument shifts the whole melody without reauthoring the song.
 
 The attack envelope (`attackTimeSec`) is an `AudioParam` ramp — short for piano (5 ms, key-click feel), medium for bass (3 ms), and very short for guitar (2 ms, percussive string pluck). Without the envelope, oscillators start at full amplitude and produce a digital click on every note.
 
@@ -157,6 +157,36 @@ sequenceDiagram
 ```
 
 Adding a new instrument only requires a new entry in `INSTRUMENT_PRESETS` in `config.ts` — the scheduler and game loop pick it up automatically. For a more realistic feel, the next step would be `PeriodicWave` with custom harmonic tables, or a convolution reverb impulse; the current architecture supports both without changing the game logic.
+
+## The songs: a recording behind the notes the player plays
+
+The first three songs were not songs. Each was a list of hit times worked out by arithmetic, and every note in a lane played the same tone, so a round was a metronome made of four pitches in C. There was nothing behind the player, and nothing a hit could be in time with except itself.
+
+Each song is now written in Strudel in two parts. The **backing** holds the drums, bass and chords, and is rendered to a compressed recording. The **lead** is the melody, exported as MIDI, and it is the chart: the falling notes are the melody's notes, lanes come from their pitch, and easy and medium are the same melody with notes dropped by the gap filter below. The lead is left out of the recording because the player plays it. Every note now sounds at its own pitch, which also fixed uploaded MIDI, whose melody had been replaced by the four lane tones.
+
+```mermaid
+flowchart LR
+    A[Backing pattern] --> B[Render, set level, encode]
+    C[Lead pattern] --> D[MIDI export]
+    B --> E[Recording on the scheduler's clock]
+    D --> F[Chart: lanes and difficulty]
+    D --> G[Notes at their real pitch]
+    E -.same clock.- G
+```
+
+Writing them meant deciding what each layer is for, the method from the `sound-design` skill. The kick owns the low end, so each bass plays between the kicks. Each song has an intro for the player to find the pulse, two sections with different harmony, a breakdown whose riser stops just short of the bar so a moment of silence makes the drop land harder, and a last section with faster notes. Nobody listened while these were made: every judgement was by measurement and spectrogram, including that each lead note on a strong beat belongs to its bar's chord.
+
+Two traps came with the recording.
+
+**It has to start on the note clock, and on time.** The recording runs through the note scheduler, in the same lookahead tick as the notes, not as a separate player that would start whenever it finished loading. The game also used to start the scheduler 400 ms after the countdown ended, which notes survived by bunching up at the start but a recording cannot: it would have lost its first kick. The song now loads and is scheduled when the view opens, so the countdown covers the load. A round that still starts late skips forward by the same amount rather than playing behind the chart.
+
+**The final chord has to fit the end of the round.** A round ends two seconds after the last note, whatever is still playing, so each song's last chord decays inside those two seconds instead of being cut off.
+
+MP3 padding looked like a third trap and was not. Encoders pad the start of a file, and tens of milliseconds would be most of the 50 ms window for a perfect hit, so the scheduler briefly skipped to the first audible sample. Measured, it had almost nothing to skip: under a millisecond in Chromium, because the encoder records the padding in the file and the decoder removes it. The old WebKit bug that ignored that record was fixed in macOS Monterey, so the skip came out again.
+
+![The lobby offering a built-in song, a difficulty and a place to upload MIDI](/img/rhythm-game/song-picker.webp)
+
+The lobby had a quieter failure. Its song picker sat in a template slot the wizard no longer rendered, so the built-in songs beyond the default, the difficulties and MIDI upload were all unreachable, with no error anywhere. They are now the wizard's own config fields.
 
 ## Canvas rendering: Canvas 2D API and glow effects
 

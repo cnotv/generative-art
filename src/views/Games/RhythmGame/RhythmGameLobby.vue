@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
-import { LobbyUIWizard } from '@/components/LobbyUI'
+import { LobbyUIButton, LobbyUIRow, LobbyUIWizard } from '@/components/LobbyUI'
 import '@/assets/styles/lobby-ui.scss'
 import RhythmGameSummary from './RhythmGameSummary.vue'
-import type { LobbyPlayer } from '@/types/lobbyWizard'
-import { MATCHMAKER_ROOM, CONTROLS_CONFIG } from './config'
+import type { LobbyConfigField, LobbyPlayer } from '@/types/lobbyWizard'
+import { MATCHMAKER_ROOM, CONTROLS_CONFIG, DIFFICULTIES, SONGS } from './config'
 import type { RgPlayer } from '@/stores/rhythmGame'
 import {
   midiStorageList,
@@ -15,7 +15,7 @@ import {
 } from './midiStorage'
 import { getMidiTracks, parseMidiTrack, parseAllMidiNotes } from './parseMidi'
 import type { ScheduledNote } from '@webgamekit/audio'
-import type { RhythmNote } from './config'
+import type { RgDifficulty, RgSong, RhythmNote } from './config'
 
 const props = defineProps<{
   playerName: string
@@ -24,6 +24,8 @@ const props = defineProps<{
   playerList: LobbyPlayer[]
   rgPlayerList: RgPlayer[]
   roomId: string
+  song: RgSong
+  difficulty: RgDifficulty
   showResults?: boolean
   winnerId?: string | null
   localPeerId?: string
@@ -38,6 +40,8 @@ const emit = defineEmits<{
   leaveRoom: []
   playAgain: []
   midiParsed: [gameNotes: RhythmNote[], backgroundNotes: ScheduledNote[], songName: string]
+  songPicked: [song: RgSong]
+  'update:difficulty': [difficulty: RgDifficulty]
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -53,6 +57,49 @@ onMounted(loadLibrary)
 
 const selectedEntry = computed(() => library.value.find((e) => e.id === selectedMidiId.value))
 const availableTracks = computed(() => selectedEntry.value?.tracks ?? [])
+
+const songField = computed(
+  (): LobbyConfigField => ({
+    type: 'select',
+    key: 'song',
+    label: 'Song',
+    value: selectedMidiId.value ?? props.song,
+    options: [
+      ...SONGS.map((song) => ({ value: song.id, label: `${song.label} (${song.bpm} BPM)` })),
+      ...library.value.map((entry) => ({ value: entry.id, label: entry.name }))
+    ]
+  })
+)
+
+const difficultyField = computed(
+  (): LobbyConfigField => ({
+    type: 'select',
+    key: 'difficulty',
+    label: 'Difficulty',
+    value: props.difficulty,
+    options: DIFFICULTIES.map(({ id, label }) => ({ value: id, label }))
+  })
+)
+
+const trackField = computed(
+  (): LobbyConfigField => ({
+    type: 'select',
+    key: 'track',
+    label: 'Channel',
+    value: selectedTrackIndex.value,
+    options: availableTracks.value.map((track) => ({
+      value: track.index,
+      label: `${track.name} (${track.noteCount}n)`
+    }))
+  })
+)
+
+// An uploaded song is always played whole, so only a built-in song has a difficulty.
+const configFields = computed((): LobbyConfigField[] => [
+  songField.value,
+  ...(selectedMidiId.value === null ? [difficultyField.value] : []),
+  ...(availableTracks.value.length > 1 ? [trackField.value] : [])
+])
 
 const loadAndEmit = async (midiId: string, trackIndex: number, songName: string): Promise<void> => {
   const buf = await midiStorageLoad(midiId)
@@ -71,30 +118,39 @@ const resolveTrackLabel = (midiId: string, trackIndex: number): string => {
     : entry.name
 }
 
-const handleSongChange = async (event: Event): Promise<void> => {
-  const value = (event.target as HTMLSelectElement).value
-  if (value === '__upload__') {
-    ;(event.target as HTMLSelectElement).value = selectedMidiId.value ?? ''
-    fileInput.value?.click()
+const pickSong = async (songValue: string): Promise<void> => {
+  const builtInSong = SONGS.find((song) => song.id === songValue)
+  if (builtInSong !== undefined) {
+    selectedMidiId.value = null
+    emit('songPicked', builtInSong.id)
     return
   }
-  selectedMidiId.value = value
-  const entry = library.value.find((e) => e.id === value)
-  const firstTrack = entry?.tracks[0]
+  selectedMidiId.value = songValue
+  const firstTrack = library.value.find((e) => e.id === songValue)?.tracks[0]
   if (!firstTrack) return
   selectedTrackIndex.value = firstTrack.index
-  await loadAndEmit(value, firstTrack.index, resolveTrackLabel(value, firstTrack.index))
+  await loadAndEmit(songValue, firstTrack.index, resolveTrackLabel(songValue, firstTrack.index))
 }
 
-const handleTrackChange = async (event: Event): Promise<void> => {
+const pickDifficulty = (difficultyValue: string): void => {
+  const pickedDifficulty = DIFFICULTIES.find((difficulty) => difficulty.id === difficultyValue)
+  if (pickedDifficulty !== undefined) emit('update:difficulty', pickedDifficulty.id)
+}
+
+const pickTrack = async (trackIndex: number): Promise<void> => {
   if (!selectedMidiId.value) return
-  const trackIndex = Number((event.target as HTMLSelectElement).value)
   selectedTrackIndex.value = trackIndex
   await loadAndEmit(
     selectedMidiId.value,
     trackIndex,
     resolveTrackLabel(selectedMidiId.value, trackIndex)
   )
+}
+
+const handleConfig = async (key: string, value: string | number): Promise<void> => {
+  if (key === 'song') await pickSong(String(value))
+  if (key === 'difficulty') pickDifficulty(String(value))
+  if (key === 'track') await pickTrack(Number(value))
 }
 
 const handleFileChange = async (event: Event): Promise<void> => {
@@ -121,7 +177,7 @@ const handleDelete = async (): Promise<void> => {
   await midiStorageDelete(selectedMidiId.value)
   selectedMidiId.value = null
   selectedTrackIndex.value = 0
-  emit('midiParsed', [], [], '')
+  emit('songPicked', SONGS[0].id)
   await loadLibrary()
 }
 </script>
@@ -134,66 +190,33 @@ const handleDelete = async (): Promise<void> => {
     :player-list="playerList"
     :room-id="roomId"
     :matchmaker-room="MATCHMAKER_ROOM"
-    :config-fields="[]"
+    :config-fields="configFields"
     :controls="CONTROLS_CONFIG"
     :show-results="showResults"
     :can-start="true"
     @update:player-name="emit('update:playerName', $event)"
     @update:player-color="emit('update:playerColor', $event)"
     @name-change="emit('nameChange')"
+    @config-change="handleConfig"
     @start-game="emit('startGame')"
     @match-found="emit('matchFound', $event)"
     @leave-room="emit('leaveRoom')"
     @play-again="emit('playAgain')"
   >
-    <template #config>
-      <div class="rgl-field">
-        <label class="rgl-field__label">Song</label>
-        <div class="rgl-field__row">
-          <select
-            class="rgl-field__select"
-            :value="selectedMidiId ?? ''"
-            @change="handleSongChange"
-          >
-            <option value="" disabled>— Select a song —</option>
-
-            <optgroup v-if="library.length" label="My Library">
-              <option v-for="entry in library" :key="entry.id" :value="entry.id">
-                {{ entry.name }}
-              </option>
-            </optgroup>
-
-            <option value="__upload__">↑ Upload MIDI…</option>
-          </select>
-
-          <button
-            v-if="selectedMidiId"
-            class="rgl-field__delete"
-            type="button"
-            title="Remove from library"
-            @click="handleDelete"
-          >
-            ×
-          </button>
-        </div>
-
+    <template #profile-extra>
+      <LobbyUIRow v-if="isHost" label="Your MIDI" inline>
+        <LobbyUIButton variant="ghost" size="sm" @click="fileInput?.click()">Upload</LobbyUIButton>
+        <LobbyUIButton v-if="selectedMidiId" variant="ghost" size="sm" @click="handleDelete">
+          Remove
+        </LobbyUIButton>
         <input
           ref="fileInput"
           type="file"
           accept=".mid,.midi"
-          class="rgl-field__input"
+          class="rgl-file-input"
           @change="handleFileChange"
         />
-      </div>
-
-      <div v-if="selectedMidiId && availableTracks.length > 1" class="rgl-field">
-        <label class="rgl-field__label">Channel</label>
-        <select class="rgl-field__select" :value="selectedTrackIndex" @change="handleTrackChange">
-          <option v-for="track in availableTracks" :key="track.index" :value="track.index">
-            {{ track.name }} ({{ track.noteCount }}n)
-          </option>
-        </select>
-      </div>
+      </LobbyUIRow>
     </template>
 
     <template #summary>
@@ -209,75 +232,7 @@ const handleDelete = async (): Promise<void> => {
 </template>
 
 <style scoped>
-.rgl-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.rgl-field__label {
-  font-family: var(--lui-font);
-  font-size: var(--lui-text-small);
-  font-weight: 700;
-  color: var(--lui-text-color);
-  text-shadow: var(--lui-text-shadow);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.rgl-field__row {
-  display: flex;
-  gap: var(--spacing-1);
-}
-
-.rgl-field__select {
-  flex: 1;
-  padding: var(--spacing-1) var(--spacing-2);
-  border: none;
-  border-bottom: 2px solid var(--lui-stroke-faint);
-  background: transparent;
-  color: var(--lui-text-color);
-  font-family: var(--lui-font);
-  font-size: var(--lui-text-medium);
-  font-weight: 900;
-  cursor: pointer;
-  appearance: none;
-}
-
-.rgl-field__select:focus {
-  outline: none;
-  border-bottom-color: var(--lui-focus-color);
-  color: var(--lui-focus-color);
-}
-
-.rgl-field__select option {
-  background: #000;
-  color: #fff;
-}
-
-.rgl-field__delete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: 2px solid var(--lui-stroke-faint);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--lui-text-color);
-  font-size: 1.1rem;
-  cursor: pointer;
-  font-family: var(--lui-font);
-  flex-shrink: 0;
-  transition: border-color 0.15s ease;
-}
-
-.rgl-field__delete:hover {
-  border-color: var(--lui-stroke);
-  color: var(--lui-stroke);
-}
-
-.rgl-field__input {
+.rgl-file-input {
   display: none;
 }
 </style>

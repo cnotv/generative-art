@@ -58,7 +58,11 @@ try {
     [STORAGE_KEY, patternCode]
   )
   await page.goto(`${values.url}/tools/StrudelEditor#export`)
-  await page.getByRole('button', { name: format === 'midi' ? 'MIDI' : 'WAV', exact: true }).click()
+  // The drawer scope matters: the toolbar has a MIDI button of its own.
+  await page
+    .locator('aside')
+    .getByRole('button', { name: format === 'midi' ? 'MIDI' : 'WAV', exact: true })
+    .click()
   await page
     .locator('aside')
     .getByLabel('Name', { exact: true })
