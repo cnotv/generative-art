@@ -1,4 +1,5 @@
 setcpm(30)
+// This loops, so roll.wav has its seam crossfaded after rendering: see the strudel-sound skill.
 stack(
   s("brown*8").lpf(160).gain(rand.range(0.6, 1)).attack(0.03).release(0.08).degradeBy(0.3),
   s("brown").lpf(100).decay(0.3).sustain(0).struct("x ~ x x ~ x ~ ~").gain(1.4),

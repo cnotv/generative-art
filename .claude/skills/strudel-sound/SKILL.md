@@ -47,6 +47,18 @@ two. Chromium runs headless with `--mute-audio` and the WAV renders offline.
 that starts audio unmuted: the user may be wearing headphones. A pattern error is printed by
 the script and it exits non-zero.
 
+A render stops dead at the end of its last cycle, cutting off any release or reverb. A one-shot
+with a tail adds an empty cycle, `cat(sound, silence)`, and renders that too. A loop crossfades
+its own end into its start, here 30 ms (1440 samples) of a 96000 sample file, then checks that
+the first and last samples agree:
+
+```sh
+ffmpeg -i in.wav -filter_complex "[0]asplit=3[t][h][b];[t]atrim=start_sample=94560,asetpts=N/SR/TB[tail];[h]atrim=end_sample=1440,asetpts=N/SR/TB[head];[b]atrim=start_sample=1440:end_sample=94560,asetpts=N/SR/TB[body];[tail][head]acrossfade=ns=1440:c1=qsin:c2=qsin[join];[join][body]concat=n=2:v=0:a=1" -bitexact out.wav
+```
+
+The export does not normalise, so set the level afterwards with `volume`: about -16 LUFS for a
+game sound, with the peak under -1 dBFS.
+
 ## 3. Check the file without listening
 
 Read it back instead. For a WAV, the length, and a peak well above zero in the part that
