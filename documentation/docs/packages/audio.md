@@ -280,8 +280,6 @@ Decodes an encoded file and plays it in time with the notes. Call it after `star
 - `audioData`: The encoded file as an `ArrayBuffer`, which decoding takes ownership of
 - `volume`: Playback volume (default: 1)
 
-The recording must open on its first beat: leading silence is skipped, because browsers remove different amounts of the padding a compressed format adds.
-
 ## Best Practices
 
 1. **Always preload sounds** for time-critical effects (SFX)

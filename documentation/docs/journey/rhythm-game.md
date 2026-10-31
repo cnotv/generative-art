@@ -176,13 +176,13 @@ flowchart LR
 
 Writing them meant deciding what each layer is for, the method from the `sound-design` skill. The kick owns the low end, so each bass plays between the kicks. Each song has an intro for the player to find the pulse, two sections with different harmony, a breakdown whose riser stops just short of the bar so a moment of silence makes the drop land harder, and a last section with faster notes. Nobody listened while these were made: every judgement was by measurement and spectrogram, including that each lead note on a strong beat belongs to its bar's chord.
 
-Three traps came with the recording.
+Two traps came with the recording.
 
 **It has to start on the note clock, and on time.** The recording runs through the note scheduler, in the same lookahead tick as the notes, not as a separate player that would start whenever it finished loading. The game also used to start the scheduler 400 ms after the countdown ended, which notes survived by bunching up at the start but a recording cannot: it would have lost its first kick. The song now loads and is scheduled when the view opens, so the countdown covers the load. A round that still starts late skips forward by the same amount rather than playing behind the chart.
 
-**A compressed file does not start where it was written.** Encoders pad the start of an MP3, and browsers disagree about removing that padding, with WebKit reported to keep more than the others. Tens of milliseconds is most of the 50 ms window for a perfect hit. So every song opens with a kick on its very first sample, and the scheduler skips to the first audible sample of whatever the browser decoded, which makes the padding irrelevant.
-
 **The final chord has to fit the end of the round.** A round ends two seconds after the last note, whatever is still playing, so each song's last chord decays inside those two seconds instead of being cut off.
+
+MP3 padding looked like a third trap and was not. Encoders pad the start of a file, and tens of milliseconds would be most of the 50 ms window for a perfect hit, so the scheduler briefly skipped to the first audible sample. Measured, it had almost nothing to skip: under a millisecond in Chromium, because the encoder records the padding in the file and the decoder removes it. The old WebKit bug that ignored that record was fixed in macOS Monterey, so the skip came out again.
 
 ![The lobby offering a built-in song, a difficulty and a place to upload MIDI](/img/rhythm-game/song-picker.webp)
 
