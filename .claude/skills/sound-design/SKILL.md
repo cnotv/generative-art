@@ -22,6 +22,10 @@ covers what to put in the pattern and how to tell whether it worked. Follow the 
 | Freesound licenses, foley, sync to picture, risers, multi-track mix   | `foley-and-layering.md` |
 | Teaching someone: the three phases, nine weeks and practical projects | `curriculum.md`         |
 
+What each source says, including Learning Synths' worked recipes and the full loudness numbers, is
+in `documentation/docs/journey/sound-design-sources.md`. Read it when this skill is not enough or a
+claim needs tracing.
+
 ## 1. Write the brief
 
 One line each: what physically happens, how big it is, how far away, and what it must not sound
