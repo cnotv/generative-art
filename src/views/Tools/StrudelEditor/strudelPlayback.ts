@@ -24,6 +24,7 @@ import type {
   StrudelPlayback,
   StrudelPlaybackHooks,
   StrudelPlaybackPosition,
+  StrudelRenderResult,
   StrudelUnknownCallable
 } from './types'
 
@@ -256,6 +257,24 @@ const createPlaybackDrawer = async (hooks: StrudelPlaybackHooks) => {
 }
 
 /**
+ * Evaluates code and renders it, handing back the file or the reason it failed rather than
+ * downloading it.
+ * @param evaluate - evaluates the code without playing it
+ * @param render - renders an evaluated pattern to a WAV file
+ * @returns the file, or the error message
+ */
+const renderWavBytes = async (
+  evaluate: () => Promise<unknown>,
+  render: (pattern: unknown) => Promise<ArrayBuffer>
+): Promise<StrudelRenderResult> => {
+  try {
+    return { success: true, file: await render(await evaluate()) }
+  } catch (error) {
+    return { success: false, errorMessage: describeError(error) }
+  }
+}
+
+/**
  * Loads the Strudel engine on demand, starts audio, loads the default sample kit and
  * returns a playback handle around one REPL (read-eval-print loop) instance. Evaluations
  * report their sliders and widgets, and every frame its playing notes, to the hooks.
@@ -397,6 +416,17 @@ export const loadDefaultStrudelPlayback = async (
         )
       )
     },
+    renderToWavBytes: (patternCode: string, exportOptions: StrudelExportOptions) =>
+      renderWavBytes(
+        () => evaluateForExport(patternCode),
+        (pattern) =>
+          renderStrudelPatternToWav(
+            engine.audioModule,
+            pattern,
+            readCyclesPerSecond(replScheduler),
+            exportOptions
+          )
+      ),
     renderToWav: exportAs('wav', (pattern, cyclesPerSecond, exportOptions) =>
       renderStrudelPatternToWav(engine.audioModule, pattern, cyclesPerSecond, exportOptions)
     ),

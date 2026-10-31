@@ -269,6 +269,155 @@ setcpm(120/4)
 
 note("<[e2@2 g2 e2 g2 e2 e2 eb2] [d2 a2 d2 d2@2 a2 d2 eb2]>")
   .s("gm_electric_guitar_clean").clip(2).room(.3)`
+  },
+  {
+    id: 'concrete-hours',
+    label: 'Concrete Hours (techno)',
+    code: `// Concrete Hours: a techno song in F minor
+// Sixty-four bars: intro, build, main, break, main, outro. Each string holds one number a bar.
+setcpm(130/4)
+
+$: s("bd*4").bank("RolandTR909").gain(.5).mask("<1!40 0!8 1!16>")._punchcard()
+$: s("[~ hh]*4").bank("RolandTR909").gain(.35).mask("<0!4 1!60>")
+$: s("~ cp ~ cp").bank("RolandTR909").gain(.3).mask("<0!16 1!16 0!8 1!16 0!8>")
+$: stack(
+  note("[~ f1 f1 ab1]*4").add(note("<0 0 0 -2>")).s("sawtooth")
+    .lpf("<300!16 500!16 900!8 500!16 300!8>").decay(.12).sustain(0).gain(.55),
+  chord("<Fm7 Fm7 Fm7 Ebm7>").voicing().struct("~ [~ x] ~ [x ~]").s("sawtooth")
+    .lpf(1400).decay(.1).sustain(0).room(.3).delay(.3).gain(.15)
+    .mask("<0!16 1!40 0!8>")
+).mask("<0!8 1!48 0!8>")._scope()
+$: s("perc(3,8,2)").hpf(500).gain(.4).pan(.7).mask("<0!16 1!40 0!8>")`
+  },
+  {
+    id: 'second-floor',
+    label: 'Second Floor (house)',
+    code: `// Second Floor: a deep house song in A minor
+// Fifty-six bars: intro, groove, chorus, break, chorus, outro. Each string holds one number a bar.
+setcpm(124/4)
+
+$: s("bd*4").bank("RolandTR909").gain(.5).mask("<1!36 0!4 1!16>")._punchcard()
+$: s("[~ hh]*4").bank("RolandTR909").gain(.3)
+$: s("~ cp ~ cp").bank("RolandTR909").gain(.3).mask("<0!8 1!44 0!4>")
+$: note("[~ a1] [~ a1] [~ a1 ~ a1] [~ e2]").add(note("<0 5 8 7>")).s("sawtooth")
+  .lpf(420).decay(.18).sustain(0).gain(.55).mask("<0!8 1!44 0!4>")
+$: stack(
+  chord("<Am7 Dm7 F^7 Em7>").voicing().struct("[~ x] ~ [~ x] [~ ~ x ~]").s("gm_epiano1")
+    .room(.4).gain(.35),
+  n("<[~ 7 ~ 9 ~ 7 4 ~] [~ 5 ~ 7 ~ 5 3 ~] [~ 7 ~ 9 ~ 11 9 ~] [~ 6 ~ 8 ~ 6 4 ~]>")
+    .scale("A3:minor").s("gm_vibraphone").delay(.3).room(.3).gain(.3)
+    .mask("<0!20 1!16 0!4 1!16>")
+)._pianoroll()`
+  },
+  {
+    id: 'long-way-down',
+    label: 'Long Way Down (drum and bass)',
+    code: `// Long Way Down: a drum and bass song in D minor
+// Sixty-four bars: intro, drop, break, drop, outro. Each string holds one number a bar.
+setcpm(174/4)
+
+$: s("bd ~ ~ ~ ~ bd ~ ~").gain(.45).mask("<0!16 1!24 0!8 1!16>")._spectrum()
+$: s("~ ~ sd ~ ~ ~ sd ~").gain(.35).mask("<0!16 1!24 0!8 1!16>")
+$: stack(
+  s("hh*8").gain("[1.2 .8]*4"),
+  s("breaks165").fit().gain(.2).hpf(600).mask("<0!16 1!24 0!8 1!16>")
+).mask("<0!8 1!56>")
+$: stack(
+  note("<d2 d2 bb1 a1>").s("sine").shape(.8).postgain(.2).mask("<0!16 1!24 0!8 1!16>"),
+  note("<d2 d2 bb1 a1>").s("sawtooth").add(note("0,.1")).lpf(380).gain(.15)
+    .mask("<0!16 1!24 0!8 1!16>"),
+  chord("<Dm7 Dm7 Bb^7 A7>").voicing().s("sawtooth").lpf(900).attack(.4).release(1)
+    .room(.6).gain(.12)
+)._scope()`
+  },
+  {
+    id: 'corner-store',
+    label: 'Corner Store (hip hop)',
+    code: `// Corner Store: a lofi hip hop song in C minor
+// Forty bars: intro, verse, hook, verse, outro. Each string holds one number a bar.
+setcpm(90/4)
+
+$: s("bd ~ ~ bd ~ bd ~ ~").bank("RolandTR808").gain(.65).mask("<0!4 1!32 0!4>")._punchcard()
+$: s("~ ~ sd ~ ~ ~ sd ~").bank("RolandTR808").gain(.5).mask("<0!4 1!32 0!4>")
+$: s("hh*8").bank("RolandTR808").gain("[.3 .2]*4").swingBy(1/6, 4).mask("<0!4 1!36>")
+$: stack(
+  chord("<Cm7 Ab^7 Fm7 G7>").voicing().s("gm_epiano1").room(.4).crush(8).gain(.42),
+  n("<[7 ~ 9 ~ ~ 7 ~ 4] [5 ~ ~ 4 ~ 2 ~ ~] [3 ~ 5 ~ ~ 3 ~ 2] [1 ~ ~ 2 ~ ~ ~ ~]>")
+    .scale("C4:minor").s("gm_vibraphone").delay(.4).room(.3).gain(.4)
+    .mask("<0!20 1!8 0!12>")
+)._pianoroll()
+$: note("<[c2 ~ ~ c2 ~ eb2 ~ ~] [ab1 ~ ~ ab1 ~ c2 ~ ~] [f1 ~ ~ f1 ~ ab1 ~ ~] [g1 ~ ~ g1 ~ b1 ~ ~]>")
+  .s("triangle").shape(.3).postgain(.7).mask("<0!4 1!32 0!4>")`
+  },
+  {
+    id: 'tideline',
+    label: 'Tideline (ambient)',
+    code: `// Tideline: an ambient piece in D major
+// Thirty-two bars: chords alone, then the drone, the melody, and the chords alone again.
+setcpm(70/4)
+
+$: chord("<D^7 Bm7 G^7 A7>").voicing().s("triangle").slow(2)
+  .attack(1.5).release(3).room(.8).roomsize(6).gain(.2)._spiral()
+$: n("<0 ~ 4 ~ 7 ~ 4 ~ 9 ~ 7 ~ 4 ~ 2 ~>").scale("D4:major:pentatonic").s("sine")
+  .attack(.05).decay(1.5).sustain(0).delay(.5).delaytime(.5).delayfeedback(.5).room(.7).gain(.4)
+  .mask("<0!12 1!16 0!4>")
+$: note("<d2 b2 g2 a2>").s("sine").slow(2).shape(.5).postgain(.25).attack(1.5).release(3)
+  .mask("<0!4 1!24 0!4>")._spectrum()`
+  },
+  {
+    id: 'lift-off',
+    label: 'Lift Off (trance)',
+    code: `// Lift Off: an uplifting trance song in A minor
+// Sixty-four bars: intro, theme, breakdown with a riser, drop, outro. One number a bar.
+setcpm(138/4)
+
+$: s("bd*4").bank("RolandTR909").gain(.5).mask("<1!24 0!16 1!24>")._spectrum()
+$: stack(
+  s("[~ hh]*4").bank("RolandTR909").gain(.3).mask("<0!8 1!16 0!16 1!24>"),
+  s("sd*16").gain("<0!36 .1 .2 .3 .4 0!24>")
+)
+$: note("[~ a1 a1 a1]*4").add(note("<0 -4 3 -2>")).s("sawtooth").lpf(600)
+  .decay(.1).sustain(0).gain(.55).mask("<0!8 1!16 0!16 1!16 0!8>")
+$: stack(
+  n("0 2 4 7 9 7 4 2").fast(2).scale("<A3:minor F3:major C4:major G3:major>")
+    .s("sawtooth").lpf("<800!8 1400!16 1000!8 2400!8 3000!16 1400!8>").decay(.12).sustain(0)
+    .delay(.3).room(.3).gain(.25).mask("<0!8 1!48 0!8>"),
+  chord("<Am F C G>").voicing().s("sawtooth").lpf(1600).attack(.2).release(.6).room(.6).gain(.12)
+    .mask("<0!24 1!32 0!8>")
+)._pianoroll()
+$: s("<~!32 white@8 ~!24>").lpf(150).lpattack(13).lpenv(7).lpsustain(1).attack(10).sustain(1)
+  .release(.02).gain(.3)`
+  },
+  {
+    id: 'harbour-steps',
+    label: 'Harbour Steps (dub)',
+    code: `// Harbour Steps: a dub song in G minor
+// Thirty-two bars: intro, riddim, drop out, riddim, outro. Each string holds one number a bar.
+setcpm(75/4)
+
+$: s("~ ~ bd ~, hh*8").bank("RolandTR808").gain(.5).mask("<1!16 0!2 1!14>")._punchcard()
+$: s("~ ~ rm ~").gain(.4).delay(.5).delaytime(.3).delayfeedback(.5).mask("<0!4 1!28>")
+$: note("<[g2 ~ g2 bb2] [c3 ~ bb2 g2] [g2 ~ d2 f2] [d2 ~ ~ ~]>").s("triangle").lpf(300).shape(.3)
+  .decay(.5).sustain(.3).postgain(.8).mask("<0!4 1!10 0!4 1!10 0!4>")._scope()
+$: stack(
+  chord("<Gm Cm Gm D7>").voicing().struct("~ x ~ x").s("square").lpf(1800).decay(.1).sustain(0)
+    .delay(.5).delaytime(.4).delayfeedback(.55).room(.3).gain(.28),
+  n("<[~ 4 ~ 3] [2 ~ ~ ~] [~ 4 ~ 6] [4 ~ ~ ~]>").scale("G4:minor").s("gm_accordion")
+    .delay(.4).delaytime(.4).delayfeedback(.5).room(.4).gain(.4).mask("<0!8 1!8 0!16>")
+)`
+  },
+  {
+    id: 'wire-fence',
+    label: 'Wire Fence (breakbeat)',
+    code: `// Wire Fence: a breakbeat song in E minor
+// Forty-eight bars: intro, verse, breakdown, verse, outro. Each string holds one number a bar.
+setcpm(130/4)
+
+$: s("breaks125").fit().gain(.75).chop(16).mask("<1!28 0!4 1!16>")._punchcard()
+$: note("<[e1 ~ e2 ~ ~ e1 ~ g1] [e1 ~ e2 ~ ~ d2 ~ b1] [c2 ~ c3 ~ ~ c2 ~ d2] [b1 ~ b2 ~ ~ b1 ~ d2]>")
+  .s("sawtooth").lpf(600).decay(.2).sustain(.2).gain(.65).mask("<0!4 1!40 0!4>")._scope()
+$: s("~ cp ~ cp").gain(.45).mask("<0!8 1!20 0!4 1!12 0!4>")
+$: s("perc(5,8)").hpf(500).gain(.5).pan(sine.range(.3, .7).slow(4)).mask("<0!12 1!36>")`
   }
 ]
 
@@ -596,6 +745,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     id: 'techno',
     label: 'Techno',
     keywords: ['techno', 'minimal techno', 'acid techno'],
+    definingRoles: ['kick'],
     minBeatsPerMinute: 125,
     maxBeatsPerMinute: 140,
     beatsPerMinute: 130,
@@ -603,32 +753,33 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'kick',
         label: 'a four-on-the-floor kick',
-        snippet: 's("bd*4")',
+        snippet: 's("bd*4").gain(.5)',
         reason: 'Techno is built on a kick on every beat; everything else hangs off it.'
       },
       {
         role: 'hihat',
         label: 'offbeat hi-hats',
-        snippet: 's("[~ hh]*4").gain(.6)',
+        snippet: 's("[~ hh]*4").gain(1.5)',
         reason: 'Hats between the kicks give the groove its push.'
       },
       {
         role: 'clap',
         label: 'a clap on two and four',
-        snippet: 's("~ cp ~ cp")',
+        snippet: 's("~ cp ~ cp").gain(.4)',
         reason: 'A clap on the backbeat answers the kick.'
       },
       {
         role: 'bass',
         label: 'a rolling bass',
-        snippet: 'note("c2*8").s("sawtooth").lpf(500)',
-        reason: 'A filtered eighth-note bass fills the space under the kick.'
+        snippet: 'note("[~ c2 c2 c2]*4").s("sawtooth").lpf(500).decay(.12).sustain(0).gain(1.2)',
+        reason: 'Short notes between the kicks roll under them without fighting them.'
       },
       {
         role: 'percussion',
         label: 'syncopated percussion',
-        snippet: 's("perc(3,8)").gain(.5)',
-        reason: 'An off-grid percussion line keeps a long loop from going flat.'
+        snippet: 's("perc(3,8)").hpf(500).gain(.6)',
+        reason:
+          'An off-grid line keeps a long loop from going flat; the filter leaves the low end to the kick.'
       }
     ],
     visuals: ['punchcard', 'scope']
@@ -637,6 +788,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     id: 'house',
     label: 'House',
     keywords: ['house', 'deep house', 'tech house', 'garage'],
+    definingRoles: ['kick'],
     minBeatsPerMinute: 118,
     maxBeatsPerMinute: 128,
     beatsPerMinute: 124,
@@ -644,26 +796,28 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'kick',
         label: 'a four-on-the-floor kick',
-        snippet: 's("bd*4")',
+        snippet: 's("bd*4").gain(.5)',
         reason: 'House runs on a steady kick on every beat.'
       },
       {
         role: 'hihat',
         label: 'offbeat hi-hats',
-        snippet: 's("[~ hh]*4")',
+        snippet: 's("[~ hh]*4").gain(1.5)',
         reason: 'The offbeat hat is the swing that makes house move.'
       },
       {
         role: 'clap',
         label: 'a clap on two and four',
-        snippet: 's("~ cp ~ cp")',
+        snippet: 's("~ cp ~ cp").gain(.4)',
         reason: 'A clap on the backbeat is the other half of the house groove.'
       },
       {
         role: 'bass',
         label: 'a bassline',
-        snippet: 'note("<c2 c2 eb2 f2>*4").s("sawtooth").lpf(600)',
-        reason: 'A short, moving bass carries the harmony under the drums.'
+        snippet:
+          'note("[~ c2] [~ c2] [~ eb2] [~ f2]").s("sawtooth").lpf(600).decay(.2).sustain(0).gain(1.2)',
+        reason:
+          'A short, moving bass on the offbeats carries the harmony and leaves room for the kick.'
       },
       {
         role: 'chords',
@@ -686,6 +840,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       'd&b',
       'jungle'
     ],
+    definingRoles: ['kick', 'snare'],
     minBeatsPerMinute: 165,
     maxBeatsPerMinute: 178,
     beatsPerMinute: 174,
@@ -693,26 +848,27 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'kick',
         label: 'a two-step kick',
-        snippet: 's("bd ~ ~ ~ ~ ~ bd ~")',
+        snippet: 's("bd ~ ~ ~ ~ bd ~ ~").gain(.45)',
         reason: 'The kick on one and the and of three sets up the two-step.'
       },
       {
         role: 'snare',
         label: 'a snare on two and four',
-        snippet: 's("~ ~ sd ~ ~ ~ sd ~")',
+        snippet: 's("~ ~ sd ~ ~ ~ sd ~").gain(.35)',
         reason: 'The backbeat snare is what makes the tempo feel half as fast as it is.'
       },
       {
         role: 'hihat',
         label: 'fast hi-hats',
-        snippet: 's("hh*8").gain(.5)',
+        snippet: 's("hh*8").gain(1.2)',
         reason: 'Steady hats keep the double-time energy.'
       },
       {
         role: 'bass',
         label: 'a sub bass',
-        snippet: 'note("<c1 c1 g1 eb1>").s("sine")',
-        reason: 'A deep sine sub is the "bass" half of drum and bass.'
+        snippet: 'note("<c2 c2 g1 eb2>").s("sine").shape(.8).postgain(.2)',
+        reason:
+          'A deep sub is the "bass" half of drum and bass; saturation adds the harmonics that let small speakers carry it.'
       }
     ],
     visuals: ['scope', 'spectrum']
@@ -721,6 +877,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     id: 'hip-hop',
     label: 'Hip hop',
     keywords: ['hip hop', 'hip-hop', 'hiphop', 'boom bap', 'boombap', 'rap', 'lofi', 'lo-fi'],
+    definingRoles: ['kick', 'snare'],
     minBeatsPerMinute: 80,
     maxBeatsPerMinute: 100,
     beatsPerMinute: 90,
@@ -728,32 +885,33 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'kick',
         label: 'a boom-bap kick',
-        snippet: 's("bd ~ ~ bd ~ ~ bd ~")',
+        snippet: 's("bd ~ ~ bd ~ bd ~ ~").gain(.45)',
         reason: 'A loose, syncopated kick is the "boom".'
       },
       {
         role: 'snare',
         label: 'a snare on two and four',
-        snippet: 's("~ ~ sd ~ ~ ~ sd ~")',
+        snippet: 's("~ ~ sd ~ ~ ~ sd ~").gain(.35)',
         reason: 'The backbeat snare is the "bap".'
       },
       {
         role: 'hihat',
         label: 'eighth-note hi-hats',
-        snippet: 's("hh*8").gain(.5)',
+        snippet: 's("hh*8").gain(1.2)',
         reason: 'Steady hats hold a slow beat together.'
       },
       {
         role: 'chords',
         label: 'jazzy chords',
-        snippet: 'chord("<Cm7 Ab^7>").voicing().s("triangle").gain(.4)',
+        snippet: 'chord("<Cm7 Ab^7>").voicing().s("triangle").gain(.3)',
         reason: 'Sampled-sounding seventh chords are the classic hip hop bed.'
       },
       {
         role: 'bass',
         label: 'a bassline',
-        snippet: 'note("<c2 ~ eb2 g1>").s("triangle")',
-        reason: 'A sparse bass follows the kick and fills the bottom.'
+        snippet:
+          'note("<[c2 ~ ~ c2 ~ eb2 ~ ~] [ab1 ~ ~ ab1 ~ c2 ~ ~]>").s("triangle").shape(.3).postgain(.45)',
+        reason: 'A sparse bass follows the kick and the chords, and fills the bottom.'
       }
     ],
     visuals: ['punchcard', 'pianoroll']
@@ -762,6 +920,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     id: 'ambient',
     label: 'Ambient',
     keywords: ['ambient', 'drone', 'chill', 'chillout', 'downtempo', 'meditation'],
+    definingRoles: ['chords'],
     minBeatsPerMinute: 60,
     maxBeatsPerMinute: 90,
     beatsPerMinute: 70,
@@ -769,8 +928,9 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'chords',
         label: 'slow chords',
-        snippet: 'chord("<C^7 Am7 F^7 G7>").voicing().s("triangle").slow(2).room(.8)',
-        reason: 'Long, reverberant chords are the body of ambient music.'
+        snippet:
+          'chord("<C^7 Am7 F^7 G7>").voicing().s("triangle").slow(2).attack(1).release(2).room(.8).gain(.2)',
+        reason: 'Long chords that fade in and out are the body of ambient music.'
       },
       {
         role: 'melody',
@@ -781,7 +941,8 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'bass',
         label: 'a drone bass',
-        snippet: 'note("<c2 a1 f1 g1>").s("sine").slow(2)',
+        snippet:
+          'note("<c2 a2 f2 g2>").s("sine").shape(.5).postgain(.3).slow(2).attack(1).release(2)',
         reason: 'A low, slow root note anchors the chords.'
       }
     ],
@@ -791,6 +952,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     id: 'trance',
     label: 'Trance',
     keywords: ['trance', 'psytrance', 'psy trance', 'uplifting'],
+    definingRoles: ['kick'],
     minBeatsPerMinute: 130,
     maxBeatsPerMinute: 145,
     beatsPerMinute: 138,
@@ -798,25 +960,26 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'kick',
         label: 'a four-on-the-floor kick',
-        snippet: 's("bd*4")',
+        snippet: 's("bd*4").gain(.5)',
         reason: 'Trance keeps a kick on every beat.'
       },
       {
         role: 'hihat',
         label: 'offbeat hi-hats',
-        snippet: 's("[~ hh]*4").gain(.6)',
+        snippet: 's("[~ hh]*4").gain(1.5)',
         reason: 'The offbeat hat drives the build.'
       },
       {
         role: 'bass',
         label: 'an offbeat rolling bass',
-        snippet: 'note("[~ a1]*4").s("sawtooth").lpf(800)',
-        reason: 'A bass between the kicks gives trance its rolling feel.'
+        snippet: 'note("[~ a1]*4").s("sawtooth").lpf(800).decay(.15).sustain(0).gain(1.2)',
+        reason: 'A short bass between the kicks gives trance its rolling feel.'
       },
       {
         role: 'melody',
         label: 'an arpeggiated lead',
-        snippet: 'n("0 2 4 7 4 2 0 2").scale("A:minor").s("sawtooth").lpf(2000).gain(.5)',
+        snippet:
+          'n("0 2 4 7 4 2 0 2").fast(2).scale("A:minor").s("sawtooth").lpf(2000).decay(.15).sustain(0).gain(.6)',
         reason: 'A fast arpeggio is the hook trance is known for.'
       }
     ],
@@ -826,6 +989,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     id: 'dub',
     label: 'Dub',
     keywords: ['dub', 'reggae', 'roots'],
+    definingRoles: ['kick', 'bass'],
     minBeatsPerMinute: 65,
     maxBeatsPerMinute: 85,
     beatsPerMinute: 75,
@@ -833,25 +997,27 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'kick',
         label: 'a one-drop kick',
-        snippet: 's("~ ~ bd ~")',
+        snippet: 's("~ ~ bd ~").gain(.4)',
         reason: 'The one drop leaves the first beat empty and lands on the third.'
       },
       {
         role: 'clap',
         label: 'a rimshot with the drop',
-        snippet: 's("~ ~ rm ~").gain(.6)',
+        snippet: 's("~ ~ rm ~").gain(.3)',
         reason: 'A rim on the same beat as the kick marks the drop.'
       },
       {
         role: 'bass',
         label: 'a heavy bassline',
-        snippet: 'note("<c2 ~ c2 eb2>").s("sine").lpf(300)',
-        reason: 'Dub is led by a deep, round bass.'
+        snippet:
+          'note("<[c2 ~ c2 eb2] [f2 ~ eb2 c2]>").s("triangle").lpf(300).shape(.3).postgain(.5)',
+        reason: 'Dub is led by a deep, round bass that moves with the chords.'
       },
       {
         role: 'chords',
         label: 'an offbeat skank',
-        snippet: 'chord("<Cm Fm>").voicing().struct("~ x ~ x").s("square").gain(.3).delay(.5)',
+        snippet:
+          'chord("<Cm Fm>").voicing().struct("~ x ~ x").s("square").decay(.12).sustain(0).gain(.3).delay(.5)',
         reason: 'Short chords on the offbeat, echoed, are the skank.'
       }
     ],
@@ -861,6 +1027,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     id: 'breakbeat',
     label: 'Breakbeat',
     keywords: ['breakbeat', 'breaks', 'big beat', 'nu skool'],
+    definingRoles: ['breaks'],
     minBeatsPerMinute: 120,
     maxBeatsPerMinute: 140,
     beatsPerMinute: 130,
@@ -868,26 +1035,27 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'breaks',
         label: 'a sampled break',
-        snippet: 's("breaks125").fit()',
+        snippet: 's("breaks125").fit().gain(.6)',
         reason: 'A chopped drum break, not a drum machine, is what defines breakbeat.'
       },
       {
         role: 'bass',
         label: 'a bassline',
-        snippet: 'note("<c2 eb2>*2").s("sawtooth").lpf(500)',
+        snippet: 'note("<c2 eb2>*2").s("sawtooth").lpf(500).decay(.3).sustain(0).gain(1.2)',
         reason: 'A gritty bass rides on top of the break.'
       },
       {
         role: 'clap',
         label: 'a clap on two and four',
-        snippet: 's("~ cp ~ cp")',
+        snippet: 's("~ cp ~ cp").gain(.4)',
         reason: 'A clap on the backbeat reinforces the break.'
       },
       {
         role: 'percussion',
         label: 'extra percussion',
-        snippet: 's("perc(5,8)").gain(.5)',
-        reason: 'Percussion on top fills the gaps in the break.'
+        snippet: 's("perc(5,8)").hpf(500).gain(.6)',
+        reason:
+          'Percussion on top fills the gaps in the break; the filter leaves the low end to it.'
       }
     ],
     visuals: ['punchcard', 'scope']
@@ -933,8 +1101,9 @@ export const STRUDEL_INSTRUMENT_ROLE_LABELS: Record<StrudelInstrumentRole, strin
 export const STRUDEL_PATTERN_IDEAS: StrudelPatternIdea[] = [
   {
     id: 'breakdown',
-    title: 'Drop the drums every fourth bar',
-    reason: 'A bar without drums now and then lets the loop breathe, and the return hits harder.',
+    title: 'Drop out every fourth bar',
+    reason:
+      'A bar without this layer now and then lets the loop breathe, and its return hits harder.',
     snippet: '.mask("<1 1 1 0>")',
     callName: 'mask',
     targetRoles: ['kick', 'breaks', 'snare', 'hihat']
@@ -943,10 +1112,11 @@ export const STRUDEL_PATTERN_IDEAS: StrudelPatternIdea[] = [
     id: 'filter-sweep',
     title: 'Sweep the filter',
     reason:
-      'A filter opening and closing over eight bars builds tension without a single new note.',
+      'A filter opening and closing over eight bars builds tension without a single new note. It moves once per note, so a busy line sweeps smoothly and a held one in steps.',
     snippet: '.lpf(sine.range(300, 3000).slow(8))',
     callName: 'sine',
-    targetRoles: ['bass', 'chords', 'melody']
+    targetRoles: ['bass', 'chords', 'melody'],
+    unsuitedSounds: ['sine']
   },
   {
     id: 'phrase-answer',
@@ -978,7 +1148,7 @@ export const STRUDEL_PATTERN_IDEAS: StrudelPatternIdea[] = [
     reason: 'A reversed copy in the other ear makes a layer wide without making it louder.',
     snippet: '.jux(rev)',
     callName: 'jux',
-    targetRoles: ['percussion', 'melody', 'clap']
+    targetRoles: ['percussion', 'melody']
   },
   {
     id: 'echo',

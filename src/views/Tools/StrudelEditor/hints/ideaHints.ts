@@ -18,7 +18,9 @@ export const buildIdeaHints = ({ facts, style }: StrudelHintContext): StrudelHin
       .map((role) =>
         styleLayers.find(
           (candidate) =>
-            candidate.instrumentRoles.includes(role) && !candidate.callNames.includes(idea.callName)
+            candidate.instrumentRoles.includes(role) &&
+            !candidate.callNames.includes(idea.callName) &&
+            !idea.unsuitedSounds?.some((sound) => candidate.soundTokens.includes(sound))
         )
       )
       .find((candidate) => candidate !== undefined)

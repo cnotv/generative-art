@@ -27,6 +27,7 @@ const TEMPO_TOKEN_PATTERN = /[*/]|\d+\.?\d*|\.\d+/g
 // `//` and `/*` open a comment and `*/` closes it, all two characters long.
 const COMMENT_MARK_LENGTH = 2
 const SOUND_TOKEN_SEPARATOR = /[^\d#a-z]+/
+const CHORD_CALLEE_PATTERN = /\bchord$/
 
 const siblingsFrom = (node: ParsedNode | null): ParsedNode[] =>
   node === null ? [] : [node, ...siblingsFrom(node.nextSibling)]
@@ -112,9 +113,15 @@ const readTempo = (code: string, statement: ParsedNode): StrudelCodeTempo | null
   }
 }
 
+// A chord symbol such as G7 spells like a note, so a chord's string says nothing about sounds.
+const isChordArgument = (code: string, node: ParsedNode): boolean => {
+  const callee = node.parent?.parent?.firstChild
+  return callee !== null && callee !== undefined && CHORD_CALLEE_PATTERN.test(textOf(code, callee))
+}
+
 const soundTokensOf = (code: string, nodes: ParsedNode[]): string[] =>
   nodes
-    .filter((node) => STRING_NODE_NAMES.has(node.name))
+    .filter((node) => STRING_NODE_NAMES.has(node.name) && !isChordArgument(code, node))
     .flatMap((node) => textOf(code, node).slice(1, -1).toLowerCase().split(SOUND_TOKEN_SEPARATOR))
     .filter((token) => token.length > 0)
 
@@ -167,16 +174,26 @@ const readVisualCalls = (code: string, nodes: ParsedNode[]): StrudelCodeRange[] 
 const readPatternStatement = (code: string, statement: ParsedNode): StrudelPatternStatement => {
   const statementNodes = descendantsOf(statement)
   const callNames = callNamesOf(code, statementNodes)
+  const soundTokens = soundTokensOf(code, statementNodes)
   return {
     from: statement.from,
     to: expressionEnd(statement),
     line: code.slice(0, statement.from).split('\n').length,
     isBlock: statement.name === 'LabeledStatement',
-    instrumentRoles: readInstrumentRoles(soundTokensOf(code, statementNodes), callNames),
+    instrumentRoles: readInstrumentRoles(soundTokens, callNames),
     visualNames: readVisualNames(callNames),
     visualCalls: readVisualCalls(code, statementNodes),
-    callNames
+    callNames,
+    soundTokens
   }
+}
+
+const readDeclaredRoles = (code: string, declaration: ParsedNode): StrudelInstrumentRole[] => {
+  const declarationNodes = descendantsOf(declaration)
+  return readInstrumentRoles(
+    soundTokensOf(code, declarationNodes),
+    callNamesOf(code, declarationNodes)
+  )
 }
 
 // Strudel mutes a block whose label starts or ends with an underscore, as in `_$:`.
@@ -190,7 +207,8 @@ const isMutedBlock = (code: string, statement: ParsedNode): boolean => {
  * Reads what the hints need from a pattern's code: its first-line comment, its tempo, the
  * instruments its sounds and calls point to, the visuals it draws and where its patterns are.
  * Comments are left out of everything but the style, so a comment naming a sound adds nothing,
- * and a muted block plays nothing, so it counts for nothing either.
+ * and a muted block plays nothing, so it counts for nothing either. Parts written as `const`
+ * count towards the instruments, since a song usually names its parts before stacking them.
  * @param code - the pattern's code
  * @returns the facts read from its syntax tree
  */
@@ -203,6 +221,9 @@ export const readStrudelCodeFacts = (code: string): StrudelCodeFacts => {
   const patternStatements = statements
     .filter((statement) => !isSetupStatement(code, statement) && !isMutedBlock(code, statement))
     .map((statement) => readPatternStatement(code, statement))
+  const declaredRoles = topLevelNodes
+    .filter((node) => node.name === 'VariableDeclaration')
+    .flatMap((declaration) => readDeclaredRoles(code, declaration))
   return {
     firstLineComment: readFirstLineComment(code, topLevelNodes),
     headerEnd: readHeaderEnd(topLevelNodes),
@@ -210,7 +231,10 @@ export const readStrudelCodeFacts = (code: string): StrudelCodeFacts => {
       statements.map((statement) => readTempo(code, statement)).find((tempo) => tempo !== null) ??
       null,
     instrumentRoles: [
-      ...new Set(patternStatements.flatMap((statement) => statement.instrumentRoles))
+      ...new Set([
+        ...patternStatements.flatMap((statement) => statement.instrumentRoles),
+        ...declaredRoles
+      ])
     ],
     visualNames: [...new Set(patternStatements.flatMap((statement) => statement.visualNames))],
     patternStatements,

@@ -26,6 +26,8 @@ const EFFECT_URLS = {
 }
 type EffectName = keyof typeof EFFECT_URLS
 
+const isEffectName = (name: string): name is EffectName => name in EFFECT_URLS
+
 const IMPACT_VOLUMES = { fall: FALL_VOLUME, bump: BUMP_VOLUME }
 
 type Rumble = { source: AudioBufferSourceNode; gain: GainNode }
@@ -54,6 +56,7 @@ export const useRockRunnerAudio = (createContext: () => AudioContext = createDef
     rumble: null as Rumble | null,
     rollingStep: -1,
     themeWanted: false,
+    themeUrl: null as string | null,
     lastImpactAt: { fall: -Infinity, bump: -Infinity }
   }
 
@@ -133,6 +136,27 @@ export const useRockRunnerAudio = (createContext: () => AudioContext = createDef
     else theme.pause()
   }
 
+  const replaceEffect = async (name: EffectName, wav: ArrayBuffer | null): Promise<void> => {
+    session.context ??= createContext()
+    if (wav)
+      session.buffers[name] = await session.context.decodeAudioData(wav.slice(0, wav.byteLength))
+    else {
+      delete session.buffers[name]
+      await loadEffects(session.context)
+    }
+    // The running rumble holds the old buffer; the next frame starts a fresh one.
+    if (name === 'roll') stopRumble()
+  }
+
+  const replaceTheme = (wav: ArrayBuffer | null): void => {
+    const previousUrl = session.themeUrl
+    session.themeUrl = wav ? URL.createObjectURL(new Blob([wav], { type: 'audio/wav' })) : null
+    const wasPlaying = !theme.paused
+    theme.src = session.themeUrl ?? runTheme
+    if (previousUrl) URL.revokeObjectURL(previousUrl)
+    if (wasPlaying) playTheme()
+  }
+
   watch(
     () => settings.music,
     () => playTheme()
@@ -152,6 +176,10 @@ export const useRockRunnerAudio = (createContext: () => AudioContext = createDef
       stopRumble()
     },
     setRolling,
+    replaceSound: async (id: string, wav: ArrayBuffer | null): Promise<void> => {
+      if (id === 'theme') replaceTheme(wav)
+      else if (isEffectName(id)) await replaceEffect(id, wav)
+    },
     playImpact: ({ kind, strength }: RockImpact): void => {
       const now = performance.now()
       if (now - session.lastImpactAt[kind] < IMPACT_COOLDOWN_MS[kind]) return

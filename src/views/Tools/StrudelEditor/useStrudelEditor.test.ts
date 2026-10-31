@@ -156,6 +156,7 @@ const buildSuccessfulPlayback = (): StrudelPlayback => ({
   evaluateCode: vi.fn(async () => ({ success: true })),
   stopPlayback: vi.fn(async () => {}),
   renderToWav: vi.fn(async () => ({ success: true })),
+  renderToWavBytes: vi.fn(async () => ({ success: true })),
   renderToMidi: vi.fn(async () => ({ success: true })),
   measureRepetition: vi.fn(async () => 1),
   readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -955,6 +956,7 @@ describe('useStrudelEditor', () => {
       evaluateCode: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' })),
       stopPlayback: vi.fn(async () => {}),
       renderToWav: vi.fn(async () => ({ success: true })),
+      renderToWavBytes: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
       measureRepetition: vi.fn(async () => 1),
       readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -1059,6 +1061,7 @@ describe('useStrudelEditor', () => {
         throw new Error('stop failed')
       }),
       renderToWav: vi.fn(async () => ({ success: true })),
+      renderToWavBytes: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
       measureRepetition: vi.fn(async () => 1),
       readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -1092,13 +1095,7 @@ describe('useStrudelEditor', () => {
     // Assert
     expect(tuneCount).toBe(ELECTRO_TUNES.length)
     expect(electroTunes.map((tune) => tune.id)).toContain('caverave')
-    expect(electroTunes.map((tune) => tune.label)).toEqual([
-      'Caverave',
-      'Dinofunk',
-      'Megalovania riff (Toby Fox)',
-      'Breakfast in America (Supertramp)',
-      'Come as You Are riff (Nirvana)'
-    ])
+    expect(electroTunes.map((tune) => tune.label)).toEqual(ELECTRO_TUNES.map((tune) => tune.label))
   })
 
   it('loads an electro tune into the editor when selected', () => {
@@ -1404,6 +1401,7 @@ describe('useStrudelEditor transcription', () => {
       const playback = {
         ...buildSuccessfulPlayback(),
         renderToWav: vi.fn(async () => renderResult),
+        renderToWavBytes: vi.fn(async () => renderResult),
         renderToMidi: vi.fn(async () => renderResult)
       }
       const { patternCode, exportPattern, exportStatus, exportError } = useStrudelEditor({

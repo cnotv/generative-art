@@ -8,6 +8,7 @@ const buildStyle = (visuals: StrudelVisualName[]): StrudelMusicStyle => ({
   id: 'techno',
   label: 'Techno',
   keywords: [],
+  definingRoles: ['kick'],
   minBeatsPerMinute: 125,
   maxBeatsPerMinute: 140,
   beatsPerMinute: 130,

@@ -308,6 +308,7 @@ onBeforeUnmount(() => {
             <component :is="tool.icon" aria-hidden="true" />
           </IconButton>
         </div>
+        <slot name="actions" />
         <div class="strudel-editor__mode" role="group" aria-label="Editor mode">
           <ButtonSelector
             :model-value="editorMode"

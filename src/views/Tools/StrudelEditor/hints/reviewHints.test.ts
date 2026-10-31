@@ -8,6 +8,7 @@ const breakbeatStyle: StrudelMusicStyle = {
   id: 'breakbeat',
   label: 'Breakbeat',
   keywords: [],
+  definingRoles: ['breaks'],
   minBeatsPerMinute: 120,
   maxBeatsPerMinute: 140,
   beatsPerMinute: 130,
