@@ -232,3 +232,18 @@ describe('STRUDEL_MUSIC_STYLES snippets', () => {
     expect(strayNotes).toEqual([])
   })
 })
+
+const ADDED_STYLE_IDS = ['synthwave', 'stoner-rock', 'grunge', 'classical', 'funk', 'jazz'] as const
+
+describe('the added styles', () => {
+  it.each(ADDED_STYLE_IDS)('ships a %s style', (styleId) => {
+    // Arrange
+    const styleIds = STRUDEL_MUSIC_STYLES.map((style) => style.id)
+
+    // Act
+    const hasStyle = styleIds.includes(styleId)
+
+    // Assert
+    expect(hasStyle).toBe(true)
+  })
+})
