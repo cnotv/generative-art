@@ -45,7 +45,7 @@ describe('useStrudelHints', () => {
     applyHint('instrument-clap')
 
     // Assert
-    expect(patternCode.value).toBe('// techno\n$: s("bd*4")\n$: s("~ cp ~ cp")')
+    expect(patternCode.value).toBe('// techno\n$: s("bd*4")\n$: s("~ cp ~ cp").gain(.4)')
     expect(hints.value.map((hint) => hint.id)).not.toContain('instrument-clap')
   })
 

@@ -248,6 +248,8 @@ export type StrudelPatternStatement = StrudelCodeRange & {
   /** Each visual call chained on it, from its dot to its closing parenthesis. */
   visualCalls: StrudelCodeRange[]
   callNames: string[]
+  /** Every word in its strings, lower case: sound names, notes and the like. */
+  soundTokens: string[]
 }
 
 /** A variation a layer can take, chained onto the first layer playing one of its roles. */
@@ -259,6 +261,8 @@ export type StrudelPatternIdea = {
   /** The call that shows a layer already has this variation. */
   callName: string
   targetRoles: StrudelInstrumentRole[]
+  /** Sounds the variation does nothing to, so a layer playing one is passed over. */
+  unsuitedSounds?: string[]
 }
 
 /** What every hint is built from: the code, what was read from it, and its style. */

@@ -15,7 +15,7 @@ describe('buildIdeaHints', () => {
       name: 'the first three ideas, each on the first layer it suits',
       code: '$: s("bd*4, hh*8")\n$: note("c2 eb2")',
       expectedTitles: [
-        'Drop the drums every fourth bar on line 1',
+        'Drop out every fourth bar on line 1',
         'Sweep the filter on line 2',
         'Add drum fills on line 1'
       ]
@@ -30,7 +30,17 @@ describe('buildIdeaHints', () => {
       code: '$: chord("<Cm7>").voicing()',
       expectedTitles: []
     },
-    { name: 'nothing without a layer', code: '// techno', expectedTitles: [] }
+    { name: 'nothing without a layer', code: '// techno', expectedTitles: [] },
+    {
+      name: 'no filter sweep on a sine, which has nothing to remove',
+      code: '$: note("c2 eb2").s("sine").mask("<1 0>").lastOf(4, (x) => x.rev())',
+      expectedTitles: []
+    },
+    {
+      name: 'no stereo spread on a clap, whose reverse leaves the backbeat',
+      code: '$: s("~ cp ~ cp").sometimesBy(.2, (x) => x.ply(2)).delay(.4)',
+      expectedTitles: []
+    }
   ])('offers $name', ({ code, expectedTitles }) => {
     // Arrange
     const patternCode = code

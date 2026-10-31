@@ -267,7 +267,7 @@ describe('StrudelEditor view', () => {
     )
   })
 
-  it('keeps exactly the five songs', () => {
+  it('keeps the five songs and adds one for each style', () => {
     // Arrange / Act
     const labels = ELECTRO_TUNES.map((song) => song.label)
 
@@ -277,7 +277,15 @@ describe('StrudelEditor view', () => {
       'Dinofunk',
       'Megalovania riff (Toby Fox)',
       'Breakfast in America (Supertramp)',
-      'Come as You Are riff (Nirvana)'
+      'Come as You Are riff (Nirvana)',
+      'Concrete Hours (techno)',
+      'Second Floor (house)',
+      'Long Way Down (drum and bass)',
+      'Corner Store (hip hop)',
+      'Tideline (ambient)',
+      'Lift Off (trance)',
+      'Harbour Steps (dub)',
+      'Wire Fence (breakbeat)'
     ])
   })
 

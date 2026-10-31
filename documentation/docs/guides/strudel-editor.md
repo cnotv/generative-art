@@ -27,11 +27,15 @@ flow tab:
 
 - **hints**: what the pattern is missing for its style (below)
 - **welcome**: intro and about
-- **patterns**: your saved patterns, then the examples, then the shipped
-  electro tunes (Caverave, Good times, Flatrave, Amensister, Dinofunk) plus Bike by Autechre,
-  typed in by hand from a score and only approximate, and three songs typed in from guitar
-  tabs: the Megalovania riff, Breakfast in America (Supertramp) and the Come as You Are riff
-  (Nirvana), played on the General MIDI guitars. Each is a link to its own anchor, so
+- **patterns**: your saved patterns, then the examples, then the songs: the electro tunes
+  Caverave and Dinofunk, three songs typed in from guitar tabs (the Megalovania riff, Breakfast
+  in America by Supertramp and the Come as You Are riff by Nirvana, played on the General MIDI
+  guitars), and one original song for each hint style. Those eight are Concrete Hours (techno),
+  Second Floor (house), Long Way Down (drum and bass), Corner Store (hip hop), Tideline
+  (ambient), Lift Off (trance), Harbour Steps (dub) and Wire Fence (breakbeat). They are written
+  as `$:` layers with a `.mask` holding one number a bar, so each layer can be read, muted or
+  rearranged on its own, and the hints tab finds nothing missing in them. Each is a link to its
+  own anchor, so
   `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
   pattern can open in a new tab. The name field at the top saves the code in the editor under
   that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under
@@ -109,15 +113,22 @@ sweep, a phrase turned round, drum fills, swing, stereo spread and an echo; thei
 `STRUDEL_PATTERN_IDEAS`. To keep a version you like, save it in the patterns tab and build a
 variation on a copy.
 
+The filter sweep moves once per note, so a busy line sweeps smoothly and a held note steps, and
+it is not offered on a sine, which has nothing for a filter to remove. The stereo spread is not
+offered on a clap, since reversing `~ cp ~ cp` moves it off the backbeat in one ear.
+
 Instruments are read from sound names in strings (`bd` is a kick, `hh` a hi-hat, `jvbass` a bass),
 from notes (octave 2 and below is bass, above is melody), and from calls (`chord` and `voicing`
-are chords, `scale` a melody). Words in comments name the style but never an instrument, so
-`// bass and hats` counts as neither. A muted block counts as nothing.
+are chords, `scale` a melody), in the patterns and in the `const` parts a song stacks together.
+Words in comments name the style but never an instrument, so `// bass and hats` counts as
+neither. A muted block counts as nothing.
 
 Strudel plays only the `$:` blocks once any exists, so the first instrument added to a plain
 pattern turns that pattern into a block too, and both keep playing. Only `$:` blocks can be muted
 on their own, so a single plain pattern is never reviewed. Every snippet uses only the sounds the
-editor loads and Strudel's built-in synths.
+editor loads and Strudel's built-in synths, and each style's snippets share a key and are
+balanced to play together without clipping: the reasoning is in
+[Balancing the Strudel hints](/docs/journey/strudel-hint-balance).
 
 ## The timeline
 
@@ -542,7 +553,7 @@ The flow editor follows [Strudel Flow](https://xyflow.com/strudel-flow) by
 welcome tab each link back to it.
 
 The electro tunes are ported from [strudel.cc](https://strudel.cc/) repl tunes by Felix Roos
-under CC BY-NC-SA 4.0.
+under CC BY-NC-SA 4.0. The eight style songs were written for this editor.
 
 The Strudel engine is AGPL-3.0-or-later while this repo is MIT, so a deployed build of this
 view carries that obligation. The dependency stays isolated to
