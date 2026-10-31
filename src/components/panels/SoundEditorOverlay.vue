@@ -52,12 +52,12 @@ watch(
 </template>
 
 <style scoped>
-/* Above the app's navigation bar: the editor is modal, and the strip it reserves for that bar
-   would otherwise show the bar sliding in over the page behind. */
+/* Below the app's navigation bar, which stays usable over the editor: the editor reserves a strip
+   at the top for it, and the bar's own buttons never share a row with this overlay's. */
 .sound-editor-overlay {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--z-nav) + 1);
+  z-index: var(--z-modal);
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
