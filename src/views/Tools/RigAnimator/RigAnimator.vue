@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { getTools } from '@webgamekit/threejs'
@@ -19,13 +20,14 @@ import {
 } from 'lucide-vue-next'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import IconButton from '@/components/IconButton.vue'
-import { createReactiveConfig } from '@/stores/viewConfig'
+import { createReactiveConfig, registerViewConfig, unregisterViewConfig } from '@/stores/viewConfig'
 import { useDebugSceneStore } from '@/stores/debugScene'
 import {
   RIG_ANIMATOR_SETUP_CONFIG,
   DEFAULT_FPS,
   DEFAULT_MODEL_PATH,
   MODEL_FILE_ACCEPT,
+  MODEL_SELECTOR_CONTROL,
   CAMERA_PANEL_WIDTH_VW,
   CAMERA_SMOOTHING_MILLISECONDS,
   CAMERA_LANDMARK_MAX_JUMP_METERS,
@@ -80,6 +82,7 @@ import type {
 
 const { registerSceneElements, clearSceneElements } = useDebugSceneStore()
 
+const route = useRoute()
 const canvas = ref<HTMLCanvasElement | null>(null)
 const loadingVisible = ref(true)
 const loadingStage = ref('Loading…')
@@ -633,6 +636,10 @@ const init = async (): Promise<void> => {
     }
   )
 
+  // The Config panel offers the bundled examples; picking one is just another writer of the
+  // model value, so the watcher above loads whatever the picker, an upload or the arrival
+  // default puts there.
+  registerViewConfig(route.name as string, reactiveConfig, { model: MODEL_SELECTOR_CONTROL })
   reactiveConfig.value.model = DEFAULT_MODEL_PATH
 }
 
@@ -681,6 +688,7 @@ onUnmounted(() => {
   timelineControls?.destroyControls()
   rig.clearPhysics()
   clearSceneElements()
+  unregisterViewConfig(route.name as string)
 })
 </script>
 
