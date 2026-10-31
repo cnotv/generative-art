@@ -156,6 +156,7 @@ const buildSuccessfulPlayback = (): StrudelPlayback => ({
   evaluateCode: vi.fn(async () => ({ success: true })),
   stopPlayback: vi.fn(async () => {}),
   renderToWav: vi.fn(async () => ({ success: true })),
+  renderToWavBytes: vi.fn(async () => ({ success: true })),
   renderToMidi: vi.fn(async () => ({ success: true })),
   measureRepetition: vi.fn(async () => 1),
   readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -905,6 +906,7 @@ describe('useStrudelEditor', () => {
       evaluateCode: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' })),
       stopPlayback: vi.fn(async () => {}),
       renderToWav: vi.fn(async () => ({ success: true })),
+      renderToWavBytes: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
       measureRepetition: vi.fn(async () => 1),
       readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -1009,6 +1011,7 @@ describe('useStrudelEditor', () => {
         throw new Error('stop failed')
       }),
       renderToWav: vi.fn(async () => ({ success: true })),
+      renderToWavBytes: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
       measureRepetition: vi.fn(async () => 1),
       readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -1348,6 +1351,7 @@ describe('useStrudelEditor transcription', () => {
       const playback = {
         ...buildSuccessfulPlayback(),
         renderToWav: vi.fn(async () => renderResult),
+        renderToWavBytes: vi.fn(async () => renderResult),
         renderToMidi: vi.fn(async () => renderResult)
       }
       const { patternCode, exportPattern, exportStatus, exportError } = useStrudelEditor({
