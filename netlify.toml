@@ -1,2 +1,15 @@
 [build]
   edge_functions = "src/edge"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["playwright", "playwright-core"]
+
+[dev]
+  command = "pnpm dev --port 5317 --strictPort"
+  targetPort = 5317
+  port = 8888
+  framework = "#custom"
