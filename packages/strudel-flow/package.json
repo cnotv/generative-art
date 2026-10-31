@@ -1,6 +1,6 @@
 {
   "name": "@webgamekit/strudel-flow",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A node editor that compiles instrument and effect nodes into Strudel code, after Strudel Flow by xyflow (https://xyflow.com/strudel-flow, https://github.com/xyflow/strudel-flow).",
   "type": "module",
   "files": [
