@@ -202,6 +202,8 @@ export type StrudelMusicStyle = {
   /** The tempo a tempo hint sets. */
   beatsPerMinute: number
   instruments: StrudelStyleInstrument[]
+  /** What code has to play before its style can be guessed from it. */
+  definingRoles: StrudelInstrumentRole[]
   visuals: StrudelVisualName[]
 }
 

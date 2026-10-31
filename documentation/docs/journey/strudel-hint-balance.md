@@ -51,6 +51,18 @@ A mask rather than an arrangement of sections keeps each layer's whole life on i
 structure of a song is then readable as a column of numbers, and two layers entering together are
 visibly two masks that change on the same bar.
 
+## Why a guess has to be able to say no
+
+Hints only help a pattern that belongs to a style, and the guess was built to always find one. It
+took the styles nearest in tempo and accepted a single point, so a tempo alone was enough. That
+made a Nirvana riff house, because it runs at 120 beats a minute and has a bass note, and put a
+funk tune at 240 on the drum and bass list, the nearest thing to a tempo no style uses.
+
+A wrong style is worse than none: every hint that follows is confidently about the wrong music. A
+guess now needs the tempo inside the style's range and the instruments that define the style, and
+otherwise the tab asks. The defining instruments are few on purpose, because they answer whether
+this could be the style, while the score still picks between the styles that could.
+
 ## What is still unknown
 
 Everything above was measured, and nobody has listened to it. The measurements catch clipping,

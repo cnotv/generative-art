@@ -89,7 +89,12 @@ The style comes from the first of these that names one, and the tab says which:
 
 1. the **Style** picker at the top of the tab;
 2. the comment on the code's first line, such as `// deep house groove` or `// my first dnb tune`;
-3. a guess from the tempo the code plays at and the sounds it uses.
+3. a guess from the code, which needs a tempo inside the style's range and the instruments that
+   define it: a kick for most, a snare too for drum and bass and hip hop, a bass too for dub,
+   chords for ambient and a sampled break for breakbeat.
+
+Most songs are none of these, so a guitar riff at 120 BPM gets no style rather than the nearest
+one, and the tab asks you to name or pick it.
 
 There are eight styles: techno, house, drum and bass, hip hop, ambient, trance, dub and
 breakbeat. Each has a usual tempo range, the instruments it is built from, and the visuals that
