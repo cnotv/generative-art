@@ -11,9 +11,9 @@ description: >-
 
 Every sound here is a Strudel pattern rendered by the Strudel Editor, so the file is exactly
 what the editor plays and the pattern can be edited and rendered again. Writing the pattern and
-choosing between WAV and MIDI are covered by `workflow:music-sound`; this file is how to do it
-in this repository. The editor itself is documented in
-`documentation/docs/guides/strudel-editor.md`.
+choosing between WAV and MIDI are covered by `workflow:music-sound`, and what a sound should be
+made of by `sound-design`; this file is how to do it in this repository. The editor itself is
+documented in `documentation/docs/guides/strudel-editor.md`.
 
 ## 1. Write the pattern for this editor
 
