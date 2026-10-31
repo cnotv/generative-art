@@ -35,15 +35,6 @@ describe('createNoteScheduler', () => {
     start: vi.fn(),
     stop: vi.fn()
   }
-  const decodedBacking = (leadingSilentSamples: number): AudioBuffer =>
-    ({
-      sampleRate: 1000,
-      getChannelData: () => {
-        const samples = new Float32Array(leadingSilentSamples + 1)
-        samples.fill(0.5, leadingSilentSamples)
-        return samples
-      }
-    }) as unknown as AudioBuffer
   const decodeAudioData = vi.fn()
 
   beforeEach(() => {
@@ -76,7 +67,7 @@ describe('createNoteScheduler', () => {
       createBufferSource: vi.fn().mockReturnValue(mockBufferSource),
       decodeAudioData
     }
-    decodeAudioData.mockResolvedValue(decodedBacking(0))
+    decodeAudioData.mockResolvedValue({})
 
     mockFactory = () => mockContext as unknown as AudioContext
   })
@@ -154,13 +145,10 @@ describe('createNoteScheduler', () => {
     })
 
     it.each([
-      ['on time, with no padding', 0, 0, 0],
-      ['decoded with leading padding', 0, 25, 0.025],
-      ['started late', 400, 0, 0.4],
-      ['started late and decoded with padding', 400, 25, 0.425]
-    ])('skips to the right place when %s', async (_case, lateMs, silentSamples, expectedOffset) => {
+      ['on time', 0, 0],
+      ['late', 400, 0.4]
+    ])('skips to the right place when started %s', async (_case, lateMs, expectedOffset) => {
       // Arrange
-      decodeAudioData.mockResolvedValue(decodedBacking(silentSamples))
       const scheduler = createNoteScheduler(mockFactory)
       scheduler.start([], Date.now() - lateMs)
 

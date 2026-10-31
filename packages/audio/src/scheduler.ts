@@ -2,15 +2,13 @@ import type { ScheduledNote } from './types'
 
 const LOOKAHEAD_MS = 150
 const TICK_INTERVAL_MS = 30
-const AUDIBLE_SAMPLE_LEVEL = 0.02
 
 type WaitingBacking = { buffer: AudioBuffer; volume: number }
 
 export interface NoteScheduler {
   start(notes: ScheduledNote[], wallClockStartMs: number): void
   /**
-   * Plays a recording in time with the notes. It must open on its first beat: the leading
-   * silence is skipped, because decoders pad compressed audio by different amounts.
+   * Plays a recording in time with the notes, skipping forward if the start time has passed.
    * @param audioData - The encoded file, which decoding takes ownership of
    * @param volume - Playback volume, 1 for as recorded
    * @returns A promise that settles once the track is decoded and scheduled
@@ -23,13 +21,6 @@ export interface NoteScheduler {
 }
 
 export type AudioContextFactory = () => AudioContext
-
-const findFirstSoundSeconds = (buffer: AudioBuffer): number => {
-  const firstSoundIndex = buffer
-    .getChannelData(0)
-    .findIndex((sample) => Math.abs(sample) >= AUDIBLE_SAMPLE_LEVEL)
-  return Math.max(0, firstSoundIndex) / buffer.sampleRate
-}
 
 const scheduleNote = (ctx: AudioContext, note: ScheduledNote, startAtSec: number): void => {
   const osc = ctx.createOscillator()
@@ -64,7 +55,7 @@ const playBacking = (
   gain.connect(ctx.destination)
   const delayFromNowSec = Math.max(0, -elapsedMs / 1000)
   const lateSec = Math.max(0, elapsedMs / 1000)
-  source.start(ctx.currentTime + delayFromNowSec, findFirstSoundSeconds(buffer) + lateSec)
+  source.start(ctx.currentTime + delayFromNowSec, lateSec)
   return source
 }
 

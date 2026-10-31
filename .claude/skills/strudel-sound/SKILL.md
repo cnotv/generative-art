@@ -89,8 +89,8 @@ A RhythmGame song is two patterns of the same length, both committed: `<song>.st
 backing and `<song>.lead.strudel` the melody the player hits, which never goes in the backing.
 Render the backing to WAV, set its level with `ffmpeg` (about -16 LUFS, true peak under -1 dBFS,
 `alimiter` with `latency=1` so nothing shifts), and encode it with `-q:a 5`. Export the lead to
-`<song>.mid`, which is the chart. The backing's first sound must be on its very first beat, since
-the game skips to it, and its last chord has to die away within two seconds of the last note.
+`<song>.mid`, which is the chart. The backing's last chord has to die away within two seconds of
+the last note, when the round ends.
 
 Commit the `.strudel` source next to the file it renders, so it can be changed and rendered
 again. A WAV is about 11 MB a minute at 48 kHz stereo: anything longer than a short effect or
