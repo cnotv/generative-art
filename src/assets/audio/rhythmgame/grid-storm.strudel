@@ -1,0 +1,38 @@
+// Grid Storm: breakbeat in D minor at 140 BPM. One cycle is one bar.
+// The lead is not here: the player plays it, from grid-storm.lead.strudel.
+setcpm(140/4)
+
+const kit = "RolandTR909"
+const kick = s("bd ~ ~ ~ ~ ~ ~ ~ ~ ~ bd ~ ~ ~ ~ ~").bank(kit).gain(.95)
+const snare = s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~").bank(kit).room(.15).gain(.55)
+const hats = s("hh*8").bank(kit).hpf(6000).gain("[.3 .18]*4")
+const breakLoop = s("breaks125").fit().hpf(1500).gain(.3)
+
+const verseChords = "<[a3,d4,f4] [bb3,d4,f4] [a3,c4,f4] [g3,c4,e4]>"
+const liftChords = "<[bb3,d4,g4] [bb3,d4,f4] [a3,d4,f4] [a3,c#4,e4]>"
+const stab = (chords) => note(chords).struct("x ~ ~ ~ ~ ~ x ~").s("sawtooth").add(note("0,0.06"))
+  .hpf(350).lpf(1600).lpenv(2).lpdecay(.12).decay(.16).sustain(0).delay(.25).delaytime(.214).delayfeedback(.3).gain(.24)
+
+// Two detuned saws between the kicks: a growl with a low note under it.
+const bass = (roots) => note(roots).struct("~ x ~ ~ x ~ ~ x").s("sawtooth").add(note("0,0.1"))
+  .lpf(420).lpenv(1.5).lpdecay(.1).lpq(4).decay(.2).sustain(0).shape(.3).gain(.5)
+const verseBass = bass("<d2 bb1 f1 c2>")
+const liftBass = bass("<g1 bb1 d2 a1>")
+
+const riser = stack(
+  s("white").slow(4).clip(.93).lpf(150).lpattack(6.4).lpenv(7).lpsustain(1).attack(5).sustain(1).release(.02).gain(.3),
+  note("d3").slow(4).clip(.93).s("sawtooth").pattack(6.4).penv(24).lpf(1800).attack(5).sustain(1).release(.02).gain(.14)
+)
+const drop = note("<d2 ~!7>").s("sine").penv(-24).pdecay(.4).decay(1.6).sustain(0).gain(.7)
+
+const intro = stack(kick, snare, hats, breakLoop)
+const verse = stack(kick, snare, hats, breakLoop, verseBass, stab(verseChords))
+const lift = stack(kick, snare, hats, breakLoop, liftBass, stab(liftChords))
+const breakdown = stack(note(verseChords).s("sawtooth").add(note("0,0.08,-0.08")).lpf(600).attack(.2).release(.6).room(.5).gain(.14), riser)
+const lastVerse = stack(drop, verse)
+const ending = stack(
+  s("<bd ~>").bank(kit),
+  note("<[d2,a2,d3,f3,a3,d4] ~>").s("sawtooth").lpf(1400).decay(3).sustain(0).room(.6).roomsize(4).gain(.3)
+)
+
+arrange([4, intro], [8, verse], [8, lift], [4, breakdown], [8, lastVerse], [2, ending])
