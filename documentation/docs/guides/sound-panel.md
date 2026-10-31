@@ -28,8 +28,7 @@ corner icon to hear the preview alone. The render is kept, so Play then Apply re
 everything the panel leaves out (the sounds list, patterns, the timeline, MIDI, hints). **Use code
 in sound** takes whatever the editor holds back into the sound and returns to the panel, and
 **Close** returns without it. The game keeps running underneath and the Sound panel steps aside
-until the editor closes. The overlay sits above the app's top bar, so the bar does not slide in
-over its two buttons. A game that plays its own music should pause it while the editor is open,
+until the editor closes. The two buttons sit in the editor's own toolbar row, after its tool icons. A game that plays its own music should pause it while the editor is open,
 as Rock Runner does, because the editor plays sound of its own. The editor opens on the code it
 last saved, so this replaces whatever it had saved.
 

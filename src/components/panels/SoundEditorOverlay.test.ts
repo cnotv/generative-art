@@ -10,7 +10,7 @@ import type { SoundSlot } from '@/types/soundPanel'
 vi.mock('@/utils/soundRender', () => ({ renderStrudelSound: vi.fn() }))
 vi.mock('@/views/Tools/StrudelEditor/StrudelEditor.vue', () => ({
   __esModule: true,
-  default: defineComponent({ template: '<div data-testid="editor" />' })
+  default: defineComponent({ template: '<div data-testid="editor"><slot name="actions" /></div>' })
 }))
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -58,7 +58,7 @@ describe('SoundEditorOverlay', () => {
   it('takes the code back into the sound and reopens the panel on Use code in sound', async () => {
     const { soundStore, panelsStore, wrapper } = setup()
     soundStore.openEditor('bump')
-    await nextTick()
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="editor"]').exists()).toBe(true))
 
     await wrapper
       .findAll('button')
@@ -74,7 +74,7 @@ describe('SoundEditorOverlay', () => {
   it('discards the editor and reopens the panel on Close', async () => {
     const { soundStore, panelsStore, wrapper } = setup()
     soundStore.openEditor('bump')
-    await nextTick()
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="editor"]').exists()).toBe(true))
 
     await wrapper
       .findAll('button')
