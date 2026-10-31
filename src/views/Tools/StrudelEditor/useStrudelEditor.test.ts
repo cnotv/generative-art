@@ -877,6 +877,56 @@ describe('useStrudelEditor', () => {
     expect(playback.stopPlayback).not.toHaveBeenCalled()
   })
 
+  it('plays a clicked pattern only once the old one has stopped', async () => {
+    // Arrange
+    const callOrder: string[] = []
+    const playback: StrudelPlayback = {
+      ...buildSuccessfulPlayback(),
+      evaluateCode: vi.fn(async (patternCode: string) => {
+        callOrder.push(`play ${patternCode}`)
+        return { success: true }
+      }),
+      stopPlayback: vi.fn(async () => {
+        await Promise.resolve()
+        callOrder.push('stop')
+      })
+    }
+    const editor = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    await editor.playPattern()
+    callOrder.length = 0
+
+    // Act
+    editor.selectPattern('four-floor')
+    await editor.playLoadedPattern()
+
+    // Assert
+    expect(callOrder).toEqual(['stop', `play ${editor.patternCode.value}`])
+    expect(editor.editorStatus.value).toBe('playing')
+  })
+
+  it('leaves a clicked pattern playing when its anchor then loads it again', async () => {
+    // Arrange
+    const playback = buildSuccessfulPlayback()
+    const editor = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    editor.selectPattern('four-floor')
+    await editor.playLoadedPattern()
+
+    // Act
+    const isLoaded = editor.selectPattern('four-floor')
+    await nextTick()
+
+    // Assert
+    expect(isLoaded).toBe(true)
+    expect(playback.stopPlayback).not.toHaveBeenCalled()
+    expect(editor.editorStatus.value).toBe('playing')
+  })
+
   it('stops the old pattern when edited code fails, rather than leave it playing', async () => {
     // Arrange
     const playback = buildSuccessfulPlayback()
