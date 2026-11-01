@@ -154,8 +154,8 @@ here needs:
 - **Form.** Intro 8, verse 8, chorus 8, break 4, chorus 8, outro 4.
 - **Rhythm.** Four on the floor, gated clap on two and four, offbeat hats, octave bass, a tom
   fill every eight bars.
-- **Harmony.** Minor, a four-chord loop, one lift in the chorus such as Am-F-G-E. Use wide
-  voicings and let the pad ring.
+- **Harmony.** Minor, a four-chord loop, one substitution in the chorus (the song here moves
+  Am-F-G-E in the verse to Am-F-C-G in the chorus). Use wide voicings and let the pad ring.
 - **Melody.** A two-bar lead motif with long notes and a dotted rhythm, sequenced down in the
   repeat, over a sixteenth-note chord-tone arpeggio.
 - **Signature.** Juno-style pad, gated snare or clap, octave bass, arpeggio, dotted delay.
@@ -226,5 +226,5 @@ here needs:
 - The melody is a motif, not a scale played in order.
 - The style's defining roles, instruments and visuals are all present, so the hints tab finds
   nothing missing and nothing to review.
-- The file renders, measures at or below -1 dBFS true peak and around -16 to -20 LUFS, and the
+- The file renders, measures at or below -1 dBFS true peak and around -16 to -21 LUFS, and the
   spectrogram shows the sections changing.
