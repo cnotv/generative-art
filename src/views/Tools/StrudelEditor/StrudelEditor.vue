@@ -54,6 +54,7 @@ const {
   deleteSavedPattern,
   updatePatternCode,
   playPattern,
+  playLoadedPattern,
   stopPattern,
   setActiveTab,
   clearLogEntries,
@@ -213,6 +214,7 @@ const loadAnchor = (): void => {
 const onPatternSelected = (patternId: string): void => {
   if (selectPattern(patternId)) {
     editorMode.value = 'code'
+    void playLoadedPattern()
   }
 }
 

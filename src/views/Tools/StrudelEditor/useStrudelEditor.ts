@@ -12,6 +12,7 @@ import {
 import { useSavedPatterns } from './useSavedPatterns'
 import { useStrudelExport } from './useStrudelExport'
 import { useStrudelLog } from './useStrudelLog'
+import { useStrudelPatternLoad } from './useStrudelPatternLoad'
 import type {
   StrudelEditorHandle,
   StrudelEditorStatus,
@@ -84,6 +85,8 @@ type StrudelEditorState = StrudelTranscriptionState & {
   deleteSavedPattern: (savedPatternId: string) => void
   updatePatternCode: (nextCode: string) => void
   playPattern: () => Promise<void>
+  /** Plays what was just loaded, once whatever it replaced has stopped. */
+  playLoadedPattern: () => Promise<void>
   stopPattern: () => Promise<void>
   exportStatus: Ref<StrudelExportStatus>
   exportError: Ref<string>
@@ -207,25 +210,15 @@ export const useStrudelEditor = (
     appendLog
   })
 
-  // Loading another pattern over one that plays stops it, so only the code on screen sounds.
-  const loadPatternCode = (nextCode: string): void => {
-    if (editorStatus.value === 'playing') {
-      void stopPattern()
-    }
-    patternCode.value = nextCode
-    editorStatus.value = 'idle'
-    errorMessage.value = ''
-    timeline.seekToCycle(0)
-  }
-
-  const loadListedPattern = (pattern: StrudelExample | undefined): boolean => {
-    if (pattern === undefined) {
-      return false
-    }
-    selectedExampleId.value = pattern.id
-    loadPatternCode(pattern.code)
-    return true
-  }
+  const { loadPatternCode, playLoadedPattern, loadListedPattern } = useStrudelPatternLoad({
+    patternCode,
+    editorStatus,
+    errorMessage,
+    selectedExampleId,
+    stopPattern,
+    playPattern,
+    rewindTimeline: () => timeline.seekToCycle(0)
+  })
 
   const selectExample = (exampleId: string): void => {
     loadListedPattern(findStrudelExample(exampleList, exampleId))
@@ -259,7 +252,10 @@ export const useStrudelEditor = (
 
   const transcription = useStrudelTranscription({
     runner: editorOptions?.transcriptionRunner ?? runTranscription,
-    applyCode: loadPatternCode,
+    applyCode: (transcribedCode) => {
+      loadPatternCode(transcribedCode)
+      void playLoadedPattern()
+    },
     appendCode: (blocks) => updatePatternCode(appendStrudelFlowBlocks(patternCode.value, blocks)),
     appendLog
   })
@@ -291,6 +287,7 @@ export const useStrudelEditor = (
     deleteSavedPattern,
     updatePatternCode,
     playPattern,
+    playLoadedPattern,
     stopPattern,
     ...strudelExport,
     setActiveTab,
