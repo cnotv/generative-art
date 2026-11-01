@@ -41,7 +41,8 @@ flow tab:
   `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
   pattern can open in a new tab. The name field at the top saves the code in the editor under
   that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under
-  a name already used replaces it, and its cross deletes it.
+  a name already used replaces it, and its cross deletes it. How each style is written is in
+  [Writing a song in a Strudel style](./strudel-genres.md).
 - **sounds**: every sound the editor can play, filtered as on strudel.cc into samples, drum
   machines, synths (soundfonts included) and wavetables, and grouped by where it comes from:
   each sample bank, each drum machine, the General MIDI families from pianos to sound effects.
