@@ -22,6 +22,9 @@ Before writing a named style, look it up: its entry in
 its `STRUDEL_MUSIC_STYLES` entry in `src/views/Tools/StrudelEditor/config.ts` for the tempo,
 roles, instruments and visuals the editor's hints expect.
 
+Note: when modifying a song, always modify the claps and hats too — not every song should sound
+the same.
+
 Save it as `<name>.strudel` in the scratchpad while iterating.
 
 | What             | Here                                                                                                                                         |
