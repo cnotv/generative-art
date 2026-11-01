@@ -1,0 +1,42 @@
+// Electric Pulse: electro house in A minor at 120 BPM. One cycle is one bar.
+// The lead is not here: the player plays it, from electric-pulse.lead.strudel.
+setcpm(120/4)
+
+const kit = "RolandTR909"
+const kick = s("bd*4").bank(kit).gain(.95)
+const clap = s("~ cp ~ cp").bank(kit).gain(.45)
+const hats = s("[~ hh]*4").bank(kit).hpf(5000).gain(.4)
+const shaker = s("hh*16").bank(kit).hpf(8000).gain(.13)
+
+const verseChords = "<[a3,c4,e4] [a3,c4,f4] [g3,c4,e4] [g3,b3,d4]>"
+const liftChords = "<[a3,d4,f4] [a3,c4,f4] [a3,c4,e4] [g3,b3,e4]>"
+const stab = (chords) => note(chords).struct("x ~ ~ x ~ x ~ ~").s("sawtooth").add(note("0,0.06"))
+  .hpf(300).lpf(1400).lpenv(2).lpdecay(.15).decay(.2).sustain(0).room(.25).gain(.26)
+const pad = note(verseChords).s("sawtooth").add(note("0,0.08,-0.08"))
+  .lpf(500).lpattack(1).lpdecay(1).lpsustain(0).lpenv(1.5).attack(.3).release(.8).room(.6).roomsize(4).gain(.15)
+
+// Off the beat, so the kick keeps the low end to itself.
+const bass = (roots) => note(roots).struct("[~ x]*4").s("sawtooth")
+  .lpf(320).lpenv(2).lpdecay(.12).lpq(3).decay(.22).sustain(0).gain(.75)
+const verseBass = bass("<a1 f1 c2 g1>")
+const liftBass = bass("<d2 f1 a1 e2>")
+
+// Stops just short of the bar, so a moment of silence makes the drop land harder.
+const riser = stack(
+  s("white").slow(4).clip(.93).lpf(150).lpattack(7.4).lpenv(7).lpsustain(1).attack(6).sustain(1).release(.02).gain(.3),
+  note("a2").slow(4).clip(.93).s("sawtooth").pattack(7.4).penv(24).lpf(1800).attack(6).sustain(1).release(.02).gain(.14)
+)
+const drop = note("<a2 ~!7>").s("sine").penv(-24).pdecay(.4).decay(1.6).sustain(0).gain(.7)
+
+const intro = stack(kick, hats, verseBass)
+const verse = stack(kick, clap, hats, verseBass, stab(verseChords))
+const lift = stack(kick, clap, hats, shaker, liftBass, stab(liftChords))
+const breakdown = stack(pad, riser)
+const lastVerse = stack(drop, verse, shaker)
+const ending = stack(
+  s("<bd ~>").bank(kit),
+  note("<[a2,e3,a3,c4,e4] ~>").s("sawtooth").lpf(1400).decay(1.8).sustain(0).room(.25).roomsize(1).gain(.3)
+)
+
+// Headroom: the export clips what sums past full scale, and level is set after rendering.
+arrange([4, intro], [8, verse], [8, lift], [4, breakdown], [8, lastVerse], [2, ending]).postgain(.6)

@@ -1,3 +1,4 @@
+import { midiNoteToFreq, type ScheduledNote } from '@webgamekit/audio'
 import {
   HIT_WINDOW_PERFECT_MS,
   HIT_WINDOW_GOOD_MS,
@@ -5,9 +6,32 @@ import {
   SCORE_GOOD,
   COMBO_THRESHOLDS,
   COMBO_MULTIPLIERS,
+  INSTRUMENT_PRESETS,
   type HitResult,
+  type RgInstrument,
   type RhythmNote
 } from './config'
+
+/**
+ * Turns a chart into the notes the chosen instrument plays, each at the song's own pitch.
+ * @param songNotes - The chart's notes
+ * @param instrument - The instrument the player picked
+ * @returns The notes to schedule
+ */
+export const buildScheduledNotes = (
+  songNotes: RhythmNote[],
+  instrument: RgInstrument
+): ScheduledNote[] => {
+  const preset = INSTRUMENT_PRESETS[instrument]
+  return songNotes.map((note) => ({
+    time: note.time,
+    freq: midiNoteToFreq(note.midiNote) * preset.freqMultiplier,
+    duration: preset.durationMs,
+    volume: preset.volume,
+    waveType: preset.waveType,
+    attackTime: preset.attackTimeSec
+  }))
+}
 
 /**
  * Evaluates a hit attempt based on the timing delta from the target.
