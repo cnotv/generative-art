@@ -471,16 +471,18 @@ $: stack(
 )._scope()
 $: stack(
   chord("<D5 D5 D5 C5>").voicing().struct("x ~ x x ~ x x ~")
-    .s("gm_overdriven_guitar").lpf(1500).decay(.18).sustain(0).gain(.2).room(.25)
+    .s("gm_overdriven_guitar").lpf(1200).attack(.15).release(2).decay(.15).sustain(.08)
+    .gain(.1).room(.7).delay(.2).delaytime(.35).delayfeedback(.3)
     .mask("<1!24 0!8 1!16>"),
   chord("<D5>").voicing().slow(8)
-    .s("gm_overdriven_guitar").lpf(900).attack(.5).release(1.5).gain(.16).room(.5)
+    .s("gm_overdriven_guitar").lpf(700).attack(.6).release(3).decay(.3).sustain(.2)
+    .gain(.08).room(.8).delay(.25).delaytime(.4).delayfeedback(.2)
     .mask("<0!24 1!8 0!16>")
 )
 $: stack(
   n("<[3 ~ 2 ~ 0 ~ 2 3] [3 ~ 2 ~ 0 ~ 4 ~] [3 ~ 2 ~ 0 ~ 2 3] [2 ~ 0 ~ 4 ~ 2 ~]>")
     .scale("D4:minor:pentatonic").s("gm_overdriven_guitar")
-    .lpf(2200).decay(.3).sustain(.2).gain(.22).room(.3)
+    .lpf(1800).decay(.4).sustain(.25).gain(.12).room(.6).delay(.15).delaytime(.3).delayfeedback(.25)
     .mask("<0!8 1!16 0!8 1!16>"),
   note("<d4>").s("gm_overdriven_guitar").lpf(1200).attack(.1).release(2).gain(.16).room(.6)
     .mask("<0!24 1!8 0!16>")
