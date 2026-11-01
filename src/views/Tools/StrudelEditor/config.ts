@@ -339,7 +339,7 @@ setcpm(90/4)
 
 $: s("bd ~ ~ bd ~ bd ~ ~").bank("RolandTR808").gain(.65).mask("<0!4 1!32 0!4>")._punchcard()
 $: s("~ ~ sd ~ ~ ~ sd ~").bank("RolandTR808").gain(.5).mask("<0!4 1!32 0!4>")
-$: s("hh*8").bank("RolandTR808").gain("[.3 .2]*4").swingBy(1/6, 4).mask("<0!4 1!36>")
+$: s("hh*8").bank("RolandTR808").gain("[.3 .2]*4").mask("<0!4 1!36>")
 $: stack(
   chord("<Cm7 Ab^7 Fm7 G7>").voicing().s("gm_epiano1").room(.4).crush(8).gain(.42),
   n("<[7 ~ 9 ~ ~ 7 ~ 4] [5 ~ ~ 4 ~ 2 ~ ~] [3 ~ 5 ~ ~ 3 ~ 2] [1 ~ ~ 2 ~ ~ ~ ~]>")
@@ -471,20 +471,20 @@ $: stack(
 )._scope()
 $: stack(
   chord("<D5 D5 D5 C5>").voicing().struct("x ~ x x ~ x x ~")
-    .s("gm_overdriven_guitar").lpf(1200).attack(.15).release(2).decay(.15).sustain(.08)
-    .gain(.1).room(.7).delay(.2).delaytime(.35).delayfeedback(.3)
+    .s("gm_overdriven_guitar").lpf(450).attack(.15).release(2).decay(.15).sustain(.08)
+    .gain(.28).room(.95).delay(.3).delaytime(.4).delayfeedback(.5)
     .mask("<1!24 0!8 1!16>"),
   chord("<D5>").voicing().slow(8)
-    .s("gm_overdriven_guitar").lpf(700).attack(.6).release(3).decay(.3).sustain(.2)
-    .gain(.08).room(.8).delay(.25).delaytime(.4).delayfeedback(.2)
+    .s("gm_overdriven_guitar").lpf(380).attack(.6).release(3).decay(.3).sustain(.2)
+    .gain(.22).room(.95).delay(.35).delaytime(.5).delayfeedback(.6)
     .mask("<0!24 1!8 0!16>")
 )
 $: stack(
   n("<[3 ~ 2 ~ 0 ~ 2 3] [3 ~ 2 ~ 0 ~ 4 ~] [3 ~ 2 ~ 0 ~ 2 3] [2 ~ 0 ~ 4 ~ 2 ~]>")
     .scale("D4:minor:pentatonic").s("gm_overdriven_guitar")
-    .lpf(1800).decay(.4).sustain(.25).gain(.12).room(.6).delay(.15).delaytime(.3).delayfeedback(.25)
+    .lpf(600).decay(.4).sustain(.25).gain(.35).room(.95).delay(.3).delaytime(.35).delayfeedback(.45)
     .mask("<0!8 1!16 0!8 1!16>"),
-  note("<d4>").s("gm_overdriven_guitar").lpf(1200).attack(.1).release(2).gain(.16).room(.6)
+  note("<d4>").s("gm_overdriven_guitar").lpf(550).attack(.1).release(2).gain(.3).room(.9)
     .mask("<0!24 1!8 0!16>")
 )`
   },
@@ -565,18 +565,18 @@ setcpm(105/4)
 $: stack(
   s("bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~"),
   s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~"),
-  s("sd*16").gain(.06).hpf(400),
-  s("hh*16").gain("[.6 .3]*8"),
+  s("sd*16").gain(.12).hpf(400),
+  s("hh*16").gain("[.55 .28 .7 .32]*4"),
   s("oh").struct("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ x ~"),
   s("perc(5,8)").hpf(600).gain(.3),
   s("cb").struct("~ ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ x ~").gain(.12)
 ).gain(.3).mask("<1!38 0!2 1!8>")._punchcard()
 $: note("<[e2 ~ e2 g2 ~ a2 ~ b2 ~ e2 ~ d2 ~ b1 a1 g1] [a1 ~ a1 c#2 ~ e2 ~ g2 ~ a2 ~ g2 ~ e2 c#2 a1] [e2 ~ e2 g2 ~ a2 ~ b2 ~ e2 ~ d2 ~ b1 a1 g1] [b1 ~ b1 d#2 ~ f#2 ~ a1 ~ b2 ~ a2 ~ f#2 d#2 b1]>")
   .s("sawtooth").lpf(750).shape(.25).decay(.1).sustain(0).gain(.38)
-  .mask("<1!38 0!2 1!8>")
+  .mask("<1!38 0!2 1!8>").struct("x*8").add(note("<0 12 7 0 12 7 0 0>"))
 $: stack(
-  chord("<E9 A9 E9 B9>").voicing().struct("~ ~ x ~ ~ x ~ ~ ~ ~ x ~ ~ x ~ ~")
-    .s("gm_clavinet").decay(.06).sustain(0).gain(.1).room(.15),
+  chord("<E9 A9 E9 B9>").voicing().struct("~ x ~ x ~ ~ x ~ x ~ x ~ x ~ x ~ x")
+    .s("gm_clavinet").decay(.05).sustain(0).gain(.15).room(.2)
   chord("<E9 A9 E9 B9>").voicing().struct("~ x ~ ~ x ~ ~ x ~ x ~ ~ x ~ ~ x")
     .s("gm_overdriven_guitar").lpf(1800).decay(.08).sustain(0).gain(.075).room(.2)
 ).mask("<1!38 0!2 1!8>")._pianoroll()
@@ -602,12 +602,12 @@ $: stack(
   s("~ ~ bd ~ ~ ~ bd ~").gain(.22),
   s("~ ~ sd ~ ~ ~ sd ~").gain(.17),
   s("hh*8").gain("[.55 .28]*4")
-).swingBy(1/3, 4).mask("<1!40>")
+).mask("<1!40>")
 $: note("<[c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [bb1 d2 f2 a1] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [d2 f#2 a2 c2] [g1 b1 d2 f2] [c2 e2 g2 bb1] [f1 a1 c2 eb2] [d2 f#2 a2 c2] [g1 b1 d2 f2] [c2 e2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [bb1 d2 f2 a1]>")
   .s("gm_acoustic_bass").gain(.62).room(.2)
 $: chord("<Cm7 F7 Bb^7 Bb^7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 D7 G7 C7 F7 D7 G7 C7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 Bb^7>")
   .voicing().struct("~ x ~ x ~ ~ x ~").s("gm_epiano1")
-  .swingBy(1/3, 4).gain(.2).room(.3)._pianoroll()
+  .gain(.2).room(.3)._pianoroll()
 $: stack(
   note("<[f4 ~ d4 bb3 ~ f4 ~ ~] [d4 ~ b3 g3 ~ d4 ~ ~] [eb4 ~ c4 g3 ~ bb3 ~ ~] [a3 ~ c4 eb4 ~ f4 ~ ~] [d4 ~ f4 bb4 ~ a4 ~ ~] [g4 ~ f4 d4 ~ b3 ~ ~] [c4 ~ eb4 g4 ~ f4 ~ ~] [eb4 ~ d4 c4 ~ a3 ~ ~]>")
     .late(4).mask("<0!4 1!8 0!28>"),
@@ -1500,7 +1500,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
         role: 'chords',
         label: 'clavinet stabs',
         snippet:
-          'chord("<E9 A9 E9 B9>").voicing().struct("~ ~ x ~ ~ x ~ ~ ~ ~ x ~ ~ x ~ ~").s("gm_clavinet").decay(.06).sustain(0).gain(.3)',
+          'chord("<E9 A9 E9 B9>").voicing().struct("~ x ~ x ~ ~ x ~ x ~ x ~ x ~ x ~ x").s("gm_clavinet").decay(.05).sustain(0).gain(.15).room(.2)',
         reason: 'Short offbeat stabs chop against the bass without filling the space.'
       },
       {
@@ -1535,12 +1535,6 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
         reason: 'Soft backbeats leave room for the comping.'
       },
       {
-        role: 'hihat',
-        label: 'a swung ride-like hi-hat',
-        snippet: 's("hh*8").gain(1.1).swingBy(1/3, 4)',
-        reason: 'A swung cymbal line is the timekeeper in a small group.'
-      },
-      {
         role: 'bass',
         label: 'a walking bass',
         snippet:
@@ -1551,7 +1545,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
         role: 'chords',
         label: 'comping seventh chords',
         snippet:
-          'chord("<Cm7 F7 Bb^7 Eb^7>").voicing().struct("~ x ~ x ~ ~ x ~").s("gm_epiano1").swingBy(1/3, 4).gain(.3)',
+          'chord("<Cm7 F7 Bb^7 Eb^7>").voicing().struct("~ x ~ x ~ ~ x ~").s("gm_epiano1").gain(.3)',
         reason:
           'Short, syncopated seventh chords are the comping; block chords on every beat are not.'
       },
@@ -1638,14 +1632,6 @@ export const STRUDEL_PATTERN_IDEAS: StrudelPatternIdea[] = [
     snippet: '.sometimesBy(.2, (x) => x.ply(2))',
     callName: 'sometimesBy',
     targetRoles: ['hihat', 'snare', 'percussion', 'clap', 'kick']
-  },
-  {
-    id: 'swing',
-    title: 'Swing the hi-hats',
-    reason: 'Pushing every other hat a little late gives a straight groove some shuffle.',
-    snippet: '.swingBy(1/3, 4)',
-    callName: 'swingBy',
-    targetRoles: ['hihat']
   },
   {
     id: 'stereo',
