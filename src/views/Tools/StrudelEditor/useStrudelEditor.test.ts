@@ -156,6 +156,7 @@ const buildSuccessfulPlayback = (): StrudelPlayback => ({
   evaluateCode: vi.fn(async () => ({ success: true })),
   stopPlayback: vi.fn(async () => {}),
   renderToWav: vi.fn(async () => ({ success: true })),
+  renderToWavBytes: vi.fn(async () => ({ success: true })),
   renderToMidi: vi.fn(async () => ({ success: true })),
   measureRepetition: vi.fn(async () => 1),
   readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -877,6 +878,56 @@ describe('useStrudelEditor', () => {
     expect(playback.stopPlayback).not.toHaveBeenCalled()
   })
 
+  it('plays a clicked pattern only once the old one has stopped', async () => {
+    // Arrange
+    const callOrder: string[] = []
+    const playback: StrudelPlayback = {
+      ...buildSuccessfulPlayback(),
+      evaluateCode: vi.fn(async (patternCode: string) => {
+        callOrder.push(`play ${patternCode}`)
+        return { success: true }
+      }),
+      stopPlayback: vi.fn(async () => {
+        await Promise.resolve()
+        callOrder.push('stop')
+      })
+    }
+    const editor = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    await editor.playPattern()
+    callOrder.length = 0
+
+    // Act
+    editor.selectPattern('four-floor')
+    await editor.playLoadedPattern()
+
+    // Assert
+    expect(callOrder).toEqual(['stop', `play ${editor.patternCode.value}`])
+    expect(editor.editorStatus.value).toBe('playing')
+  })
+
+  it('leaves a clicked pattern playing when its anchor then loads it again', async () => {
+    // Arrange
+    const playback = buildSuccessfulPlayback()
+    const editor = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async () => playback
+    })
+    editor.selectPattern('four-floor')
+    await editor.playLoadedPattern()
+
+    // Act
+    const isLoaded = editor.selectPattern('four-floor')
+    await nextTick()
+
+    // Assert
+    expect(isLoaded).toBe(true)
+    expect(playback.stopPlayback).not.toHaveBeenCalled()
+    expect(editor.editorStatus.value).toBe('playing')
+  })
+
   it('stops the old pattern when edited code fails, rather than leave it playing', async () => {
     // Arrange
     const playback = buildSuccessfulPlayback()
@@ -905,6 +956,7 @@ describe('useStrudelEditor', () => {
       evaluateCode: vi.fn(async () => ({ success: false, errorMessage: 'bad pattern' })),
       stopPlayback: vi.fn(async () => {}),
       renderToWav: vi.fn(async () => ({ success: true })),
+      renderToWavBytes: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
       measureRepetition: vi.fn(async () => 1),
       readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -1009,6 +1061,7 @@ describe('useStrudelEditor', () => {
         throw new Error('stop failed')
       }),
       renderToWav: vi.fn(async () => ({ success: true })),
+      renderToWavBytes: vi.fn(async () => ({ success: true })),
       renderToMidi: vi.fn(async () => ({ success: true })),
       measureRepetition: vi.fn(async () => 1),
       readPosition: vi.fn(() => ({ cycle: 0, cyclesPerSecond: 0.5 })),
@@ -1042,13 +1095,7 @@ describe('useStrudelEditor', () => {
     // Assert
     expect(tuneCount).toBe(ELECTRO_TUNES.length)
     expect(electroTunes.map((tune) => tune.id)).toContain('caverave')
-    expect(electroTunes.map((tune) => tune.label)).toEqual([
-      'Caverave',
-      'Dinofunk',
-      'Megalovania riff (Toby Fox)',
-      'Breakfast in America (Supertramp)',
-      'Come as You Are riff (Nirvana)'
-    ])
+    expect(electroTunes.map((tune) => tune.label)).toEqual(ELECTRO_TUNES.map((tune) => tune.label))
   })
 
   it('loads an electro tune into the editor when selected', () => {
@@ -1354,6 +1401,7 @@ describe('useStrudelEditor transcription', () => {
       const playback = {
         ...buildSuccessfulPlayback(),
         renderToWav: vi.fn(async () => renderResult),
+        renderToWavBytes: vi.fn(async () => renderResult),
         renderToMidi: vi.fn(async () => renderResult)
       }
       const { patternCode, exportPattern, exportStatus, exportError } = useStrudelEditor({

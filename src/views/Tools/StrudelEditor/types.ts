@@ -38,6 +38,9 @@ export type StrudelEvaluationResult = {
   errorMessage?: string
 }
 
+/** A render that hands back the file instead of downloading it. */
+export type StrudelRenderResult = StrudelEvaluationResult & { file?: ArrayBuffer }
+
 export type StrudelExportFormat = 'wav' | 'midi'
 
 export type StrudelExportOptions = {
@@ -70,6 +73,11 @@ export type StrudelPlayback = {
     patternCode: string,
     exportOptions: StrudelExportOptions
   ) => Promise<StrudelEvaluationResult>
+  /** Renders the cycles offline and returns the WAV file instead of downloading it. */
+  renderToWavBytes: (
+    patternCode: string,
+    exportOptions: StrudelExportOptions
+  ) => Promise<StrudelRenderResult>
   /** How many cycles one repetition of the code lasts, read without playing it. */
   measureRepetition: (patternCode: string) => Promise<number>
   /** Downloads the notes that start inside the cycles as a standard MIDI file. */
@@ -202,6 +210,8 @@ export type StrudelMusicStyle = {
   /** The tempo a tempo hint sets. */
   beatsPerMinute: number
   instruments: StrudelStyleInstrument[]
+  /** What code has to play before its style can be guessed from it. */
+  definingRoles: StrudelInstrumentRole[]
   visuals: StrudelVisualName[]
 }
 
@@ -248,6 +258,8 @@ export type StrudelPatternStatement = StrudelCodeRange & {
   /** Each visual call chained on it, from its dot to its closing parenthesis. */
   visualCalls: StrudelCodeRange[]
   callNames: string[]
+  /** Every word in its strings, lower case: sound names, notes and the like. */
+  soundTokens: string[]
 }
 
 /** A variation a layer can take, chained onto the first layer playing one of its roles. */
@@ -259,6 +271,8 @@ export type StrudelPatternIdea = {
   /** The call that shows a layer already has this variation. */
   callName: string
   targetRoles: StrudelInstrumentRole[]
+  /** Sounds the variation does nothing to, so a layer playing one is passed over. */
+  unsuitedSounds?: string[]
 }
 
 /** What every hint is built from: the code, what was read from it, and its style. */

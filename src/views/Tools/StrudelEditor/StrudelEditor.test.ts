@@ -17,7 +17,10 @@ vi.mock('@webgamekit/strudel-flow', async (importOriginal) => {
   }
 })
 
-const { mockPreviewSound } = vi.hoisted(() => ({ mockPreviewSound: vi.fn() }))
+const { mockPreviewSound, mockEvaluateCode } = vi.hoisted(() => ({
+  mockPreviewSound: vi.fn(),
+  mockEvaluateCode: vi.fn(async () => ({ success: true }))
+}))
 
 // The sound library fetches manifests over the network; the browser tests load the real one.
 vi.mock('./strudelSoundLibrary', async (importOriginal) => {
@@ -55,7 +58,14 @@ vi.mock('./strudelSoundLibrary', async (importOriginal) => {
 })
 vi.mock('./strudelPlayback', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./strudelPlayback')>()),
-  previewStrudelSound: mockPreviewSound.mockResolvedValue(undefined)
+  previewStrudelSound: mockPreviewSound.mockResolvedValue(undefined),
+  loadDefaultStrudelPlayback: async () => ({
+    evaluateCode: mockEvaluateCode,
+    stopPlayback: async () => undefined,
+    readPosition: () => ({ cycle: 0, cyclesPerSecond: 0.5 }),
+    seekToCycle: () => undefined,
+    measureLoop: () => 1
+  })
 }))
 
 // CodeMirror and the Strudel engine only load in a real browser; the browser tests cover
@@ -267,7 +277,7 @@ describe('StrudelEditor view', () => {
     )
   })
 
-  it('keeps exactly the five songs', () => {
+  it('keeps the five songs and adds one for each style', () => {
     // Arrange / Act
     const labels = ELECTRO_TUNES.map((song) => song.label)
 
@@ -277,7 +287,15 @@ describe('StrudelEditor view', () => {
       'Dinofunk',
       'Megalovania riff (Toby Fox)',
       'Breakfast in America (Supertramp)',
-      'Come as You Are riff (Nirvana)'
+      'Come as You Are riff (Nirvana)',
+      'Concrete Hours (techno)',
+      'Second Floor (house)',
+      'Long Way Down (drum and bass)',
+      'Corner Store (hip hop)',
+      'Tideline (ambient)',
+      'Lift Off (trance)',
+      'Harbour Steps (dub)',
+      'Wire Fence (breakbeat)'
     ])
   })
 
@@ -321,6 +339,43 @@ describe('StrudelEditor view', () => {
     await vi.waitFor(() => {
       expect(readEditorCode(wrapper)).toBe(pattern?.code)
     })
+  })
+
+  it('plays a song as soon as it is clicked', async () => {
+    // Arrange
+    mockEvaluateCode.mockClear()
+    const wrapper = await mountEditorView()
+    await openDrawer(wrapper, 'Import')
+    const triggers = wrapper.findAll('.strudel-patterns button[aria-expanded]')
+    await Promise.all(triggers.map((trigger) => trigger.trigger('click')))
+    const songLink = wrapper
+      .findAll('.strudel-patterns__link')
+      .find((link) => link.attributes('href') === `#${ELECTRO_TUNES[1].id}`)
+
+    // Act
+    await songLink?.trigger('click')
+
+    // Assert
+    await vi.waitFor(() => {
+      expect(mockEvaluateCode).toHaveBeenCalledWith(ELECTRO_TUNES[1].code)
+    })
+    expect(readEditorCode(wrapper)).toBe(ELECTRO_TUNES[1].code)
+  })
+
+  it('stays silent when the address opens a pattern', async () => {
+    // Arrange
+    mockEvaluateCode.mockClear()
+    const wrapper = await mountEditorView()
+
+    // Act
+    window.location.hash = `#${ELECTRO_TUNES[1].id}`
+    await vi.waitFor(() => {
+      expect(readEditorCode(wrapper)).toBe(ELECTRO_TUNES[1].code)
+    })
+    await flushPromises()
+
+    // Assert
+    expect(mockEvaluateCode).not.toHaveBeenCalled()
   })
 
   it('opens on the pattern its address names', async () => {

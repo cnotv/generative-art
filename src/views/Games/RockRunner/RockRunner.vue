@@ -26,6 +26,8 @@ import TouchControl from '@/components/TouchControl.vue'
 import { useRockRun } from './game/useRockRun'
 import { useRockRunnerAudio } from './game/useRockRunnerAudio'
 import RockRunnerSoundToggles from './game/RockRunnerSoundToggles.vue'
+import { ROCK_RUNNER_SOUND_SLOTS } from './soundSlots'
+import { useSoundPanelStore } from '@/stores/soundPanel'
 import { useRockRunnerSession } from './useRockRunnerSession'
 import RockRunnerLobby from './wizard/RockRunnerLobby.vue'
 import RockRunnerRules from './wizard/RockRunnerRules.vue'
@@ -291,7 +293,23 @@ watch(phase, async (newPhase, oldPhase) => {
 
 const RR_FONT_KEY = 'rr-font'
 
-onUnmounted(audio.stopTheme)
+const soundPanel = useSoundPanelStore()
+const soundRouteName = String(useRoute().name ?? 'RockRunner')
+soundPanel.register(soundRouteName, ROCK_RUNNER_SOUND_SLOTS, audio.replaceSound)
+
+// The full editor plays sound of its own, so the game's music steps aside while it is open.
+watch(
+  () => soundPanel.editorSlotId !== null,
+  (editorOpen) => {
+    if (editorOpen) audio.stopTheme()
+    else if (phase.value === 'run') audio.startTheme()
+  }
+)
+
+onUnmounted(() => {
+  audio.stopTheme()
+  soundPanel.unregister(soundRouteName)
+})
 
 onMounted(() => {
   store.reset()

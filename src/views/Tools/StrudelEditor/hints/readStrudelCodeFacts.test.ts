@@ -55,8 +55,10 @@ describe('readStrudelCodeFacts', () => {
     { code: 'note("c4 e4 g4").s("triangle")', expectedRoles: ['melody'] },
     { code: 'n("0 2 4").scale("C:major")', expectedRoles: ['melody'] },
     { code: 'chord("<Am C>").voicing()', expectedRoles: ['chords'] },
+    { code: 'chord("<Am7 G7>").voicing()', expectedRoles: ['chords'] },
     { code: 's("breaks125").fit()', expectedRoles: ['breaks'] },
     { code: 's("perc(3,8), lt")', expectedRoles: ['percussion'] },
+    { code: 'const drums = s("bd*4")\nstack(drums, note("c2"))', expectedRoles: ['kick', 'bass'] },
     { code: '// bass and hats\ns("bd*4")', expectedRoles: ['kick'] },
     { code: 'scale("C:harmonic minor")', expectedRoles: ['melody'] }
   ])('finds the instruments in $code', ({ code, expectedRoles }) => {

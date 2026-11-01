@@ -54,6 +54,7 @@ const {
   deleteSavedPattern,
   updatePatternCode,
   playPattern,
+  playLoadedPattern,
   stopPattern,
   setActiveTab,
   clearLogEntries,
@@ -213,6 +214,7 @@ const loadAnchor = (): void => {
 const onPatternSelected = (patternId: string): void => {
   if (selectPattern(patternId)) {
     editorMode.value = 'code'
+    void playLoadedPattern()
   }
 }
 
@@ -306,6 +308,7 @@ onBeforeUnmount(() => {
             <component :is="tool.icon" aria-hidden="true" />
           </IconButton>
         </div>
+        <slot name="actions" />
         <div class="strudel-editor__mode" role="group" aria-label="Editor mode">
           <ButtonSelector
             :model-value="editorMode"

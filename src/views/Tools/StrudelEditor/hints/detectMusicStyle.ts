@@ -43,18 +43,16 @@ const distanceFromTempoRange = (style: StrudelMusicStyle, beatsPerMinute: number
 const readPlayingTempo = (facts: StrudelCodeFacts): number | null =>
   facts.tempo === null ? STRUDEL_DEFAULT_BEATS_PER_MINUTE : facts.tempo.beatsPerMinute
 
-const closestTempoStyles = (
+const stylesAtTempo = (
   styles: StrudelMusicStyle[],
   beatsPerMinute: number | null
-): StrudelMusicStyle[] => {
-  if (beatsPerMinute === null) {
-    return styles
-  }
-  const closestDistance = Math.min(
-    ...styles.map((style) => distanceFromTempoRange(style, beatsPerMinute))
-  )
-  return styles.filter((style) => distanceFromTempoRange(style, beatsPerMinute) === closestDistance)
-}
+): StrudelMusicStyle[] =>
+  beatsPerMinute === null
+    ? styles
+    : styles.filter((style) => distanceFromTempoRange(style, beatsPerMinute) === 0)
+
+const playsDefiningRoles = (style: StrudelMusicStyle, facts: StrudelCodeFacts): boolean =>
+  style.definingRoles.every((role) => facts.instrumentRoles.includes(role))
 
 // One point per instrument the style expects and the code has, and one for a tempo the code
 // sets on purpose inside the style's range; the default tempo proves nothing.
@@ -68,20 +66,21 @@ const scoreStyle = (style: StrudelMusicStyle, facts: StrudelCodeFacts): number =
   return instrumentMatches + tempoMatch
 }
 
+// Most songs are not one of these styles, so a guess takes the style's tempo and what defines it:
+// a guitar riff at 120 BPM has a bassline and a house tempo, and is still not house.
 const guessStyleFromCode = (
   styles: StrudelMusicStyle[],
   facts: StrudelCodeFacts
 ): StrudelMusicStyle | null => {
-  const scoredStyles = closestTempoStyles(styles, readPlayingTempo(facts)).map((style) => ({
-    style,
-    score: scoreStyle(style, facts)
-  }))
+  const scoredStyles = stylesAtTempo(styles, readPlayingTempo(facts))
+    .filter((style) => playsDefiningRoles(style, facts))
+    .map((style) => ({ style, score: scoreStyle(style, facts) }))
   const best = scoredStyles.reduce<(typeof scoredStyles)[number] | null>(
     (currentBest, scored) =>
       currentBest === null || scored.score > currentBest.score ? scored : currentBest,
     null
   )
-  return best !== null && best.score > 0 ? best.style : null
+  return best?.style ?? null
 }
 
 /**
