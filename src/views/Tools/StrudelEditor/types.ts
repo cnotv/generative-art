@@ -170,6 +170,12 @@ export type StrudelMusicStyleId =
   | 'trance'
   | 'dub'
   | 'breakbeat'
+  | 'synthwave'
+  | 'stoner-rock'
+  | 'grunge'
+  | 'classical'
+  | 'funk'
+  | 'jazz'
 
 /** What a layer of a pattern plays, as far as its sound names and calls tell. */
 export type StrudelInstrumentRole =
