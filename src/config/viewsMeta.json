@@ -74,6 +74,9 @@
   "Chick Run": {
     "description": "Endless runner game \u2014 dodge obstacles as a speedy chick."
   },
+  "Generative Canvas": {
+    "description": "Compile a Vue component in the page and hot-swap it into a sandboxed frame without losing the page's state."
+  },
   "Forest Game": {
     "description": "3D forest exploration game with character movement and environment."
   },
