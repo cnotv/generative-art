@@ -27,13 +27,16 @@ export interface PathInteractionOptions {
 const DEFAULT_GROUND_Y = 0
 const DEFAULT_MIN_WAYPOINT_DISTANCE = 1.5
 
+// TouchEvent is undefined in browsers without touch support, so instanceof would throw.
+const isTouchEvent = (event: MouseEvent | TouchEvent): event is TouchEvent => 'touches' in event
+
 const getNdcFromEvent = (
   event: MouseEvent | TouchEvent,
   canvasElement: HTMLCanvasElement
 ): THREE.Vector2 => {
   const rect = canvasElement.getBoundingClientRect()
-  const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX
-  const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY
+  const point = isTouchEvent(event) ? event.touches[0] : event
+  const { clientX, clientY } = point
   return new THREE.Vector2(
     ((clientX - rect.left) / rect.width) * 2 - 1,
     -((clientY - rect.top) / rect.height) * 2 + 1
@@ -118,7 +121,7 @@ export const usePathInteraction = ({
   }
 
   const onPointerDown = (event: MouseEvent | TouchEvent): void => {
-    if (event instanceof TouchEvent) event.preventDefault()
+    if (isTouchEvent(event)) event.preventDefault()
     const canvasElement = canvas.value
     const camera = getCamera()
     if (!canvasElement || !camera) return
@@ -135,7 +138,7 @@ export const usePathInteraction = ({
   }
 
   const onPointerMove = (event: MouseEvent | TouchEvent): void => {
-    if (event instanceof TouchEvent) event.preventDefault()
+    if (isTouchEvent(event)) event.preventDefault()
     const canvasElement = canvas.value
     const camera = getCamera()
     if (selectedNodeIndex !== null && canvasElement && camera) {

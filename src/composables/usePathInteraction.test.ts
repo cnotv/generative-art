@@ -98,3 +98,34 @@ describe('usePathInteraction node dragging', () => {
     interaction.unmount()
   })
 })
+
+describe('usePathInteraction without TouchEvent support', () => {
+  it('handles mouse input when the browser does not define TouchEvent', () => {
+    // Arrange: desktop Firefox and Safari have no TouchEvent global
+    vi.stubGlobal('TouchEvent', undefined)
+    const canvas = makeCanvas()
+    const camera = makeCamera()
+    const onAddWaypoint = vi.fn()
+    const interaction = usePathInteraction({
+      canvas: ref(canvas),
+      getCamera: () => camera,
+      groundY: GROUND_Y,
+      onAddWaypoint,
+      onUpdateWaypoint: () => {},
+      onDrawStart: () => {},
+      onDrawEnd: () => {},
+      getNodes: () => []
+    })
+    interaction.mount()
+
+    // Act
+    const act = () => dispatch(canvas, 'mousedown', { clientX: 400, clientY: 300 })
+
+    // Assert
+    expect(act).not.toThrow()
+    expect(onAddWaypoint).toHaveBeenCalled()
+
+    interaction.unmount()
+    vi.unstubAllGlobals()
+  })
+})
