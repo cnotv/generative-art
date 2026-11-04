@@ -189,7 +189,9 @@ describe('useSceneViewStore', () => {
     describe('lights', () => {
       const initWithEnvironment = async (store: ReturnType<typeof useSceneViewStore>) => {
         const canvas = document.createElement('canvas')
-        await store.init(canvas, { lights: { environment: { intensity: 0.5 } } })
+        await store.init(canvas, {
+          lights: { cycle: true, environment: { intensity: 0.5 } }
+        })
       }
 
       it('lists one Lights row instead of a row per light', async () => {
@@ -279,7 +281,7 @@ describe('useSceneViewStore', () => {
         expect(mockScene.environmentIntensity).toBe(1.2)
       })
 
-      it('opens on a moving sky at four times speed', async () => {
+      it('runs the cycle at four times speed when the view asks for it', async () => {
         const store = useSceneViewStore()
 
         await initWithEnvironment(store)
@@ -288,6 +290,15 @@ describe('useSceneViewStore', () => {
         expect(store.lightTransitionSpeed).toBe(4)
         expect(store.activeLightPreset).toBe(null)
         store.setLightTransitionEnabled(false)
+      })
+
+      it('keeps the sky still unless the view asks for the cycle', async () => {
+        const store = useSceneViewStore()
+        const canvas = document.createElement('canvas')
+
+        await store.init(canvas, { lights: { environment: { intensity: 0.5 } } })
+
+        expect(store.lightTransitionEnabled).toBe(false)
       })
 
       it('leaves the lights alone in a scene that declared none', async () => {
