@@ -18,7 +18,10 @@ export type StrudelRenderResult =
   | { ok: true; file: StrudelRenderFile }
   | { ok: false; status: number; message: string }
 
-export type StrudelRenderFunction = (request: StrudelRenderRequest) => Promise<StrudelRenderResult>
+export type StrudelRenderFunction = (
+  request: StrudelRenderRequest,
+  siteOrigin: string
+) => Promise<StrudelRenderResult>
 
 export type StrudelRenderParseResult =
   | { ok: true; request: StrudelRenderRequest }

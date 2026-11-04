@@ -71,14 +71,16 @@ export const createStrudelRenderHandler =
     const parsed = parseStrudelRenderRequest(body)
     if (!parsed.ok) return jsonResponse(parsed.status, { error: parsed.message })
 
-    const result = await render(parsed.request).catch((error: unknown) => {
-      console.error('[strudel-render]', error)
-      return {
-        ok: false as const,
-        status: STRUDEL_HTTP_STATUS.unprocessableEntity,
-        message: 'The render failed'
+    const result = await render(parsed.request, new URL(request.url).origin).catch(
+      (error: unknown) => {
+        console.error('[strudel-render]', error)
+        return {
+          ok: false as const,
+          status: STRUDEL_HTTP_STATUS.unprocessableEntity,
+          message: 'The render failed'
+        }
       }
-    })
+    )
     if (!result.ok) return jsonResponse(result.status, { error: result.message })
 
     return audioResponse(result.file)
