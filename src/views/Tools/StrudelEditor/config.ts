@@ -570,7 +570,7 @@ $: stack(
   s("oh").struct("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ x ~"),
   s("perc(5,8)").hpf(600).gain(.3),
   s("cb").struct("~ ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ x ~").gain(.12)
-).gain(.3).mask("<1!38 0!2 1!8>")._punchcard()
+).gain(.26).mask("<1!38 0!2 1!8>")._punchcard()
 $: note("<[e2 ~ e2 g2 ~ a2 ~ b2 ~ e2 ~ d2 ~ b1 a1 g1] [a1 ~ a1 c#2 ~ e2 ~ g2 ~ a2 ~ g2 ~ e2 c#2 a1] [e2 ~ e2 g2 ~ a2 ~ b2 ~ e2 ~ d2 ~ b1 a1 g1] [b1 ~ b1 d#2 ~ f#2 ~ a1 ~ b2 ~ a2 ~ f#2 d#2 b1]>")
   .s("sawtooth").lpf(750).shape(.25).decay(.1).sustain(0).gain(.38)
   .mask("<1!38 0!2 1!8>").struct("x*8").add(note("<0 12 7 0 12 7 0 0>"))
