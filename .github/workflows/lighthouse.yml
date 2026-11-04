@@ -42,10 +42,14 @@ jobs:
           REPORT=$(ls .lighthouseci/lhr-*.json | head -1)
           node scripts/generate-lighthouse-badges.mjs "$REPORT"
 
-      - name: Commit badge files
+      # main is protected, so badges live on an unprotected orphan branch that is
+      # rewritten as a single commit on every run.
+      - name: Publish badge files to the badges branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan badges
+          git rm -rf --cached --quiet .
           git add badges/
-          git diff --cached --quiet || git commit -m "chore: update Lighthouse performance badges [skip ci]"
-          git push
+          git commit -m "chore: update Lighthouse performance badges"
+          git push --force origin badges
