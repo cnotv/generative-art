@@ -423,203 +423,167 @@ $: s("perc(5,8)").hpf(500).gain(.5).pan(sine.range(.3, .7).slow(4)).mask("<0!12 
     id: 'neon-drive',
     label: 'Neon Drive (synthwave)',
     code: `// Neon Drive: a synthwave song in A minor
-// Forty bars: intro, verse, chorus, break, chorus, outro. One number a bar.
+// Forty bars: intro, verse, chorus, break, chorus, outro. Every part follows one chord plan.
 setcpm(100/4)
 
+const changes = "<Am F G E Am F G E Am F G E Am F G E Am F C G Am F C G Am F G E Am F C G Am F C G Am F E Am>"
+
 $: stack(
-  s("bd*4"),
-  s("~ cp ~ cp"),
-  s("[~ hh]*4"),
-  s("mt lt").fast(2).mask("<0!7 1>")
-).bank("RolandTR909").gain(.36).mask("<0!8 1!16 0!4 1!8 0!4>")._punchcard()
-$: note("<a1 f1 c2 g1>").struct("x*8").add(note("[0 12]*4"))
-  .s("sawtooth").lpf(520).decay(.16).sustain(0).gain(.6)
-  .mask("<0!4 1!20 0!4 1!8 0!4>")
+  s("bd*4").gain(.34).mask("<0!8 1!16 0!4 1!8 0!4>"),
+  s("~ cp ~ cp").gain(.272).room(.35).roomsize(1.5).mask("<0!8 1!16 0!4 1!8 0!4>"),
+  s("[~ hh]*4").gain(.238).mask("<0!4 1!20 0!4 1!8 0!4>"),
+  s("~ ~ mt lt").gain(.306).mask("<0!15 1 0!7 1 0!12 1 0!3>")
+).bank("RolandTR909")._punchcard()
 $: stack(
-  chord("<Am F G E>").voicing().mask("<1!16 0!8 1!4 0!8 1!4>"),
-  chord("<Am F C G>").voicing().mask("<0!16 1!8 0!4 1!8 0!4>")
-).s("sawtooth").lpf(1300).attack(.25).release(.8).gain(.12).room(.45)._pianoroll()
+  note("<a1 f1 g1 e1 a1 f1 g1 e1 a1 f1 g1 e1 a1 f1 g1 e1 a1 f1 c2 g1 a1 f1 c2 g1 a1 f1 g1 e1 a1 f1 c2 g1 a1 f1 c2 g1 a1 f1 e1 a1>").struct("x*8").add(note("[0 12]*4"))
+    .s("sawtooth").lpf(520).decay(.16).sustain(0).gain(.374)
+    .mask("<0!4 1!20 0!4 1!11 0>"),
+  note("<~!39 a1>").s("sawtooth").lpf(400).decay(2.4).sustain(0).gain(.408)
+)
+$: chord(changes).voicing().s("supersaw").lpf(1300).attack(.3).release(1).room(.45).gain(.068)._pianoroll()
 $: stack(
-  n("0 2 4 7 4 2 0 2").scale("A3:minor").fast(2).s("triangle")
-    .delay(.3).delaytime(.375).delayfeedback(.35).lpf(3200).gain(.16)
-    .mask("<1!36 0!4>"),
-  n("<[4 ~ 2 ~ 0 ~ 2 4] [4 ~ 2 ~ 7 ~ 4 ~] [4 ~ 2 ~ 0 ~ 2 0] [2 ~ 4 ~ 7 ~ 4 ~]>")
-    .scale("A4:minor").s("sawtooth").lpf(2600).decay(.3).sustain(.2)
-    .delay(.35).delaytime(.5).delayfeedback(.3).room(.3).gain(.2)
-    .mask("<0!16 1!8 0!4 1!8 0!4>")
+  n("[0 1 2 3 2 1 0 1]*2").chord(changes).voicing().s("square").lpf(2400).decay(.12).sustain(0)
+    .delay(.3).delaytime(.45).delayfeedback(.3).gain(.054).mask("<1!39 0>"),
+  note("<~ ~ ~ ~ ~ ~ ~ ~ [e5@3 c5] [a4@2 c5 a4] [d5@3 b4] [b4@3 g#4] [c5@3 a4] [a4@2 f4 a4] [b4@3 g4] [g#4@2 e4@2] [e5@2 a5 g5] [f5@2 c5 a4] [e5@2 g5 e5] [d5@3 b4] [c5@2 e5 a5] [a5@2 f5 c5] [g5@2 e5 c5] [b4@2 d5 g5] ~ ~ ~ ~ [e5@2 a5 g5] [f5@2 c5 a4] [e5@2 g5 e5] [d5@3 b4] [c5@2 e5 a5] [a5@2 f5 c5] [g5@2 e5 c5] [b4@2 d5 g5] [e5@4] [c5@4] [b4@2 g#4@2] [a4@4]>")
+    .s("gm_lead_2_sawtooth").lpf(3000).attack(.02).release(.4)
+    .delay(.35).delaytime(.45).delayfeedback(.35).room(.3).gain(.238)
 )._spectrum()`
   },
   {
     id: 'dust-and-diesel',
     label: 'Dust and Diesel (stoner rock)',
     code: `// Dust and Diesel: a stoner rock song in D minor
-// Forty-eight bars: riff, verse, chorus, breakdown, chorus, outro. One number a bar.
+// Forty-eight bars: riff, verse, chorus, breakdown, chorus, outro. Bass and guitar play one riff.
 setcpm(80/4)
 
+const riff = "<[d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [a1 ~ a1 a1 ~ e2 g2 ~] [d2@8] [d2@8] [d2@8] [c2@8] [d2@8] [d2@8] [d2@8] [a1@8] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [a1 ~ a1 a1 ~ e2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2@8] ~>"
+
 $: stack(
-  s("bd ~ ~ bd ~ ~ bd ~"),
-  s("~ ~ sd ~ ~ ~ sd ~"),
-  s("hh*8"),
-  s("cr").mask("<0!7 1>")
-).gain(.34).mask("<1!24 0!8 1!16>")._punchcard()
+  s("bd ~ ~ bd ~ ~ bd ~").mask("<0!4 1!20 0!8 1!14 0!2>"),
+  s("bd ~ ~ ~ ~ ~ ~ ~").mask("<0!24 1!8 0!16>"),
+  s("~ ~ sd ~ ~ ~ sd ~").late(1/96).mask("<0!4 1!20 0!8 1!14 0!2>"),
+  s("~ ~ ~ ~ sd ~ ~ ~").late(1/96).mask("<0!24 1!8 0!16>"),
+  s("hh*8").gain(.484).mask("<0!4 1!42 0!2>"),
+  s("cr").mask("<0!16 1 0!7 1 0!7 1 0!7 1 0!5 1 0>")
+).gain(.37).room(.15)._punchcard()
+$: note(riff).s("sawtooth").lpf(420).shape(.35).decay(.24).sustain("<0!24 .6!8 0!16>")
+  .gain(.44).mask("<0!4 1!44>")._scope()
 $: stack(
-  note("<[d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~]>")
-    .s("sawtooth").lpf(380).shape(.35).decay(.22).sustain(0).gain(.62)
-    .mask("<1!24 0!8 1!16>"),
-  note("<d2>").s("sawtooth").lpf(300).shape(.3).decay(.6).sustain(.3).gain(.45)
-    .mask("<0!24 1!8 0!16>")
-)._scope()
-$: stack(
-  chord("<D5 D5 D5 C5>").voicing().struct("x ~ x x ~ x x ~")
-    .s("gm_overdriven_guitar").lpf(450).attack(.15).release(2).decay(.15).sustain(.08)
-    .gain(.28).room(.95).delay(.3).delaytime(.4).delayfeedback(.5)
-    .mask("<1!24 0!8 1!16>"),
-  chord("<D5>").voicing().slow(8)
-    .s("gm_overdriven_guitar").lpf(380).attack(.6).release(3).decay(.3).sustain(.2)
-    .gain(.22).room(.95).delay(.35).delaytime(.5).delayfeedback(.6)
-    .mask("<0!24 1!8 0!16>")
+  note(riff).add(note("12,19,24")).s("gm_overdriven_guitar").lpf(2200).decay(.3).sustain(.2)
+    .room(.15).gain(.176).mask("<1!24 0!8 1!16>"),
+  chord("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ D5 D5 D5 C5 D5 D5 D5 A5 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~>").voicing().s("gm_overdriven_guitar").lpf(1600).attack(.3).release(2)
+    .room(.3).gain(.158)
 )
-$: stack(
-  n("<[3 ~ 2 ~ 0 ~ 2 3] [3 ~ 2 ~ 0 ~ 4 ~] [3 ~ 2 ~ 0 ~ 2 3] [2 ~ 0 ~ 4 ~ 2 ~]>")
-    .scale("D4:minor:pentatonic").s("gm_overdriven_guitar")
-    .lpf(600).decay(.4).sustain(.25).gain(.35).room(.95).delay(.3).delaytime(.35).delayfeedback(.45)
-    .mask("<0!8 1!16 0!8 1!16>"),
-  note("<d4>").s("gm_overdriven_guitar").lpf(550).attack(.1).release(2).gain(.3).room(.9)
-    .mask("<0!24 1!8 0!16>")
-)`
+$: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] [d5@8] ~ [a4@8] [c5@8] [d5@8] ~ [f5@4 e5@4] [e5@8] [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] ~ ~ ~ ~ ~ ~ [d5@8] ~>").s("gm_distortion_guitar").lpf(2600).attack(.03).release(.8)
+  .room(.45).delay(.25).delaytime(.375).delayfeedback(.35).gain(.211)`
   },
   {
     id: 'rust-and-rain',
     label: 'Rust and Rain (grunge)',
     code: `// Rust and Rain: a grunge song in E minor
-// Forty bars: quiet verse, loud chorus, quiet verse, loud chorus, bridge, outro. One number a bar.
+// Forty bars: quiet verse, loud chorus, quiet verse, loud chorus, bridge, outro.
 setcpm(120/4)
 
+const changes = "<E5 F5 F#5 G5 E5 F5 F#5 G5 E5 G5 A5 C5 E5 G5 A5 C5 E5 F5 F#5 G5 E5 F5 F#5 G5 E5 G5 A5 C5 E5 G5 A5 C5 C5 C5 D5 D5 E5 G5 A5 E5>"
+
 $: stack(
-  s("bd ~ bd ~ bd ~ ~ ~"),
-  s("~ ~ sd ~ ~ ~ sd ~"),
-  s("hh*8"),
-  s("cr").mask("<0!7 1>")
-).gain("<.19!8 .38!8 .19!8 .38!8 .24!4 .38!4>").mask("<1!32 0!4 1!4>")._punchcard()
+  s("bd ~ ~ ~ bd ~ ~ ~").gain(.4).mask("<1!8 0!8 1!8 0!16>"),
+  s("~ ~ sd ~ ~ ~ sd ~").gain(.32).mask("<1!8 0!8 1!8 0!16>"),
+  s("hh*8").gain(.224).mask("<1!8 0!8 1!8 0!16>"),
+  s("bd ~ bd ~ bd ~ ~ bd").gain(.64).mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
+  s("~ ~ sd ~ ~ ~ sd ~").gain(.6).mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
+  s("oh*4").gain(.28).mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
+  s("~ ~ ~ ~ ~ ~ mt lt").gain(.4).mask("<0!15 1 0!15 1 0!8>"),
+  s("bd ~ ~ ~ ~ ~ ~ ~, ~ ~ ~ ~ sd ~ ~ ~").gain(.48).mask("<0!32 1!4 0!4>"),
+  s("cr").gain(.48).mask("<0!8 1 0!15 1 0!11 1 0!2 1>")
+).gain(.36)._punchcard()
+$: note("<e2 f2 f#2 g2 e2 f2 f#2 g2 e2 g2 a1 c2 e2 g2 a1 c2 e2 f2 f#2 g2 e2 f2 f#2 g2 e2 g2 a1 c2 e2 g2 a1 c2 c2 c2 d2 d2 e2 g2 a1 e2>").struct("<[x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x ~ ~ ~ x ~ ~ ~] [x ~ ~ ~ x ~ ~ ~] [x ~ ~ ~ x ~ ~ ~] [x ~ ~ ~ x ~ ~ ~] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x ~ ~ ~ ~ ~ ~ ~]>")
+  .s("sawtooth").lpf(520).shape(.3).decay(.18).sustain(0).gain("<.35!8 .55!8 .35!8 .55!16>")._scope()
+$: note("<~ ~ ~ ~ ~ ~ ~ ~ [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [g4 ~ g4 g4 ~ e4 ~ ~] [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [c5 ~ g4 ~ c5 ~ e4 ~] ~ ~ ~ ~ ~ ~ ~ ~ [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [g4 ~ g4 g4 ~ e4 ~ ~] [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [c5 ~ g4 ~ c5 ~ e4 ~] [g4@8] ~ [a4@8] ~ [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [b4@8]>").s("gm_distortion_guitar").lpf(3000).decay(.25).sustain(.3)
+  .room(.2).gain(.24)
 $: stack(
-  note("<[e2 ~ e2 g2 ~ a2 ~ b2] [e2 ~ e2 g2 ~ a2 ~ b2] [e2 ~ e2 g2 ~ a2 ~ b2] [d2 ~ d2 f#2 ~ g2 ~ a2]>")
-    .s("sawtooth").lpf(520).shape(.3).decay(.18).sustain(0).gain(.56)
-    .mask("<1!8 0!8 1!8 0!8 0!4 0!4>"),
-  note("<[e2 ~ e2 g2 ~ b2 ~ e2] [g2 ~ g2 b2 ~ d2 ~ g2] [a2 ~ a2 e2 ~ a2 ~ e2] [c2 ~ c2 g2 ~ e2 ~ c2]>")
-    .s("sawtooth").lpf(520).shape(.3).decay(.18).sustain(0).gain(.35)
-    .mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
-  note("<e2>").s("sawtooth").lpf(300).shape(.3).decay(.8).sustain(.3).gain(.36)
-    .mask("<0!32 1!4 0!4>")
-)._scope()
-$: stack(
-  chord("<E5 F5 F#5 G5>").voicing().struct("x ~ x ~ x ~ x x")
-    .s("gm_overdriven_guitar").lpf(950).decay(.08).sustain(0).gain(.1).room(.25)
-    .mask("<1!8 0!8 1!8 0!8 0!4 0!4>"),
-  chord("<E5 G5 A5 C5>").voicing().struct("x ~ ~ x ~ ~ x ~")
-    .s("gm_overdriven_guitar").lpf(1600).decay(.2).sustain(0).gain(.24).room(.3)
-    .mask("<0!8 1!8 0!8 1!8 0!4 1!4>")
-)
-$: stack(
-  n("<[4 ~ 4 4 ~ 2 ~ 0] [4 ~ 4 4 ~ 3 ~ 2] [4 ~ 4 4 ~ 2 ~ 0] [2 ~ 3 ~ 4 ~ 4 ~]>")
-    .scale("E4:minor").s("gm_overdriven_guitar")
-    .lpf(2400).decay(.2).sustain(.2).gain(.22).room(.2)
-    .mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
-  note("<b4>").s("gm_overdriven_guitar").lpf(1800).attack(.1).release(2).gain(.14).room(.6)
-    .mask("<0!32 1!4 0!4>")
+  n("0 1 2 3 2 1 0 1").chord(changes).voicing().s("gm_electric_guitar_clean")
+    .decay(.4).sustain(0).room(.3).gain(.2).mask("<1!8 0!8 1!8 0!16>"),
+  chord(changes).voicing().struct("x ~ ~ x ~ ~ x ~").s("gm_overdriven_guitar")
+    .lpf(1800).decay(.25).sustain(.1).room(.25).gain(.192).mask("<0!8 1!8 0!8 1!8 1!4 1!3 0>"),
+  chord("<~!39 E5>").voicing().s("gm_overdriven_guitar").lpf(1600).release(2.5).room(.4).gain(.208)
 )`
   },
   {
     id: 'winter-court',
     label: 'Winter Court (classical)',
     code: `// Winter Court: a classical piece in D minor
-// Thirty-two bars: theme, development, return, coda. One number a bar.
+// Thirty-two bars: theme, a turn to F major, the theme returned with a counter-line, coda.
 setcpm(80/4)
 
-$: chord("<Dm Gm A7 Dm Bb Gm A7 Dm F C Dm Bb F C Dm A7 Dm Gm A7 Dm Bb Gm A7 Dm Dm Gm A7 Dm Bb Gm A7 D>")
-  .voicing().struct("x@2 ~ x@1 x@1").s("gm_string_ensemble_1")
-  .attack(.25).release(.6).gain(.3).room(.4)._pianoroll()
-$: note("<[d2 f2 a1 d2] [bb1 d2 g1 bb1] [a1 c#2 e2 a1] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 a1] [d2 f2 a1 d2] [f2 a2 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [f2 a2 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [a1 c#2 e2 a1] [d2 f2 a1 d2] [bb1 d2 g1 bb1] [a1 c#2 e2 a1] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 a1] [d2 f2 a1 d2] [d2 f2 a1 d2] [bb1 d2 g1 bb1] [a1 c#2 e2 a1] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 a1] [d2 f#2 a2 d2]>")
-  .s("gm_cello").gain(.8).room(.3)
+const changes = "<Dm Gm A7 Dm Bb Gm A7 Dm F C Dm Bb F C Dm A7 Dm Gm A7 Dm Bb Gm A7 Dm Dm Gm A7 Dm Bb Gm A7 D>"
+
+$: chord(changes).voicing().struct("x@2 x x").s("gm_string_ensemble_1")
+  .attack(.25).release(.8).room(.4).gain(.26)._pianoroll()
+$: note("<[d2 f2 a1 d2] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [f1 a1 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [f1 a1 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [a1 c#2 e2 g2] [d2 f2 a1 d2] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [d2 f2 a1 d2] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 g2] d2>").s("gm_cello").release(.4).room(.3).gain(.7)
+  .mask("<0!2 1!30>")
 $: stack(
-  note("<[d5@2 f5 e5] [d5@2 a4@2] [bb4@2 d5 c5] [a4@4] [g4@2 bb4 a4] [f4@2 a4@2] [e4@2 g4 f4] [d4@4]>")
-    .mask("<1!8 0!24>"),
-  note("<[a4@2 c5 d5] [f5@2 e5@2] [d5@2 c5 bb4] [a4@4] [g4@2 f4 e4] [d4@2 f4@2] [e4@2 g4 a4] [a4@4]>")
-    .mask("<0!8 1!8 0!16>"),
-  note("<[d5@2 f5 e5] [d5@2 a4@2] [bb4@2 d5 c5] [a4@4] [g4@2 bb4 a4] [f4@2 a4@2] [e4@2 g4 f4] [d4@2 a4@2]>")
-    .mask("<0!16 1!8 0!8>"),
-  note("<[d5@2 c5 bb4] [a4@2 g4@2] [f4@2 e4@2] [d4@4] [bb4@2 a4 g4] [f4@2 e4@2] [d4@2 c#4@2] [d4@4]>")
-    .mask("<0!24 1!8>")
-).s("gm_violin").attack(.08).release(.4).gain(.6).room(.35)._spiral()
+  note("<[d5@2 f5 e5] [d5@2 bb4@2] [c#5@2 e5 g5] [a4@4] [d5@2 f5 d5] [bb4@2 g4 bb4] [a4@2 c#5 e5] [d5@4] [a4@2 c5 f5] [e5@2 c5 g4] [f5@2 d5 a4] [bb4@2 d5 f5] [f5@2 c5 a4] [g5@2 e5 c5] [a5@2 f5 d5] [e5@2 c#5 a4] [d5@2 f5 a5] [g5@2 d5 bb4] [a5@2 e5 c#5] [f5@3 e5] [f5@2 d5 bb4] [g5@2 bb4 d5] [e5@2 a4 c#5] [d5@4] [a5@2 f5 d5] [g5@2 d5 bb4] [a4@2 c#5 e5] [d5@2 a4@2] [f5@2 d5 bb4] [g4@2 bb4 d5] [c#5@2 e5 a4] [d5@4]>").s("gm_violin").attack(.06).release(.5).room(.35).gain(.55),
+  note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [f4@2 a4@2] [g4@2 bb4@2] [e4@2 g4@2] [f4@4] [f4@2 d4@2] [d4@2 g4@2] [c#4@2 e4@2] [d4@4] [f4@2 a4@2] [g4@2 bb4@2] [e4@2 g4@2] [f4@4] [f4@2 d4@2] [d4@2 g4@2] [c#4@2 e4@2] [f#4@4]>").s("gm_viola").attack(.1).release(.6).room(.35).gain(.35)
+    .mask("<0!16 1!16>")
+)._spiral()
 $: stack(
-  note("<d2>").s("gm_timpani").decay(.6).sustain(0).gain(.55).mask("<0!3 1>"),
-  s("perc(3,8)").hpf(80).gain(.3).mask("<0!3 1>")
+  note("<~ ~ ~ ~ ~ ~ ~ d2 ~ ~ ~ ~ ~ ~ ~ a1 ~ ~ ~ ~ ~ ~ ~ d2 ~ ~ ~ ~ ~ ~ a1 d2>").s("gm_timpani").decay(1.2).sustain(0).gain(.6),
+  s("<~ ~ ~ ~ ~ ~ ~ perc ~ ~ ~ ~ ~ ~ ~ perc ~ ~ ~ ~ ~ ~ ~ perc ~ ~ ~ ~ ~ ~ perc perc>").hpf(80).gain(.12)
 )`
   },
   {
     id: 'uptown-strut',
     label: 'Uptown Strut (funk)',
     code: `// Uptown Strut: a funk song in E
-// Forty-eight bars: intro, verse, chorus, break, chorus. One number a bar.
+// Forty-eight bars: intro, verse vamp, chorus, break, chorus and a last hit. The bass leads.
 setcpm(105/4)
 
+const changes = "<E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 A9 A9 E9 E9 B9 A9 E9 B9 E9 E9 E9 E9 E9 E9 E9 E9 A9 A9 E9 E9 B9 A9 E9 E9>"
+
 $: stack(
-  s("bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~"),
-  s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~"),
-  s("sd*16").gain(.12).hpf(400),
-  s("hh*16").gain("[.55 .28 .7 .32]*4"),
-  s("oh").struct("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ x ~"),
-  s("perc(5,8)").hpf(600).gain(.3),
-  s("cb").struct("~ ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ x ~").gain(.12)
-).gain(.26).mask("<1!38 0!2 1!8>")._punchcard()
-$: note("<[e2 ~ e2 g2 ~ a2 ~ b2 ~ e2 ~ d2 ~ b1 a1 g1] [a1 ~ a1 c#2 ~ e2 ~ g2 ~ a2 ~ g2 ~ e2 c#2 a1] [e2 ~ e2 g2 ~ a2 ~ b2 ~ e2 ~ d2 ~ b1 a1 g1] [b1 ~ b1 d#2 ~ f#2 ~ a1 ~ b2 ~ a2 ~ f#2 d#2 b1]>")
-  .s("sawtooth").lpf(750).shape(.25).decay(.1).sustain(0).gain(.38)
-  .mask("<1!38 0!2 1!8>").struct("x*8").add(note("<0 12 7 0 12 7 0 0>"))
+  s("bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~").gain(.85).mask("<1!38 0!2 1!7 0>"),
+  s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~").gain(.75).mask("<1!38 0!2 1!7 0>"),
+  s("~ sd ~ ~ ~ ~ ~ sd ~ sd ~ ~ ~ ~ ~ sd").gain(.14).mask("<1!8 1!24 0!8 1!7 0>"),
+  s("hh*16").gain("[.5 .25 .4 .25]*4").mask("<1!8 1!24 0!8 1!7 0>"),
+  s("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ oh ~").gain(.4).mask("<1!8 1!24 0!8 1!7 0>"),
+  s("perc(5,8)").hpf(600).gain(.3).mask("<0!8 1!24 0!8 1!7 0>")
+).gain(.3)._punchcard()
 $: stack(
-  chord("<E9 A9 E9 B9>").voicing().struct("~ x ~ x ~ ~ x ~ x ~ x ~ x ~ x ~ x")
-    .s("gm_clavinet").decay(.05).sustain(0).gain(.15).room(.2),
-  chord("<E9 A9 E9 B9>").voicing().struct("~ x ~ ~ x ~ ~ x ~ x ~ ~ x ~ ~ x")
-    .s("gm_overdriven_guitar").lpf(1800).decay(.08).sustain(0).gain(.075).room(.2)
-).mask("<1!38 0!2 1!8>")._pianoroll()
+  note("<[e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~]>").s("gm_slap_bass_1").decay(.25).sustain(0).gain(.9)
+    .mask("<0!4 1!44>"),
+  s("<~!47 [bd,cr]>").gain(.4)
+)
 $: stack(
-  n("<[4 ~ 3 ~ 2 ~ 0 ~] [4 ~ 3 2 ~ 0 ~ ~] [4 ~ 3 ~ 2 ~ 3 4] [3 ~ 2 ~ 0 ~ ~ ~]>")
-    .scale("E4:minor:pentatonic").s("gm_brass_section")
-    .decay(.12).sustain(0).gain(.12).room(.2)
-    .mask("<0!8 1!16 0!24>"),
-  n("<[4 ~ 3 ~ 2 ~ 0 ~] [4 ~ 3 2 ~ 0 ~ ~] [4 ~ 3 ~ 2 ~ 3 4] [3 ~ 2 ~ 0 ~ 2 3]>")
-    .scale("E4:minor:pentatonic").s("gm_brass_section")
-    .decay(.15).sustain(0).gain(.14).room(.25)
-    .mask("<0!24 1!8 0!8 1!8>")
-)`
+  chord(changes).voicing().struct("~ x ~ x ~ ~ x ~ ~ x ~ x ~ ~ x ~").s("gm_clavinet")
+    .decay(.06).sustain(0).room(.15).gain(.18).mask("<0!8 1!24 0!8 1!7 0>"),
+  chord(changes).voicing().struct("~ ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ x ~").s("gm_electric_guitar_muted")
+    .decay(.08).sustain(0).gain(.14).mask("<0!8 1!24 0!8 1!7 0>"),
+  chord("<~!47 E9>").voicing().s("gm_clavinet").decay(1.5).sustain(0).room(.3).gain(.22)
+)._pianoroll()
+$: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ ~ c#5 e5 ~] [g5 ~ e5 ~ c#5 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [d5 ~ b4 ~ g#4 ~ ~ ~] [~ ~ ~ ~ ~ d#5 f#5 ~] [e5 ~ c#5 ~ a4 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [f#5 ~ d#5 ~ b4 ~ a4 ~] ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ ~ c#5 e5 ~] [g5 ~ e5 ~ c#5 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [d5 ~ b4 ~ g#4 ~ ~ ~] [~ ~ ~ ~ ~ d#5 f#5 ~] [e5 ~ c#5 ~ a4 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [e5 ~ ~ ~ ~ ~ ~ ~]>").s("gm_brass_section").decay(.18).sustain(.2).room(.25).gain(.3)`
   },
   {
     id: 'blue-hour',
     label: 'Blue Hour (jazz)',
-    code: `// Blue Hour: a jazz song in Bb major
-// Forty bars: intro, AABA head, tag. One number a bar.
+    code: `// Blue Hour: a jazz song in Bb major, on rhythm changes
+// Forty bars: intro, a 32-bar AABA head, tag. Swung eighths; the bass walks in quarters.
 setcpm(136/4)
 
+const changes = "<[[Cm7 F7]] [[Cm7 F7]] [[Cm7 F7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Fm7 Bb7]] [[Eb^7 Ab7]] [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Fm7 Bb7]] [[Eb^7 Ab7]] [[Bb^7 G7]] Bb^7 D7 D7 G7 G7 C7 C7 F7 F7 [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Fm7 Bb7]] [[Eb^7 Ab7]] [[Bb^7 G7]] Bb^7 [[Cm7 F7]] [[Cm7 F7]] [[Cm7 F7]] Bb^7>"
+
 $: stack(
-  s("~ ~ bd ~ ~ ~ bd ~").gain(.22),
-  s("~ ~ sd ~ ~ ~ sd ~").gain(.17),
-  s("hh*8").gain("[.55 .28]*4")
-).mask("<1!40>")
-$: note("<[c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [bb1 d2 f2 a1] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [d2 f#2 a2 c2] [g1 b1 d2 f2] [c2 e2 g2 bb1] [f1 a1 c2 eb2] [d2 f#2 a2 c2] [g1 b1 d2 f2] [c2 e2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [f1 a1 c2 eb2] [bb1 d2 f2 a1] [g1 b1 d2 f2] [c2 eb2 g2 bb1] [bb1 d2 f2 a1]>")
-  .s("gm_acoustic_bass").gain(.62).room(.2)
-$: chord("<Cm7 F7 Bb^7 Bb^7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 D7 G7 C7 F7 D7 G7 C7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 F7 Bb^7 G7 Cm7 Bb^7>")
-  .voicing().struct("~ x ~ x ~ ~ x ~").s("gm_epiano1")
-  .gain(.2).room(.3)._pianoroll()
+  s("hh ~ hh hh hh ~ hh hh").gain(.45),
+  s("bd bd bd bd").gain(.1),
+  s("~ sd ~ sd").gain(.12).lpf(3000)
+).swingBy(1/3, 4).mask("<0!4 1!36>")
+$: note("<[c2 eb2 f1 a1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [f1 ab1 bb1 d2] [eb2 g2 ab1 c2] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [f1 ab1 bb1 d2] [eb2 g2 ab1 c2] [bb1 d2 g1 b1] [bb1 d2 f2 c#2] [d2 f#2 a2 f#2] [d2 c2 a1 f#1] [g1 b1 d2 f2] [g1 f2 d2 b1] [c2 e2 g2 e2] [c2 bb1 g1 e1] [f1 a1 c2 eb2] [f1 eb2 c2 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [f1 ab1 bb1 d2] [eb2 g2 ab1 c2] [bb1 d2 g1 b1] [bb1 d2 f2 b1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] bb1>").s("gm_acoustic_bass").release(.2).room(.2).gain(.75)
 $: stack(
-  note("<[f4 ~ d4 bb3 ~ f4 ~ ~] [d4 ~ b3 g3 ~ d4 ~ ~] [eb4 ~ c4 g3 ~ bb3 ~ ~] [a3 ~ c4 eb4 ~ f4 ~ ~] [d4 ~ f4 bb4 ~ a4 ~ ~] [g4 ~ f4 d4 ~ b3 ~ ~] [c4 ~ eb4 g4 ~ f4 ~ ~] [eb4 ~ d4 c4 ~ a3 ~ ~]>")
-    .late(4).mask("<0!4 1!8 0!28>"),
-  note("<[f4 ~ d4 bb3 ~ f4 ~ ~] [d4 ~ b3 g3 ~ d4 ~ ~] [eb4 ~ c4 g3 ~ bb3 ~ ~] [a3 ~ c4 eb4 ~ f4 ~ ~] [d4 ~ f4 bb4 ~ a4 ~ ~] [g4 ~ f4 d4 ~ b3 ~ ~] [c4 ~ eb4 g4 ~ f4 ~ ~] [eb4 ~ d4 c4 ~ bb3 ~ ~]>")
-    .late(12).mask("<0!12 1!8 0!20>"),
-  note("<[f#4 ~ a4 c4 ~ a4 ~ ~] [g4 ~ f4 d4 ~ b3 ~ ~] [e4 ~ g4 bb4 ~ g4 ~ ~] [f4 ~ eb4 c4 ~ a3 ~ ~] [d4 ~ f#4 a4 ~ c5 ~ ~] [b4 ~ g4 f4 ~ d4 ~ ~] [e4 ~ g4 bb4 ~ a4 ~ ~] [g4 ~ f4 eb4 ~ c4 ~ ~]>")
-    .late(20).mask("<0!20 1!8 0!12>"),
-  note("<[f4 ~ d4 bb3 ~ f4 ~ ~] [d4 ~ b3 g3 ~ d4 ~ ~] [eb4 ~ c4 g3 ~ bb3 ~ ~] [a3 ~ c4 eb4 ~ f4 ~ ~] [d4 ~ f4 bb4 ~ a4 ~ ~] [g4 ~ f4 d4 ~ b3 ~ ~] [c4 ~ eb4 g4 ~ f4 ~ ~] [eb4 ~ d4 c4 ~ bb3 ~ ~]>")
-    .late(28).mask("<0!28 1!8 0!4>"),
-  note("<[f4 ~ d4 bb3 ~ f4 ~ ~] [g4 ~ f4 d4 ~ b3 ~ ~] [eb4 ~ c4 g3 ~ bb3 ~ ~] [d4 f4 bb4 ~ ~ ~ ~ ~]>")
-    .late(36).mask("<0!36 1!4>")
-).s("gm_vibraphone").gain(.3).room(.3)._pitchwheel()`
+  chord(changes).voicing().struct("~ ~ x ~ ~ x ~ ~").s("gm_epiano1").decay(.5).sustain(.2)
+    .room(.3).gain(.22).swingBy(1/3, 4).mask("<1!39 0>"),
+  chord("<~!39 Bb^7>").voicing().s("gm_epiano1").release(2).room(.4).gain(.24)
+)._pianoroll()
+$: note("<~ ~ ~ ~ [d5 ~ f5 d5 ~ ~ b4 ~] [c5 ~ eb5 g5 ~ ~ a4 c5] [d5 f5 a5 f5 ~ d5 b4 ~] [bb4 ~ g4 eb5 ~ ~ c5 ~] [ab4 ~ c5 eb5 ~ ~ d5 ~] [g4 ~ bb4 d5 ~ ~ c5 ~] [f5 ~ d5 bb4 ~ ~ b4 d5] [eb5 ~ c5 ~ a4 ~ ~ ~] [d5 ~ f5 d5 ~ ~ b4 ~] [c5 ~ eb5 g5 ~ ~ a4 c5] [d5 f5 a5 f5 ~ d5 b4 ~] [bb4 ~ g4 eb5 ~ ~ c5 ~] [ab4 ~ c5 eb5 ~ ~ d5 ~] [g4 ~ bb4 d5 ~ ~ c5 ~] [f5 ~ d5 bb4 ~ ~ b4 d5] [d5 ~ bb4 ~ f4 ~ ~ ~] [f#5 ~ a5 f#5 ~ ~ d5 ~] [c5 ~ ~ a4 ~ f#4 ~ ~] [b4 ~ d5 f5 ~ ~ d5 ~] [f5 ~ ~ d5 ~ b4 ~ ~] [e5 ~ g5 e5 ~ ~ c5 ~] [bb4 ~ ~ g4 ~ e4 ~ ~] [a4 ~ c5 eb5 ~ ~ c5 ~] [eb5 ~ ~ c5 ~ a4 ~ ~] [d5 ~ f5 d5 ~ ~ b4 ~] [c5 ~ eb5 g5 ~ ~ a4 c5] [d5 f5 a5 f5 ~ d5 b4 ~] [bb4 ~ g4 eb5 ~ ~ c5 ~] [ab4 ~ c5 eb5 ~ ~ d5 ~] [g4 ~ bb4 d5 ~ ~ c5 ~] [f5 ~ d5 bb4 ~ ~ b4 d5] [d5 ~ bb4 ~ f4 ~ ~ ~] ~ ~ ~ [d5@8]>").s("gm_vibraphone").swingBy(1/3, 4).room(.3).gain(.4)._pitchwheel()`
   }
 ]
 
