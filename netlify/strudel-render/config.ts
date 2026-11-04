@@ -1,4 +1,3 @@
-export const STRUDEL_RENDER_PATH = '/api/strudel/render'
 export const STRUDEL_EDITOR_ROUTE = '/tools/StrudelEditor#export'
 export const STRUDEL_EDITOR_URL_ENV = 'STRUDEL_EDITOR_URL'
 export const STRUDEL_EDITOR_STORAGE_KEY = 'strudel-editor-code'
@@ -25,13 +24,6 @@ export const STRUDEL_FILE_EXTENSIONS = {
 } as const
 export const STRUDEL_VIEWPORT = { width: 1280, height: 720 } as const
 export const STRUDEL_ERROR_MESSAGE_MAX = 500
-
-export const STRUDEL_RENDER_RATE_LIMIT = {
-  action: 'rate_limit',
-  aggregateBy: 'ip',
-  windowSize: 60,
-  windowLimit: 3
-} as const
 
 export const STRUDEL_RENDER_TIMEOUT_MS = 30_000
 export const STRUDEL_BROWSER_LAUNCH_TIMEOUT_MS = 25_000

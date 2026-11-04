@@ -31,12 +31,10 @@ import type {
 } from './types'
 import { readWavDurationSeconds } from './wav'
 
-const resolveEditorUrl = (): string => {
-  const configuredUrl =
-    process.env[STRUDEL_EDITOR_URL_ENV] ??
-    process.env.DEPLOY_PRIME_URL ??
-    process.env.URL ??
-    'http://localhost:5317'
+// Netlify's URL and DEPLOY_PRIME_URL exist only at build time, so the request's own origin
+// is what points a preview deploy at its own editor.
+const resolveEditorUrl = (siteOrigin: string): string => {
+  const configuredUrl = process.env[STRUDEL_EDITOR_URL_ENV] ?? siteOrigin
   return `${configuredUrl.replace(/\/$/, '')}${STRUDEL_EDITOR_ROUTE}`
 }
 
@@ -46,7 +44,8 @@ const describeError = (error: unknown): string => {
 }
 
 const launchBrowser = async (): Promise<Browser> => {
-  const isServerless = process.env.CONTEXT !== undefined && process.env.CONTEXT !== 'dev'
+  // CONTEXT is a build-time variable and is undefined inside a deployed function.
+  const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined
   if (!isServerless) {
     const { chromium } = await import('playwright')
     return chromium.launch({
@@ -201,10 +200,11 @@ const makeRenderFile = (bytes: Uint8Array, request: StrudelRenderRequest): Strud
 /**
  * Renders Strudel code through the deployed editor in a headless browser and returns the file.
  * @param request - the validated code, format, range and sample rate
+ * @param siteOrigin - the origin the request arrived on, which serves the editor
  * @returns the rendered WAV or MIDI bytes, or the status and message to send back
  */
-export const renderStrudelFile: StrudelRenderFunction = async (request) => {
-  const editorUrl = resolveEditorUrl()
+export const renderStrudelFile: StrudelRenderFunction = async (request, siteOrigin) => {
+  const editorUrl = resolveEditorUrl(siteOrigin)
   const browser = await launchBrowser().catch((error: unknown) => {
     console.error(`[strudel-render] ${describeError(error)}`)
     return undefined

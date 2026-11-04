@@ -80,13 +80,29 @@ describe('createStrudelRenderHandler', () => {
 
     await handler(postRequest({ code: 's("bd")' }))
 
-    expect(render).toHaveBeenCalledWith({
-      code: 's("bd")',
-      format: 'wav',
-      cycles: 1,
-      startCycle: 0,
-      sampleRate: 48_000
-    })
+    expect(render).toHaveBeenCalledWith(
+      { code: 's("bd")', format: 'wav', cycles: 1, startCycle: 0, sampleRate: 48_000 },
+      'http://localhost'
+    )
+  })
+
+  it('tells the renderer which origin the request arrived on', async () => {
+    const render = successfulRender()
+    const handler = createStrudelRenderHandler(render)
+    const previewRequest = new Request(
+      'https://deploy-preview-1--site.netlify.app/api/strudel/render',
+      {
+        method: 'POST',
+        body: JSON.stringify({ code: 's("bd")' })
+      }
+    )
+
+    await handler(previewRequest)
+
+    expect(render).toHaveBeenCalledWith(
+      expect.anything(),
+      'https://deploy-preview-1--site.netlify.app'
+    )
   })
 
   it('returns the rendered file with download headers', async () => {
