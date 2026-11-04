@@ -36,11 +36,10 @@ flow tab:
   (synthwave), Dust and Diesel (stoner rock), Rust and Rain (grunge), Winter Court (classical),
   Uptown Strut (funk) and Blue Hour (jazz). They are written
   as `$:` layers with a `.mask` holding one number a bar, so each layer can be read, muted or
-  rearranged on its own, and the hints tab finds nothing missing in them. Each is a link to its
-  own anchor, so
-  `/tools/StrudelEditor#caverave` opens on Caverave, Back returns to the pattern before, and a
-  pattern can open in a new tab. The name field at the top saves the code in the editor under
-  that name, in local storage; a save is linked like the rest, as `#saved-<name>`, saving under
+  rearranged on its own, and the hints tab finds nothing missing in them. Each is a link that puts
+  it in the address, so `/tools/StrudelEditor?pattern=caverave` opens on Caverave, Back returns
+  to the pattern before, and a pattern can open in a new tab. The name field at the top saves the code in the editor under
+  that name, in local storage; a save is linked like the rest, as `?pattern=saved-<name>`, saving under
   a name already used replaces it, and its cross deletes it. How each style is written is in
   [Writing a song in a Strudel style](./strudel-genres.md).
 - **sounds**: every sound the editor can play, filtered as on strudel.cc into samples, drum
@@ -59,9 +58,12 @@ flow tab:
 
 ![The sounds tab grouped by drum machine: under Roland TR909 and Sakata DPM48, sounds named Bass drum, Clap, Closed hi-hat and the rest, each with its code name and variation count](/img/strudel-editor/sounds-tab.webp)
 
-Every tab has its own anchor, so `/tools/StrudelEditor#midi` opens on the midi tab and
-`#flow` opens the flow canvas. Tabs and patterns share the anchor: a name that is a tab opens it,
-anything else loads the pattern it names.
+The open tab is in the address too, so `/tools/StrudelEditor?tab=midi` opens on the midi tab
+and `?tab=flow` opens the flow canvas. The two combine: `?pattern=caverave&tab=export` opens
+Caverave with the export tab ready, which is how `scripts/strudel-export.mjs` and the render API
+reach it. Opening and closing a tab from the toolbar replaces the address rather than adding to Back,
+which steps through the patterns picked. Links from before the query, such as `#caverave` or
+`#export`, still open what they named and are rewritten to the query form.
 
 Audio starts on the first Play press or the first click on a pattern, since browsers only allow
 sound after a user gesture. Clicking an example, a song or a saved pattern plays it at once from

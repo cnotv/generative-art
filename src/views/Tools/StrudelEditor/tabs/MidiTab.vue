@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import Button from '@/components/ui/button/Button.vue'
+import { writeStrudelAddress } from '../strudelAddress'
 import { createMidiSnippets, useMidiDevices } from '../useMidiDevices'
+
+const route = useRoute()
 
 const emit = defineEmits<{
   code: [patternCode: string]
@@ -30,7 +34,11 @@ const onConnect = (): void => {
   <section class="strudel-midi">
     <p class="strudel-midi__intro">
       To turn a .mid file into a pattern, drop it on the
-      <a class="strudel-midi__link" href="#import">import tab</a>
+      <RouterLink
+        class="strudel-midi__link"
+        :to="{ query: writeStrudelAddress(route.query, { tabName: 'import' }) }"
+        >import tab</RouterLink
+      >
       instead.
     </p>
     <h3 class="strudel-midi__heading">MIDI devices</h3>

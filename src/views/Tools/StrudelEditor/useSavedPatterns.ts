@@ -13,7 +13,7 @@ import type { StrudelExample, StrudelSavedPattern } from './types'
 type SavedPatternsState = {
   /** The patterns saved under a name, newest first, as the patterns tab lists them. */
   savedPatterns: ComputedRef<StrudelExample[]>
-  /** Saves the current code under a name, replacing a save with the same anchor. */
+  /** Saves the current code under a name, replacing a save with the same id. */
   savePattern: (name: string) => void
   deleteSavedPattern: (savedPatternId: string) => void
 }

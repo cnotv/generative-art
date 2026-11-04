@@ -48,7 +48,7 @@ describe('StrudelEditor config', () => {
     expect(uniqueIds.size).toBe(exampleIds.length)
   })
 
-  it('gives every example and tune its own id, since each id is its anchor', () => {
+  it('gives every example and tune its own id, since each id is its address', () => {
     // Arrange
     const patternIds = [...STRUDEL_EXAMPLES, ...ELECTRO_TUNES].map((pattern) => pattern.id)
 
