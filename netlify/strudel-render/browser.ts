@@ -205,15 +205,17 @@ const makeRenderFile = (bytes: Uint8Array, request: StrudelRenderRequest): Strud
  */
 export const renderStrudelFile: StrudelRenderFunction = async (request) => {
   const editorUrl = resolveEditorUrl()
+  let launchFailure = ''
   const browser = await launchBrowser().catch((error: unknown) => {
-    console.error(`[strudel-render] ${describeError(error)}`)
+    launchFailure = describeError(error)
+    console.error(`[strudel-render] ${launchFailure}`)
     return undefined
   })
   if (browser === undefined) {
     return {
       ok: false,
       status: STRUDEL_HTTP_STATUS.serviceUnavailable,
-      message: 'The renderer could not start'
+      message: `The renderer could not start: ${launchFailure}`
     }
   }
 
