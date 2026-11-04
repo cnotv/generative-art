@@ -576,7 +576,7 @@ $: note("<[e2 ~ e2 g2 ~ a2 ~ b2 ~ e2 ~ d2 ~ b1 a1 g1] [a1 ~ a1 c#2 ~ e2 ~ g2 ~ a
   .mask("<1!38 0!2 1!8>").struct("x*8").add(note("<0 12 7 0 12 7 0 0>"))
 $: stack(
   chord("<E9 A9 E9 B9>").voicing().struct("~ x ~ x ~ ~ x ~ x ~ x ~ x ~ x ~ x")
-    .s("gm_clavinet").decay(.05).sustain(0).gain(.15).room(.2)
+    .s("gm_clavinet").decay(.05).sustain(0).gain(.15).room(.2),
   chord("<E9 A9 E9 B9>").voicing().struct("~ x ~ ~ x ~ ~ x ~ x ~ ~ x ~ ~ x")
     .s("gm_overdriven_guitar").lpf(1800).decay(.08).sustain(0).gain(.075).room(.2)
 ).mask("<1!38 0!2 1!8>")._pianoroll()
