@@ -186,6 +186,20 @@ describe('createNoteScheduler', () => {
       expect(mockBufferSource.start).not.toHaveBeenCalled()
     })
 
+    it('never hands a recording decoded across a restart to the new run', async () => {
+      // Arrange
+      const scheduler = createNoteScheduler(mockFactory)
+      scheduler.start([], Date.now())
+      const decoding = scheduler.startBacking(backingData)
+
+      // Act
+      scheduler.start([], Date.now())
+      await decoding
+
+      // Assert
+      expect(mockBufferSource.start).not.toHaveBeenCalled()
+    })
+
     it('forgets a waiting backing track on stop', async () => {
       // Arrange
       const scheduler = createNoteScheduler(mockFactory)

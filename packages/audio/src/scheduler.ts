@@ -75,6 +75,7 @@ export const createNoteScheduler = (
   let nextNoteIndex = 0
   let tickId: ReturnType<typeof setInterval> | null = null
   let playing = false
+  let runId = 0
   let sortedNotes: ScheduledNote[] = []
   let waitingBacking: WaitingBacking | null = null
   let backingSource: AudioBufferSourceNode | null = null
@@ -119,6 +120,7 @@ export const createNoteScheduler = (
     sortedNotes = [...notes].sort((a, b) => a.time - b.time)
     startMs = wallClockStartMs
     nextNoteIndex = 0
+    runId += 1
     playing = true
     tickId = setInterval(tick, TICK_INTERVAL_MS)
     schedulePendingNotes(ctx, Date.now() - startMs)
@@ -126,8 +128,10 @@ export const createNoteScheduler = (
 
   const startBacking = async (audioData: ArrayBuffer, volume = 1): Promise<void> => {
     const ctx = getContext()
+    const requestedRunId = runId
     const buffer = await ctx.decodeAudioData(audioData)
-    if (!playing) return
+    // A restart while decoding must not hand this recording to the new run.
+    if (!playing || requestedRunId !== runId) return
     waitingBacking = { buffer, volume }
     scheduleBacking(ctx, Date.now() - startMs)
   }
