@@ -48,10 +48,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp -r badges "$RUNNER_TEMP/badges"
-          git switch --orphan badges
-          git rm -rf --quiet --ignore-unmatch .
-          cp -r "$RUNNER_TEMP/badges" badges
+          git checkout --orphan badges
+          git rm -rf --cached --quiet .
           git add badges/
           git commit -m "chore: update Lighthouse performance badges"
           git push --force origin badges
