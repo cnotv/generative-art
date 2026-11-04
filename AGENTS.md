@@ -121,14 +121,14 @@ A PR body links to these homes; a section growing into an explanation belongs in
 
 ## Scoped rules
 
-Each file in `.claude/rules/` declares a `paths:` glob and loads only when a matching file is
-touched. Read one directly if you are working in its area without opening a matching file.
+Each file in `.claude/rules/` declares a `paths:` glob and loads only when a matching file is touched. Read one directly if you are working in its area without opening a matching file.
 
 | File in `.claude/rules/` | Covers                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------- |
 | `vue-components.md`      | anything in `src/components/` or `src/views/`, or a stylesheet               |
 | `lobby-ui.md`            | the LobbyUI kit, a game overlay or dialog, or anything in `src/views/Games/` |
 | `threejs-views.md`       | a 3D view, scene, animation loop, or the threejs package                     |
+| `music.md`               | a Strudel style, song, or music pattern                                      |
 | `packages.md`            | anything in `packages/`, and whether a new one is earned at all              |
 | `tests.md`               | any `*.test.ts`                                                              |
 | `docs.md`                | anything in `documentation/`                                                 |

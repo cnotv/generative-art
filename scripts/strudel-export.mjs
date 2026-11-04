@@ -17,7 +17,7 @@ import { parseArgs } from 'node:util'
 import { chromium } from 'playwright'
 
 const STORAGE_KEY = 'strudel-editor-code'
-const RENDER_TIMEOUT = 180_000
+const RENDER_TIMEOUT = 600_000
 const SAMPLE_RATE_LABELS = { 44100: '44.1 kHz', 48000: '48 kHz', 96000: '96 kHz' }
 
 const { values, positionals } = parseArgs({

@@ -17,6 +17,18 @@ documented in `documentation/docs/guides/strudel-editor.md`.
 
 ## 1. Write the pattern for this editor
 
+Before writing a named style, look it up: its entry in
+`documentation/docs/guides/strudel-genres.md` for the form, groove and harmonic language, and
+its `STRUDEL_MUSIC_STYLES` entry in `src/views/Tools/StrudelEditor/config.ts` for the tempo,
+roles, instruments and visuals the editor's hints expect.
+
+Note: when modifying a song, always modify the claps and hats too — not every song should sound
+the same.
+
+Note: every pattern must include a comment naming the instruments playing (e.g. "bass: sawtooth,
+drum: RolandTR909, chord: gm_overdriven_guitar") so the arrangement is readable without
+listening.
+
 Save it as `<name>.strudel` in the scratchpad while iterating.
 
 | What             | Here                                                                                                                                         |
