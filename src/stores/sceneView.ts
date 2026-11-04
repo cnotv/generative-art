@@ -1503,9 +1503,9 @@ export const useSceneViewStore = defineStore('sceneView', () => {
 
     registerCameraProperties()
     if (config.ground !== false) registerGroundProperties()
-    // A scene with lights opens on a moving sky. Started here rather than defaulted on in the
-    // player, which cannot run before there is a scene to light.
-    if (config.lights !== false) lightTransition.setEnabled(true)
+    // Started here rather than defaulted on in the player, which cannot run before there is a
+    // scene to light. Opt-in: a game keeps the sky it declared.
+    if (config.lights && config.lights.cycle) lightTransition.setEnabled(true)
 
     viewPanelsStore.setViewPanels(resolvedOptions.viewPanels ?? {})
     updateSceneElements()

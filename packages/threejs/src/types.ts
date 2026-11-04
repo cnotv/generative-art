@@ -136,6 +136,8 @@ export interface LightRig {
 }
 
 export interface LightsConfig {
+  /** Opens the scene on the moving day and night sky. Off unless a view asks for it. */
+  cycle?: boolean
   environment?: EnvironmentLightConfig | false
   /** `false` leaves the light out, for a scene lighting itself some other way. */
   ambient?:
