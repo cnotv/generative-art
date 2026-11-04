@@ -1,0 +1,22 @@
+// Electric Pulse's lead: the notes the player hits. Sections match electric-pulse.strudel.
+setcpm(120/4)
+
+const verse = note(`<
+  [a4 ~ c5 a4 e5 ~ d5 c5]
+  [c5 ~ a4 c5 f5 ~ e5 c5]
+  [e5 ~ c5 g4 [c5 d5] e5 g5 ~]
+  [d5 ~ b4 g4 [b4 c5] d5 b4 ~]>`)
+const lift = note(`<
+  [d5 ~ ~ f5 ~ ~ a4 ~]
+  [c5 ~ ~ f5 ~ ~ e5 d5]
+  [c5 ~ ~ e5 ~ ~ g5 ~]
+  [b4 ~ ~ e5 ~ ~ d5 b4]>`)
+const breakdown = note("<[a4 e5] [c5 f5] [e5 g5] [d5 b4]>")
+const lastVerse = note(`<
+  [a4 [b4 c5] ~ a4 e5 [f5 e5] d5 c5]
+  [c5 [a4 c5] ~ c5 f5 [g5 f5] e5 c5]
+  [e5 [d5 c5] ~ g4 [c5 d5] e5 g5 [f5 e5]]
+  [d5 [c5 b4] ~ g4 [b4 c5] d5 [c5 b4] g4]>`)
+const ending = note("<a4 ~>")
+
+arrange([4, silence], [8, verse], [8, lift], [4, breakdown], [8, lastVerse], [2, ending]).s("triangle")

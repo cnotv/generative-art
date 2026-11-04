@@ -1,0 +1,41 @@
+// Neon Chase: synthwave in E minor at 128 BPM. One cycle is one bar.
+// The lead is not here: the player plays it, from neon-chase.lead.strudel.
+setcpm(128/4)
+
+const kit = "LinnDrum"
+const kick = s("bd*4").bank(kit).gain(.95)
+const snare = s("~ sd ~ sd").bank(kit).room(.3).gain(.5)
+const hats = s("hh*8").bank(kit).hpf(6000).gain("[.3 .16]*4")
+
+const verseChords = "<[g3,b3,e4] [g3,c4,e4] [g3,b3,d4] [f#3,a3,d4]>"
+const liftChords = "<[a3,c4,e4] [g3,c4,e4] [g3,b3,e4] [f#3,a3,d4]>"
+const synth = (chords) => note(chords).s("sawtooth").add(note("0,0.07,-0.07"))
+  .hpf(250).lpf(900).attack(.04).release(.3).room(.4).roomsize(3).gain(.13)
+
+// Rolls between the kicks, the pulse the whole song runs on.
+const bass = (roots) => note(roots).struct("[~ x x x]*4").s("sawtooth")
+  .lpf(380).lpenv(1.5).lpdecay(.08).decay(.12).sustain(0).gain(.6)
+const verseBass = bass("<e2 c2 g1 d2>")
+const liftBass = bass("<a1 c2 e2 d2>")
+
+const shimmer = (chords) => note(chords).arp("0 1 2 1 2 1 0 1").fast(2).s("square")
+  .hpf(900).lpf(3500).decay(.09).sustain(0).delay(.3).delaytime(.14).delayfeedback(.3).gain(.1)
+
+const riser = stack(
+  s("white").slow(4).clip(.93).lpf(150).lpattack(7).lpenv(7).lpsustain(1).attack(5.5).sustain(1).release(.02).gain(.3),
+  note("e3").slow(4).clip(.93).s("sawtooth").pattack(7).penv(24).lpf(1800).attack(5.5).sustain(1).release(.02).gain(.14)
+)
+const drop = note("<e2 ~!7>").s("sine").penv(-24).pdecay(.4).decay(1.6).sustain(0).gain(.7)
+
+const intro = stack(kick, hats, verseBass)
+const verse = stack(kick, snare, hats, verseBass, synth(verseChords))
+const lift = stack(kick, snare, hats, liftBass, synth(liftChords), shimmer(liftChords))
+const breakdown = stack(synth(verseChords).lpf(600), riser)
+const lastVerse = stack(drop, verse, shimmer(verseChords))
+const ending = stack(
+  s("<bd ~>").bank(kit),
+  note("<[e2,b2,e3,g3,b3,e4] ~>").s("sawtooth").lpf(1300).decay(1.8).sustain(0).room(.25).roomsize(1).gain(.3)
+)
+
+// Headroom: the export clips what sums past full scale, and level is set after rendering.
+arrange([4, intro], [8, verse], [8, lift], [4, breakdown], [8, lastVerse], [2, ending]).postgain(.6)
