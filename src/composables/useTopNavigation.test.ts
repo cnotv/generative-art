@@ -34,5 +34,12 @@ describe('useTopNavigation', () => {
     disableNavigation()
     expect(isNavigationEnabled.value).toBe(false)
     expect(localStorage.getItem(STORAGE_KEY)).toBe('false')
+    expect(window.location.search).not.toContain('nav=')
+  })
+
+  it('adds nav=true to the URL when enabled from storage', async () => {
+    localStorage.setItem(STORAGE_KEY, 'true')
+    await loadComposable('')
+    expect(window.location.search).toContain('nav=true')
   })
 })

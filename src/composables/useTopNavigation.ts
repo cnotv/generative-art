@@ -21,10 +21,19 @@ const writeStored = (enabled: boolean): void => {
 const hasEnableQuery = (): boolean =>
   new URLSearchParams(window.location.search).get('nav') === 'true'
 
+const syncQuery = (enabled: boolean): void => {
+  const url = new URL(window.location.href)
+  if (enabled) url.searchParams.set('nav', 'true')
+  else url.searchParams.delete('nav')
+  window.history.replaceState(window.history.state, '', url)
+}
+
 const initialState = (): boolean => {
   const enabledByQuery = hasEnableQuery()
   if (enabledByQuery) writeStored(true)
-  return enabledByQuery || readStored()
+  const enabled = enabledByQuery || readStored()
+  syncQuery(enabled)
+  return enabled
 }
 
 const isNavigationEnabled = ref(initialState())
@@ -32,6 +41,7 @@ const isNavigationEnabled = ref(initialState())
 const disableNavigation = (): void => {
   isNavigationEnabled.value = false
   writeStored(false)
+  syncQuery(false)
 }
 
 /**
