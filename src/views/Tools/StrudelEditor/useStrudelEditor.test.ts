@@ -651,7 +651,7 @@ describe('useStrudelEditor', () => {
     )
   })
 
-  it('replaces a save under the same name and deletes one by its anchor', () => {
+  it('replaces a save under the same name and deletes one by its id', () => {
     // Arrange
     const { savePattern, deleteSavedPattern, updatePatternCode, savedPatterns } = useStrudelEditor({
       initialExamples: buildExampleList()
@@ -670,7 +670,7 @@ describe('useStrudelEditor', () => {
     ])
   })
 
-  it('loads a save by its anchor, as it does an example or a tune', () => {
+  it('loads a save by its id, as it does an example or a tune', () => {
     // Arrange
     localStorage.setItem(
       STRUDEL_SAVED_PATTERNS_STORAGE_KEY,
@@ -843,7 +843,7 @@ describe('useStrudelEditor', () => {
   it.each([
     ['an example', 'selectExample', 'four-floor'],
     ['an electro tune', 'selectElectroTune', ELECTRO_TUNES[0].id],
-    ['a pattern by its anchor', 'selectPattern', 'four-floor']
+    ['a pattern by its id', 'selectPattern', 'four-floor']
   ] as const)('stops the music when %s is loaded over it', async (_kind, loader, patternId) => {
     // Arrange
     const playback = buildSuccessfulPlayback()
@@ -908,7 +908,7 @@ describe('useStrudelEditor', () => {
     expect(editor.editorStatus.value).toBe('playing')
   })
 
-  it('leaves a clicked pattern playing when its anchor then loads it again', async () => {
+  it('leaves a clicked pattern playing when the address then loads it again', async () => {
     // Arrange
     const playback = buildSuccessfulPlayback()
     const editor = useStrudelEditor({

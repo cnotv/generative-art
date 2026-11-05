@@ -1,4 +1,4 @@
-export const STRUDEL_EDITOR_ROUTE = '/tools/StrudelEditor#export'
+export const STRUDEL_EDITOR_ROUTE = '/tools/StrudelEditor?tab=export'
 export const STRUDEL_EDITOR_URL_ENV = 'STRUDEL_EDITOR_URL'
 export const STRUDEL_EDITOR_STORAGE_KEY = 'strudel-editor-code'
 export const STRUDEL_RENDER_NAME = 'strudel-render'

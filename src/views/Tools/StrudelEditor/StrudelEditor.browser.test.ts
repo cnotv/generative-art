@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { config, mount } from '@vue/test-utils'
+import { createRouter, createWebHistory } from 'vue-router'
 import { page, userEvent } from 'vitest/browser'
 // The app's global styles size the nav and lock the page, which the phone layout depends on.
 import '@/style.css'
@@ -104,11 +105,18 @@ const encodeMonoWav = (samples: Float32Array, sampleRate: number): Blob => {
   return new Blob([view.buffer], { type: 'audio/wav' })
 }
 
+// A real history, so Back moves the address as it does in the app.
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [{ path: '/:anyPath(.*)*', component: { template: '<div />' } }]
+})
+config.global.plugins = [router]
+
 describe('StrudelEditor audible playback', () => {
   // The editor saves its code to local storage and reads the address, so both would carry one
   // test's pattern into the next.
-  beforeEach(() => {
-    window.history.replaceState(null, '', window.location.pathname)
+  beforeEach(async () => {
+    await router.replace({ query: {} })
     localStorage.clear()
   })
 
@@ -760,21 +768,20 @@ describe('StrudelEditor audible playback', () => {
 
         // Act
         await page.getByRole('link', { name: 'Scope', exact: true }).click()
-        const linkedHash = window.location.hash
+        const linkedSearch = window.location.search
         const linkedCode = readEditorCode()
         await page.getByRole('link', { name: 'Spiral', exact: true }).click()
         window.history.back()
 
         // Assert
-        expect(linkedHash).toBe('#scope')
+        expect(linkedSearch).toBe('?tab=import&pattern=scope')
         expect(linkedCode).toContain('s("sawtooth")._scope()')
         await vi.waitFor(() => {
-          expect(window.location.hash).toBe('#scope')
+          expect(window.location.search).toBe('?tab=import&pattern=scope')
           expect(readEditorCode()).toContain('s("sawtooth")._scope()')
         })
       } finally {
         wrapper.unmount()
-        window.history.replaceState(null, '', window.location.pathname + window.location.search)
       }
     }
   )

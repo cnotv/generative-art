@@ -19,7 +19,7 @@ const parseJson = (text: string): unknown => {
 }
 
 /**
- * The anchor a saved pattern is linked by, made from its name so the address reads well.
+ * The id a saved pattern is linked by, made from its name so the address reads well.
  * @param name - the name the player gave the pattern
  * @returns `saved-` and the name in lowercase, with every run of other characters as one dash
  */
@@ -43,7 +43,7 @@ export const readSavedPatterns = (storedText: string | null): StrudelSavedPatter
 }
 
 /**
- * Saves code under a name, replacing a save with the same anchor, and puts it first.
+ * Saves code under a name, replacing a save with the same id, and puts it first.
  * @param savedPatterns - the saves so far
  * @param name - the name to save under; a blank one saves nothing
  * @param code - the code to save
@@ -68,9 +68,9 @@ export const upsertSavedPattern = (
 }
 
 /**
- * Deletes the save with an anchor.
+ * Deletes the save with an id.
  * @param savedPatterns - the saves so far
- * @param savedPatternId - the anchor of the save to delete
+ * @param savedPatternId - the id of the save to delete
  * @returns the remaining saves
  */
 export const removeSavedPattern = (
@@ -80,9 +80,9 @@ export const removeSavedPattern = (
   savedPatterns.filter((savedPattern) => toSavedPatternId(savedPattern.name) !== savedPatternId)
 
 /**
- * The saves as patterns the patterns tab and the anchors handle like examples and tunes.
+ * The saves as patterns the patterns tab and the address handle like examples and tunes.
  * @param savedPatterns - the saves
- * @returns one pattern per save, with its anchor as id and its name as label
+ * @returns one pattern per save, with its id and its name as label
  */
 export const toSavedPatternExamples = (savedPatterns: StrudelSavedPattern[]): StrudelExample[] =>
   savedPatterns.map((savedPattern) => ({

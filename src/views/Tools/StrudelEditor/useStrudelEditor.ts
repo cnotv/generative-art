@@ -80,7 +80,7 @@ type StrudelEditorState = StrudelTranscriptionState & {
   selectPattern: (patternId: string) => boolean
   /** The patterns saved under a name, newest first, as the patterns tab lists them. */
   savedPatterns: ComputedRef<StrudelExample[]>
-  /** Saves the code on screen under a name, replacing a save with the same anchor. */
+  /** Saves the code on screen under a name, replacing a save with the same id. */
   savePattern: (name: string) => void
   deleteSavedPattern: (savedPatternId: string) => void
   updatePatternCode: (nextCode: string) => void

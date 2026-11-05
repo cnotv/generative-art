@@ -13,7 +13,7 @@ describe('toSavedPatternId', () => {
     ['  Night Drive #2 ', 'saved-night-drive-2'],
     ['Ünïcode & co', 'saved-n-code-co'],
     ['!!!', 'saved-pattern']
-  ])('turns "%s" into the anchor %s', (name, expectedId) => {
+  ])('turns "%s" into the id %s', (name, expectedId) => {
     // Arrange
     const patternName = name
 
@@ -60,7 +60,7 @@ describe('upsertSavedPattern', () => {
       ]
     ],
     [
-      'replaces a save with the same anchor and moves it to the top',
+      'replaces a save with the same id and moves it to the top',
       [
         { name: 'Other', code: 's("cp")' },
         { name: 'My beat', code: 's("bd")' }
@@ -86,7 +86,7 @@ describe('upsertSavedPattern', () => {
 })
 
 describe('removeSavedPattern', () => {
-  it('drops the save with that anchor and keeps the rest', () => {
+  it('drops the save with that id and keeps the rest', () => {
     // Arrange
     const savedPatterns = [
       { name: 'Keep', code: 's("bd")' },
@@ -102,7 +102,7 @@ describe('removeSavedPattern', () => {
 })
 
 describe('toSavedPatternExamples', () => {
-  it('lists each save as a pattern with its anchor, label and code', () => {
+  it('lists each save as a pattern with its id, label and code', () => {
     // Arrange
     const savedPatterns = [{ name: 'My beat', code: 's("bd")' }]
 

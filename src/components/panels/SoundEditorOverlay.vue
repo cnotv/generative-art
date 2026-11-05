@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { defineAsyncComponent, watch } from 'vue'
 import { Check, X } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { usePanelsStore } from '@/stores/panels'
 import { useSoundPanelStore } from '@/stores/soundPanel'
+import { writeStrudelAddress } from '@/views/Tools/StrudelEditor/strudelAddress'
 
 // The whole editor, with its patterns, sounds, timeline and MIDI, only loads when it is opened.
 const StrudelEditor = defineAsyncComponent(
@@ -12,6 +14,8 @@ const StrudelEditor = defineAsyncComponent(
 
 const soundStore = useSoundPanelStore()
 const panelsStore = usePanelsStore()
+const route = useRoute()
+const router = useRouter()
 
 // The Sound panel's code editor and the full editor share a canvas id, and the panel would sit
 // behind the overlay anyway, so it steps aside while the editor is open and comes back after.
@@ -23,7 +27,9 @@ watch(
       return
     }
     // The editor writes its tab and pattern into the address; the game does not want them.
-    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    void router.replace({
+      query: writeStrudelAddress(route.query, { patternId: undefined, tabName: undefined })
+    })
     panelsStore.openPanel('sound')
   }
 )

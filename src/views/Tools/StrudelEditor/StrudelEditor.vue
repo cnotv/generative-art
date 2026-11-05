@@ -2,21 +2,23 @@
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Boxes,
+  Cable,
   CircleHelp,
-  Download,
   Music,
+  Save,
   Settings,
   Terminal,
-  Upload,
   Volume2,
   X
 } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
 import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { FLOW_SYNC_DELAY_MS, STRUDEL_LICENSE_NOTE } from './config'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import { useStrudelFlow } from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
+import { readLegacyStrudelAnchor, readStrudelAddress, writeStrudelAddress } from './strudelAddress'
 import { useStrudelHints } from './hints/useStrudelHints'
 import { readStrudelNoteBars } from './noteBars'
 import { useStrudelSounds } from './useStrudelSounds'
@@ -192,23 +194,45 @@ const { musicStyles, pickedStyleId, styleDetection, hints, pickStyle, applyHint 
   updatePatternCode
 )
 
-const readAnchor = (): string => decodeURIComponent(window.location.hash.slice(1))
+const route = useRoute()
+const router = useRouter()
 
-const findTab = (anchor: string): StrudelTabId | undefined =>
-  tabList.find((tab) => tab.id === anchor)?.id
+const findTab = (tabName: string | undefined): StrudelTabId | undefined =>
+  tabList.find((tab) => tab.id === tabName)?.id
 
-// Every drawer and every pattern has its own anchor, so either can be linked to, and Back steps
-// through them. Drawer ids never collide with pattern ids, which saved patterns prefix.
-const loadAnchor = (): void => {
-  const anchor = readAnchor()
-  const tabId = findTab(anchor)
-  if (tabId !== undefined) {
-    setActiveTab(tabId)
-    return
-  }
-  if (selectPattern(anchor)) {
+// The address names a pattern and a drawer tab apart, so a link can open both, and Back steps
+// through them. Each is applied only when it changes, so moving between tabs never reloads
+// the pattern over edits made since it was picked.
+const loadAddressedTab = (tabName: string | undefined): void => {
+  setActiveTab(findTab(tabName) ?? null)
+}
+
+const loadAddressedPattern = (patternId: string | undefined): void => {
+  if (patternId !== undefined && selectPattern(patternId)) {
     editorMode.value = 'code'
   }
+}
+
+watch(() => readStrudelAddress(route.query).tabName, loadAddressedTab)
+watch(() => readStrudelAddress(route.query).patternId, loadAddressedPattern)
+
+// Replaced rather than pushed, so the toolbar never fills Back with drawers opened and closed.
+watch(activeTab, (tabId) => {
+  void router.replace({ query: writeStrudelAddress(route.query, { tabName: tabId ?? undefined }) })
+})
+
+const loadAddress = (): void => {
+  const legacyAddress = readLegacyStrudelAnchor(
+    route.hash,
+    tabList.map((tab) => tab.id)
+  )
+  if (legacyAddress !== null) {
+    void router.replace({ query: writeStrudelAddress(route.query, legacyAddress), hash: '' })
+    return
+  }
+  const { patternId, tabName } = readStrudelAddress(route.query)
+  loadAddressedTab(tabName)
+  loadAddressedPattern(patternId)
 }
 
 const onPatternSelected = (patternId: string): void => {
@@ -218,10 +242,7 @@ const onPatternSelected = (patternId: string): void => {
   }
 }
 
-onMounted(() => {
-  loadAnchor()
-  window.addEventListener('hashchange', loadAnchor)
-})
+onMounted(loadAddress)
 
 const onPlayRequested = (): void => {
   if (flowErrorMessage.value !== null) {
@@ -260,9 +281,9 @@ const toggleDrawer = (tabId: StrudelTabId): void => {
 }
 
 const toolbarTools = [
-  { id: 'import', label: 'Import', icon: Upload },
-  { id: 'export', label: 'Export', icon: Download },
-  { id: 'midi', label: 'MIDI', icon: Music },
+  { id: 'import', label: 'Import', icon: Music },
+  { id: 'export', label: 'Export', icon: Save },
+  { id: 'midi', label: 'MIDI', icon: Cable },
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
   { id: 'console', label: 'Console', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -282,7 +303,6 @@ const onFlowNodesConnected = (sourceNodeId: string, targetNodeId: string): void 
 
 // Before unmounting, while the code editor and its canvas are still there to clear.
 onBeforeUnmount(() => {
-  window.removeEventListener('hashchange', loadAnchor)
   replayTimer = clearTimer(replayTimer)
   codeParseTimer = clearTimer(codeParseTimer)
   void stopPattern()

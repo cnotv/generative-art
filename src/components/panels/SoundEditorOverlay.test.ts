@@ -12,9 +12,10 @@ vi.mock('@/views/Tools/StrudelEditor/StrudelEditor.vue', () => ({
   __esModule: true,
   default: defineComponent({ template: '<div data-testid="editor"><slot name="actions" /></div>' })
 }))
+const { mockReplace } = vi.hoisted(() => ({ mockReplace: vi.fn() }))
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
-  useRoute: () => ({ query: {} })
+  useRouter: () => ({ push: vi.fn(), replace: mockReplace }),
+  useRoute: () => ({ query: { room: 'abc', pattern: 'caverave', tab: 'export' } })
 }))
 
 const slots: SoundSlot[] = [{ id: 'bump', label: 'Bump', code: 'b', kind: 'once' }]
@@ -84,5 +85,8 @@ describe('SoundEditorOverlay', () => {
 
     expect(soundStore.codeOf('bump')).toBe('b')
     expect(panelsStore.openPanel).toHaveBeenCalledWith('sound')
+    expect(mockReplace).toHaveBeenCalledWith({
+      query: { room: 'abc', pattern: undefined, tab: undefined }
+    })
   })
 })

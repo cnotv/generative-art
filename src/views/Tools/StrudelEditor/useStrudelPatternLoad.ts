@@ -29,7 +29,7 @@ export const useStrudelPatternLoad = ({
   const pendingStop = shallowRef<Promise<void>>(Promise.resolve())
 
   // Loading another pattern over one that plays stops it, so only the code on screen sounds. The
-  // anchor a click navigates to loads the same code a moment later, which must not stop it.
+  // address a click navigates to loads the same code a moment later, which must not stop it.
   const loadPatternCode = (nextCode: string): void => {
     if (nextCode === patternCode.value) {
       return

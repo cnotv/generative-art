@@ -57,7 +57,7 @@ try {
     ([key, code]) => window.localStorage.setItem(key, code),
     [STORAGE_KEY, patternCode]
   )
-  await page.goto(`${values.url}/tools/StrudelEditor#export`)
+  await page.goto(`${values.url}/tools/StrudelEditor?tab=export`)
   // The drawer scope matters: the toolbar has a MIDI button of its own.
   await page
     .locator('aside')

@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import StrudelEditor from './StrudelEditor.vue'
 import { ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_SAVED_CODE_STORAGE_KEY } from './config'
 import type { StrudelCodeMirrorOptions } from './types'
@@ -91,12 +92,13 @@ vi.mock('./codeEditor/createStrudelCodeMirror', () => ({
   }
 }))
 
-const clearLocationHash = (): void => {
-  window.history.replaceState(null, '', window.location.pathname)
-}
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [{ path: '/', component: { template: '<div />' } }]
+})
 
-const clearSavedState = (): void => {
-  clearLocationHash()
+const clearSavedState = async (): Promise<void> => {
+  await router.replace('/')
   localStorage.clear()
 }
 
@@ -104,7 +106,7 @@ const readEditorCode = (wrapper: Awaited<ReturnType<typeof mountEditorView>>): s
   wrapper.find<HTMLTextAreaElement>('.fake-strudel-code').element.value
 
 const mountEditorView = async () => {
-  const wrapper = mount(StrudelEditor)
+  const wrapper = mount(StrudelEditor, { global: { plugins: [router] } })
   // The editor module loads through a dynamic import, which outlasts a promise flush.
   await vi.waitFor(() => {
     expect(wrapper.find('.fake-strudel-code').exists()).toBe(true)
@@ -273,7 +275,10 @@ describe('StrudelEditor view', () => {
         .findAll('.strudel-patterns__link')
         .map((link) => [link.text(), link.attributes('href')])
     ).toEqual(
-      [...STRUDEL_EXAMPLES, ...ELECTRO_TUNES].map((pattern) => [pattern.label, `#${pattern.id}`])
+      [...STRUDEL_EXAMPLES, ...ELECTRO_TUNES].map((pattern) => [
+        pattern.label,
+        `/?pattern=${pattern.id}`
+      ])
     )
   })
 
@@ -327,19 +332,22 @@ describe('StrudelEditor view', () => {
     // Assert
     expect(disabledWithoutName).toBe(true)
     expect(savedTrigger.text()).toBe('Saved (1)')
-    expect([savedLink.text(), savedLink.attributes('href')]).toEqual(['My beat', '#saved-my-beat'])
+    expect([savedLink.text(), savedLink.attributes('href')]).toEqual([
+      'My beat',
+      '/?pattern=saved-my-beat'
+    ])
     expect(wrapper.find('button[aria-label="Delete My beat"]').exists()).toBe(false)
   })
 
   it.each([
     ['an example', STRUDEL_EXAMPLES.at(-1)],
     ['an electro tune', ELECTRO_TUNES[0]]
-  ])('loads %s when the address moves to its anchor', async (_kind, pattern) => {
+  ])('loads %s when the address moves to it', async (_kind, pattern) => {
     // Arrange
     const wrapper = await mountEditorView()
 
     // Act
-    window.location.hash = `#${pattern?.id}`
+    await router.push({ query: { pattern: pattern?.id } })
 
     // Assert
     await vi.waitFor(() => {
@@ -356,7 +364,7 @@ describe('StrudelEditor view', () => {
     await Promise.all(triggers.map((trigger) => trigger.trigger('click')))
     const songLink = wrapper
       .findAll('.strudel-patterns__link')
-      .find((link) => link.attributes('href') === `#${ELECTRO_TUNES[1].id}`)
+      .find((link) => link.attributes('href') === `/?pattern=${ELECTRO_TUNES[1].id}`)
 
     // Act
     await songLink?.trigger('click')
@@ -374,7 +382,7 @@ describe('StrudelEditor view', () => {
     const wrapper = await mountEditorView()
 
     // Act
-    window.location.hash = `#${ELECTRO_TUNES[1].id}`
+    await router.push({ query: { pattern: ELECTRO_TUNES[1].id } })
     await vi.waitFor(() => {
       expect(readEditorCode(wrapper)).toBe(ELECTRO_TUNES[1].code)
     })
@@ -386,7 +394,7 @@ describe('StrudelEditor view', () => {
 
   it('opens on the pattern its address names', async () => {
     // Arrange
-    window.history.replaceState(null, '', `${window.location.pathname}#${ELECTRO_TUNES[0].id}`)
+    await router.replace({ query: { pattern: ELECTRO_TUNES[0].id } })
 
     // Act
     const wrapper = await mountEditorView()
@@ -399,13 +407,13 @@ describe('StrudelEditor view', () => {
     ['the code saved on the last visit', '', 's("cp*3")'],
     [
       'the pattern its address names, over saved code',
-      `#${ELECTRO_TUNES[0].id}`,
+      `/?pattern=${ELECTRO_TUNES[0].id}`,
       ELECTRO_TUNES[0].code
     ]
-  ])('opens on %s', async (_case, hash, expectedCode) => {
+  ])('opens on %s', async (_case, address, expectedCode) => {
     // Arrange
     localStorage.setItem(STRUDEL_SAVED_CODE_STORAGE_KEY, 's("cp*3")')
-    window.history.replaceState(null, '', `${window.location.pathname}${hash}`)
+    await router.replace(address || '/')
 
     // Act
     const wrapper = await mountEditorView()
@@ -414,9 +422,9 @@ describe('StrudelEditor view', () => {
     expect(readEditorCode(wrapper)).toBe(expectedCode)
   })
 
-  it('keeps the default example for an anchor that names no pattern', async () => {
+  it('keeps the default example for an address that names no pattern', async () => {
     // Arrange
-    window.history.replaceState(null, '', `${window.location.pathname}#no-such-pattern`)
+    await router.replace({ query: { pattern: 'no-such-pattern' } })
 
     // Act
     const wrapper = await mountEditorView()
@@ -426,18 +434,87 @@ describe('StrudelEditor view', () => {
   })
 
   it.each([
-    ['#midi', 'MIDI'],
-    ['#export', 'Export']
-  ])('opens the drawer named by the anchor %s', async (hash, drawerTitle) => {
-    // Arrange
-    window.history.replaceState(null, '', `${window.location.pathname}${hash}`)
+    ['a tab', '/?tab=midi', 'MIDI', STRUDEL_EXAMPLES[0].code, { tab: 'midi' }],
+    [
+      'a tab and a pattern',
+      `/?tab=export&pattern=${ELECTRO_TUNES[0].id}`,
+      'Export',
+      ELECTRO_TUNES[0].code,
+      { tab: 'export', pattern: ELECTRO_TUNES[0].id }
+    ],
+    ['an old tab anchor', '/#export', 'Export', STRUDEL_EXAMPLES[0].code, { tab: 'export' }],
+    [
+      'an old pattern anchor',
+      `/#${ELECTRO_TUNES[0].id}`,
+      null,
+      ELECTRO_TUNES[0].code,
+      { pattern: ELECTRO_TUNES[0].id }
+    ]
+  ])(
+    'opens on %s named by the address',
+    async (_case, address, drawerTitle, expectedCode, expectedQuery) => {
+      // Arrange
+      await router.replace(address)
 
-    // Act
+      // Act
+      const wrapper = await mountEditorView()
+
+      // Assert
+      await vi.waitFor(() => {
+        expect(router.currentRoute.value.query).toEqual(expectedQuery)
+        expect(router.currentRoute.value.hash).toBe('')
+        expect(readEditorCode(wrapper)).toBe(expectedCode)
+      })
+      const drawerHeading = wrapper.find('.strudel-editor__drawer-title')
+      expect(drawerHeading.exists() ? drawerHeading.text() : null).toBe(drawerTitle)
+    }
+  )
+
+  it('writes the drawer it opens into the address, beside the pattern, and clears it on close', async () => {
+    // Arrange
+    await router.replace({ query: { pattern: ELECTRO_TUNES[0].id } })
     const wrapper = await mountEditorView()
 
+    // Act
+    await openDrawer(wrapper, 'Export')
+    await flushPromises()
+    const openedQuery = router.currentRoute.value.query
+    await openDrawer(wrapper, 'Export')
+    await flushPromises()
+
     // Assert
-    expect(wrapper.find('.strudel-editor__drawer-title').text()).toBe(drawerTitle)
-    expect(readEditorCode(wrapper)).toBe(STRUDEL_EXAMPLES[0].code)
+    expect(openedQuery).toEqual({ pattern: ELECTRO_TUNES[0].id, tab: 'export' })
+    expect(router.currentRoute.value.query).toEqual({ pattern: ELECTRO_TUNES[0].id })
+  })
+
+  it('opens the import tab from the link in the MIDI tab', async () => {
+    // Arrange
+    await router.replace({ query: { tab: 'midi' } })
+    const wrapper = await mountEditorView()
+
+    // Act
+    await wrapper.find('.strudel-midi__link').trigger('click')
+
+    // Assert
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-editor__drawer-title').text()).toBe('Import')
+    })
+    expect(router.currentRoute.value.query).toEqual({ tab: 'import' })
+  })
+
+  it('keeps edits made since a pattern was picked when only the tab in the address changes', async () => {
+    // Arrange
+    await router.replace({ query: { pattern: ELECTRO_TUNES[0].id } })
+    const wrapper = await mountEditorView()
+    await wrapper.find('.fake-strudel-code').setValue('s("cp*3")')
+
+    // Act
+    await router.push({ query: { pattern: ELECTRO_TUNES[0].id, tab: 'midi' } })
+    await flushPromises()
+
+    // Assert
+    expect(wrapper.find('.strudel-editor__drawer-title').text()).toBe('MIDI')
+    expect(readEditorCode(wrapper)).toBe('s("cp*3")')
   })
 
   it('opens the console drawer', async () => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { X } from 'lucide-vue-next'
+import { RouterLink, useRoute } from 'vue-router'
 import {
   Accordion,
   AccordionContent,
@@ -8,6 +9,7 @@ import {
   AccordionTrigger
 } from '@/components/ui/accordion'
 import IconButton from '@/components/IconButton.vue'
+import { writeStrudelAddress } from '../strudelAddress'
 import type { StrudelExample } from '../types'
 
 const props = defineProps<{
@@ -21,6 +23,8 @@ const emit = defineEmits<{
   select: [patternId: string]
   delete: [patternId: string]
 }>()
+
+const route = useRoute()
 
 const searchQuery = ref('')
 const matchesSearch = (pattern: StrudelExample, query: string): boolean =>
@@ -52,8 +56,8 @@ const patternGroups = computed(() => {
   ].filter((group) => group.patterns.length > 0)
 })
 
-// The link's own navigation sets the anchor; loading here as well reloads a pattern whose
-// anchor is already in the address, which would otherwise not change. A modified or middle
+// The link's own navigation sets the address; loading here as well reloads a pattern already
+// in the address, which would otherwise not change. A modified or middle
 // click is left to the browser, to open the pattern in a new tab.
 const onPatternClick = (event: MouseEvent, patternId: string): void => {
   const opensElsewhere =
@@ -84,14 +88,14 @@ const onPatternClick = (event: MouseEvent, patternId: string): void => {
               class="strudel-patterns__item"
               :class="{ 'strudel-patterns__item--deletable': group.deletable }"
             >
-              <a
+              <RouterLink
                 class="strudel-patterns__link"
-                :href="`#${pattern.id}`"
+                :to="{ query: writeStrudelAddress(route.query, { patternId: pattern.id }) }"
                 :aria-current="pattern.code === currentCode ? 'true' : undefined"
                 @click="onPatternClick($event, pattern.id)"
               >
                 {{ pattern.label }}
-              </a>
+              </RouterLink>
               <IconButton
                 v-if="group.deletable"
                 size="sm"
