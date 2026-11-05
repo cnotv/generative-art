@@ -2,12 +2,12 @@
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Boxes,
+  Cable,
   CircleHelp,
   Music,
   Save,
   Settings,
   Terminal,
-  Upload,
   Volume2,
   X
 } from 'lucide-vue-next'
@@ -281,9 +281,9 @@ const toggleDrawer = (tabId: StrudelTabId): void => {
 }
 
 const toolbarTools = [
-  { id: 'import', label: 'Import', icon: Upload },
+  { id: 'import', label: 'Import', icon: Music },
   { id: 'export', label: 'Export', icon: Save },
-  { id: 'midi', label: 'MIDI', icon: Music },
+  { id: 'midi', label: 'MIDI', icon: Cable },
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
   { id: 'console', label: 'Console', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
