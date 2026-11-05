@@ -56,6 +56,11 @@ const collectEngineErrors = (): { engineErrors: string[]; stopCollecting: () => 
 // More than any style offers, so a hint that never goes away fails instead of looping forever.
 const MAX_HINTS_APPLIED = 60
 
+// The hints live in their own drawer, and only show once it is open.
+const openHintsDrawer = async (): Promise<void> => {
+  await page.getByRole('button', { name: 'Hints', exact: true }).click()
+}
+
 const countHints = (): number => document.querySelectorAll('.strudel-hints__item').length
 
 const applyEveryHint = async (appliedCount = 0): Promise<number> => {
@@ -260,13 +265,12 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      // Act: decode and analyse through the real worker, load the code, then play it.
+      // Act: decode and analyse through the real worker, then load the code, which plays it.
       await page.getByRole('button', { name: 'Import', exact: true }).click()
       const fileInput = wrapper.find<HTMLInputElement>('input[type="file"]').element
       await userEvent.upload(page.elementLocator(fileInput), audioFile)
       await page.getByRole('button', { name: 'Load', exact: true }).click({ timeout: 60000 })
       const editorCode = readEditorCode()
-      await page.getByRole('button', { name: 'Play from here' }).click()
       await vi.waitFor(
         () => {
           expect(bufferStartCount).toBeGreaterThan(0)
@@ -347,7 +351,7 @@ describe('StrudelEditor audible playback', () => {
         await vi.waitFor(
           () => {
             expect(
-              readPlayButtonLabel() === 'Stop' || wrapper.find('[role="alert"]').exists()
+              readPlayButtonLabel() === 'Pause' || wrapper.find('[role="alert"]').exists()
             ).toBe(true)
           },
           { timeout: 60000, interval: 500 }
@@ -456,7 +460,7 @@ describe('StrudelEditor audible playback', () => {
 
         // Assert
         expect(wrapper.find('.strudel-editor__error').text()).not.toBe('')
-        expect(readPlayButtonLabel()).toBe('Play')
+        expect(readPlayButtonLabel()).toBe('Play from here')
       } finally {
         wrapper.unmount()
       }
@@ -839,6 +843,7 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         await page.getByRole('textbox', { name: 'Live code pattern' }).fill(`// ${keyword}`)
+        await openHintsDrawer()
         await vi.waitFor(() => {
           expect(countHints()).toBeGreaterThan(0)
         })
@@ -887,6 +892,7 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         await page.getByRole('textbox', { name: 'Live code pattern' }).fill(grownPattern)
+        await openHintsDrawer()
         await page.getByRole('combobox').click()
         await page.getByRole('option', { name: 'Breakbeat' }).click()
 
