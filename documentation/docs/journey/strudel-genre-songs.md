@@ -68,7 +68,7 @@ Each song was written from a brief in the `audio-brief` form, after reading its 
 | Song            | Tempo and key       | Form                                                          | Must not                                              |
 | --------------- | ------------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
 | Neon Drive      | 100, A minor        | intro 8, verse 8, chorus 8, break 4, chorus 8, outro 4        | a scale-run lead; an arpeggio that ignores the chords |
-| Dust and Diesel | 80, D minor, drop D | riff 8, verse 8, chorus 8, breakdown 8, chorus 8, outro 8     | triads; a wash of reverb over the riff                |
+| Dust and Diesel | 80, D minor, drop D | riff 8, verse 8, chorus 8, breakdown 8, chorus 8, outro 8     | triads; a polite crunch; one drum loop for 48 bars    |
 | Rust and Rain   | 120, E minor        | quiet verse 8, loud chorus 8, twice, bridge 4, outro 4        | the same level in verse and chorus                    |
 | Winter Court    | 80, D minor         | theme 8, turn to F major 8, theme with counter-line 8, coda 8 | a pad with a scale run; a drum kit                    |
 | Uptown Strut    | 105, E              | intro 8, vamp 16, chorus 8, break 8, chorus 8                 | root notes on the beat; chords on every beat          |
@@ -80,9 +80,14 @@ The choices that follow from them:
   the root of each bar, a chord-tone arpeggio runs under a two-bar lead motif that is sequenced
   down on its repeat, and the delays are dotted eighths at the tempo.
 - **Dust and Diesel** plays one riff on bass and guitar: the guitar is the bass line raised an
-  octave with its fifth and octave added, so the two cannot disagree. The room is dry on the riff
-  and wide only on the lead, the snare sits a little behind the beat, and the breakdown halves the
-  drums under a held power chord.
+  octave with its fifth and octave added, so the two cannot disagree. Its reference is the
+  desert rock of Kyuss: fuzz rather than crunch, so the guitar is driven hard and doubled by a
+  distorted saw, and the bass is distorted too, with the level brought down after the effects so
+  the fuzz stays. The kit is a sampled acoustic one that changes its kick pattern every bar, adds
+  ghost notes in the verses, moves from hi-hat to ride in the choruses, and fills on the toms or a
+  snare roll at the end of every four-bar phrase. The room is dry on the riff and wide only on the
+  lead, the snare sits a little behind the beat, and the breakdown halves the drums under a held
+  power chord.
 - **Rust and Rain** sets a clean arpeggiated guitar and a light kit against an overdriven chorus
   with crashes and an open hat, and the bass gets louder with it. The hook repeats with a changed
   last bar.
@@ -100,7 +105,7 @@ The choices that follow from them:
 | Song            | Loudness   | True peak |
 | --------------- | ---------- | --------- |
 | Neon Drive      | -19.5 LUFS | -1.9 dBTP |
-| Dust and Diesel | -19.9 LUFS | -1.9 dBTP |
+| Dust and Diesel | -19.8 LUFS | -4.3 dBTP |
 | Rust and Rain   | -19.2 LUFS | -1.0 dBTP |
 | Winter Court    | -17.4 LUFS | -5.7 dBTP |
 | Uptown Strut    | -19.6 LUFS | -2.8 dBTP |
