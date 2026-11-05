@@ -4,6 +4,7 @@ import { Menu, Settings, Bug, Box, Clock, Music, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { usePanelsStore } from '@/stores/panels'
 import { useSoundPanelStore } from '@/stores/soundPanel'
+import { useTopNavigation } from '@/composables/useTopNavigation'
 import type { PanelType } from '@/stores/panels'
 
 const NAV_HEIGHT_PX = 48 // matches --nav-height: 3rem
@@ -16,6 +17,7 @@ interface PanelButton {
 
 const panelsStore = usePanelsStore()
 const soundPanelStore = useSoundPanelStore()
+const { isNavigationEnabled, disableNavigation } = useTopNavigation()
 const isNearTop = ref(false)
 const hasOpenPanels = computed(() => panelsStore.activePanels.size > 0)
 
@@ -42,6 +44,11 @@ const panelButtons = computed<PanelButton[]>(() => [
 
 const isPanelOpen = (panelType: PanelType) => panelsStore.activePanels.has(panelType)
 
+const handleClose = () => {
+  panelsStore.closeAllPanels()
+  disableNavigation()
+}
+
 const handleToggle = (panelType: PanelType) => {
   panelsStore.togglePanel(panelType)
 }
@@ -49,6 +56,7 @@ const handleToggle = (panelType: PanelType) => {
 
 <template>
   <nav
+    v-if="isNavigationEnabled"
     class="global-navigation"
     :class="{ 'global-navigation--visible': isNearTop || hasOpenPanels }"
   >
@@ -85,8 +93,8 @@ const handleToggle = (panelType: PanelType) => {
         variant="ghost"
         size="icon"
         class="global-navigation__button"
-        aria-label="Close all panels"
-        @click="panelsStore.closeAllPanels"
+        aria-label="Close navigation"
+        @click="handleClose"
       >
         <X class="h-5 w-5" />
       </Button>

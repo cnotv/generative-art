@@ -26,7 +26,7 @@ The Three.js canvas covers the viewport and takes pointer events, so `locator.cl
 or panel button times out. Click programmatically: `locator.evaluate((element) => element.click())`.
 
 Panel toggles are icon buttons named by `aria-label`: `Navigation`, `Elements`, `Config`,
-`Debug`, `Timeline` and `Close all panels`. The camera panel is behind `Elements`, then the row
+`Debug`, `Timeline` and `Close navigation`. The bar is hidden by default: open the page with `?nav=true` (the choice is kept in local storage, and the X button turns it off again). The camera panel is behind `Elements`, then the row
 whose exact text is `Camera`.
 
 ## Choosing an angle
