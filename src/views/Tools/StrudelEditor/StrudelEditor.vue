@@ -3,8 +3,8 @@ import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch 
 import {
   Boxes,
   CircleHelp,
-  Download,
   Music,
+  Save,
   Settings,
   Terminal,
   Upload,
@@ -282,7 +282,7 @@ const toggleDrawer = (tabId: StrudelTabId): void => {
 
 const toolbarTools = [
   { id: 'import', label: 'Import', icon: Upload },
-  { id: 'export', label: 'Export', icon: Download },
+  { id: 'export', label: 'Export', icon: Save },
   { id: 'midi', label: 'MIDI', icon: Music },
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
   { id: 'console', label: 'Console', icon: Terminal },
