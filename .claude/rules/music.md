@@ -14,3 +14,12 @@ the second the tempo, roles, instruments and visuals the hints expect.
 
 A song is a motif, a bass line with its own rhythm, at least two sections and an ending. A
 four-bar chord loop with a scale run is a backing track, not a song.
+
+Write the chord plan once, as a `const` of one chord a bar, and derive every part from it, so the
+bass, arpeggio and melody cannot drift onto another chord. In a `<...>` one-a-bar string, a lone
+item with a weight such as `a4@4` lasts four bars, not four beats: write `[a4@4]`. Check the
+harmony from a MIDI export with `scripts/strudel-harmony.mjs` before calling a song finished.
+
+Write sections once with `arrange([8, verse], [8, chorus])` over short `<...>` strings, not as a
+forty item list per part, and name any bar that comes back. Keep each layer's sample name in its
+own `$:` block, as `s("bd").struct(kicks)`: the hints tab cannot see names inside a constant.

@@ -88,6 +88,16 @@ console.log((pcm.length / 2 / rate).toFixed(2), 's, peak', (pcm.reduce((m, v) =>
 For a MIDI file, list its tracks with `@tonejs/midi`: each sound should be a track with the
 expected note count, drums on channel 9 (General MIDI channel 10), and the tempo `cpm × 4`.
 
+For a song, check the harmony from its MIDI export. A track is named after its sound, so give the
+chords a sound no other part uses:
+
+```sh
+node scripts/strudel-harmony.mjs <name>.mid <chord sound>[,<second chord sound>]
+```
+
+It lists every note on a beat outside that bar's chord. Read the list: a blue note, a third over
+a power chord or a fifth the voicing leaves out is right, a bass under the wrong chord is not.
+
 ## 4. Put it where it is used
 
 | Use                            | Where                                                                                        |
