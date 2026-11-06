@@ -472,7 +472,8 @@ onBeforeUnmount(() => {
 .strudel-editor {
   box-sizing: border-box;
   height: 100dvh;
-  padding: 0 var(--spacing-4) var(--spacing-4);
+  padding-inline: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: 'code';
