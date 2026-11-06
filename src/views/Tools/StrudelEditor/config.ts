@@ -453,7 +453,7 @@ $: stack(
     id: 'dust-and-diesel',
     label: 'Dust and Diesel (stoner rock)',
     code: `// Dust and Diesel: a stoner rock song in D minor
-// Forty-eight bars: riff, verse, chorus, breakdown, chorus, outro. Fuzz bass and guitar play one
+// Forty-eight bars: riff, verse, chorus, breakdown, chorus, outro. Low fuzz bass and guitar play one
 // riff; the drums change their kick every bar and fill at the end of every phrase.
 setcpm(80/4)
 
@@ -466,19 +466,19 @@ $: stack(
   s("<~ ~ ~ ~ [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] ~ ~>").gain(.32),
   s("<~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sd sd sd sd] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ lt ~ lt ~ lt lt lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sd sd sd sd] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt] ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt] ~ ~>").gain(.7),
   s("cr").gain(.5).mask("<0!8 1 0!7 1 0!3 1 0!3 1 0!7 1 0!3 1 0!3 1 0!5 1 0>")
-).bank("LinnDrum").gain(.5).room(.12).postgain(.38)._punchcard()
-$: note(riff).s("sawtooth").lpf(450).distort("2:.5").decay(.24).sustain("<0!24 .6!8 0!16>")
-  .gain(.5).postgain(.38).mask("<0!4 1!44>")._scope()
+).gain(.5).room(.12).postgain(.4)._punchcard()
+$: note(riff).s("gm_electric_bass_pick").shape(.5).lpf(700).decay(.3).sustain("<0!24 .6!8 0!16>")
+  .gain(.9).postgain(.4).mask("<0!4 1!44>")._scope()
 $: stack(
-  note(riff).add(note("12,19,24")).s("gm_overdriven_guitar").hpf(90).shape(.7).lpf(2400)
-    .decay(.3).sustain(.25).room(.12).gain(.16).mask("<1!24 0!8 1!16>"),
-  note(riff).add(note("12,19")).s("sawtooth").distort("4:.25").hpf(110).lpf(1800)
-    .decay(.3).sustain(.3).gain(.12).mask("<1!24 0!8 1!16>"),
-  chord("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ D5 D5 D5 C5 D5 D5 D5 A5 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~>").voicing().s("gm_overdriven_guitar").shape(.6).lpf(1600).attack(.3).release(2)
-    .room(.3).gain(.16)
-).postgain(.38)
-$: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] [d5@8] ~ [a4@8] [c5@8] [d5@8] ~ [f5@4 e5@4] [e5@8] [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] ~ ~ ~ ~ ~ ~ [d5@8] ~>").s("gm_distortion_guitar").shape(.4).lpf(2600).attack(.03).release(.8)
-  .room(.45).delay(.25).delaytime(.375).delayfeedback(.35).gain(.22).postgain(.38)`
+  note(riff).add(note("0,7")).s("gm_overdriven_guitar").hpf(60).shape(.8).lpf(1100)
+    .decay(.35).sustain(.3).room(.1).gain(.5).mask("<1!24 0!8 1!16>"),
+  note(riff).s("gm_distortion_guitar").hpf(60).shape(.6).lpf(800)
+    .decay(.35).sustain(.35).gain(.4).mask("<1!24 0!8 1!16>"),
+  chord("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ D5 D5 D5 C5 D5 D5 D5 A5 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~>").voicing().add(note(-12)).s("gm_overdriven_guitar").shape(.7).lpf(900).attack(.3).release(2)
+    .room(.3).gain(.4)
+).postgain(.4)
+$: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] [d5@8] ~ [a4@8] [c5@8] [d5@8] ~ [f5@4 e5@4] [e5@8] [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] ~ ~ ~ ~ ~ ~ [d5@8] ~>").add(note(-12)).s("gm_distortion_guitar").shape(.5).lpf(1500).attack(.03).release(.8)
+  .room(.45).delay(.25).delaytime(.375).delayfeedback(.35).gain(.5).postgain(.4)`
   },
   {
     id: 'rust-and-rain',

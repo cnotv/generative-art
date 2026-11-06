@@ -79,15 +79,16 @@ The choices that follow from them:
 - **Neon Drive** keeps the guide's verse Am F G E and chorus Am F C G. The octave bass follows
   the root of each bar, a chord-tone arpeggio runs under a two-bar lead motif that is sequenced
   down on its repeat, and the delays are dotted eighths at the tempo.
-- **Dust and Diesel** plays one riff on bass and guitar: the guitar is the bass line raised an
-  octave with its fifth and octave added, so the two cannot disagree. Its reference is the
-  desert rock of Kyuss: fuzz rather than crunch, so the guitar is driven hard and doubled by a
-  distorted saw, and the bass is distorted too, with the level brought down after the effects so
-  the fuzz stays. The kit is a sampled acoustic one that changes its kick pattern every bar, adds
-  ghost notes in the verses, moves from hi-hat to ride in the choruses, and fills on the toms or a
-  snare roll at the end of every four-bar phrase. The room is dry on the riff and wide only on the
-  lead, the snare sits a little behind the beat, and the breakdown halves the drums under a held
-  power chord.
+- **Dust and Diesel** plays one riff on bass and guitar, low and fuzzed in the manner of Kyuss's
+  desert rock. The guitar sits at the written pitch of the riff, in drop D, with a fifth added,
+  doubled by a second distorted guitar sample; nothing is raised an octave. The first version
+  played raw saw waves an octave up and used the LinnDrum bank, and it sounded like a chip tune:
+  a plain oscillator is thin and aliased, and the LinnDrum was recorded at 8 bits. The bass is now
+  a picked bass sample, the lead is an octave lower, and the kit is the default drum samples.
+  Distortion raises the level a long way, so the level is set after the effects. The kit changes
+  its kick pattern every bar, adds ghost notes in the verses, moves from hi-hat to ride in the
+  choruses and fills on the toms or a snare roll at the end of every four-bar phrase. The snare
+  sits a little behind the beat, and the breakdown halves the drums under a held power chord.
 - **Rust and Rain** sets a clean arpeggiated guitar and a light kit against an overdriven chorus
   with crashes and an open hat, and the bass gets louder with it. The hook repeats with a changed
   last bar.
@@ -105,7 +106,7 @@ The choices that follow from them:
 | Song            | Loudness   | True peak |
 | --------------- | ---------- | --------- |
 | Neon Drive      | -19.5 LUFS | -1.9 dBTP |
-| Dust and Diesel | -19.8 LUFS | -4.3 dBTP |
+| Dust and Diesel | -19.0 LUFS | -3.6 dBTP |
 | Rust and Rain   | -19.2 LUFS | -1.0 dBTP |
 | Winter Court    | -17.4 LUFS | -5.7 dBTP |
 | Uptown Strut    | -19.6 LUFS | -2.8 dBTP |
