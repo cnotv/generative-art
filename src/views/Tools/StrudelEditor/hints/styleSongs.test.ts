@@ -45,7 +45,8 @@ describe('the song for each style', () => {
       const code = songsNamingStyle(styleId)[0]?.code ?? ''
 
       // Act
-      const sectionCount = code.match(/\.mask\("</g)?.length ?? 0
+      const sectionCount =
+        (code.match(/\.mask\("</g)?.length ?? 0) + (code.match(/arrange\(/g)?.length ?? 0)
 
       // Assert
       expect(sectionCount).toBeGreaterThanOrEqual(2)

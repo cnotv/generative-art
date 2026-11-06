@@ -426,27 +426,39 @@ $: s("perc(5,8)").hpf(500).gain(.5).pan(sine.range(.3, .7).slow(4)).mask("<0!12 
 // Forty bars: intro, verse, chorus, break, chorus, outro. Every part follows one chord plan.
 setcpm(100/4)
 
-const changes = "<Am F G E Am F G E Am F G E Am F G E Am F C G Am F C G Am F G E Am F C G Am F C G Am F E Am>"
+const plan = (verse, chorus, outro) =>
+  arrange([16, verse], [8, chorus], [4, verse], [8, chorus], [4, outro])
+const changes = plan("<Am F G E>", "<Am F C G>", "<Am F E Am>")
+const roots = plan("<a1 f1 g1 e1>", "<a1 f1 c2 g1>", "<a1 f1 e1 a1>")
+
+const chorusLead = "<[e5@2 a5 g5] [f5@2 c5 a4] [e5@2 g5 e5] [d5@3 b4] [c5@2 e5 a5] [a5@2 f5 c5] [g5@2 e5 c5] [b4@2 d5 g5]>"
+const lead = arrange(
+  [8, silence],
+  [8, "<[e5@3 c5] [a4@2 c5 a4] [d5@3 b4] [b4@3 g#4] [c5@3 a4] [a4@2 f4 a4] [b4@3 g4] [g#4@2 e4@2]>"],
+  [8, chorusLead],
+  [4, silence],
+  [8, chorusLead],
+  [4, "<[e5@4] [c5@4] [b4@2 g#4@2] [a4@4]>"]
+)
 
 $: stack(
   s("bd*4").gain(.34).mask("<0!8 1!16 0!4 1!8 0!4>"),
-  s("~ cp ~ cp").gain(.272).room(.35).roomsize(1.5).mask("<0!8 1!16 0!4 1!8 0!4>"),
-  s("[~ hh]*4").gain(.238).mask("<0!4 1!20 0!4 1!8 0!4>"),
-  s("~ ~ mt lt").gain(.306).mask("<0!15 1 0!7 1 0!12 1 0!3>")
+  s("~ cp ~ cp").gain(.27).room(.35).roomsize(1.5).mask("<0!8 1!16 0!4 1!8 0!4>"),
+  s("[~ hh]*4").gain(.24).mask("<0!4 1!20 0!4 1!8 0!4>"),
+  s("~ ~ mt lt").gain(.3).mask("<0!15 1 0!7 1 0!12 1 0!3>")
 ).bank("RolandTR909")._punchcard()
 $: stack(
-  note("<a1 f1 g1 e1 a1 f1 g1 e1 a1 f1 g1 e1 a1 f1 g1 e1 a1 f1 c2 g1 a1 f1 c2 g1 a1 f1 g1 e1 a1 f1 c2 g1 a1 f1 c2 g1 a1 f1 e1 a1>").struct("x*8").add(note("[0 12]*4"))
-    .s("sawtooth").lpf(520).decay(.16).sustain(0).gain(.374)
+  note(roots).struct("x*8").add(note("[0 12]*4"))
+    .s("sawtooth").lpf(520).decay(.16).sustain(0).gain(.37)
     .mask("<0!4 1!20 0!4 1!11 0>"),
-  note("<~!39 a1>").s("sawtooth").lpf(400).decay(2.4).sustain(0).gain(.408)
+  note("<~!39 a1>").s("sawtooth").lpf(400).decay(2.4).sustain(0).gain(.4)
 )
-$: chord(changes).voicing().s("supersaw").lpf(1300).attack(.3).release(1).room(.45).gain(.068)._pianoroll()
+$: chord(changes).voicing().s("supersaw").lpf(1300).attack(.3).release(1).room(.45).gain(.07)._pianoroll()
 $: stack(
   n("[0 1 2 3 2 1 0 1]*2").chord(changes).voicing().s("square").lpf(2400).decay(.12).sustain(0)
-    .delay(.3).delaytime(.45).delayfeedback(.3).gain(.054).mask("<1!39 0>"),
-  note("<~ ~ ~ ~ ~ ~ ~ ~ [e5@3 c5] [a4@2 c5 a4] [d5@3 b4] [b4@3 g#4] [c5@3 a4] [a4@2 f4 a4] [b4@3 g4] [g#4@2 e4@2] [e5@2 a5 g5] [f5@2 c5 a4] [e5@2 g5 e5] [d5@3 b4] [c5@2 e5 a5] [a5@2 f5 c5] [g5@2 e5 c5] [b4@2 d5 g5] ~ ~ ~ ~ [e5@2 a5 g5] [f5@2 c5 a4] [e5@2 g5 e5] [d5@3 b4] [c5@2 e5 a5] [a5@2 f5 c5] [g5@2 e5 c5] [b4@2 d5 g5] [e5@4] [c5@4] [b4@2 g#4@2] [a4@4]>")
-    .s("gm_lead_2_sawtooth").lpf(3000).attack(.02).release(.4)
-    .delay(.35).delaytime(.45).delayfeedback(.35).room(.3).gain(.238)
+    .delay(.3).delaytime(.45).delayfeedback(.3).gain(.05).mask("<1!39 0>"),
+  note(lead).s("gm_lead_2_sawtooth").lpf(3000).attack(.02).release(.4)
+    .delay(.35).delaytime(.45).delayfeedback(.35).room(.3).gain(.24)
 )._spectrum()`
   },
   {
@@ -457,27 +469,93 @@ $: stack(
 // riff; the drums change their kick every bar and fill at the end of every phrase.
 setcpm(80/4)
 
-const riff = "<[d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [a1 ~ a1 a1 ~ e2 g2 ~] [d2@8] [d2@8] [d2@8] [c2@8] [d2@8] [d2@8] [d2@8] [a1@8] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [a1 ~ a1 a1 ~ e2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2@8] ~>"
+const riffs = "<[d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~]>"
+const chorusRiffs = "<[bb1 ~ bb1 bb1 ~ f2 bb1 ~] [c2 ~ c2 c2 ~ g2 c2 ~] [d2 ~ d2 d2 ~ a2 d2 ~] [d2 ~ d2 f2 ~ g2 a2 ~]>"
+const chorus = arrange([4, chorusRiffs], [3, chorusRiffs], [1, "[a1 ~ a1 a1 ~ e2 g2 ~]"])
+const breakdown = arrange([3, "d2"], [1, "c2"], [3, "d2"], [1, "a1"])
+const riff = arrange(
+  [16, riffs], [8, chorus], [8, breakdown], [8, chorus],
+  [6, riffs], [1, "d2"], [1, silence]
+)
+const drone = arrange(
+  [24, silence],
+  [3, "D5"], [1, "C5"], [3, "D5"], [1, "A5"],
+  [16, silence]
+)
+const chorusLead = "<[~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~]>"
+const lead = arrange(
+  [16, silence],
+  [8, chorusLead],
+  [8, "<[d5@8] ~ [a4@8] [c5@8] [d5@8] ~ [f5@4 e5@4] [e5@8]>"],
+  [8, chorusLead],
+  [6, silence], [1, "d5"], [1, silence]
+)
+
+const lone = "x ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~"
+const k1 = "x ~ ~ ~ ~ ~ x ~ ~ ~ x ~ ~ ~ ~ ~"
+const k2 = "x ~ ~ x ~ ~ ~ ~ ~ ~ x ~ ~ x ~ ~"
+const k3 = "x ~ ~ ~ ~ ~ x x ~ ~ ~ ~ ~ ~ x ~"
+const k4 = "x ~ ~ x ~ ~ x ~ ~ ~ ~ ~ ~ ~ ~ ~"
+const c1 = "x ~ ~ x ~ ~ x ~ ~ ~ x ~ x ~ ~ ~"
+const c2 = "x ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ ~ ~"
+const verseKick = cat(k1, k2, k3, k4)
+const chorusKick = cat(c1, c2, c1, k4, c1, c2, c2, k4)
+const kicks = arrange(
+  [4, silence], [4, cat(k1, k2, k1, k4)], [8, verseKick], [8, chorusKick],
+  [8, cat(lone, "x ~ ~ ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~")], [8, chorusKick], [6, verseKick], [1, lone], [1, silence]
+)
+const backbeat = "~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~"
+const snares = arrange(
+  [4, silence], [20, backbeat], [8, "~ ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~"], [14, backbeat], [2, silence]
+)
+const ghost = "<[~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ ~] [~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ x] [~ ~ ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ x ~] [~ ~ x ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ ~]>"
+const ghosts = arrange([8, silence], [8, ghost], [24, silence], [4, ghost], [4, silence])
+const hatBars = "<[x x x x x x x x] [x x x x x x x ~]>"
+const openBars = "<~ [~ ~ ~ ~ ~ ~ ~ x]>"
+const rideBars = "<[x x x x x x x x] [x x x x x x [x x] x]>"
+const hats = arrange([4, silence], [12, hatBars], [24, silence], [6, hatBars], [2, silence])
+const openHats = arrange([4, silence], [12, openBars], [24, silence], [6, openBars], [2, silence])
+const rides = arrange([16, silence], [8, rideBars], [8, "x ~ x ~ x ~ x ~"], [8, rideBars], [8, silence])
+const fillPhrase = (fill) => arrange([3, silence], [1, fill])
+const fills = arrange(
+  ...[
+    "~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sd sd sd sd",
+    "~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ lt ~ lt ~ lt lt lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sd sd sd sd",
+    "~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt",
+    "~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt"
+  ].map((fill) => [4, fillPhrase(fill)]),
+  [1, silence], [1, "~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt"], [2, silence]
+)
+const riffMask = "<1!24 0!8 1!16>"
 
 $: stack(
-  s("<~ ~ ~ ~ [bd ~ ~ ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ ~ ~ ~ ~ bd ~ ~ bd ~ ~] [bd ~ ~ ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ ~ ~ ~ ~ bd ~ ~ bd ~ ~] [bd ~ ~ ~ ~ ~ bd bd ~ ~ ~ ~ ~ ~ bd ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ ~ ~ ~ ~ bd ~ ~ bd ~ ~] [bd ~ ~ ~ ~ ~ bd bd ~ ~ ~ ~ ~ ~ bd ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ bd ~ ~ ~] [bd ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ bd ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ bd ~ ~ ~] [bd ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ bd ~ ~ ~] [bd ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ bd ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ bd ~ ~ ~] [bd ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ ~ ~ ~ ~ bd ~ ~ bd ~ ~] [bd ~ ~ ~ ~ ~ bd bd ~ ~ ~ ~ ~ ~ bd ~] [bd ~ ~ bd ~ ~ bd ~ ~ ~ ~ ~ ~ ~ ~ ~] [bd ~ ~ ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ ~ ~] [bd ~ ~ bd ~ ~ ~ ~ ~ ~ bd ~ ~ bd ~ ~] [bd ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~] ~>").gain(.9),
-  s("<~ ~ ~ ~ [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] [~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~] ~ ~>").late(1/96).gain(.8),
-  s("<~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ ~] [~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ sd] [~ ~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ sd ~] [~ ~ sd ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ ~] [~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ ~] [~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ sd] [~ ~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ sd ~] [~ ~ sd ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ ~] ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ ~] [~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ sd] [~ ~ ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~ ~ sd ~] [~ ~ sd ~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ ~] ~ ~ ~ ~>").late(1/96).gain(.18),
-  s("<~ ~ ~ ~ [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd ~ rd ~ rd ~ rd ~] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [rd rd rd rd rd rd rd rd] [rd rd rd rd rd rd [rd rd] rd] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] [hh hh hh hh hh hh hh hh] [hh hh hh hh hh hh hh oh] ~ ~>").gain(.32),
-  s("<~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sd sd sd sd] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ lt ~ lt ~ lt lt lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sd sd sd sd] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ~ mt ~ lt ~ lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt] ~ ~ ~ [~ ~ ~ ~ ~ ~ ~ ~ sd sd ht ~ mt ~ lt lt] ~ [~ ~ ~ ~ ~ ~ ~ ~ ht ht mt mt lt lt lt lt] ~ ~>").gain(.7),
+  s("bd").struct(kicks).gain(.9),
+  s("sd").struct(snares).late(1/96).gain(.8),
+  s("sd").struct(ghosts).late(1/96).gain(.18),
+  s("hh").struct(hats).gain(.32),
+  s("oh").struct(openHats).gain(.32),
+  s("rd").struct(rides).gain(.32),
+  s(fills).gain(.7),
   s("cr").gain(.5).mask("<0!8 1 0!7 1 0!3 1 0!3 1 0!7 1 0!3 1 0!3 1 0!5 1 0>")
 ).gain(.5).room(.12).postgain(.4)._punchcard()
 $: note(riff).s("gm_electric_bass_pick").shape(.5).lpf(700).decay(.3).sustain("<0!24 .6!8 0!16>")
   .gain(.9).postgain(.4).mask("<0!4 1!44>")._scope()
 $: stack(
   note(riff).add(note("0,7")).s("gm_overdriven_guitar").hpf(60).shape(.8).lpf(1100)
-    .decay(.35).sustain(.3).room(.1).gain(.5).mask("<1!24 0!8 1!16>"),
+    .decay(.35).sustain(.3).room(.1).gain(.5).mask(riffMask),
   note(riff).s("gm_distortion_guitar").hpf(60).shape(.6).lpf(800)
-    .decay(.35).sustain(.35).gain(.4).mask("<1!24 0!8 1!16>"),
-  chord("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ D5 D5 D5 C5 D5 D5 D5 A5 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~>").voicing().add(note(-12)).s("gm_overdriven_guitar").shape(.7).lpf(900).attack(.3).release(2)
+    .decay(.35).sustain(.35).gain(.4).mask(riffMask),
+  chord(drone).voicing().add(note(-12)).s("gm_overdriven_guitar").shape(.7).lpf(900).attack(.3).release(2)
     .room(.3).gain(.4)
 ).postgain(.4)
-$: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] [d5@8] ~ [a4@8] [c5@8] [d5@8] ~ [f5@4 e5@4] [e5@8] [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5@2 ~ g5 f5 ~ d5 ~] [d5@6 ~ ~] [~ ~ ~ ~ d5 ~ f5 ~] [g5 ~ f5 ~ g5@4] [a5@4 g5 ~ f5 ~] [e5@6 ~ ~] ~ ~ ~ ~ ~ ~ [d5@8] ~>").add(note(-12)).s("gm_distortion_guitar").shape(.5).lpf(1500).attack(.03).release(.8)
+$: note(lead).add(note(-12)).s("gm_distortion_guitar").shape(.5).lpf(1500).attack(.03).release(.8)
   .room(.45).delay(.25).delaytime(.375).delayfeedback(.35).gain(.5).postgain(.4)`
   },
   {
@@ -487,29 +565,45 @@ $: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ d5 ~ f5 ~] [g5@4 ~ ~ ~ ~] [a5
 // Forty bars: quiet verse, loud chorus, quiet verse, loud chorus, bridge, outro.
 setcpm(120/4)
 
-const changes = "<E5 F5 F#5 G5 E5 F5 F#5 G5 E5 G5 A5 C5 E5 G5 A5 C5 E5 F5 F#5 G5 E5 F5 F#5 G5 E5 G5 A5 C5 E5 G5 A5 C5 C5 C5 D5 D5 E5 G5 A5 E5>"
+const plan = (verse, chorus, bridge, outro) =>
+  arrange([8, verse], [8, chorus], [8, verse], [8, chorus], [4, bridge], [4, outro])
+const changes = plan("<E5 F5 F#5 G5>", "<E5 G5 A5 C5>", "<C5 C5 D5 D5>", "<E5 G5 A5 E5>")
+const roots = plan("<e2 f2 f#2 g2>", "<e2 g2 a1 c2>", "<c2 c2 d2 d2>", "<e2 g2 a1 e2>")
+const rhythm = arrange(
+  [8, "x ~ ~ x ~ ~ x ~"], [8, "x x ~ x x ~ x x"], [8, "x ~ ~ x ~ ~ x ~"], [8, "x x ~ x x ~ x x"],
+  [4, "x ~ ~ ~ x ~ ~ ~"], [3, "x x ~ x x ~ x x"], [1, "x ~ ~ ~ ~ ~ ~ ~"]
+)
+const hookLines = "<[e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [g4 ~ g4 g4 ~ e4 ~ ~]>"
+const hook = arrange([4, hookLines], [3, hookLines], [1, "[c5 ~ g4 ~ c5 ~ e4 ~]"])
+const lead = arrange(
+  [8, silence], [8, hook], [8, silence], [8, hook],
+  [1, "g4"], [1, silence], [1, "a4"], [1, silence],
+  [3, hookLines], [1, "b4"]
+)
+const quiet = "<1!8 0!8 1!8 0!16>"
+const loud = "<0!8 1!8 0!8 1!8 0!4 1!4>"
 
 $: stack(
-  s("bd ~ ~ ~ bd ~ ~ ~").gain(.4).mask("<1!8 0!8 1!8 0!16>"),
-  s("~ ~ sd ~ ~ ~ sd ~").gain(.32).mask("<1!8 0!8 1!8 0!16>"),
-  s("hh*8").gain(.224).mask("<1!8 0!8 1!8 0!16>"),
-  s("bd ~ bd ~ bd ~ ~ bd").gain(.64).mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
-  s("~ ~ sd ~ ~ ~ sd ~").gain(.6).mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
-  s("oh*4").gain(.28).mask("<0!8 1!8 0!8 1!8 0!4 1!4>"),
-  s("~ ~ ~ ~ ~ ~ mt lt").gain(.4).mask("<0!15 1 0!15 1 0!8>"),
-  s("bd ~ ~ ~ ~ ~ ~ ~, ~ ~ ~ ~ sd ~ ~ ~").gain(.48).mask("<0!32 1!4 0!4>"),
-  s("cr").gain(.48).mask("<0!8 1 0!15 1 0!11 1 0!2 1>")
+  s("bd ~ ~ ~ bd ~ ~ ~").gain(.5).mask(quiet),
+  s("~ ~ sd ~ ~ ~ sd ~").gain(.4).mask(quiet),
+  s("hh*8").gain(.28).mask(quiet),
+  s("bd ~ bd ~ bd ~ ~ bd").gain(.8).mask(loud),
+  s("~ ~ sd ~ ~ ~ sd ~").gain(.75).mask(loud),
+  s("oh*4").gain(.35).mask(loud),
+  s("~ ~ ~ ~ ~ ~ mt lt").gain(.5).mask("<0!15 1 0!15 1 0!8>"),
+  s("bd ~ ~ ~ ~ ~ ~ ~, ~ ~ ~ ~ sd ~ ~ ~").gain(.6).mask("<0!32 1!4 0!4>"),
+  s("cr").gain(.6).mask("<0!8 1 0!15 1 0!11 1 0!2 1>")
 ).gain(.36)._punchcard()
-$: note("<e2 f2 f#2 g2 e2 f2 f#2 g2 e2 g2 a1 c2 e2 g2 a1 c2 e2 f2 f#2 g2 e2 f2 f#2 g2 e2 g2 a1 c2 e2 g2 a1 c2 c2 c2 d2 d2 e2 g2 a1 e2>").struct("<[x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x ~ ~ x ~ ~ x ~] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x ~ ~ ~ x ~ ~ ~] [x ~ ~ ~ x ~ ~ ~] [x ~ ~ ~ x ~ ~ ~] [x ~ ~ ~ x ~ ~ ~] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x x ~ x x ~ x x] [x ~ ~ ~ ~ ~ ~ ~]>")
-  .s("sawtooth").lpf(520).shape(.3).decay(.18).sustain(0).gain("<.35!8 .55!8 .35!8 .55!16>")._scope()
-$: note("<~ ~ ~ ~ ~ ~ ~ ~ [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [g4 ~ g4 g4 ~ e4 ~ ~] [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [c5 ~ g4 ~ c5 ~ e4 ~] ~ ~ ~ ~ ~ ~ ~ ~ [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [g4 ~ g4 g4 ~ e4 ~ ~] [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [c5 ~ g4 ~ c5 ~ e4 ~] [g4@8] ~ [a4@8] ~ [e5 ~ e5 e5 ~ d5 ~ b4] [d5 ~ d5 d5 ~ b4 ~ g4] [e5 ~ e5 e5 ~ c5 ~ a4] [b4@8]>").s("gm_distortion_guitar").lpf(3000).decay(.25).sustain(.3)
+$: note(roots).struct(rhythm)
+  .s("sawtooth").lpf(520).shape(.3).decay(.18).sustain(0).gain("<.28!8 .44!8 .28!8 .44!16>")._scope()
+$: note(lead).s("gm_distortion_guitar").lpf(3000).decay(.25).sustain(.3)
   .room(.2).gain(.24)
 $: stack(
   n("0 1 2 3 2 1 0 1").chord(changes).voicing().s("gm_electric_guitar_clean")
-    .decay(.4).sustain(0).room(.3).gain(.2).mask("<1!8 0!8 1!8 0!16>"),
+    .decay(.4).sustain(0).room(.3).gain(.2).mask(quiet),
   chord(changes).voicing().struct("x ~ ~ x ~ ~ x ~").s("gm_overdriven_guitar")
-    .lpf(1800).decay(.25).sustain(.1).room(.25).gain(.192).mask("<0!8 1!8 0!8 1!8 1!4 1!3 0>"),
-  chord("<~!39 E5>").voicing().s("gm_overdriven_guitar").lpf(1600).release(2.5).room(.4).gain(.208)
+    .lpf(1800).decay(.25).sustain(.1).room(.25).gain(.19).mask("<0!8 1!8 0!8 1!8 1!7 0>"),
+  chord("<~!39 E5>").voicing().s("gm_overdriven_guitar").lpf(1600).release(2.5).room(.4).gain(.21)
 )`
   },
   {
@@ -519,20 +613,33 @@ $: stack(
 // Thirty-two bars: theme, a turn to F major, the theme returned with a counter-line, coda.
 setcpm(80/4)
 
-const changes = "<Dm Gm A7 Dm Bb Gm A7 Dm F C Dm Bb F C Dm A7 Dm Gm A7 Dm Bb Gm A7 Dm Dm Gm A7 Dm Bb Gm A7 D>"
+const theme = "<Dm Gm A7 Dm Bb Gm A7 Dm>"
+const turn = "<F C Dm Bb F C Dm A7>"
+const changes = arrange([8, theme], [8, turn], [8, theme], [7, theme], [1, "D"])
+
+const cello = "<[d2 f2 a1 d2] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2]>"
+const celloTurn = "<[f1 a1 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [f1 a1 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [a1 c#2 e2 g2]>"
+
+const violin = arrange(
+  [8, "<[d5@2 f5 e5] [d5@2 bb4@2] [c#5@2 e5 g5] [a4@4] [d5@2 f5 d5] [bb4@2 g4 bb4] [a4@2 c#5 e5] [d5@4]>"],
+  [8, "<[a4@2 c5 f5] [e5@2 c5 g4] [f5@2 d5 a4] [bb4@2 d5 f5] [f5@2 c5 a4] [g5@2 e5 c5] [a5@2 f5 d5] [e5@2 c#5 a4]>"],
+  [8, "<[d5@2 f5 a5] [g5@2 d5 bb4] [a5@2 e5 c#5] [f5@3 e5] [f5@2 d5 bb4] [g5@2 bb4 d5] [e5@2 a4 c#5] [d5@4]>"],
+  [8, "<[a5@2 f5 d5] [g5@2 d5 bb4] [a4@2 c#5 e5] [d5@2 a4@2] [f5@2 d5 bb4] [g4@2 bb4 d5] [c#5@2 e5 a4] [d5@4]>"]
+)
+const counterLine = "<[f4@2 a4@2] [g4@2 bb4@2] [e4@2 g4@2] [f4@4] [f4@2 d4@2] [d4@2 g4@2] [c#4@2 e4@2] [d4@4]>"
+const viola = arrange([16, silence], [8, counterLine], [7, counterLine], [1, "[f#4@4]"])
 
 $: chord(changes).voicing().struct("x@2 x x").s("gm_string_ensemble_1")
   .attack(.25).release(.8).room(.4).gain(.26)._pianoroll()
-$: note("<[d2 f2 a1 d2] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [f1 a1 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [f1 a1 c2 f2] [c2 e2 g1 c2] [d2 f2 a1 d2] [a1 c#2 e2 g2] [d2 f2 a1 d2] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [d2 f2 a1 d2] [g1 bb1 d2 g1] [a1 c#2 e2 g2] [d2 f2 a1 d2] [bb1 d2 f2 bb1] [g1 bb1 d2 g1] [a1 c#2 e2 g2] d2>").s("gm_cello").release(.4).room(.3).gain(.7)
+$: note(arrange([8, cello], [8, celloTurn], [8, cello], [7, cello], [1, "d2"])).s("gm_cello").release(.4).room(.3).gain(.7)
   .mask("<0!2 1!30>")
 $: stack(
-  note("<[d5@2 f5 e5] [d5@2 bb4@2] [c#5@2 e5 g5] [a4@4] [d5@2 f5 d5] [bb4@2 g4 bb4] [a4@2 c#5 e5] [d5@4] [a4@2 c5 f5] [e5@2 c5 g4] [f5@2 d5 a4] [bb4@2 d5 f5] [f5@2 c5 a4] [g5@2 e5 c5] [a5@2 f5 d5] [e5@2 c#5 a4] [d5@2 f5 a5] [g5@2 d5 bb4] [a5@2 e5 c#5] [f5@3 e5] [f5@2 d5 bb4] [g5@2 bb4 d5] [e5@2 a4 c#5] [d5@4] [a5@2 f5 d5] [g5@2 d5 bb4] [a4@2 c#5 e5] [d5@2 a4@2] [f5@2 d5 bb4] [g4@2 bb4 d5] [c#5@2 e5 a4] [d5@4]>").s("gm_violin").attack(.06).release(.5).room(.35).gain(.55),
-  note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [f4@2 a4@2] [g4@2 bb4@2] [e4@2 g4@2] [f4@4] [f4@2 d4@2] [d4@2 g4@2] [c#4@2 e4@2] [d4@4] [f4@2 a4@2] [g4@2 bb4@2] [e4@2 g4@2] [f4@4] [f4@2 d4@2] [d4@2 g4@2] [c#4@2 e4@2] [f#4@4]>").s("gm_viola").attack(.1).release(.6).room(.35).gain(.35)
-    .mask("<0!16 1!16>")
+  note(violin).s("gm_violin").attack(.06).release(.5).room(.35).gain(.55),
+  note(viola).s("gm_viola").attack(.1).release(.6).room(.35).gain(.35)
 )._spiral()
 $: stack(
-  note("<~ ~ ~ ~ ~ ~ ~ d2 ~ ~ ~ ~ ~ ~ ~ a1 ~ ~ ~ ~ ~ ~ ~ d2 ~ ~ ~ ~ ~ ~ a1 d2>").s("gm_timpani").decay(1.2).sustain(0).gain(.6),
-  s("<~ ~ ~ ~ ~ ~ ~ perc ~ ~ ~ ~ ~ ~ ~ perc ~ ~ ~ ~ ~ ~ ~ perc ~ ~ ~ ~ ~ ~ perc perc>").hpf(80).gain(.12)
+  note("<~!7 d2 ~!7 a1 ~!7 d2 ~!6 a1 d2>").s("gm_timpani").decay(1.2).sustain(0).gain(.6),
+  s("<~!7 perc ~!7 perc ~!7 perc ~!6 perc perc>").hpf(80).gain(.12)
 )`
   },
   {
@@ -542,29 +649,44 @@ $: stack(
 // Forty-eight bars: intro, verse vamp, chorus, break, chorus and a last hit. The bass leads.
 setcpm(105/4)
 
-const changes = "<E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 E9 A9 A9 E9 E9 B9 A9 E9 B9 E9 E9 E9 E9 E9 E9 E9 E9 A9 A9 E9 E9 B9 A9 E9 E9>"
+const vamp = "<A9 A9 E9 E9 B9 A9 E9 B9>"
+const changes = arrange([24, "E9"], [8, vamp], [8, "E9"], [8, vamp])
+
+const slapE = "<[e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1]>"
+const slapChorus = "<[a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2]>"
+const bass = arrange([24, slapE], [8, slapChorus], [8, slapE], [7, slapChorus], [1, "e1 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~"])
+
+const horns = "<[~ ~ ~ ~ ~ c#5 e5 ~] [g5 ~ e5 ~ c#5 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [d5 ~ b4 ~ g#4 ~ ~ ~] [~ ~ ~ ~ ~ d#5 f#5 ~] [e5 ~ c#5 ~ a4 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~]>"
+const brass = arrange(
+  [24, silence], [7, horns], [1, "f#5 ~ d#5 ~ b4 ~ a4 ~"],
+  [8, silence], [7, horns], [1, "e5 ~ ~ ~ ~ ~ ~ ~"]
+)
+
+const full = "<1!8 1!24 0!8 1!7 0>"
+const comp = "<0!8 1!24 0!8 1!7 0>"
+const kit = "<1!38 0!2 1!7 0>"
 
 $: stack(
-  s("bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~").gain(.85).mask("<1!38 0!2 1!7 0>"),
-  s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~").gain(.75).mask("<1!38 0!2 1!7 0>"),
-  s("~ sd ~ ~ ~ ~ ~ sd ~ sd ~ ~ ~ ~ ~ sd").gain(.14).mask("<1!8 1!24 0!8 1!7 0>"),
-  s("hh*16").gain("[.5 .25 .4 .25]*4").mask("<1!8 1!24 0!8 1!7 0>"),
-  s("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ oh ~").gain(.4).mask("<1!8 1!24 0!8 1!7 0>"),
+  s("bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~").gain(.85).mask(kit),
+  s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~").gain(.75).mask(kit),
+  s("~ sd ~ ~ ~ ~ ~ sd ~ sd ~ ~ ~ ~ ~ sd").gain(.14).mask(full),
+  s("hh*16").gain("[.5 .25 .4 .25]*4").mask(full),
+  s("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ oh ~").gain(.4).mask(full),
   s("perc(5,8)").hpf(600).gain(.3).mask("<0!8 1!24 0!8 1!7 0>")
 ).gain(.3)._punchcard()
 $: stack(
-  note("<[e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~]>").s("gm_slap_bass_1").decay(.25).sustain(0).gain(.9)
+  note(bass).s("gm_slap_bass_1").decay(.25).sustain(0).gain(.9)
     .mask("<0!4 1!44>"),
   s("<~!47 [bd,cr]>").gain(.4)
 )
 $: stack(
   chord(changes).voicing().struct("~ x ~ x ~ ~ x ~ ~ x ~ x ~ ~ x ~").s("gm_clavinet")
-    .decay(.06).sustain(0).room(.15).gain(.18).mask("<0!8 1!24 0!8 1!7 0>"),
+    .decay(.06).sustain(0).room(.15).gain(.18).mask(comp),
   chord(changes).voicing().struct("~ ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ x ~").s("gm_electric_guitar_muted")
-    .decay(.08).sustain(0).gain(.14).mask("<0!8 1!24 0!8 1!7 0>"),
+    .decay(.08).sustain(0).gain(.14).mask(comp),
   chord("<~!47 E9>").voicing().s("gm_clavinet").decay(1.5).sustain(0).room(.3).gain(.22)
 )._pianoroll()
-$: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ ~ c#5 e5 ~] [g5 ~ e5 ~ c#5 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [d5 ~ b4 ~ g#4 ~ ~ ~] [~ ~ ~ ~ ~ d#5 f#5 ~] [e5 ~ c#5 ~ a4 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [f#5 ~ d#5 ~ b4 ~ a4 ~] ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ ~ c#5 e5 ~] [g5 ~ e5 ~ c#5 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [d5 ~ b4 ~ g#4 ~ ~ ~] [~ ~ ~ ~ ~ d#5 f#5 ~] [e5 ~ c#5 ~ a4 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [e5 ~ ~ ~ ~ ~ ~ ~]>").s("gm_brass_section").decay(.18).sustain(.2).room(.25).gain(.3)`
+$: note(brass).s("gm_brass_section").decay(.18).sustain(.2).room(.25).gain(.3)`
   },
   {
     id: 'blue-hour',
@@ -573,20 +695,42 @@ $: note("<~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ [~ ~ ~ ~ ~ c#5 e5 ~] [
 // Forty bars: intro, a 32-bar AABA head, tag. Swung eighths; the bass walks in quarters.
 setcpm(136/4)
 
-const changes = "<[[Cm7 F7]] [[Cm7 F7]] [[Cm7 F7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Fm7 Bb7]] [[Eb^7 Ab7]] [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Fm7 Bb7]] [[Eb^7 Ab7]] [[Bb^7 G7]] Bb^7 D7 D7 G7 G7 C7 C7 F7 F7 [[Bb^7 G7]] [[Cm7 F7]] [[Bb^7 G7]] [[Cm7 F7]] [[Fm7 Bb7]] [[Eb^7 Ab7]] [[Bb^7 G7]] Bb^7 [[Cm7 F7]] [[Cm7 F7]] [[Cm7 F7]] Bb^7>"
+const turn = "[Cm7 F7]"
+const bridge = "<D7 D7 G7 G7 C7 C7 F7 F7>"
+const aChanges = "<[Bb^7 G7] [Cm7 F7] [Bb^7 G7] [Cm7 F7] [Fm7 Bb7] [Eb^7 Ab7] [Bb^7 G7]>"
+const head = (changes, end) => arrange([7, changes], [1, end])
+const changes = arrange(
+  [4, turn], [8, head(aChanges, turn)], [8, head(aChanges, "Bb^7")],
+  [8, bridge], [8, head(aChanges, "Bb^7")], [3, turn], [1, "Bb^7"]
+)
+
+const walkTurn = "c2 eb2 f1 a1"
+const walkA = "<[bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [f1 ab1 bb1 d2] [eb2 g2 ab1 c2] [bb1 d2 g1 b1]>"
+const walkBridge = "<[d2 f#2 a2 f#2] [d2 c2 a1 f#1] [g1 b1 d2 f2] [g1 f2 d2 b1] [c2 e2 g2 e2] [c2 bb1 g1 e1] [f1 a1 c2 eb2] [f1 eb2 c2 a1]>"
+const bass = arrange(
+  [4, walkTurn], [8, head(walkA, walkTurn)], [8, head(walkA, "bb1 d2 f2 c#2")],
+  [8, walkBridge], [8, head(walkA, "bb1 d2 f2 b1")], [3, walkTurn], [1, "bb1"]
+)
+
+const headLine = "<[d5 ~ f5 d5 ~ ~ b4 ~] [c5 ~ eb5 g5 ~ ~ a4 c5] [d5 f5 a5 f5 ~ d5 b4 ~] [bb4 ~ g4 eb5 ~ ~ c5 ~] [ab4 ~ c5 eb5 ~ ~ d5 ~] [g4 ~ bb4 d5 ~ ~ c5 ~] [f5 ~ d5 bb4 ~ ~ b4 d5]>"
+const bridgeLine = "<[f#5 ~ a5 f#5 ~ ~ d5 ~] [c5 ~ ~ a4 ~ f#4 ~ ~] [b4 ~ d5 f5 ~ ~ d5 ~] [f5 ~ ~ d5 ~ b4 ~ ~] [e5 ~ g5 e5 ~ ~ c5 ~] [bb4 ~ ~ g4 ~ e4 ~ ~] [a4 ~ c5 eb5 ~ ~ c5 ~] [eb5 ~ ~ c5 ~ a4 ~ ~]>"
+const melody = arrange(
+  [4, silence], [8, head(headLine, "eb5 ~ c5 ~ a4 ~ ~ ~")], [8, head(headLine, "d5 ~ bb4 ~ f4 ~ ~ ~")],
+  [8, bridgeLine], [8, head(headLine, "d5 ~ bb4 ~ f4 ~ ~ ~")], [3, silence], [1, "d5"]
+)
 
 $: stack(
   s("hh ~ hh hh hh ~ hh hh").gain(.45),
   s("bd bd bd bd").gain(.1),
   s("~ sd ~ sd").gain(.12).lpf(3000)
 ).swingBy(1/3, 4).mask("<0!4 1!36>")
-$: note("<[c2 eb2 f1 a1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [f1 ab1 bb1 d2] [eb2 g2 ab1 c2] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [f1 ab1 bb1 d2] [eb2 g2 ab1 c2] [bb1 d2 g1 b1] [bb1 d2 f2 c#2] [d2 f#2 a2 f#2] [d2 c2 a1 f#1] [g1 b1 d2 f2] [g1 f2 d2 b1] [c2 e2 g2 e2] [c2 bb1 g1 e1] [f1 a1 c2 eb2] [f1 eb2 c2 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [bb1 d2 g1 b1] [c2 eb2 f1 a1] [f1 ab1 bb1 d2] [eb2 g2 ab1 c2] [bb1 d2 g1 b1] [bb1 d2 f2 b1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] [c2 eb2 f1 a1] bb1>").s("gm_acoustic_bass").release(.2).room(.2).gain(.75)
+$: note(bass).s("gm_acoustic_bass").release(.2).room(.2).gain(.75)
 $: stack(
   chord(changes).voicing().struct("~ ~ x ~ ~ x ~ ~").s("gm_epiano1").decay(.5).sustain(.2)
     .room(.3).gain(.22).swingBy(1/3, 4).mask("<1!39 0>"),
   chord("<~!39 Bb^7>").voicing().s("gm_epiano1").release(2).room(.4).gain(.24)
 )._pianoroll()
-$: note("<~ ~ ~ ~ [d5 ~ f5 d5 ~ ~ b4 ~] [c5 ~ eb5 g5 ~ ~ a4 c5] [d5 f5 a5 f5 ~ d5 b4 ~] [bb4 ~ g4 eb5 ~ ~ c5 ~] [ab4 ~ c5 eb5 ~ ~ d5 ~] [g4 ~ bb4 d5 ~ ~ c5 ~] [f5 ~ d5 bb4 ~ ~ b4 d5] [eb5 ~ c5 ~ a4 ~ ~ ~] [d5 ~ f5 d5 ~ ~ b4 ~] [c5 ~ eb5 g5 ~ ~ a4 c5] [d5 f5 a5 f5 ~ d5 b4 ~] [bb4 ~ g4 eb5 ~ ~ c5 ~] [ab4 ~ c5 eb5 ~ ~ d5 ~] [g4 ~ bb4 d5 ~ ~ c5 ~] [f5 ~ d5 bb4 ~ ~ b4 d5] [d5 ~ bb4 ~ f4 ~ ~ ~] [f#5 ~ a5 f#5 ~ ~ d5 ~] [c5 ~ ~ a4 ~ f#4 ~ ~] [b4 ~ d5 f5 ~ ~ d5 ~] [f5 ~ ~ d5 ~ b4 ~ ~] [e5 ~ g5 e5 ~ ~ c5 ~] [bb4 ~ ~ g4 ~ e4 ~ ~] [a4 ~ c5 eb5 ~ ~ c5 ~] [eb5 ~ ~ c5 ~ a4 ~ ~] [d5 ~ f5 d5 ~ ~ b4 ~] [c5 ~ eb5 g5 ~ ~ a4 c5] [d5 f5 a5 f5 ~ d5 b4 ~] [bb4 ~ g4 eb5 ~ ~ c5 ~] [ab4 ~ c5 eb5 ~ ~ d5 ~] [g4 ~ bb4 d5 ~ ~ c5 ~] [f5 ~ d5 bb4 ~ ~ b4 d5] [d5 ~ bb4 ~ f4 ~ ~ ~] ~ ~ ~ [d5@8]>").s("gm_vibraphone").swingBy(1/3, 4).room(.3).gain(.4)._pitchwheel()`
+$: note(melody).s("gm_vibraphone").swingBy(1/3, 4).room(.3).gain(.4)._pitchwheel()`
   }
 ]
 

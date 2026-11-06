@@ -60,6 +60,31 @@ lasts that many bars: a lone `a4@4` takes four bars, not four beats, and shifts 
 it. The first versions came out with the violin three bars behind its chords. Every weighted item
 is now bracketed.
 
+## Writing a song without repeating itself
+
+The first versions spelled every bar out: a chord string of forty items, a bass string of forty
+items, and runs of `~ ~ ~ ~ ~ ~ ~ ~` for the bars a part sits out. They were long, and a change to
+the form meant editing four strings in step. The songs now say each thing once:
+
+| Repetition                                  | Written as                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------ |
+| a section that lasts several bars           | `arrange([8, verse], [8, chorus])`, with a one-a-bar string inside |
+| the same plan for chords, bass and a melody | a small function, `plan(verse, chorus, outro)`, called once each   |
+| a chorus that comes back                    | a `const` used twice                                               |
+| bars a part sits out, or the same bar twice | `silence`, or `~!8`, `<a!3 b>`                                     |
+| a kick that changes every bar               | `cat(k1, k2, k3, k4)` from named one-bar cells                     |
+| a fill at the end of every four-bar phrase  | a function of the fill, mapped over the list of fills              |
+| the first bars of a section, then a new end | `[7, line], [1, end]`                                              |
+
+The hints tab reads sound names from the song's own `$:` blocks, not from constants, so a drum
+layer keeps its sample in the block, as `s("bd").struct(kicks)`, with the rhythm in a constant. A
+layer written as `s(kicks)` leaves the block with only a crash cymbal in it, and the hints then
+report the drums as off style.
+
+The rewrite was checked against the songs it replaced. Each was exported to MIDI before and after,
+and every track matches note for note at the same times: 4 to 5 tracks a song, no note missing
+and none added. The six songs went from 21,000 to 14,600 characters.
+
 ## The briefs
 
 Each song was written from a brief in the `audio-brief` form, after reading its section of
@@ -105,10 +130,10 @@ The choices that follow from them:
 
 | Song            | Loudness   | True peak |
 | --------------- | ---------- | --------- |
-| Neon Drive      | -19.5 LUFS | -1.9 dBTP |
-| Dust and Diesel | -19.0 LUFS | -3.6 dBTP |
-| Rust and Rain   | -19.2 LUFS | -1.0 dBTP |
-| Winter Court    | -17.4 LUFS | -5.7 dBTP |
+| Neon Drive      | -19.5 LUFS | -2.3 dBTP |
+| Dust and Diesel | -18.9 LUFS | -3.9 dBTP |
+| Rust and Rain   | -19.5 LUFS | -1.3 dBTP |
+| Winter Court    | -17.3 LUFS | -5.3 dBTP |
 | Uptown Strut    | -19.6 LUFS | -2.8 dBTP |
 | Blue Hour       | -17.2 LUFS | -3.1 dBTP |
 
