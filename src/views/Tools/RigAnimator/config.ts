@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { SetupConfig } from '@webgamekit/threejs'
 import type { CoordinateTuple } from '@webgamekit/animation'
 import type { ControlMapping } from '@webgamekit/controls'
+import type { ControlOption, ControlSchema } from '@/stores/viewConfig'
 import type { CameraJointLimitDegrees } from './types'
 
 export const RIG_ANIMATOR_SETUP_CONFIG: SetupConfig = {
@@ -40,6 +41,29 @@ export const MODEL_FILE_ACCEPT = '.fbx,.glb,.gltf'
 export const POSES_FILE_ACCEPT = 'application/json'
 export const MEDIA_FILE_ACCEPT = 'image/*,video/*'
 export const DEFAULT_MODEL_PATH = '/character2.fbx'
+
+/**
+ * The `character2` mesh skinned to the armature `blender/character-rig.py` fits to its own
+ * geometry, so the animator has an example whose rig is ours rather than the one the Mixamo
+ * download carries.
+ */
+export const OWN_RIG_MODEL_PATH = '/character2-own-rig.glb'
+
+/**
+ * The bundled models the Model control offers, in the order the panel lists them. The default
+ * comes first, so the button the panel marks selected is the model that loaded on arrival.
+ */
+export const EXAMPLE_MODELS: ControlOption[] = [
+  { value: DEFAULT_MODEL_PATH, label: 'character2' },
+  { value: OWN_RIG_MODEL_PATH, label: 'character2, own rig' }
+]
+
+/** The Model control the Config panel shows above the global settings: one button per example. */
+export const MODEL_SELECTOR_CONTROL: ControlSchema = {
+  label: 'Model',
+  component: 'ButtonSelector',
+  options: EXAMPLE_MODELS
+}
 
 export const BONE_MARKER_RADIUS_FRACTION = 0.009
 /**
