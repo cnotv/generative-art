@@ -310,7 +310,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="strudel-editor" :class="{ 'strudel-editor--drawer-open': activeTab !== null }">
+  <div class="strudel-editor pt-nav" :class="{ 'strudel-editor--drawer-open': activeTab !== null }">
     <section class="strudel-editor__code" aria-label="Code">
       <header class="strudel-editor__code-header">
         <div class="strudel-editor__toolbar" role="toolbar" aria-label="Editor tools">
@@ -472,7 +472,8 @@ onBeforeUnmount(() => {
 .strudel-editor {
   box-sizing: border-box;
   height: 100dvh;
-  padding: var(--nav-height) var(--spacing-4) var(--spacing-4);
+  padding-inline: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: 'code';
