@@ -22,7 +22,7 @@ Before writing a named style, look it up: its entry in
 its `STRUDEL_MUSIC_STYLES` entry in `src/views/Tools/StrudelEditor/config.ts` for the tempo,
 roles, instruments and visuals the editor's hints expect.
 
-Note: when modifying a song, always modify the claps and hats too — not every song should sound
+Note: when modifying a song, always modify the claps and hats too: not every song should sound
 the same.
 
 Note: every pattern must include a comment naming the instruments playing (e.g. "bass: sawtooth,
@@ -38,6 +38,31 @@ Save it as `<name>.strudel` in the scratchpad while iterating.
 | Synths           | `sine`, `sawtooth`, `square`, `triangle`, the other superdough synths, the uzu wavetables (`wt_*`) and the General MIDI soundfonts (`gm_*`)  |
 | Tempo            | `setcpm(bpm / 4)`: one cycle is a bar of four beats, which the MIDI export assumes too                                                       |
 | Pitches for MIDI | `note(...)`, or `n(...)` with `.scale(...)`. A bare `n` on a synth has no pitch in the MIDI file                                             |
+
+### Write each thing once
+
+A forty item bar list or a run of `~ ~ ~ ~` is the sign a song is spelled out rather than written.
+Say each thing once:
+
+| Repetition                                  | Write                                                                   |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| sections that last several bars             | `arrange([8, verse], [8, chorus])` over short `<...>` one a bar strings |
+| one plan for chords, bass and melody        | a function, `plan(verse, chorus, outro)`, called once for each part     |
+| a chorus that returns, or a mask used twice | a `const`                                                               |
+| bars a part sits out, the same bar again    | `silence`, `~!8`, `<a!3 b>`                                             |
+| a kick that changes each bar                | `cat(k1, k2, k3, k4)` from one bar cells                                |
+| the first bars of a section, then a new end | `[7, line], [1, end]`                                                   |
+| one bank or one mask on several layers      | `stack(...).bank("RolandTR909")` or `.mask(name)`                       |
+
+Two traps. In a one a bar `<...>` string an item with a weight and no brackets lasts that many
+bars: write `[a4@4]`, not `a4@4`. And the hints tab reads sound names from the `$:` block itself,
+not from constants, so keep the sample in the block (`s("bd").struct(kicks)`) and the notes of a
+bass or chord line inline: a layer written as `s(kicks)` hides its drums from the hints.
+
+After a rewrite, export the old and the new version to MIDI and compare them track by track. Every
+note should match at the same time: a refactor must not change the music. The fourteen style songs
+were rewritten this way, and `documentation/docs/journey/strudel-genre-songs.md` shows what each
+pattern became.
 
 ## 2. Render it
 
