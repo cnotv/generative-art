@@ -36,3 +36,12 @@ body {
   overflow: hidden;
   max-height: 100vh;
 }
+
+/* The bar is hidden by default, so the space it reserves is too. */
+:root:not(.top-nav-visible) {
+  --nav-height: 0px;
+}
+
+.pt-nav {
+  padding-top: var(--nav-height);
+}

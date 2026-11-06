@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watchEffect } from 'vue'
 
 const STORAGE_KEY = 'top-navigation-enabled'
 
@@ -38,15 +38,17 @@ const initialState = (): boolean => {
 
 const isNavigationEnabled = ref(initialState())
 
+// Drives `--nav-height` and the `pt-nav` utility in src/style.css.
+watchEffect(() =>
+  document.documentElement.classList.toggle('top-nav-visible', isNavigationEnabled.value)
+)
+
 const disableNavigation = (): void => {
   isNavigationEnabled.value = false
   writeStored(false)
   syncQuery(false)
 }
 
-/**
- *
- */
 /**
  * Shared state for the top navigation bar, hidden unless `?nav=true` or a stored opt in.
  * @returns the enabled flag and a function that disables the bar and remembers it

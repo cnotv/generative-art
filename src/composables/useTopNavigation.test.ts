@@ -17,6 +17,13 @@ describe('useTopNavigation', () => {
     expect(isNavigationEnabled.value).toBe(false)
   })
 
+  it('toggles the top-nav-visible class on the root element', async () => {
+    await loadComposable('')
+    expect(document.documentElement.classList.contains('top-nav-visible')).toBe(false)
+    await loadComposable('?nav=true')
+    expect(document.documentElement.classList.contains('top-nav-visible')).toBe(true)
+  })
+
   it('nav=true enables it and persists', async () => {
     const { isNavigationEnabled } = await loadComposable('?nav=true')
     expect(isNavigationEnabled.value).toBe(true)
