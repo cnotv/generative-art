@@ -275,32 +275,42 @@ note("<[e2@2 g2 e2 g2 e2 e2 eb2] [d2 a2 d2 d2@2 a2 d2 eb2]>")
     label: 'Concrete Hours (techno)',
     code: `// Concrete Hours: a techno song in F minor
 // Sixty-four bars: intro, build, main, break, main, outro. Each string holds one number a bar.
+// Instruments: drums RolandTR909, bass and chords sawtooth
 setcpm(130/4)
 
-$: s("bd*4").bank("RolandTR909").gain(.5).mask("<1!40 0!8 1!16>")._punchcard()
-$: s("[~ hh]*4").bank("RolandTR909").gain(.35).mask("<0!4 1!60>")
-$: s("~ cp ~ cp").bank("RolandTR909").gain(.3).mask("<0!16 1!16 0!8 1!16 0!8>")
+const body = "<0!16 1!40 0!8>"
+
 $: stack(
-  note("[~ f1 f1 ab1]*4").add(note("<0 0 0 -2>")).s("sawtooth")
+  s("bd*4").gain(.5).mask("<1!40 0!8 1!16>"),
+  s("[~ hh]*4").gain(.35).mask("<0!4 1!60>"),
+  s("~ cp ~ cp").gain(.3).mask("<0!16 1!16 0!8 1!16 0!8>")
+).bank("RolandTR909")._punchcard()
+$: stack(
+  note("[~ f1 f1 ab1]*4").add(note("<0!3 -2>")).s("sawtooth")
     .lpf("<300!16 500!16 900!8 500!16 300!8>").decay(.12).sustain(0).gain(.55),
-  chord("<Fm7 Fm7 Fm7 Ebm7>").voicing().struct("~ [~ x] ~ [x ~]").s("sawtooth")
+  chord("<Fm7!3 Ebm7>").voicing().struct("~ [~ x] ~ [x ~]").s("sawtooth")
     .lpf(1400).decay(.1).sustain(0).room(.3).delay(.3).gain(.15)
-    .mask("<0!16 1!40 0!8>")
+    .mask(body)
 ).mask("<0!8 1!48 0!8>")._scope()
-$: s("perc(3,8,2)").hpf(500).gain(.4).pan(.7).mask("<0!16 1!40 0!8>")`
+$: s("perc(3,8,2)").hpf(500).gain(.4).pan(.7).mask(body)`
   },
   {
     id: 'second-floor',
     label: 'Second Floor (house)',
     code: `// Second Floor: a deep house song in A minor
 // Fifty-six bars: intro, groove, chorus, break, chorus, outro. Each string holds one number a bar.
+// Instruments: drums RolandTR909, bass sawtooth, chords gm_epiano1, melody gm_vibraphone
 setcpm(124/4)
 
-$: s("bd*4").bank("RolandTR909").gain(.5).mask("<1!36 0!4 1!16>")._punchcard()
-$: s("[~ hh]*4").bank("RolandTR909").gain(.3)
-$: s("~ cp ~ cp").bank("RolandTR909").gain(.3).mask("<0!8 1!44 0!4>")
+const groove = "<0!8 1!44 0!4>"
+
+$: stack(
+  s("bd*4").gain(.5).mask("<1!36 0!4 1!16>"),
+  s("[~ hh]*4").gain(.3),
+  s("~ cp ~ cp").gain(.3).mask(groove)
+).bank("RolandTR909")._punchcard()
 $: note("[~ a1] [~ a1] [~ a1 ~ a1] [~ e2]").add(note("<0 5 8 7>")).s("sawtooth")
-  .lpf(420).decay(.18).sustain(0).gain(.55).mask("<0!8 1!44 0!4>")
+  .lpf(420).decay(.18).sustain(0).gain(.55).mask(groove)
 $: stack(
   chord("<Am7 Dm7 F^7 Em7>").voicing().struct("[~ x] ~ [~ x] [~ ~ x ~]").s("gm_epiano1")
     .room(.4).gain(.35),
@@ -314,19 +324,27 @@ $: stack(
     label: 'Long Way Down (drum and bass)',
     code: `// Long Way Down: a drum and bass song in D minor
 // Sixty-four bars: intro, drop, break, drop, outro. Each string holds one number a bar.
+// Instruments: drums default kit with breaks165, bass sine and sawtooth, chords sawtooth
 setcpm(174/4)
 
-$: s("bd ~ ~ ~ ~ bd ~ ~").gain(.45).mask("<0!16 1!24 0!8 1!16>")._spectrum()
-$: s("~ ~ sd ~ ~ ~ sd ~").gain(.35).mask("<0!16 1!24 0!8 1!16>")
+const drop = "<0!16 1!24 0!8 1!16>"
+
+$: stack(
+  s("bd ~ ~ ~ ~ bd ~ ~").gain(.45),
+  s("~ ~ sd ~ ~ ~ sd ~").gain(.35)
+).mask(drop)._spectrum()
 $: stack(
   s("hh*8").gain("[1.2 .8]*4"),
-  s("breaks165").fit().gain(.2).hpf(600).mask("<0!16 1!24 0!8 1!16>")
+  s("breaks165").fit().gain(.2).hpf(600).mask(drop)
 ).mask("<0!8 1!56>")
 $: stack(
-  note("<d2 d2 bb1 a1>").s("sine").shape(.8).postgain(.2).mask("<0!16 1!24 0!8 1!16>"),
-  note("<d2 d2 bb1 a1>").s("sawtooth").add(note("0,.1")).lpf(380).gain(.15)
-    .mask("<0!16 1!24 0!8 1!16>"),
-  chord("<Dm7 Dm7 Bb^7 A7>").voicing().s("sawtooth").lpf(900).attack(.4).release(1)
+  note("<d2!2 bb1 a1>")
+    .layer(
+      (x) => x.s("sine").shape(.8).postgain(.2),
+      (x) => x.s("sawtooth").add(note("0,.1")).lpf(380).gain(.15)
+    )
+    .mask(drop),
+  chord("<Dm7!2 Bb^7 A7>").voicing().s("sawtooth").lpf(900).attack(.4).release(1)
     .room(.6).gain(.12)
 )._scope()`
   },
@@ -335,11 +353,16 @@ $: stack(
     label: 'Corner Store (hip hop)',
     code: `// Corner Store: a lofi hip hop song in C minor
 // Forty bars: intro, verse, hook, verse, outro. Each string holds one number a bar.
+// Instruments: drums RolandTR808, chords gm_epiano1, melody gm_vibraphone, bass triangle
 setcpm(90/4)
 
-$: s("bd ~ ~ bd ~ bd ~ ~").bank("RolandTR808").gain(.65).mask("<0!4 1!32 0!4>")._punchcard()
-$: s("~ ~ sd ~ ~ ~ sd ~").bank("RolandTR808").gain(.5).mask("<0!4 1!32 0!4>")
-$: s("hh*8").bank("RolandTR808").gain("[.3 .2]*4").mask("<0!4 1!36>")
+const verse = "<0!4 1!32 0!4>"
+
+$: stack(
+  s("bd ~ ~ bd ~ bd ~ ~").gain(.65).mask(verse),
+  s("~ ~ sd ~ ~ ~ sd ~").gain(.5).mask(verse),
+  s("hh*8").gain("[.3 .2]*4").mask("<0!4 1!36>")
+).bank("RolandTR808")._punchcard()
 $: stack(
   chord("<Cm7 Ab^7 Fm7 G7>").voicing().s("gm_epiano1").room(.4).crush(8).gain(.42),
   n("<[7 ~ 9 ~ ~ 7 ~ 4] [5 ~ ~ 4 ~ 2 ~ ~] [3 ~ 5 ~ ~ 3 ~ 2] [1 ~ ~ 2 ~ ~ ~ ~]>")
@@ -347,13 +370,14 @@ $: stack(
     .mask("<0!20 1!8 0!12>")
 )._pianoroll()
 $: note("<[c2 ~ ~ c2 ~ eb2 ~ ~] [ab1 ~ ~ ab1 ~ c2 ~ ~] [f1 ~ ~ f1 ~ ab1 ~ ~] [g1 ~ ~ g1 ~ b1 ~ ~]>")
-  .s("triangle").shape(.3).postgain(.7).mask("<0!4 1!32 0!4>")`
+  .s("triangle").shape(.3).postgain(.7).mask(verse)`
   },
   {
     id: 'tideline',
     label: 'Tideline (ambient)',
     code: `// Tideline: an ambient piece in D major
 // Thirty-two bars: chords alone, then the drone, the melody, and the chords alone again.
+// Instruments: chords triangle, melody sine, drone sine
 setcpm(70/4)
 
 $: chord("<D^7 Bm7 G^7 A7>").voicing().s("triangle").slow(2)
@@ -369,6 +393,7 @@ $: note("<d2 b2 g2 a2>").s("sine").slow(2).shape(.5).postgain(.25).attack(1.5).r
     label: 'Lift Off (trance)',
     code: `// Lift Off: an uplifting trance song in A minor
 // Sixty-four bars: intro, theme, breakdown with a riser, drop, outro. One number a bar.
+// Instruments: drums RolandTR909, bass, lead and chords sawtooth, riser white noise
 setcpm(138/4)
 
 $: s("bd*4").bank("RolandTR909").gain(.5).mask("<1!24 0!16 1!24>")._spectrum()
@@ -393,6 +418,7 @@ $: s("<~!32 white@8 ~!24>").lpf(150).lpattack(13).lpenv(7).lpsustain(1).attack(1
     label: 'Harbour Steps (dub)',
     code: `// Harbour Steps: a dub song in G minor
 // Thirty-two bars: intro, riddim, drop out, riddim, outro. Each string holds one number a bar.
+// Instruments: drums RolandTR808 and default rim, bass triangle, chords square, melody gm_accordion
 setcpm(75/4)
 
 $: s("~ ~ bd ~, hh*8").bank("RolandTR808").gain(.5).mask("<1!16 0!2 1!14>")._punchcard()
@@ -411,6 +437,7 @@ $: stack(
     label: 'Wire Fence (breakbeat)',
     code: `// Wire Fence: a breakbeat song in E minor
 // Forty-eight bars: intro, verse, breakdown, verse, outro. Each string holds one number a bar.
+// Instruments: break breaks125, bass sawtooth, clap and percussion default kit
 setcpm(130/4)
 
 $: s("breaks125").fit().gain(.75).chop(16).mask("<1!28 0!4 1!16>")._punchcard()
@@ -424,6 +451,7 @@ $: s("perc(5,8)").hpf(500).gain(.5).pan(sine.range(.3, .7).slow(4)).mask("<0!12 
     label: 'Neon Drive (synthwave)',
     code: `// Neon Drive: a synthwave song in A minor
 // Forty bars: intro, verse, chorus, break, chorus, outro. Every part follows one chord plan.
+// Instruments: drums RolandTR909, bass sawtooth, chords supersaw, arpeggio square, lead gm_lead_2_sawtooth
 setcpm(100/4)
 
 const plan = (verse, chorus, outro) =>
@@ -467,6 +495,7 @@ $: stack(
     code: `// Dust and Diesel: a stoner rock song in D minor
 // Forty-eight bars: riff, verse, chorus, breakdown, chorus, outro. Low fuzz bass and guitar play one
 // riff; the drums change their kick every bar and fill at the end of every phrase.
+// Instruments: drums default kit, bass gm_electric_bass_pick, guitars gm_overdriven_guitar and gm_distortion_guitar
 setcpm(80/4)
 
 const riffs = "<[d2 ~ d2 f2 ~ g2 ab2 ~] [d2 ~ d2 f2 ~ g2 a2 ~] [d2 ~ d2 f2 ~ g2 ab2 ~] [c2 ~ c2 eb2 ~ f2 g2 ~]>"
@@ -563,6 +592,7 @@ $: note(lead).add(note(-12)).s("gm_distortion_guitar").shape(.5).lpf(1500).attac
     label: 'Rust and Rain (grunge)',
     code: `// Rust and Rain: a grunge song in E minor
 // Forty bars: quiet verse, loud chorus, quiet verse, loud chorus, bridge, outro.
+// Instruments: drums default kit, bass sawtooth, guitars gm_electric_guitar_clean, gm_overdriven_guitar and gm_distortion_guitar
 setcpm(120/4)
 
 const plan = (verse, chorus, bridge, outro) =>
@@ -611,6 +641,7 @@ $: stack(
     label: 'Winter Court (classical)',
     code: `// Winter Court: a classical piece in D minor
 // Thirty-two bars: theme, a turn to F major, the theme returned with a counter-line, coda.
+// Instruments: strings gm_string_ensemble_1, cello gm_cello, violin gm_violin, viola gm_viola, timpani gm_timpani
 setcpm(80/4)
 
 const theme = "<Dm Gm A7 Dm Bb Gm A7 Dm>"
@@ -647,6 +678,7 @@ $: stack(
     label: 'Uptown Strut (funk)',
     code: `// Uptown Strut: a funk song in E
 // Forty-eight bars: intro, verse vamp, chorus, break, chorus and a last hit. The bass leads.
+// Instruments: drums default kit, bass gm_slap_bass_1, clavinet gm_clavinet, guitar gm_electric_guitar_muted, brass gm_brass_section
 setcpm(105/4)
 
 const vamp = "<A9 A9 E9 E9 B9 A9 E9 B9>"
@@ -693,6 +725,7 @@ $: note(brass).s("gm_brass_section").decay(.18).sustain(.2).room(.25).gain(.3)`
     label: 'Blue Hour (jazz)',
     code: `// Blue Hour: a jazz song in Bb major, on rhythm changes
 // Forty bars: intro, a 32-bar AABA head, tag. Swung eighths; the bass walks in quarters.
+// Instruments: drums default kit, bass gm_acoustic_bass, comping gm_epiano1, melody gm_vibraphone
 setcpm(136/4)
 
 const turn = "[Cm7 F7]"

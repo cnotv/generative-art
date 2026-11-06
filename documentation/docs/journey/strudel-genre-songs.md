@@ -83,7 +83,11 @@ report the drums as off style.
 
 The rewrite was checked against the songs it replaced. Each was exported to MIDI before and after,
 and every track matches note for note at the same times: 4 to 5 tracks a song, no note missing
-and none added. The six songs went from 21,000 to 14,600 characters.
+and none added. The six songs went from 21,000 to 14,600 characters. The eight earlier style songs were already
+written with `!` and short strings, so they only gained shared constants for masks they repeated and
+one drum bank per group, again with every track matching; Tideline, Harbour Steps, Wire Fence and
+Lift Off had nothing left to share. Every one of the fourteen now names its instruments in a
+comment under its style line.
 
 ## The briefs
 
