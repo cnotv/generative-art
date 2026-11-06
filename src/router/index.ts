@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { generatedRoutes } from '@/config/router'
 import { VIEW_META } from '@/config/viewsMeta'
 import { updatePageMeta } from '@/utils/pageMeta'
+import { OWNER_NAME, OWNER_PROFESSION } from '@/views/Experiments/LandingPage/config'
+
+const HOME_TITLE = `${OWNER_NAME} - ${OWNER_PROFESSION}`
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,7 +28,7 @@ const ogImage = (path: string): string =>
 
 const getPageTitle = (name: string | null | symbol): string => {
   if (name && typeof name === 'string') return name
-  return 'Generative Art'
+  return HOME_TITLE
 }
 
 router.beforeEach((to, _from, next) => {
