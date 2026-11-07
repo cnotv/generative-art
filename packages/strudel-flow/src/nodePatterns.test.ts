@@ -198,11 +198,10 @@ describe('generateStrudelFlowNodePattern', () => {
       },
       '.room(0.4).roomsize(2).roomfade(0.5).roomlp(10000).roomdim(8000)'
     ],
-    [
-      'level',
-      { kind: 'level' as const, gain: 1, pan: 0.5, postgain: 1 },
-      '.gain(1).pan(0.5).postgain(1)'
-    ],
+    ['gain', { kind: 'gain' as const, gain: 0.8 }, '.gain(0.8)'],
+    ['level', { kind: 'level' as const, pan: 0.5, postgain: 1 }, '.pan(0.5).postgain(1)'],
+    ['mask', { kind: 'mask' as const, argument: '"<1 0>"' }, '.mask("<1 0>")'],
+    ['empty mask', { kind: 'mask' as const, argument: ' ' }, ''],
     [
       'envelope',
       { kind: 'envelope' as const, attack: 0.1, decay: 0.1, sustain: 0.7, release: 0.2 },

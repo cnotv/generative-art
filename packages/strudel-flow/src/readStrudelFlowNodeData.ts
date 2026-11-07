@@ -25,7 +25,9 @@ import {
   STRUDEL_FLOW_DELAY_DEFAULTS,
   STRUDEL_FLOW_ENVELOPE_DEFAULTS,
   STRUDEL_FLOW_FILTER_DEFAULTS,
+  STRUDEL_FLOW_GAIN_DEFAULTS,
   STRUDEL_FLOW_LEVEL_DEFAULTS,
+  STRUDEL_FLOW_MASK_DEFAULTS,
   STRUDEL_FLOW_NOTES_DEFAULTS,
   STRUDEL_FLOW_PAD_DEFAULTS,
   STRUDEL_FLOW_SAMPLES_DEFAULTS,
@@ -60,7 +62,9 @@ const NODE_KINDS: StrudelFlowNodeKind[] = [
   'filter',
   'delay',
   'space',
+  'gain',
   'level',
+  'mask',
   'envelope',
   'visualizer',
   'effect'
@@ -249,7 +253,8 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
   samples: (raw) => ({
     ...readMuted(raw),
     kind: 'samples',
-    pattern: readStoredString(raw.pattern, STRUDEL_FLOW_SAMPLES_DEFAULTS.pattern)
+    pattern: readStoredString(raw.pattern, STRUDEL_FLOW_SAMPLES_DEFAULTS.pattern),
+    ...(raw.showPattern === true ? { showPattern: true } : {})
   }),
   code: (raw) => ({
     ...readMuted(raw),
@@ -299,9 +304,16 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
     ),
     roomDim: readStoredNumber(raw.roomDim, STRUDEL_FLOW_SPACE_DEFAULTS.roomDim, 0, 20000)
   }),
+  gain: (raw) => ({
+    kind: 'gain',
+    gain: readStoredNumber(raw.gain, STRUDEL_FLOW_GAIN_DEFAULTS.gain, 0, 2)
+  }),
+  mask: (raw) => ({
+    kind: 'mask',
+    argument: readStoredString(raw.argument, STRUDEL_FLOW_MASK_DEFAULTS.argument)
+  }),
   level: (raw) => ({
     kind: 'level',
-    gain: readStoredNumber(raw.gain, STRUDEL_FLOW_LEVEL_DEFAULTS.gain, 0, 2),
     pan: readStoredNumber(raw.pan, STRUDEL_FLOW_LEVEL_DEFAULTS.pan, 0, 1),
     postgain: readStoredNumber(raw.postgain, STRUDEL_FLOW_LEVEL_DEFAULTS.postgain, 0, 2)
   }),
