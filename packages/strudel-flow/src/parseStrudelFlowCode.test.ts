@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { compileStrudelFlow } from './compileStrudelFlow'
+import { STRUDEL_FLOW_NODE_START_X, STRUDEL_FLOW_NODE_START_Y } from './config'
+import { getStrudelFlowNodeSize } from './layout'
 import { createDefaultStrudelFlowPatch } from './defaultPatch'
 import { createStrudelFlowDrumRow, createStrudelFlowNodeData } from './nodeDefaults'
 import { generateStrudelFlowNodePattern } from './nodePatterns'
@@ -57,6 +59,44 @@ describe('parseStrudelFlowCode', () => {
       patch.nodes.map((node) => node.position)
     )
     expect(compileStrudelFlow(parsed!)).toEqual(original)
+  })
+
+  it('drops a previous position that would sit on a node of the new layout', () => {
+    // Arrange
+    const previousNodes = [
+      {
+        ...createNode('samples-1', createStrudelFlowNodeData('samples')),
+        position: { x: STRUDEL_FLOW_NODE_START_X, y: STRUDEL_FLOW_NODE_START_Y }
+      }
+    ]
+    const song = `$: stack(
+  s("bd*4").gain(.5).mask("<1!40 0!8 1!16>"),
+  s("[~ hh]*4").gain(.35).mask("<0!4 1!60>")
+).bank("RolandTR909")`
+
+    // Act
+    const parsed = parseStrudelFlowCode(song, previousNodes)
+
+    // Assert
+    const boxes = (parsed?.nodes ?? []).map((node) => ({
+      id: node.id,
+      ...node.position,
+      ...getStrudelFlowNodeSize(node.data.kind)
+    }))
+    const overlapping = boxes.flatMap((left, index) =>
+      boxes
+        .slice(index + 1)
+        .filter(
+          (right) =>
+            left.x < right.x + right.width &&
+            right.x < left.x + left.width &&
+            left.y < right.y + right.height &&
+            right.y < left.y + left.height
+        )
+        .map((right) => `${left.id} on ${right.id}`)
+    )
+    expect(parsed?.nodes.map((node) => node.data.kind)).toContain('samples')
+    expect(overlapping).toEqual([])
   })
 
   it.each([
