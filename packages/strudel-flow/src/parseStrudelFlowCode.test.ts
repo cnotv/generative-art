@@ -331,12 +331,35 @@ describe('parseStrudelFlowCode', () => {
 
     // Assert
     expect(parsed?.nodes.map((node) => node.data)).toEqual([
-      { kind: 'notes', pattern: '<C Am>', notation: 'names', head: 'chord' },
+      {
+        kind: 'chords',
+        key: 'C',
+        octave: 4,
+        scaleType: 'major',
+        chordProgression: [0, 5],
+        chordSymbols: true
+      },
       { kind: 'voicing' },
       { kind: 'struct', argument: '"x ~ x x"' },
       { kind: 'slow', amount: 8 },
       { kind: 'effect', calls: [{ method: 'slow', argument: 'slider(2, 1, 4)' }] }
     ])
+    expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
+  })
+
+  it('keeps chord symbols that no key holds as a Notes node', () => {
+    // Arrange
+    const code = '$: chord("<Cm7 Fm7>").voicing()'
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+
+    // Assert
+    expect(parsed?.nodes[0]?.data).toMatchObject({
+      kind: 'notes',
+      notation: 'names',
+      head: 'chord'
+    })
     expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
   })
 

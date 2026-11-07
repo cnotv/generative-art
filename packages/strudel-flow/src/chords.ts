@@ -22,8 +22,8 @@ const KEY_PITCHES: Record<string, number> = {
   B: 11
 }
 
-const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11]
-const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10]
+export const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11]
+export const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10]
 
 const DEGREE_LABELS = {
   major: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'],

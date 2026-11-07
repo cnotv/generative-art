@@ -213,7 +213,8 @@ const readChords = (raw: Record<string, unknown>): StrudelFlowChordsData => {
       STRUDEL_FLOW_CHORDS_DEFAULTS.scaleType
     ) as StrudelFlowChordsData['scaleType'],
     chordProgression: readChordProgression(raw.chordProgression),
-    ...(chordNotes === undefined ? {} : { chordNotes })
+    ...(chordNotes === undefined ? {} : { chordNotes }),
+    ...(raw.chordSymbols === true ? { chordSymbols: true } : {})
   }
 }
 

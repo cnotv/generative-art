@@ -1,3 +1,4 @@
+import { writeStrudelFlowChordSymbols } from './chordSymbols'
 import { getStrudelFlowChordNotes } from './chords'
 import type {
   StrudelFlowBeatsData,
@@ -97,6 +98,9 @@ const generateChordsPattern = (data: StrudelFlowChordsData): string => {
   const chords = getStrudelFlowChordNotes(data)
   if (chords.every((chord) => chord.length === 0)) {
     return ''
+  }
+  if (data.chordSymbols === true) {
+    return `chord(${JSON.stringify(writeStrudelFlowChordSymbols(data))})`
   }
   const chordPatterns = chords.map((chord) => (chord.length > 0 ? `[${chord.join(',')}]` : '~'))
   const scale = `${data.key}${data.octave}:${data.scaleType}`

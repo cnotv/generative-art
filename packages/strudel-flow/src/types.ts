@@ -79,6 +79,8 @@ export type StrudelFlowChordsData = StrudelFlowMuteFlag & {
   scaleType: 'major' | 'minor'
   chordProgression: number[]
   chordNotes?: number[][]
+  /** Set when the code names its chords, `chord("<C Am F G>")`, rather than their scale degrees. */
+  chordSymbols?: boolean
 }
 
 /** How a Notes node draws its notes: picked from the sound it plays, or one chosen by hand. */

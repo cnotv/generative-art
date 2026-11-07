@@ -1,3 +1,4 @@
+import { readStrudelFlowChordSymbols } from './chordSymbols'
 import {
   isStringLiteral,
   isStrudelCodeSyntaxValid,
@@ -389,6 +390,11 @@ const readMiniNotationHead = (head: Call): StrudelFlowNodeData | null => {
   }
   if (head.name === 'note') {
     return { kind: 'notes', pattern: readStringLiteral(head.argument), notation: 'auto' }
+  }
+  const chordSymbols =
+    head.name === CHORD_HEAD ? readStrudelFlowChordSymbols(readStringLiteral(head.argument)) : null
+  if (chordSymbols !== null) {
+    return chordSymbols
   }
   if (head.name === CHORD_HEAD) {
     return {
