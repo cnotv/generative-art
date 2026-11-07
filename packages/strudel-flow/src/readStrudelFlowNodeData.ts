@@ -28,6 +28,8 @@ import {
   STRUDEL_FLOW_GAIN_DEFAULTS,
   STRUDEL_FLOW_LEVEL_DEFAULTS,
   STRUDEL_FLOW_MASK_DEFAULTS,
+  STRUDEL_FLOW_SLOW_DEFAULTS,
+  STRUDEL_FLOW_STRUCT_DEFAULTS,
   STRUDEL_FLOW_NOTES_DEFAULTS,
   STRUDEL_FLOW_PAD_DEFAULTS,
   STRUDEL_FLOW_SAMPLES_DEFAULTS,
@@ -64,6 +66,9 @@ const NODE_KINDS: StrudelFlowNodeKind[] = [
   'gain',
   'level',
   'mask',
+  'struct',
+  'slow',
+  'voicing',
   'envelope',
   'visualizer',
   'effect'
@@ -304,6 +309,15 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
     kind: 'mask',
     argument: readStoredString(raw.argument, STRUDEL_FLOW_MASK_DEFAULTS.argument)
   }),
+  struct: (raw) => ({
+    kind: 'struct',
+    argument: readStoredString(raw.argument, STRUDEL_FLOW_STRUCT_DEFAULTS.argument)
+  }),
+  slow: (raw) => ({
+    kind: 'slow',
+    amount: readStoredNumber(raw.amount, STRUDEL_FLOW_SLOW_DEFAULTS.amount, 0.25, 8)
+  }),
+  voicing: () => ({ kind: 'voicing' }),
   level: (raw) => ({
     kind: 'level',
     pan: readStoredNumber(raw.pan, STRUDEL_FLOW_LEVEL_DEFAULTS.pan, 0, 1),

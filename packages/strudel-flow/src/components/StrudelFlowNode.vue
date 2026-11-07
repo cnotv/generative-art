@@ -13,6 +13,9 @@ import StrudelFlowFilterControls from './controls/StrudelFlowFilterControls.vue'
 import StrudelFlowGainControls from './controls/StrudelFlowGainControls.vue'
 import StrudelFlowLevelControls from './controls/StrudelFlowLevelControls.vue'
 import StrudelFlowMaskControls from './controls/StrudelFlowMaskControls.vue'
+import StrudelFlowSlowControls from './controls/StrudelFlowSlowControls.vue'
+import StrudelFlowStructControls from './controls/StrudelFlowStructControls.vue'
+import StrudelFlowVoicingControls from './controls/StrudelFlowVoicingControls.vue'
 import StrudelFlowPadControls from './controls/StrudelFlowPadControls.vue'
 import StrudelFlowPatternControls from './controls/StrudelFlowPatternControls.vue'
 import StrudelFlowSamplesControls from './controls/StrudelFlowSamplesControls.vue'
@@ -55,6 +58,9 @@ const NODE_CONTROLS: Record<Exclude<StrudelFlowNodeKind, 'effect'>, Component> =
   gain: markRaw(StrudelFlowGainControls),
   level: markRaw(StrudelFlowLevelControls),
   mask: markRaw(StrudelFlowMaskControls),
+  struct: markRaw(StrudelFlowStructControls),
+  slow: markRaw(StrudelFlowSlowControls),
+  voicing: markRaw(StrudelFlowVoicingControls),
   envelope: markRaw(StrudelFlowEnvelopeControls),
   visualizer: markRaw(StrudelFlowVisualizerControls)
 }

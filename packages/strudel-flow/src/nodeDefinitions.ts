@@ -81,6 +81,24 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     description: 'Which steps or cycles of the pattern play, such as <1 1 1 0>.'
   },
   {
+    kind: 'struct',
+    title: 'Struct',
+    category: 'Effects',
+    description: 'Which steps of the pattern hit, picked with switches.'
+  },
+  {
+    kind: 'slow',
+    title: 'Slow',
+    category: 'Effects',
+    description: 'Stretches each cycle over more time.'
+  },
+  {
+    kind: 'voicing',
+    title: 'Voicing',
+    category: 'Effects',
+    description: 'Spreads chord symbols into played notes.'
+  },
+  {
     kind: 'envelope',
     title: 'Envelope',
     category: 'Effects',

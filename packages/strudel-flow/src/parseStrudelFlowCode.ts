@@ -85,6 +85,9 @@ const DRUM_TOKEN_PATTERN = /^(\d*[A-Za-z]\w*(?::\d+)?)(![2-4]|\/[2-4]|@[2-4]|\*[
 const KEY_ALIASES: Record<string, string> = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' }
 const VOICE_CALLS = new Set(['sound', 's'])
 const MASK_CALL = 'mask'
+const STRUCT_CALL = 'struct'
+const SLOW_CALL = 'slow'
+const VOICING_CALL = 'voicing'
 const SAMPLE_HEADS = new Set(['s', 'sound'])
 const CHORD_HEAD = 'chord'
 const LABEL_PATTERN = /^(_?\$|[A-Z_a-z]\w*)\s*:(?!:)\s*/
@@ -458,12 +461,20 @@ const addGenericCall = (state: EffectChainState, call: Call): EffectChainState =
   fieldsOnLast: []
 })
 
-// A mask, a voice and a visual each get a node of their own, whatever comes before them; a mask
-// whatever its argument, since it decides what plays at all.
-const readStandaloneEffect = (call: Call): StrudelFlowNodeData | null => {
-  if (call.name === MASK_CALL && call.argument.length > 0) {
-    return { kind: 'mask', argument: call.argument }
-  }
+// The calls whose argument one node reads whole; each returns null when it cannot.
+const PATTERN_ARGUMENT_NODES: Record<string, (call: Call) => StrudelFlowNodeData | null> = {
+  [MASK_CALL]: (call) =>
+    call.argument.length > 0 ? { kind: 'mask', argument: call.argument } : null,
+  [STRUCT_CALL]: (call) =>
+    call.argument.length > 0 ? { kind: 'struct', argument: call.argument } : null,
+  [SLOW_CALL]: (call) => {
+    const amount = readNumber(call.argument)
+    return amount === null ? null : { kind: 'slow', amount }
+  },
+  [VOICING_CALL]: (call) => (call.argument.length === 0 ? { kind: 'voicing' } : null)
+}
+
+const readVoiceOrVisual = (call: Call): StrudelFlowNodeData | null => {
   if (VOICE_CALLS.has(call.name) && isStringLiteral(call.argument)) {
     return { kind: 'voice', sound: readStringLiteral(call.argument) }
   }
@@ -477,6 +488,11 @@ const readStandaloneEffect = (call: Call): StrudelFlowNodeData | null => {
         options: call.argument
       }
 }
+
+// A mask, a struct, a slow, a voicing, a voice and a visual each get a node of their own,
+// whatever comes before them; a mask whatever its argument, since it decides what plays at all.
+const readStandaloneEffect = (call: Call): StrudelFlowNodeData | null =>
+  PATTERN_ARGUMENT_NODES[call.name]?.(call) ?? readVoiceOrVisual(call)
 
 // Consecutive calls of one effect, such as `.lpf(800).lpq(4)`, share a node until a field
 // repeats; a call with a pattern or a slider for its argument gets an Effect node instead.

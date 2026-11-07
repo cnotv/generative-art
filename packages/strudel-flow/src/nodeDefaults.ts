@@ -16,6 +16,9 @@ import type {
   StrudelFlowGainData,
   StrudelFlowLevelData,
   StrudelFlowMaskData,
+  StrudelFlowSlowData,
+  StrudelFlowStructData,
+  StrudelFlowVoicingData,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
   StrudelFlowNotesData,
@@ -142,6 +145,20 @@ export const STRUDEL_FLOW_MASK_DEFAULTS: StrudelFlowMaskData = {
   argument: '"<1 1 1 0>"'
 }
 
+export const STRUDEL_FLOW_STRUCT_DEFAULTS: StrudelFlowStructData = {
+  kind: 'struct',
+  argument: '"x ~ x x ~ x x ~"'
+}
+
+export const STRUDEL_FLOW_SLOW_DEFAULTS: StrudelFlowSlowData = {
+  kind: 'slow',
+  amount: 2
+}
+
+export const STRUDEL_FLOW_VOICING_DEFAULTS: StrudelFlowVoicingData = {
+  kind: 'voicing'
+}
+
 export const STRUDEL_FLOW_ENVELOPE_DEFAULTS: StrudelFlowEnvelopeData = {
   kind: 'envelope',
   attack: 0.1,
@@ -198,6 +215,9 @@ const NODE_DATA_FACTORIES: { [Kind in StrudelFlowNodeKind]: () => StrudelFlowNod
   gain: () => ({ ...STRUDEL_FLOW_GAIN_DEFAULTS }),
   level: () => ({ ...STRUDEL_FLOW_LEVEL_DEFAULTS }),
   mask: () => ({ ...STRUDEL_FLOW_MASK_DEFAULTS }),
+  struct: () => ({ ...STRUDEL_FLOW_STRUCT_DEFAULTS }),
+  slow: () => ({ ...STRUDEL_FLOW_SLOW_DEFAULTS }),
+  voicing: () => ({ ...STRUDEL_FLOW_VOICING_DEFAULTS }),
   envelope: () => ({ ...STRUDEL_FLOW_ENVELOPE_DEFAULTS }),
   visualizer: () => ({ ...STRUDEL_FLOW_VISUALIZER_DEFAULTS }),
   effect: () => ({

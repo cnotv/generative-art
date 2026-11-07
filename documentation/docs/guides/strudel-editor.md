@@ -240,6 +240,9 @@ the beats in one cycle (**B/C**).
 | **Gain**       | effect     | `gain`                                                                              |
 | **Level**      | effect     | `pan` and `postgain`                                                                |
 | **Mask**       | effect     | `mask`: which steps or cycles play                                                  |
+| **Struct**     | effect     | `struct`: which steps hit, as switches                                              |
+| **Slow**       | effect     | `slow`: how many times longer a cycle lasts, as a knob                              |
+| **Voicing**    | effect     | `voicing`: spreads chord symbols into played notes                                  |
 | **Envelope**   | effect     | `attack`, `decay`, `sustain` and `release`                                          |
 | **Visualizer** | effect     | a pianoroll, punchcard, scope, spiral, pitch wheel or spectrum, picked from a list  |
 | **Effect**     | effect     | one chained call no other node covers, such as `.jux(rev)`                          |

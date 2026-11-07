@@ -14,6 +14,9 @@ export type StrudelFlowNodeKind =
   | 'gain'
   | 'level'
   | 'mask'
+  | 'struct'
+  | 'slow'
+  | 'voicing'
   | 'envelope'
   | 'visualizer'
   | 'effect'
@@ -407,6 +410,23 @@ export type StrudelFlowMaskData = {
   argument: string
 }
 
+/** `.struct(...)`: which steps of the pattern hit, as `x` and `~`. The argument is kept as written. */
+export type StrudelFlowStructData = {
+  kind: 'struct'
+  argument: string
+}
+
+/** `.slow(...)`: how many times longer each cycle lasts. */
+export type StrudelFlowSlowData = {
+  kind: 'slow'
+  amount: number
+}
+
+/** `.voicing()`: spreads chord symbols into played notes. */
+export type StrudelFlowVoicingData = {
+  kind: 'voicing'
+}
+
 export type StrudelFlowEnvelopeData = {
   kind: 'envelope'
   attack: number
@@ -446,6 +466,9 @@ export type StrudelFlowNodeData =
   | StrudelFlowGainData
   | StrudelFlowLevelData
   | StrudelFlowMaskData
+  | StrudelFlowStructData
+  | StrudelFlowSlowData
+  | StrudelFlowVoicingData
   | StrudelFlowEnvelopeData
   | StrudelFlowVisualizerData
   | StrudelFlowEffectData

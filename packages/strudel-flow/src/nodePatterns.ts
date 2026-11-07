@@ -177,6 +177,19 @@ const generateMaskPattern = (
   return input.length === 0 || argument.length === 0 ? input : `${input}.mask(${argument})`
 }
 
+const generateStructPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'struct' }>,
+  input: string
+): string => {
+  const argument = data.argument.trim()
+  return input.length === 0 || argument.length === 0 ? input : `${input}.struct(${argument})`
+}
+
+const generateSlowPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'slow' }>,
+  input: string
+): string => (input.length === 0 ? '' : `${input}.slow(${formatStrudelFlowNumber(data.amount)})`)
+
 const generateEnvelopePattern = (
   data: Extract<StrudelFlowNodeData, { kind: 'envelope' }>,
   input: string
@@ -227,6 +240,9 @@ const PATTERN_GENERATORS: PatternGenerators = {
   gain: generateGainPattern,
   level: generateLevelPattern,
   mask: generateMaskPattern,
+  struct: generateStructPattern,
+  slow: generateSlowPattern,
+  voicing: (_data, input) => (input.length === 0 ? '' : `${input}.voicing()`),
   envelope: generateEnvelopePattern,
   visualizer: generateVisualizerPattern,
   effect: (data, input) => (input.length === 0 ? '' : `${input}${chainCalls(data.calls)}`)
