@@ -17,7 +17,7 @@ import {
   STRUDEL_FLOW_PAD_MODIFIER_OPTIONS,
   STRUDEL_FLOW_SCALE_OPTIONS
 } from './config'
-import { getStrudelFlowNodeSize } from './layout'
+import { doStrudelFlowNodesOverlap, getStrudelFlowNodeSize } from './layout'
 import {
   createStrudelFlowDrumRow,
   createStrudelFlowNodeData,
@@ -60,6 +60,7 @@ type BuildState = {
   nodes: StrudelFlowNode[]
   edges: StrudelFlowEdge[]
   reusable: StrudelFlowNode[]
+  layoutPositions: Record<string, StrudelFlowNodePosition>
   rowTop: number
 }
 
@@ -692,6 +693,10 @@ const placeNode = (
     state: {
       ...state,
       reusable: reused.reusable,
+      layoutPositions:
+        reused.node === null
+          ? state.layoutPositions
+          : { ...state.layoutPositions, [nodeId]: fallbackPosition },
       nodes: [
         ...state.nodes,
         {
@@ -802,6 +807,29 @@ const addChain = (state: BuildState, chain: ParsedChain): BuildState => {
   }
 }
 
+// A reused position keeps the user's arrangement through a code edit, but one carried over from
+// an unrelated program, such as a freshly loaded song, can land on a node the new layout placed.
+// That node goes back to its layout position, which can in turn clash with another reused one.
+const settleReusedPositions = (
+  nodes: StrudelFlowNode[],
+  layoutPositions: Record<string, StrudelFlowNodePosition>
+): StrudelFlowNode[] => {
+  const isReused = (node: StrudelFlowNode): boolean => node.id in layoutPositions
+  const clashing = nodes.find(
+    (node) =>
+      isReused(node) &&
+      nodes.some((other) => !isReused(other) && doStrudelFlowNodesOverlap(node, other))
+  )
+  if (clashing === undefined) {
+    return nodes
+  }
+  const { [clashing.id]: layoutPosition, ...remaining } = layoutPositions
+  return settleReusedPositions(
+    nodes.map((node) => (node.id === clashing.id ? { ...node, position: layoutPosition } : node)),
+    remaining
+  )
+}
+
 /**
  * Rebuilds a flow patch from Strudel code, so whatever the code editor holds also shows as a
  * graph. Recognised calls become their dedicated nodes, any other chained call a generic Effect
@@ -828,10 +856,11 @@ export const parseStrudelFlowCode = (
       nodes: [],
       edges: [],
       reusable: existingNodes,
+      layoutPositions: {},
       rowTop: STRUDEL_FLOW_NODE_START_Y
     })
   return {
-    nodes: built.nodes,
+    nodes: settleReusedPositions(built.nodes, built.layoutPositions),
     edges: built.edges,
     beatsPerMinute: program.tempo.beatsPerMinute,
     beatsPerCycle: program.tempo.beatsPerCycle,
