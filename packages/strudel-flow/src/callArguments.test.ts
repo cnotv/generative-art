@@ -37,6 +37,7 @@ describe('readStrudelFlowCallFields', () => {
     ['a call it has no controls for', { method: 'jux', argument: 'rev' }],
     ['a pattern where a number goes', { method: 'fast', argument: '"<1 2>"' }],
     ['too few arguments', { method: 'swingBy', argument: '1/3' }],
+    ['a mask longer than the strip can show', { method: 'mask', argument: `"<1!65>"` }],
     ['a mask that is not ones and zeros', { method: 'mask', argument: '"<1 [0 1]>"' }]
   ])('keeps %s as written', (_case, call) => {
     // Arrange / Act
@@ -44,6 +45,33 @@ describe('readStrudelFlowCallFields', () => {
 
     // Assert
     expect(readFields).toBeNull()
+  })
+})
+
+describe('repeated mask steps', () => {
+  it('reads 1!40 as forty cycles and writes runs back with the same repeats', () => {
+    // Arrange
+    const [field] = readStrudelFlowCallFields({ method: 'mask', argument: '"<1!40 0!8 1!16>"' })!
+
+    // Act
+    const argument = writeStrudelFlowCallFields([field])
+
+    // Assert
+    expect(field).toMatchObject({ kind: 'toggles', perCycle: true, repeated: true })
+    expect(field.kind === 'toggles' && field.steps).toHaveLength(64)
+    expect(argument).toBe('"<1!40 0!8 1!16>"')
+  })
+
+  it('writes a toggled cycle as its own run', () => {
+    // Arrange
+    const [field] = readStrudelFlowCallFields({ method: 'mask', argument: '"<1!4 0>"' })!
+    const toggled = { ...field, steps: [true, false, true, true, false] } as typeof field
+
+    // Act
+    const argument = writeStrudelFlowCallFields([toggled])
+
+    // Assert
+    expect(argument).toBe('"<1 0 1!2 0>"')
   })
 })
 

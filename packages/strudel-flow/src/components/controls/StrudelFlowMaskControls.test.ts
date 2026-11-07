@@ -17,7 +17,19 @@ describe('StrudelFlowMaskControls', () => {
     expect(wrapper.emitted('update')?.[0]).toEqual([{ kind: 'mask', argument: '"<1 0 1 0>"' }])
   })
 
-  it.each(['"<1!40 0!8>"', 'body'])('edits %s as text, with no switches', async (argument) => {
+  it('shows a run of repeats as switches and keeps the runs when one is turned off', async () => {
+    // Arrange
+    const wrapper = mountMask('"<1!4 0!2>"')
+
+    // Act
+    await wrapper.get('button[aria-label="Cycle 3"]').trigger('click')
+
+    // Assert
+    expect(wrapper.findAll('button[aria-label^="Cycle"]')).toHaveLength(6)
+    expect(wrapper.emitted('update')?.[0]).toEqual([{ kind: 'mask', argument: '"<1!2 0 1 0!2>"' }])
+  })
+
+  it.each(['"<1 [0 1]>"', 'body'])('edits %s as text, with no switches', async (argument) => {
     // Arrange
     const wrapper = mountMask(argument)
 

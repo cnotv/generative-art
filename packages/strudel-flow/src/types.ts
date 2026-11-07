@@ -365,6 +365,8 @@ export type StrudelFlowCallField =
       steps: boolean[]
       /** Written `"<1 0>"`, one step per cycle, rather than `"1 0"` within one. */
       perCycle: boolean
+      /** Written with repeats such as `1!40`, so the steps are written back as runs. */
+      repeated?: boolean
     }
 
 /** A chained call no dedicated node covers, such as `.jux(rev)`, as a node of its own. */
