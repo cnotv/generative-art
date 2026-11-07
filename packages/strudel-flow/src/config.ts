@@ -2,6 +2,7 @@ import type {
   StrudelFlowCallParameter,
   StrudelFlowNotation,
   StrudelFlowNotationView,
+  StrudelFlowSampleFamily,
   StrudelFlowVisualName
 } from './types'
 
@@ -371,3 +372,61 @@ export const STRUDEL_FLOW_SHEET_TIE_OFFSET = 0.7
 export const STRUDEL_FLOW_SHEET_TIE_SAG = 0.7
 export const STRUDEL_FLOW_SHEET_BRACKET_RISE = 3
 export const STRUDEL_FLOW_SHEET_STROKE_WIDTH = 0.12
+
+/** What can follow a sample in a Samples step: a repeat, a length, a speed or a rhythm. */
+export const STRUDEL_FLOW_SAMPLE_MODIFIER_OPTIONS = [
+  { value: '', label: 'Once' },
+  { value: '*2', label: '×2' },
+  { value: '*3', label: '×3' },
+  { value: '*4', label: '×4' },
+  { value: '*8', label: '×8' },
+  { value: '!2', label: 'Repeat 2' },
+  { value: '!3', label: 'Repeat 3' },
+  { value: '!4', label: 'Repeat 4' },
+  { value: '@2', label: 'Hold 2' },
+  { value: '@3', label: 'Hold 3' },
+  { value: '/2', label: 'Every 2nd cycle' },
+  { value: '/4', label: 'Every 4th cycle' },
+  { value: '?', label: 'Sometimes' },
+  { value: '(3,8)', label: 'Euclid 3 of 8' },
+  { value: '(5,8)', label: 'Euclid 5 of 8' },
+  { value: '(3,8,2)', label: 'Euclid 3 of 8, shifted' }
+]
+
+/** The step a Samples line gains from its add button before a sample is picked. */
+export const STRUDEL_FLOW_NEW_SAMPLE_STEP = 'bd'
+
+/**
+ * Instrument families the sample picker sorts by, matched in order against a sample's name, so
+ * `808bd` and `rolandtr909_bd` both land under Kicks. Anything unmatched is Other.
+ */
+export const STRUDEL_FLOW_SAMPLE_FAMILIES: StrudelFlowSampleFamily[] = [
+  { id: 'kick', label: 'Kicks', match: '(^|[_\\d])(bd|kick)|kick|bassdrum' },
+  { id: 'snare', label: 'Snares', match: '(^|[_\\d])(sd|sn|rim|rs)(\\b|_|$|\\d)|snare|rimshot' },
+  { id: 'hihat', label: 'Hi-hats', match: '(^|[_\\d])(hh|oh|ch|hc|ho|oc)|hat' },
+  { id: 'clap', label: 'Claps', match: '(^|[_\\d])cp|clap|hand' },
+  { id: 'tom', label: 'Toms', match: '(^|[_\\d])(lt|mt|ht|lc|mc|hc)(\\b|_|$|\\d)|tom' },
+  {
+    id: 'cymbal',
+    label: 'Cymbals',
+    match: '(^|[_\\d])(cr|cy|cb|rd)(\\b|_|$|\\d)|ride|crash|cymbal|cowbell'
+  },
+  {
+    id: 'percussion',
+    label: 'Percussion',
+    match: 'perc|tabla|conga|bongo|shaker|tamb|tok|tink|click|stomp|clave|glass|can|bottle|wood'
+  },
+  { id: 'bass', label: 'Bass', match: 'bass|sub|jvbass|jungbass' },
+  { id: 'keys', label: 'Keys', match: 'piano|keys|rhodes|organ|epiano|casio|wurli|clav|pad|arpy' },
+  {
+    id: 'strings',
+    label: 'Guitar and strings',
+    match: 'guitar|gtr|string|violin|cello|harp|pluck'
+  },
+  { id: 'voice', label: 'Voices', match: 'voc|voice|vox|choir|speech|sing|numbers|alphabet|mouth' },
+  {
+    id: 'fx',
+    label: 'Effects and noise',
+    match: 'fx|noise|glitch|sweep|wind|metal|industrial|space'
+  }
+]

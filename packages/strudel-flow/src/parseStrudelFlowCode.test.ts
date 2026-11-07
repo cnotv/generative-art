@@ -63,7 +63,9 @@ describe('parseStrudelFlowCode', () => {
     ['filter', createStrudelFlowNodeData('filter')],
     ['delay', createStrudelFlowNodeData('delay')],
     ['space', createStrudelFlowNodeData('space')],
+    ['gain', createStrudelFlowNodeData('gain')],
     ['level', createStrudelFlowNodeData('level')],
+    ['mask', createStrudelFlowNodeData('mask')],
     ['envelope', createStrudelFlowNodeData('envelope')],
     ['visualizer', createStrudelFlowNodeData('visualizer')]
   ])('round-trips a pad through a %s effect', (kind, effect) => {
@@ -267,7 +269,7 @@ describe('parseStrudelFlowCode', () => {
     ['$: note("c3").lpf(slider(800, 200, 4000))', ['notes']],
     ['$: "c3 e3".note().jux(rev)', ['code']],
     ['$: stack(note("c3"), s("bd")).jux(rev)', ['notes', 'beats', 'effect']],
-    ['$: note("c3")\n  // a comment between calls\n  .gain(.5)', ['notes', 'level']],
+    ['$: note("c3")\n  // a comment between calls\n  .gain(.5)', ['notes', 'gain']],
     ['$: note("c3")\n$: s("bd")', ['notes', 'beats']]
   ])('maps %s onto nodes', (code, kinds) => {
     // Arrange / Act
@@ -295,11 +297,9 @@ describe('parseStrudelFlowCode', () => {
       {
         kind: 'voice',
         sound: 'piano',
-        calls: [
-          { method: 'fast', argument: '2' },
-          { method: 'mask', argument: '"<1 0>"' }
-        ]
-      }
+        calls: [{ method: 'fast', argument: '2' }]
+      },
+      { kind: 'mask', argument: '"<1 0>"' }
     ])
     expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
   })
@@ -339,7 +339,7 @@ describe('parseStrudelFlowCode', () => {
 
   it('starts an Effect node for calls after a visual rather than putting them on it', () => {
     // Arrange
-    const code = '$: note("c3")._punchcard().mask("<1 1 1 0>").swingBy(1/3, 4)'
+    const code = '$: note("c3")._punchcard().jux(rev).swingBy(1/3, 4)'
 
     // Act
     const parsed = parseStrudelFlowCode(code)
@@ -352,14 +352,33 @@ describe('parseStrudelFlowCode', () => {
 
   it('keeps stacked drum lines with calls of their own apart', () => {
     // Arrange
-    const code = '$: stack(s("bd").mask("1 0"), s("hh"))'
+    const code = '$: stack(s("bd").fast(2), s("hh"))'
 
     // Act
     const parsed = parseStrudelFlowCode(code)
 
     // Assert
     expect(parsed?.nodes.map((node) => node.data.kind)).toEqual(['beats', 'beats'])
-    expect(parsed?.nodes[0]?.data.calls).toEqual([{ method: 'mask', argument: '"1 0"' }])
+    expect(parsed?.nodes[0]?.data.calls).toEqual([{ method: 'fast', argument: '2' }])
+  })
+
+  it('gives a sample line its own Gain and Mask nodes', () => {
+    // Arrange
+    const code = '$: s("bd*4").gain(.5).mask("<1!40 0!8>")'
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+
+    // Assert
+    expect(parsed?.nodes.map((node) => node.data)).toEqual([
+      expect.objectContaining({ kind: 'beats' }),
+      { kind: 'gain', gain: 0.5 },
+      { kind: 'mask', argument: '"<1!40 0!8>"' }
+    ])
+    expect(parsed?.edges.map((edge) => `${edge.source}>${edge.target}`)).toEqual([
+      'beats-1>gain-1',
+      'gain-1>mask-1'
+    ])
   })
 
   it('wires every stacked instrument into the shared effects in signal order', () => {
@@ -373,7 +392,7 @@ describe('parseStrudelFlowCode', () => {
     expect(parsed?.edges.map((edge) => `${edge.source}>${edge.target}`)).toEqual([
       'notes-1>space-1',
       'samples-1>space-1',
-      'space-1>level-1'
+      'space-1>gain-1'
     ])
   })
 
@@ -394,7 +413,7 @@ describe('parseStrudelFlowCode', () => {
     )
     expect(parsed?.nodes.map((node) => node.data)).toEqual([
       { kind: 'code', code: 'note(melody)' },
-      { kind: 'level', gain: 0.7, pan: 0.5, postgain: 1 }
+      { kind: 'gain', gain: 0.7 }
     ])
   })
 

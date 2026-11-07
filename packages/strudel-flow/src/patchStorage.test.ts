@@ -310,7 +310,7 @@ describe('parseStrudelFlowPatch', () => {
         {
           id: 'level',
           position: { x: 0, y: 100 },
-          data: { kind: 'level', gain: 5, pan: -1, postgain: 0.5 }
+          data: { kind: 'level', pan: -1, postgain: 0.5 }
         },
         {
           id: 'envelope',
@@ -339,7 +339,6 @@ describe('parseStrudelFlowPatch', () => {
     })
     expect(patch?.nodes[1]?.data).toEqual({
       kind: 'level',
-      gain: 2,
       pan: 0,
       postgain: 0.5
     })

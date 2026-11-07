@@ -153,15 +153,29 @@ const generateSpacePattern = (
         data.roomLowPass
       )}).roomdim(${formatStrudelFlowNumber(data.roomDim)})`
 
+const generateGainPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'gain' }>,
+  input: string
+): string => (input.length === 0 ? '' : `${input}.gain(${formatStrudelFlowNumber(data.gain)})`)
+
 const generateLevelPattern = (
   data: Extract<StrudelFlowNodeData, { kind: 'level' }>,
   input: string
 ): string =>
   input.length === 0
     ? ''
-    : `${input}.gain(${formatStrudelFlowNumber(data.gain)}).pan(${formatStrudelFlowNumber(
-        data.pan
-      )}).postgain(${formatStrudelFlowNumber(data.postgain)})`
+    : `${input}.pan(${formatStrudelFlowNumber(data.pan)}).postgain(${formatStrudelFlowNumber(
+        data.postgain
+      )})`
+
+// An empty mask lets everything through, so it writes nothing rather than `.mask()`.
+const generateMaskPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'mask' }>,
+  input: string
+): string => {
+  const argument = data.argument.trim()
+  return input.length === 0 || argument.length === 0 ? input : `${input}.mask(${argument})`
+}
 
 const generateEnvelopePattern = (
   data: Extract<StrudelFlowNodeData, { kind: 'envelope' }>,
@@ -210,7 +224,9 @@ const PATTERN_GENERATORS: PatternGenerators = {
   filter: generateFilterPattern,
   delay: generateDelayPattern,
   space: generateSpacePattern,
+  gain: generateGainPattern,
   level: generateLevelPattern,
+  mask: generateMaskPattern,
   envelope: generateEnvelopePattern,
   visualizer: generateVisualizerPattern,
   // An Effect node is nothing but its calls, which every node chains after its own pattern.

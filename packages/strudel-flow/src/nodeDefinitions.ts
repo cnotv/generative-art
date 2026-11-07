@@ -30,7 +30,7 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     kind: 'samples',
     title: 'Samples',
     category: 'Instruments',
-    description: 'A sample line in mini notation, such as bd*2 sd.'
+    description: 'A line of samples, rests and groups, such as bd*2 [~ sd].'
   },
   {
     kind: 'code',
@@ -63,10 +63,22 @@ export const STRUDEL_FLOW_NODE_DEFINITIONS: StrudelFlowNodeDefinition[] = [
     description: 'A room reverb with size, fade and damping.'
   },
   {
+    kind: 'gain',
+    title: 'Gain',
+    category: 'Effects',
+    description: 'How loud the pattern plays.'
+  },
+  {
     kind: 'level',
     title: 'Level',
     category: 'Effects',
-    description: 'Gain, stereo pan and postgain.'
+    description: 'Stereo pan and postgain.'
+  },
+  {
+    kind: 'mask',
+    title: 'Mask',
+    category: 'Effects',
+    description: 'Which steps or cycles of the pattern play, such as <1 1 1 0>.'
   },
   {
     kind: 'envelope',
