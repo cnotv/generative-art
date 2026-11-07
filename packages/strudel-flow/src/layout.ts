@@ -61,6 +61,15 @@ const overlaps = (
   right.y < left.y + left.height + NODE_GAP
 
 /**
+ * Whether two nodes would be drawn on top of each other or closer than the canvas gap.
+ * @param left - one node, at its position and measured or expected size
+ * @param right - the other node
+ * @returns true when their boxes, padded by the gap, intersect
+ */
+export const doStrudelFlowNodesOverlap = (left: StrudelFlowNode, right: StrudelFlowNode): boolean =>
+  overlaps({ ...left.position, ...sizeOf(left) }, { ...right.position, ...sizeOf(right) })
+
+/**
  * Finds the first free slot for a new node on the two-column canvas. Existing nodes keep
  * their positions, so adding a node near a tall pad or accordion never hides it underneath.
  * @param nodes - nodes already on the canvas
