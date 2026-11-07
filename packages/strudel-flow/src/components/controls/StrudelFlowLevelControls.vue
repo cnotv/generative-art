@@ -18,15 +18,6 @@ const update = (patch: Partial<StrudelFlowLevelData>): void => {
 <template>
   <div class="strudel-flow-knobs">
     <StrudelFlowKnob
-      label="Gain"
-      :model-value="data.gain"
-      :min="0"
-      :max="2"
-      :step="0.01"
-      suffix="×"
-      @update:model-value="update({ gain: $event })"
-    />
-    <StrudelFlowKnob
       label="Pan"
       :model-value="data.pan"
       :min="0"

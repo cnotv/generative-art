@@ -232,12 +232,14 @@ the beats in one cycle (**B/C**).
 | **Beats**      | instrument | up to eight drum tracks of any sample on up to sixteen steps                       |
 | **Chords**     | instrument | a chord progression with preset shapes and editable notes                          |
 | **Notes**      | instrument | a `note("…")` line in mini notation, drawn as a tab, sheet music or note names     |
-| **Samples**    | instrument | an `s("…")` line in mini notation                                                  |
+| **Samples**    | instrument | an `s("…")` line edited as steps, rests, groups and layers                         |
 | **Code**       | instrument | any Strudel expression, for what the controls do not cover                         |
 | **Filter**     | effect     | `lpf` and `lpq`                                                                    |
 | **Delay**      | effect     | `delay`, `delaytime` and `delayfeedback`                                           |
 | **Space**      | effect     | `room`, `roomsize`, `roomfade`, `roomlp` and `roomdim`                             |
-| **Level**      | effect     | `gain`, `pan` and `postgain`                                                       |
+| **Gain**       | effect     | `gain`                                                                             |
+| **Level**      | effect     | `pan` and `postgain`                                                               |
+| **Mask**       | effect     | `mask`: which steps or cycles play                                                 |
 | **Envelope**   | effect     | `attack`, `decay`, `sustain` and `release`                                         |
 | **Visualizer** | effect     | a pianoroll, punchcard, scope, spiral, pitch wheel or spectrum, picked from a list |
 | **Effect**     | effect     | chained calls with no single node to sit on, such as after a whole `stack(...)`    |
@@ -275,10 +277,23 @@ Each track is written as a plain sample line, such as `s("~ cp ~ cp*2")`, so typ
 that reads back as a Beats track too. Below the shortlist, each track's picker also lists every
 other sample and drum machine in the library, grouped and named as in the sounds tab.
 
-The Samples node has an **Add sample** picker under its pattern, with the same groups and
-readable names; picking one appends the sound's code name to the end of the line.
+The Samples node shows its line as steps rather than mini notation. Each step is a sample with a
+picker and a **plays** list (once, `×2`, repeat, hold, every other cycle, sometimes, or a euclidean
+rhythm such as 3 of 8), a rest, or a group: **Squeezed into one step** writes `[…]` and **One per
+cycle** writes `<…>`, each with its own steps inside. **+ Sample**, **Rest** and **Group** add a
+step to the end of a row, and **Layer** adds a row that plays alongside, written after a comma.
+Anything the controls cannot show, such as a `{…}%4` polymeter, stays as a text step. The
+**Mini notation** switch shows the whole line as text under the steps, for editing by hand.
 
-![The flow canvas with a Samples node whose pattern ends in a picked casio sample, next to a Beats node](/img/strudel-editor/flow-sample-picker.webp)
+![A Samples node showing bd*2, a squeezed group, a one-per-cycle group and a euclidean percussion layer, cabled into a Gain node and a Mask node](/img/strudel-flow/samples-gain-mask.webp)
+
+On a desktop pointer every sample picker, on a Beats track or a Samples step, opens a panel with a
+search field, the instrument families down the side (kicks, snares, hi-hats, claps, toms, cymbals,
+percussion, bass, keys, guitar and strings, voices, effects and other), and a grid of samples each
+with its family's icon and the kit it comes from. Typing narrows the grid across names, codes and
+kits; Enter picks the first match. A touch screen keeps the native list.
+
+![The sample picker open on a Beats track: a search field, instrument families with counts down the side, and a grid of kicks and snares with their icons](/img/strudel-editor/flow-sample-picker.webp)
 
 ![A Beats node with kick, clap and hi-hat tracks over eight steps, variations shown and the Shape footer open](/img/strudel-flow/beats-node.webp)
 
@@ -291,9 +306,14 @@ and behind the code it fills the node's full width and height behind its control
 canvas every background visual shares. A visual only draws the pattern, so calls chained after it go on
 an Effect node of their own rather than onto the Visualizer.
 
-A call with no dedicated node, such as `.mask("<1 1 1 0>")`, `.sometimesBy(.2, x => x.ply(2))` or
+A sample line followed by `.gain(.5).mask("<1 1 1 0>")` reads as three nodes: the instrument, a
+**Gain** node and a **Mask** node. A mask always gets its own node, whatever its argument: a plain
+run of ones and zeros shows as switches, and anything else, such as `"<1!40 0!8>"` or a constant
+named in the setup, is edited as text.
+
+A call with no dedicated node, such as `.sometimesBy(.2, x => x.ply(2))` or
 `.jux(rev)`, sits under **Calls** on the node it follows in the code. Common ones get controls: a
-step per cycle to switch on and off for `mask` and `struct`, a knob for the chance of
+step per cycle to switch on and off for `struct`, a knob for the chance of
 `sometimesBy`, `someCyclesBy` and `degradeBy`, the amount and subdivision of `swingBy`, and knobs
 for `fast`, `slow`, `ply`, `late`, `early`, `velocity`, `speed`, `crush`, `shape` and `hpf`. Any
 other call, or one whose argument the controls cannot show (a pattern where a number goes), is
@@ -302,11 +322,13 @@ or a slider, such as `.lpf(sine.range(300, 3000))`. Remove a call with its cross
 the node's **…** menu with **Add call**. Calls chained straight after a `stack(...)` of several
 instruments have no single node to sit on, so they gather on one Effect node.
 
-Each node header has a **…** menu with **View code**, which shows what the node writes, **Add
-call** and **Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
+Each node header has a **…** menu with **View code**, which shows what the node writes, **Go to
+code**, which switches to the code editor with the node's call selected, **Add call** and
+**Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
 instrument of a group writes the whole block as `_$:`. Drag a node by its header to arrange the
 canvas. Connect an output dot to an input by dragging, or click the output and then the input.
-Delete or Backspace removes a selected node and its cables. An instrument has no input, a pair of
+Delete or Backspace removes a selected node and its cables. Every cable has a disconnect button on
+its middle, faint until the cable is hovered or selected, which removes that cable alone. An instrument has no input, a pair of
 nodes connects only once, an effect cannot feed an instrument, and a cable cannot close a loop.
 
 Each connected group of nodes compiles to one `$: <pattern>` block. An instrument passes only

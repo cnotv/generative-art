@@ -393,9 +393,6 @@ export const STRUDEL_FLOW_SAMPLE_MODIFIER_OPTIONS = [
   { value: '(3,8,2)', label: 'Euclid 3 of 8, shifted' }
 ]
 
-/** The step a Samples line gains from its add button before a sample is picked. */
-export const STRUDEL_FLOW_NEW_SAMPLE_STEP = 'bd'
-
 /**
  * Instrument families the sample picker sorts by, matched in order against a sample's name, so
  * `808bd` and `rolandtr909_bd` both land under Kicks. Anything unmatched is Other.
