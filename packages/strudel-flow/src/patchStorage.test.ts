@@ -310,7 +310,7 @@ describe('parseStrudelFlowPatch', () => {
         {
           id: 'level',
           position: { x: 0, y: 100 },
-          data: { kind: 'level', gain: 5, pan: -1, postgain: 0.5 }
+          data: { kind: 'level', pan: -1, postgain: 0.5 }
         },
         {
           id: 'envelope',
@@ -339,7 +339,6 @@ describe('parseStrudelFlowPatch', () => {
     })
     expect(patch?.nodes[1]?.data).toEqual({
       kind: 'level',
-      gain: 2,
       pan: 0,
       postgain: 0.5
     })
@@ -379,7 +378,7 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.edges.map((edge) => edge.id)).toEqual(['same', 'beats-filter'])
   })
 
-  it('reads the calls chained onto a node and an Effect node stored with one call', () => {
+  it('drops calls stored on a node other than Effect and reads an Effect node stored with one call', () => {
     // Arrange
     const storedValue = storePatch({
       nodes: [
@@ -407,8 +406,7 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.nodes[0]?.data).toEqual({
       kind: 'notes',
       pattern: 'c3',
-      notation: 'auto',
-      calls: [{ method: 'mask', argument: '"1 0"' }]
+      notation: 'auto'
     })
     expect(patch?.nodes[1]?.data).toEqual({
       kind: 'effect',

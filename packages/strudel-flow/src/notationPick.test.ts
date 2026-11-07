@@ -75,24 +75,6 @@ describe('findStrudelFlowNotesSound', () => {
     expect(sound).toBe('gm_electric_bass_finger')
   })
 
-  it('falls back to an .s() call kept on the node itself', () => {
-    // Arrange
-    const nodes = [
-      node('notes-1', {
-        kind: 'notes',
-        pattern: 'c3',
-        notation: 'auto',
-        calls: [{ method: 's', argument: '"piano"' }]
-      })
-    ]
-
-    // Act
-    const sound = findStrudelFlowNotesSound('notes-1', nodes, [])
-
-    // Assert
-    expect(sound).toBe('piano')
-  })
-
   it('finds no sound when nothing sets one', () => {
     // Arrange
     const nodes = [node('notes-1', { kind: 'notes', pattern: 'c3', notation: 'auto' })]

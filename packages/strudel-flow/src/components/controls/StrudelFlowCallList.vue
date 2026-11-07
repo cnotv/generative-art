@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Plus, X } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
 import { readStrudelFlowCallFields, writeStrudelFlowCallFields } from '../../callArguments'
-import type { StrudelFlowCall, StrudelFlowCallField, StrudelFlowNodeData } from '../../types'
+import type { StrudelFlowCall, StrudelFlowCallField, StrudelFlowEffectData } from '../../types'
 import StrudelFlowKnob from './StrudelFlowKnob.vue'
 
 const props = defineProps<{
-  data: StrudelFlowNodeData
+  data: StrudelFlowEffectData
 }>()
 
 const emit = defineEmits<{
-  update: [data: StrudelFlowNodeData]
+  update: [data: StrudelFlowEffectData]
 }>()
 
-const calls = computed(() => props.data.calls ?? [])
+const calls = computed(() => props.data.calls)
 const callFields = computed(() => calls.value.map(readStrudelFlowCallFields))
 
 const updateCalls = (nextCalls: StrudelFlowCall[]): void => {
-  emit('update', Object.assign({}, props.data, { calls: nextCalls }))
+  emit('update', { ...props.data, calls: nextCalls })
 }
 
 const onFieldInput = (index: number, field: keyof StrudelFlowCall, event: Event): void => {
@@ -84,10 +84,6 @@ const onStepToggle = (
 
 const onRemove = (index: number): void => {
   updateCalls(calls.value.filter((_call, callIndex) => callIndex !== index))
-}
-
-const onAdd = (): void => {
-  updateCalls([...calls.value, { method: '', argument: '' }])
 }
 </script>
 
@@ -191,9 +187,5 @@ const onAdd = (): void => {
         </li>
       </template>
     </ul>
-    <button type="button" class="strudel-flow-calls__add nodrag" @click="onAdd">
-      <Plus aria-hidden="true" />
-      Add call
-    </button>
   </section>
 </template>

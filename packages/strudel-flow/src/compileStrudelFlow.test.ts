@@ -312,24 +312,6 @@ describe('compileStrudelFlow', () => {
       '$: stack(note("c3").sound("triangle"), s("bd")).lpf(1500).lpq(1)'
     )
   })
-
-  it("chains an instrument's own calls before muting it", () => {
-    // Arrange
-    const notes = createNode('notes', {
-      kind: 'notes',
-      pattern: 'c3',
-      notation: 'auto',
-      muted: true,
-      calls: [{ method: 'mask', argument: '"1 0"' }]
-    })
-    const samples = createNode('samples', { kind: 'samples', pattern: 'bd' })
-
-    // Act
-    const compilation = compile([notes, samples], [])
-
-    // Assert
-    expect(compilation.code).toContain('_$: note("c3").mask("1 0")')
-  })
 })
 
 describe('getStrudelFlowVisualizerWidgetIds', () => {

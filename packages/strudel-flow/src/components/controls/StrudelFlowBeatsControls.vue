@@ -10,7 +10,7 @@ import {
 import { createStrudelFlowDrumRow } from '../../nodeDefaults'
 import type { StrudelFlowBeatsData, StrudelFlowDrumRow, StrudelFlowSampleGroup } from '../../types'
 import StrudelFlowAccordion from './StrudelFlowAccordion.vue'
-import StrudelFlowSelect from './StrudelFlowSelect.vue'
+import StrudelFlowSamplePicker from './StrudelFlowSamplePicker.vue'
 import StrudelFlowStepper from './StrudelFlowStepper.vue'
 
 const props = defineProps<{
@@ -29,39 +29,25 @@ const visibleSteps = computed(() =>
 const DRUM_SOUNDS = new Set(STRUDEL_FLOW_DRUM_SOUND_GROUPS.flatMap((group) => group.sounds))
 
 // The host's full library follows the drum shortlist, minus what the shortlist already names.
-const libraryGroups = computed(() =>
+const libraryGroups = computed<StrudelFlowSampleGroup[]>(() =>
   (props.sampleGroups ?? [])
     .map((group) => ({
       label: group.label,
-      options: group.samples.filter((sample) => !DRUM_SOUNDS.has(sample.value))
+      samples: group.samples.filter((sample) => !DRUM_SOUNDS.has(sample.value))
     }))
-    .filter((group) => group.options.length > 0)
+    .filter((group) => group.samples.length > 0)
 )
 
-const knownSounds = computed(
-  () =>
-    new Set([
-      ...DRUM_SOUNDS,
-      ...libraryGroups.value.flatMap((group) => group.options.map((option) => option.value))
-    ])
-)
-
-const toOptions = (sounds: string[]): { value: string; label: string }[] =>
+const toSamples = (sounds: string[]): StrudelFlowSampleGroup['samples'] =>
   sounds.map((sound) => ({ value: sound, label: sound }))
 
-// A sample read from code that the list does not name, such as "bd:3", stays selectable.
-const soundGroups = (
-  sound: string
-): { label: string; options: { value: string; label: string }[] }[] => [
-  ...(knownSounds.value.has(sound)
-    ? []
-    : [{ label: 'In this pattern', options: toOptions([sound]) }]),
+const soundGroups = computed<StrudelFlowSampleGroup[]>(() => [
   ...STRUDEL_FLOW_DRUM_SOUND_GROUPS.map((group) => ({
     label: group.label,
-    options: toOptions(group.sounds)
+    samples: toSamples(group.sounds)
   })),
   ...libraryGroups.value
-]
+])
 
 const update = (patch: Partial<StrudelFlowBeatsData>): void => {
   emit('update', { ...props.data, ...patch })
@@ -116,12 +102,10 @@ const setTrackCount = (trackCount: number): void => {
   <div class="strudel-flow-beats">
     <div class="strudel-flow-beats__tracks" role="group" aria-label="Drum tracks">
       <div v-for="(row, rowIndex) in data.rows" :key="rowIndex" class="strudel-flow-beats__track">
-        <StrudelFlowSelect
-          class="strudel-flow-beats__sound"
+        <StrudelFlowSamplePicker
           :label="`Track ${rowIndex + 1} sound`"
-          hide-label
           :model-value="row.sound"
-          :groups="soundGroups(row.sound)"
+          :groups="soundGroups"
           @update:model-value="updateRow(rowIndex, { sound: $event })"
         />
         <div class="strudel-flow-beats__steps" :style="{ '--beats-steps': data.steps }">

@@ -6,9 +6,6 @@ import type {
   StrudelFlowNotationView
 } from './types'
 
-const SOUND_CALLS = new Set(['s', 'sound'])
-const STRING_LITERAL_PATTERN = /^\s*(["'`])(.*)\1\s*$/
-
 /**
  * The notation Auto draws a sound in: a bass or guitar tab, a piano roll, or note names.
  * @param sound - the sound name, such as `gm_electric_bass_finger`
@@ -52,14 +49,8 @@ const downstreamVoiceSound = (
   )
 }
 
-const ownSoundCall = (node: StrudelFlowNode | undefined): string => {
-  const call = node?.data.calls?.find((candidate) => SOUND_CALLS.has(candidate.method))
-  return call === undefined ? '' : (STRING_LITERAL_PATTERN.exec(call.argument)?.[2] ?? '')
-}
-
 /**
- * The sound a node's notes play: from the Voice node its cables reach, else from an `.s()`
- * call kept on the node itself.
+ * The sound a node's notes play, from the Voice node its cables reach.
  * @param nodeId - the Notes node
  * @param nodes - every node of the patch
  * @param edges - every cable of the patch
@@ -69,7 +60,4 @@ export const findStrudelFlowNotesSound = (
   nodeId: string,
   nodes: StrudelFlowNode[],
   edges: StrudelFlowEdge[]
-): string => {
-  const voiceSound = downstreamVoiceSound(nodeId, nodes, edges, new Set([nodeId]))
-  return voiceSound.length > 0 ? voiceSound : ownSoundCall(nodes.find((node) => node.id === nodeId))
-}
+): string => downstreamVoiceSound(nodeId, nodes, edges, new Set([nodeId]))

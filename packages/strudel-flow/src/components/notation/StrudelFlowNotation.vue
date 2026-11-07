@@ -27,13 +27,22 @@ const beatsPerCycle = computed(
   () => context?.value.beatsPerCycle ?? STRUDEL_FLOW_DEFAULT_BEATS_PER_CYCLE
 )
 const sound = computed(() => context?.value.soundOf(nodeId) ?? '')
-const view = computed(() => resolveStrudelFlowNotation(props.data.notation, sound.value))
+const CHORD_SYMBOL_VIEWS = new Set<string>(['names', 'text'])
+
+// Chord symbols name chords rather than pitches, so only names and the mini notation show them.
+const isChordLine = computed(() => props.data.head === 'chord')
+const view = computed(() => {
+  const resolved = resolveStrudelFlowNotation(props.data.notation, sound.value)
+  return isChordLine.value && !CHORD_SYMBOL_VIEWS.has(resolved) ? 'names' : resolved
+})
 
 const labelOf = (value: string): string =>
   STRUDEL_FLOW_NOTATION_OPTIONS.find((option) => option.value === value)?.label ?? value
 
 const options = computed(() =>
-  STRUDEL_FLOW_NOTATION_OPTIONS.map((option) =>
+  STRUDEL_FLOW_NOTATION_OPTIONS.filter(
+    (option) => !isChordLine.value || CHORD_SYMBOL_VIEWS.has(option.value)
+  ).map((option) =>
     option.value === 'auto'
       ? { ...option, label: `Auto: ${labelOf(pickStrudelFlowNotation(sound.value))}` }
       : option

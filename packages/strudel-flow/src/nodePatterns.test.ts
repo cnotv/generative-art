@@ -198,11 +198,10 @@ describe('generateStrudelFlowNodePattern', () => {
       },
       '.room(0.4).roomsize(2).roomfade(0.5).roomlp(10000).roomdim(8000)'
     ],
-    [
-      'level',
-      { kind: 'level' as const, gain: 1, pan: 0.5, postgain: 1 },
-      '.gain(1).pan(0.5).postgain(1)'
-    ],
+    ['gain', { kind: 'gain' as const, gain: 0.8 }, '.gain(0.8)'],
+    ['level', { kind: 'level' as const, pan: 0.5, postgain: 1 }, '.pan(0.5).postgain(1)'],
+    ['mask', { kind: 'mask' as const, argument: '"<1 0>"' }, '.mask("<1 0>")'],
+    ['empty mask', { kind: 'mask' as const, argument: ' ' }, ''],
     [
       'envelope',
       { kind: 'envelope' as const, attack: 0.1, decay: 0.1, sustain: 0.7, release: 0.2 },
@@ -241,12 +240,10 @@ describe('generateStrudelFlowNodePattern', () => {
     expect(patternWithoutInput).toBe('')
   })
 
-  it("chains a node's own calls after its pattern, skipping calls with no name", () => {
+  it("chains an Effect node's calls after its input, skipping calls with no name", () => {
     // Arrange
     const data = {
-      kind: 'filter' as const,
-      cutoff: 800,
-      resonance: 1,
+      kind: 'effect' as const,
       calls: [
         { method: 'mask', argument: '"1 0"' },
         { method: ' ', argument: '2' },
@@ -259,7 +256,7 @@ describe('generateStrudelFlowNodePattern', () => {
     const patternWithoutInput = generateStrudelFlowNodePattern(data, '')
 
     // Assert
-    expect(pattern).toBe('s("bd").lpf(800).lpq(1).mask("1 0").jux(rev)')
+    expect(pattern).toBe('s("bd").mask("1 0").jux(rev)')
     expect(patternWithoutInput).toBe('')
   })
 })

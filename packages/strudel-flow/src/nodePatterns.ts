@@ -153,15 +153,29 @@ const generateSpacePattern = (
         data.roomLowPass
       )}).roomdim(${formatStrudelFlowNumber(data.roomDim)})`
 
+const generateGainPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'gain' }>,
+  input: string
+): string => (input.length === 0 ? '' : `${input}.gain(${formatStrudelFlowNumber(data.gain)})`)
+
 const generateLevelPattern = (
   data: Extract<StrudelFlowNodeData, { kind: 'level' }>,
   input: string
 ): string =>
   input.length === 0
     ? ''
-    : `${input}.gain(${formatStrudelFlowNumber(data.gain)}).pan(${formatStrudelFlowNumber(
-        data.pan
-      )}).postgain(${formatStrudelFlowNumber(data.postgain)})`
+    : `${input}.pan(${formatStrudelFlowNumber(data.pan)}).postgain(${formatStrudelFlowNumber(
+        data.postgain
+      )})`
+
+// An empty mask lets everything through, so it writes nothing rather than `.mask()`.
+const generateMaskPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'mask' }>,
+  input: string
+): string => {
+  const argument = data.argument.trim()
+  return input.length === 0 || argument.length === 0 ? input : `${input}.mask(${argument})`
+}
 
 const generateEnvelopePattern = (
   data: Extract<StrudelFlowNodeData, { kind: 'envelope' }>,
@@ -203,18 +217,19 @@ const PATTERN_GENERATORS: PatternGenerators = {
   pad: generatePadPattern,
   beats: generateBeatsPattern,
   chords: generateChordsPattern,
-  notes: (data) => generateMiniNotationPattern('note', data.pattern),
+  notes: (data) => generateMiniNotationPattern(data.head ?? 'note', data.pattern),
   samples: (data) => generateMiniNotationPattern('s', data.pattern),
   code: generateCodePattern,
   voice: generateVoicePattern,
   filter: generateFilterPattern,
   delay: generateDelayPattern,
   space: generateSpacePattern,
+  gain: generateGainPattern,
   level: generateLevelPattern,
+  mask: generateMaskPattern,
   envelope: generateEnvelopePattern,
   visualizer: generateVisualizerPattern,
-  // An Effect node is nothing but its calls, which every node chains after its own pattern.
-  effect: (_data, input) => input
+  effect: (data, input) => (input.length === 0 ? '' : `${input}${chainCalls(data.calls)}`)
 }
 
 const generateWith = <Kind extends StrudelFlowNodeData['kind']>(
@@ -230,10 +245,5 @@ const generateWith = <Kind extends StrudelFlowNodeData['kind']>(
  * @param input - the pattern arriving from upstream, empty for an instrument
  * @returns the node's Strudel expression, or an empty string when it makes no sound
  */
-export const generateStrudelFlowNodePattern = (
-  data: StrudelFlowNodeData,
-  input: string
-): string => {
-  const pattern = generateWith(data, input)
-  return pattern.length === 0 ? pattern : `${pattern}${chainCalls(data.calls ?? [])}`
-}
+export const generateStrudelFlowNodePattern = (data: StrudelFlowNodeData, input: string): string =>
+  generateWith(data, input)

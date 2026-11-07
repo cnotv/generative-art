@@ -11,7 +11,9 @@ export type StrudelFlowNodeKind =
   | 'filter'
   | 'delay'
   | 'space'
+  | 'gain'
   | 'level'
+  | 'mask'
   | 'envelope'
   | 'visualizer'
   | 'effect'
@@ -82,10 +84,12 @@ export type StrudelFlowNotation = 'auto' | 'guitar' | 'bass' | 'sheet' | 'piano'
 /** The view a notation resolves to once Auto has looked at the sound. */
 export type StrudelFlowNotationView = Exclude<StrudelFlowNotation, 'auto'>
 
-/** A `note("...")` line in mini notation. */
+/** A `note("...")` line in mini notation, or a `chord("...")` line of chord symbols. */
 export type StrudelFlowNotesData = StrudelFlowMuteFlag & {
   kind: 'notes'
   pattern: string
+  /** Set for chord symbols, written as `chord("...")`; a note line leaves it out. */
+  head?: 'chord'
   notation: StrudelFlowNotation
   /** Shows the mini notation text beside a drawn notation; Mini notation itself always shows it. */
   showPattern?: boolean
@@ -263,6 +267,64 @@ export type StrudelFlowTabLayout = {
 export type StrudelFlowSamplesData = StrudelFlowMuteFlag & {
   kind: 'samples'
   pattern: string
+  /** Shows the mini notation text under the step editor. */
+  showPattern?: boolean
+}
+
+/**
+ * One step of a Samples line as its editor shows it: a rest, a sample, a bracketed group of
+ * steps, or a piece of mini notation the editor has no control for, kept as text.
+ */
+export type StrudelFlowSampleStep =
+  | { kind: 'rest' }
+  | {
+      kind: 'sound'
+      /** The sample name, with a variant number such as `bd:3` when it has one. */
+      sound: string
+      /** What follows the name, such as `*2`, `@3` or `(3,8)`, or empty. */
+      modifier: string
+    }
+  | {
+      kind: 'group'
+      /** `[a b]` squeezes its steps into one; `<a b>` plays one of them each cycle. */
+      bracket: 'subdivide' | 'alternate'
+      layers: StrudelFlowSampleLayer[]
+      modifier: string
+    }
+  | { kind: 'text'; text: string }
+
+/** Steps played one after another; layers separated by commas play together. */
+export type StrudelFlowSampleLayer = StrudelFlowSampleStep[]
+
+/** What a modifier does to a Samples step, which picks its icon and its menu group. */
+export type StrudelFlowSampleModifierKind =
+  | 'once'
+  | 'faster'
+  | 'repeat'
+  | 'hold'
+  | 'slower'
+  | 'chance'
+  | 'rhythm'
+
+/** One modifier a Samples step can take, as its menu lists it. */
+export type StrudelFlowSampleModifierOption = {
+  value: string
+  label: string
+  kind: StrudelFlowSampleModifierKind
+}
+
+/** An instrument family the sample picker sorts samples into, with the names that belong to it. */
+export type StrudelFlowSampleFamily = {
+  id: string
+  label: string
+  /** A regular expression source matched against the lowercase sample name. */
+  match: string
+}
+
+/** Where a node's code sits in the program, as character offsets. */
+export type StrudelFlowCodeRange = {
+  from: number
+  to: number
 }
 
 /** Any expression the other instruments cannot describe, kept verbatim. */
@@ -300,12 +362,7 @@ export type StrudelFlowCallField =
       perCycle: boolean
     }
 
-/** Calls no dedicated node covers, chained after the node they follow in the code. */
-export type StrudelFlowCallList = {
-  calls?: StrudelFlowCall[]
-}
-
-/** Chained calls with no single node to sit on, such as the ones after a whole `stack(...)`. */
+/** A chained call no dedicated node covers, such as `.jux(rev)`, as a node of its own. */
 export type StrudelFlowEffectData = {
   kind: 'effect'
   calls: StrudelFlowCall[]
@@ -333,11 +390,21 @@ export type StrudelFlowSpaceData = {
   roomDim: number
 }
 
+export type StrudelFlowGainData = {
+  kind: 'gain'
+  gain: number
+}
+
 export type StrudelFlowLevelData = {
   kind: 'level'
-  gain: number
   pan: number
   postgain: number
+}
+
+/** `.mask(...)`: which steps or cycles of the pattern play. The argument is kept as written. */
+export type StrudelFlowMaskData = {
+  kind: 'mask'
+  argument: string
 }
 
 export type StrudelFlowEnvelopeData = {
@@ -365,23 +432,23 @@ export type StrudelFlowVisualizerData = {
   options: string
 }
 
-export type StrudelFlowNodeData = StrudelFlowCallList &
-  (
-    | StrudelFlowPadData
-    | StrudelFlowBeatsData
-    | StrudelFlowChordsData
-    | StrudelFlowNotesData
-    | StrudelFlowSamplesData
-    | StrudelFlowCodeData
-    | StrudelFlowVoiceData
-    | StrudelFlowFilterData
-    | StrudelFlowDelayData
-    | StrudelFlowSpaceData
-    | StrudelFlowLevelData
-    | StrudelFlowEnvelopeData
-    | StrudelFlowVisualizerData
-    | StrudelFlowEffectData
-  )
+export type StrudelFlowNodeData =
+  | StrudelFlowPadData
+  | StrudelFlowBeatsData
+  | StrudelFlowChordsData
+  | StrudelFlowNotesData
+  | StrudelFlowSamplesData
+  | StrudelFlowCodeData
+  | StrudelFlowVoiceData
+  | StrudelFlowFilterData
+  | StrudelFlowDelayData
+  | StrudelFlowSpaceData
+  | StrudelFlowGainData
+  | StrudelFlowLevelData
+  | StrudelFlowMaskData
+  | StrudelFlowEnvelopeData
+  | StrudelFlowVisualizerData
+  | StrudelFlowEffectData
 
 export type StrudelFlowNodePosition = {
   x: number

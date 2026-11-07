@@ -2,7 +2,7 @@
 import { computed, inject, markRaw, ref } from 'vue'
 import type { Component } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
-import { Code2, Ellipsis, ListPlus, Trash2, Volume2, VolumeX } from 'lucide-vue-next'
+import { Code2, Ellipsis, SquareCode, Trash2, Volume2, VolumeX } from 'lucide-vue-next'
 import StrudelFlowBeatsControls from './controls/StrudelFlowBeatsControls.vue'
 import StrudelFlowCallList from './controls/StrudelFlowCallList.vue'
 import StrudelFlowChordsControls from './controls/StrudelFlowChordsControls.vue'
@@ -10,9 +10,12 @@ import StrudelFlowCodeControls from './controls/StrudelFlowCodeControls.vue'
 import StrudelFlowDelayControls from './controls/StrudelFlowDelayControls.vue'
 import StrudelFlowEnvelopeControls from './controls/StrudelFlowEnvelopeControls.vue'
 import StrudelFlowFilterControls from './controls/StrudelFlowFilterControls.vue'
+import StrudelFlowGainControls from './controls/StrudelFlowGainControls.vue'
 import StrudelFlowLevelControls from './controls/StrudelFlowLevelControls.vue'
+import StrudelFlowMaskControls from './controls/StrudelFlowMaskControls.vue'
 import StrudelFlowPadControls from './controls/StrudelFlowPadControls.vue'
 import StrudelFlowPatternControls from './controls/StrudelFlowPatternControls.vue'
+import StrudelFlowSamplesControls from './controls/StrudelFlowSamplesControls.vue'
 import StrudelFlowVisualizerControls from './controls/StrudelFlowVisualizerControls.vue'
 import StrudelFlowVisualPreview from './controls/StrudelFlowVisualPreview.vue'
 import StrudelFlowSpaceControls from './controls/StrudelFlowSpaceControls.vue'
@@ -34,21 +37,24 @@ const props = defineProps<{
 const emit = defineEmits<{
   update: [data: StrudelFlowNodeData]
   remove: [nodeId: string]
+  showCode: [nodeId: string]
 }>()
 
-// An Effect node is only its calls, which every node shows under its own controls.
+// An Effect node is only its call, shown by the call list instead.
 const NODE_CONTROLS: Record<Exclude<StrudelFlowNodeKind, 'effect'>, Component> = {
   pad: markRaw(StrudelFlowPadControls),
   beats: markRaw(StrudelFlowBeatsControls),
   chords: markRaw(StrudelFlowChordsControls),
   notes: markRaw(StrudelFlowPatternControls),
-  samples: markRaw(StrudelFlowPatternControls),
+  samples: markRaw(StrudelFlowSamplesControls),
   code: markRaw(StrudelFlowCodeControls),
   voice: markRaw(StrudelFlowVoiceControls),
   filter: markRaw(StrudelFlowFilterControls),
   delay: markRaw(StrudelFlowDelayControls),
   space: markRaw(StrudelFlowSpaceControls),
+  gain: markRaw(StrudelFlowGainControls),
   level: markRaw(StrudelFlowLevelControls),
+  mask: markRaw(StrudelFlowMaskControls),
   envelope: markRaw(StrudelFlowEnvelopeControls),
   visualizer: markRaw(StrudelFlowVisualizerControls)
 }
@@ -70,11 +76,6 @@ const controlProperties = computed(() => {
 })
 const visualizerWidgetIds = inject(STRUDEL_FLOW_VISUALIZER_WIDGET_IDS, null)
 const visualWidgetId = computed(() => visualizerWidgetIds?.value[props.id] ?? null)
-const hasCalls = computed(() => props.data.kind === 'effect' || (props.data.calls ?? []).length > 0)
-// A visual only draws the pattern, so calls that change it go on another node.
-const canTakeCalls = computed(
-  () => props.data.kind !== 'effect' && props.data.kind !== 'visualizer'
-)
 const isInstrument = computed(() => isStrudelFlowInstrumentKind(props.data.kind))
 const isMuted = computed(() => 'muted' in props.data && props.data.muted === true)
 const inputLabel = computed(() => `${title.value} pattern input`)
@@ -97,14 +98,9 @@ const onCodeToggle = (): void => {
   isMenuOpen.value = false
 }
 
-const onAddCall = (): void => {
+const onShowCode = (): void => {
   isMenuOpen.value = false
-  emit(
-    'update',
-    Object.assign({}, props.data, {
-      calls: [...(props.data.calls ?? []), { method: '', argument: '' }]
-    })
-  )
+  emit('showCode', props.id)
 }
 
 const onRemove = (): void => {
@@ -173,15 +169,14 @@ const onRemove = (): void => {
           {{ isCodeVisible ? 'Hide code' : 'View code' }}
         </button>
         <button
-          v-if="canTakeCalls"
           type="button"
           class="strudel-flow-node__menu-item"
           role="menuitem"
           @pointerdown.stop
-          @click.stop="onAddCall"
+          @click.stop="onShowCode"
         >
-          <ListPlus aria-hidden="true" />
-          Add call
+          <SquareCode aria-hidden="true" />
+          Go to code
         </button>
         <button
           type="button"
@@ -202,14 +197,14 @@ const onRemove = (): void => {
         :placement="data.placement"
         :widget-id="visualWidgetId"
       />
+      <StrudelFlowCallList v-if="data.kind === 'effect'" :data="data" @update="onDataUpdate" />
       <component
         :is="NODE_CONTROLS[data.kind]"
-        v-if="data.kind !== 'effect'"
+        v-else
         :data="data"
         v-bind="controlProperties"
         @update="onDataUpdate"
       />
-      <StrudelFlowCallList v-if="hasCalls" :data="data" @update="onDataUpdate" />
     </div>
     <Handle
       type="source"
