@@ -36,7 +36,7 @@ afterEach(() => {
 })
 
 describe('StrudelFlowSamplesControls', () => {
-  it('shows each step of the line as a control rather than mini notation', () => {
+  it('shows each step of the line as a numbered tile rather than mini notation', () => {
     // Arrange / Act
     const wrapper = mountSamples('bd*2 [~ casio] hh')
 
@@ -46,8 +46,42 @@ describe('StrudelFlowSamplesControls', () => {
       wrapper
         .findAll('select[aria-label^="Step"][aria-label$="sample"]')
         .map((select) => select.element.value)
-    ).toEqual(['bd', 'casio', 'hh'])
-    expect(wrapper.findAll('.strudel-flow-sample-steps__group')).toHaveLength(1)
+    ).toEqual(['bd', '', 'casio', 'hh'])
+    expect(wrapper.findAll('.strudel-flow-sample-steps__tile--group')).toHaveLength(1)
+    expect(wrapper.get('select[aria-label="Step 1 plays"]').element.value).toBe('*2')
+  })
+
+  it('fills a rest with the sample picked on it', async () => {
+    // Arrange
+    const wrapper = mountSamples('bd ~ hh')
+
+    // Act
+    await wrapper.get('select[aria-label="Step 2 sample"]').setValue('casio')
+
+    // Assert
+    expect(emittedPattern(wrapper)).toBe('bd casio hh')
+  })
+
+  it.each([
+    ['One per cycle', 'bd <sd cp>'],
+    ['Fit in one step', 'bd [sd cp]']
+  ])('switches a group to %s', async (buttonLabel, expectedPattern) => {
+    // Arrange
+    const wrapper = mountSamples('bd <sd cp>')
+
+    // Act
+    await wrapper.get(`button[aria-label="${buttonLabel}"]`).trigger('click')
+
+    // Assert
+    expect(emittedPattern(wrapper)).toBe(expectedPattern)
+  })
+
+  it('keeps a modifier the menu does not list', () => {
+    // Arrange / Act
+    const wrapper = mountSamples('bd@1.5')
+
+    // Assert
+    expect(wrapper.get('select[aria-label="Step 1 plays"]').element.value).toBe('@1.5')
   })
 
   it.each([
@@ -65,16 +99,16 @@ describe('StrudelFlowSamplesControls', () => {
   })
 
   it.each([
-    ['a rest', 'Rest', 'bd ~'],
-    ['a group', 'Group', 'bd [~]'],
-    ['a layer', 'Layer', 'bd, ~']
-  ])('adds %s', async (_case, buttonText, expectedPattern) => {
+    ['adds a rest', 'button[aria-label="Add rest"]', 'bd', 'bd ~'],
+    ['adds a group', 'button[aria-label="Add group"]', 'bd', 'bd [~]'],
+    ['adds a layer', 'button[title="Add a layer that plays alongside"]', 'bd', 'bd, ~'],
+    ['removes a layer', 'button[aria-label="Remove layer 2"]', 'bd, hh', 'bd']
+  ])('%s', async (_case, selector, pattern, expectedPattern) => {
     // Arrange
-    const wrapper = mountSamples('bd')
-    const button = wrapper.findAll('button').find((candidate) => candidate.text() === buttonText)
+    const wrapper = mountSamples(pattern)
 
     // Act
-    await button?.trigger('click')
+    await wrapper.get(selector).trigger('click')
 
     // Assert
     expect(emittedPattern(wrapper)).toBe(expectedPattern)

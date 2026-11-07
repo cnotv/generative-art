@@ -294,6 +294,23 @@ export type StrudelFlowSampleStep =
 /** Steps played one after another; layers separated by commas play together. */
 export type StrudelFlowSampleLayer = StrudelFlowSampleStep[]
 
+/** What a modifier does to a Samples step, which picks its icon and its menu group. */
+export type StrudelFlowSampleModifierKind =
+  | 'once'
+  | 'faster'
+  | 'repeat'
+  | 'hold'
+  | 'slower'
+  | 'chance'
+  | 'rhythm'
+
+/** One modifier a Samples step can take, as its menu lists it. */
+export type StrudelFlowSampleModifierOption = {
+  value: string
+  label: string
+  kind: StrudelFlowSampleModifierKind
+}
+
 /** An instrument family the sample picker sorts samples into, with the names that belong to it. */
 export type StrudelFlowSampleFamily = {
   id: string
