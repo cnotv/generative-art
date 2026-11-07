@@ -14,6 +14,9 @@ export type StrudelFlowNodeKind =
   | 'gain'
   | 'level'
   | 'mask'
+  | 'struct'
+  | 'slow'
+  | 'voicing'
   | 'envelope'
   | 'visualizer'
   | 'effect'
@@ -76,6 +79,8 @@ export type StrudelFlowChordsData = StrudelFlowMuteFlag & {
   scaleType: 'major' | 'minor'
   chordProgression: number[]
   chordNotes?: number[][]
+  /** Set when the code names its chords, `chord("<C Am F G>")`, rather than their scale degrees. */
+  chordSymbols?: boolean
 }
 
 /** How a Notes node draws its notes: picked from the sound it plays, or one chosen by hand. */
@@ -360,6 +365,8 @@ export type StrudelFlowCallField =
       steps: boolean[]
       /** Written `"<1 0>"`, one step per cycle, rather than `"1 0"` within one. */
       perCycle: boolean
+      /** Written with repeats such as `1!40`, so the steps are written back as runs. */
+      repeated?: boolean
     }
 
 /** A chained call no dedicated node covers, such as `.jux(rev)`, as a node of its own. */
@@ -407,6 +414,23 @@ export type StrudelFlowMaskData = {
   argument: string
 }
 
+/** `.struct(...)`: which steps of the pattern hit, as `x` and `~`. The argument is kept as written. */
+export type StrudelFlowStructData = {
+  kind: 'struct'
+  argument: string
+}
+
+/** `.slow(...)`: how many times longer each cycle lasts. */
+export type StrudelFlowSlowData = {
+  kind: 'slow'
+  amount: number
+}
+
+/** `.voicing()`: spreads chord symbols into played notes. */
+export type StrudelFlowVoicingData = {
+  kind: 'voicing'
+}
+
 export type StrudelFlowEnvelopeData = {
   kind: 'envelope'
   attack: number
@@ -446,6 +470,9 @@ export type StrudelFlowNodeData =
   | StrudelFlowGainData
   | StrudelFlowLevelData
   | StrudelFlowMaskData
+  | StrudelFlowStructData
+  | StrudelFlowSlowData
+  | StrudelFlowVoicingData
   | StrudelFlowEnvelopeData
   | StrudelFlowVisualizerData
   | StrudelFlowEffectData

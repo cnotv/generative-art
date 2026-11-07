@@ -44,28 +44,31 @@ const { code, errorMessage } = compileStrudelFlow(patch)
 
 ## Nodes
 
-| Kind       | Category   | What it does                                                                                                                   |
-| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Pad        | Instrument | An eight-note grid with an arpeggio or chord mode, key, scale and octave                                                       |
-| Beats      | Instrument | Up to eight tracks of any sample, a step count, and per-step variations                                                        |
-| Chords     | Instrument | A four-chord progression with preset shapes and note-level editing                                                             |
-| Notes      | Instrument | A `note("…")` line in mini notation, drawn as a guitar or bass tab, piano sheet music, a piano roll or note names              |
-| Samples    | Instrument | An `s("…")` line edited as steps, rests, groups and layers                                                                     |
-| Code       | Instrument | One custom Strudel expression                                                                                                  |
-| Filter     | Effect     | A low-pass filter (`lpf`) and resonance (`lpq`)                                                                                |
-| Delay      | Effect     | Mix, time and feedback                                                                                                         |
-| Space      | Effect     | Room, size, fade, low-pass and dim (`room` … `roomdim`)                                                                        |
-| Gain       | Effect     | `gain`                                                                                                                         |
-| Level      | Effect     | Stereo pan and postgain                                                                                                        |
-| Mask       | Effect     | `mask(…)`, its argument kept as written; a plain run of ones and zeros shows as switches                                       |
-| Envelope   | Effect     | Attack, decay, sustain and release                                                                                             |
-| Visualizer | Effect     | One of Strudel's visuals (pianoroll, punchcard, scope, spiral, pitch wheel, spectrum), inline or behind the code, with options |
-| Effect     | Effect     | One chained call no other node covers, such as `.jux(rev)`                                                                     |
-| Voice      | Sound      | The synth or sample bank, as `sound("…")`                                                                                      |
+| Kind       | Category   | What it does                                                                                                                                                          |
+| ---------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pad        | Instrument | An eight-note grid with an arpeggio or chord mode, key, scale and octave                                                                                              |
+| Beats      | Instrument | Up to eight tracks of any sample, a step count, and per-step variations                                                                                               |
+| Chords     | Instrument | A four-chord progression with preset shapes and note-level editing; `chord("<C Am F G>")` of plain triads in one key reads as Chords and writes back as chord symbols |
+| Notes      | Instrument | A `note("…")` line in mini notation, drawn as a guitar or bass tab, piano sheet music, a piano roll or note names                                                     |
+| Samples    | Instrument | An `s("…")` line edited as steps, rests, groups and layers                                                                                                            |
+| Code       | Instrument | One custom Strudel expression                                                                                                                                         |
+| Filter     | Effect     | A low-pass filter (`lpf`) and resonance (`lpq`)                                                                                                                       |
+| Delay      | Effect     | Mix, time and feedback                                                                                                                                                |
+| Space      | Effect     | Room, size, fade, low-pass and dim (`room` … `roomdim`)                                                                                                               |
+| Gain       | Effect     | `gain`                                                                                                                                                                |
+| Level      | Effect     | Stereo pan and postgain                                                                                                                                               |
+| Mask       | Effect     | `mask(…)`, its argument kept as written; a plain run of ones and zeros shows as switches                                                                              |
+| Struct     | Effect     | `struct(…)`, its argument kept as written; a plain run of `x` and `~` shows as switches with a step count                                                             |
+| Slow       | Effect     | `slow(n)` with a knob; a slider or other expression stays an Effect node                                                                                              |
+| Voicing    | Effect     | `voicing()` with no argument, which spreads chord symbols into played notes                                                                                           |
+| Envelope   | Effect     | Attack, decay, sustain and release                                                                                                                                    |
+| Visualizer | Effect     | One of Strudel's visuals (pianoroll, punchcard, scope, spiral, pitch wheel, spectrum), inline or behind the code, with options                                        |
+| Effect     | Effect     | One chained call no other node covers, such as `.jux(rev)`                                                                                                            |
+| Voice      | Sound      | The synth or sample bank, as `sound("…")`                                                                                                                             |
 
 Every instrument can be muted from its header, which writes `.hush()`. The header's **…** menu shows the code the node writes, emits `show-code` with the node id for **Go to code**, and removes the node. `findStrudelFlowNodeCode(code, nodes, edges, nodeId)` returns the `{ from, to }` range of that node's call in the program, counting calls of the same name in the order `getStrudelFlowCodeOrder(nodes, edges)` gives, so a host can select it. Each cable carries a disconnect button that removes it through Vue Flow, which emits `update:edges`.
 
-Only an Effect node holds calls: its data is a `calls` list of `{ method, argument }`, chained after its input as `.method(argument)`. No other node takes calls, and a stored patch that gave one some drops them, since the graph is rebuilt from code. Parsing gives any call without a dedicated node, such as `.jux(rev)` or `.lpf(sine.range(300, 3000))`, an Effect node of its own, and `.mask(…)` always becomes a Mask node. The Effect node shows its call under **Calls**: a call named in `STRUDEL_FLOW_CALL_PARAMETERS` gets knobs, text fields or on and off steps (`readStrudelFlowCallFields` and `writeStrudelFlowCallFields` convert its argument), and any other call stays as text to edit in place.
+Only an Effect node holds calls: its data is a `calls` list of `{ method, argument }`, chained after its input as `.method(argument)`. No other node takes calls, and a stored patch that gave one some drops them, since the graph is rebuilt from code. Parsing gives any call without a dedicated node, such as `.jux(rev)` or `.lpf(sine.range(300, 3000))`, an Effect node of its own, `.mask(…)` and `.struct(…)` always become Mask and Struct nodes, `.slow(n)` with a number becomes a Slow node, and `.voicing()` a Voicing node. The Effect node shows its call under **Calls**: a call named in `STRUDEL_FLOW_CALL_PARAMETERS` gets knobs, text fields or on and off steps (`readStrudelFlowCallFields` and `writeStrudelFlowCallFields` convert its argument), and any other call stays as text to edit in place.
 
 A Visualizer node is its visual, a type list and an under-the-line or behind-the-code toggle. Strudel paints the visual on a canvas in the code editor, and the node copies it each frame: `getStrudelFlowVisualizerWidgetIds(nodes, edges)` names that canvas for every inline Visualizer node, the way Strudel numbers its widgets, and a behind-the-code one copies `STRUDEL_FLOW_BACKGROUND_CANVAS_ID` onto a layer behind the whole node, stretched to its width and height. The host page must keep that canvas sized while the flow hides it.
 

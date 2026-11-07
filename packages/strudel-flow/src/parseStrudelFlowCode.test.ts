@@ -106,6 +106,9 @@ describe('parseStrudelFlowCode', () => {
     ['gain', createStrudelFlowNodeData('gain')],
     ['level', createStrudelFlowNodeData('level')],
     ['mask', createStrudelFlowNodeData('mask')],
+    ['struct', createStrudelFlowNodeData('struct')],
+    ['slow', createStrudelFlowNodeData('slow')],
+    ['voicing', createStrudelFlowNodeData('voicing')],
     ['envelope', createStrudelFlowNodeData('envelope')],
     ['visualizer', createStrudelFlowNodeData('visualizer')]
   ])('round-trips a pad through a %s effect', (kind, effect) => {
@@ -317,6 +320,47 @@ describe('parseStrudelFlowCode', () => {
 
     // Assert
     expect(parsed?.nodes.map((node) => node.data.kind)).toEqual(kinds)
+  })
+
+  it('reads struct, slow and voicing into nodes of their own', () => {
+    // Arrange
+    const code = '$: chord("<C Am>").voicing().struct("x ~ x x").slow(8).slow(slider(2, 1, 4))'
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+
+    // Assert
+    expect(parsed?.nodes.map((node) => node.data)).toEqual([
+      {
+        kind: 'chords',
+        key: 'C',
+        octave: 4,
+        scaleType: 'major',
+        chordProgression: [0, 5],
+        chordSymbols: true
+      },
+      { kind: 'voicing' },
+      { kind: 'struct', argument: '"x ~ x x"' },
+      { kind: 'slow', amount: 8 },
+      { kind: 'effect', calls: [{ method: 'slow', argument: 'slider(2, 1, 4)' }] }
+    ])
+    expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
+  })
+
+  it('keeps chord symbols that no key holds as a Notes node', () => {
+    // Arrange
+    const code = '$: chord("<Cm7 Fm7>").voicing()'
+
+    // Act
+    const parsed = parseStrudelFlowCode(code)
+
+    // Assert
+    expect(parsed?.nodes[0]?.data).toMatchObject({
+      kind: 'notes',
+      notation: 'names',
+      head: 'chord'
+    })
+    expect(compileStrudelFlow(parsed!).code).toBe(`setcpm(120/4)\n${code}`)
   })
 
   it('gives each call it has no dedicated control for an Effect node of its own', () => {

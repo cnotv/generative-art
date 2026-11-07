@@ -869,11 +869,13 @@
 
 .strudel-flow-calls__steps {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-1);
 }
 
 .strudel-flow-calls__step {
   flex: 1;
+  min-width: 0.75rem;
   max-width: 2.5rem;
   height: 1.5rem;
   padding: 0;

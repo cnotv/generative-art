@@ -28,6 +28,9 @@ const NODE_SIZES: Record<StrudelFlowNodeKind, NodeSize> = {
   gain: { width: 256, height: 220 },
   level: { width: 320, height: 220 },
   mask: { width: 384, height: 240 },
+  struct: { width: 384, height: 240 },
+  slow: { width: 256, height: 220 },
+  voicing: { width: 256, height: 140 },
   envelope: { width: 448, height: 260 },
   visualizer: { width: 384, height: 320 },
   effect: { width: 320, height: 220 }

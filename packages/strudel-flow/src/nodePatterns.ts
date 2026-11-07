@@ -1,3 +1,4 @@
+import { writeStrudelFlowChordSymbols } from './chordSymbols'
 import { getStrudelFlowChordNotes } from './chords'
 import type {
   StrudelFlowBeatsData,
@@ -98,6 +99,9 @@ const generateChordsPattern = (data: StrudelFlowChordsData): string => {
   if (chords.every((chord) => chord.length === 0)) {
     return ''
   }
+  if (data.chordSymbols === true) {
+    return `chord(${JSON.stringify(writeStrudelFlowChordSymbols(data))})`
+  }
   const chordPatterns = chords.map((chord) => (chord.length > 0 ? `[${chord.join(',')}]` : '~'))
   const scale = `${data.key}${data.octave}:${data.scaleType}`
   return `n(${JSON.stringify(`<${chordPatterns.join(' ')}>`)}).scale(${JSON.stringify(scale)})`
@@ -177,6 +181,19 @@ const generateMaskPattern = (
   return input.length === 0 || argument.length === 0 ? input : `${input}.mask(${argument})`
 }
 
+const generateStructPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'struct' }>,
+  input: string
+): string => {
+  const argument = data.argument.trim()
+  return input.length === 0 || argument.length === 0 ? input : `${input}.struct(${argument})`
+}
+
+const generateSlowPattern = (
+  data: Extract<StrudelFlowNodeData, { kind: 'slow' }>,
+  input: string
+): string => (input.length === 0 ? '' : `${input}.slow(${formatStrudelFlowNumber(data.amount)})`)
+
 const generateEnvelopePattern = (
   data: Extract<StrudelFlowNodeData, { kind: 'envelope' }>,
   input: string
@@ -227,6 +244,9 @@ const PATTERN_GENERATORS: PatternGenerators = {
   gain: generateGainPattern,
   level: generateLevelPattern,
   mask: generateMaskPattern,
+  struct: generateStructPattern,
+  slow: generateSlowPattern,
+  voicing: (_data, input) => (input.length === 0 ? '' : `${input}.voicing()`),
   envelope: generateEnvelopePattern,
   visualizer: generateVisualizerPattern,
   effect: (data, input) => (input.length === 0 ? '' : `${input}${chainCalls(data.calls)}`)
