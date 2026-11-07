@@ -1,6 +1,5 @@
+import { splitMiniNotation } from './codeScanner'
 import type { StrudelFlowSampleLayer, StrudelFlowSampleStep } from './types'
-
-type SplitState = { parts: string[]; current: string; depth: number }
 
 const OPENERS = new Set(['[', '<', '(', '{'])
 const CLOSERS = new Set([']', '>', ')', '}'])
@@ -9,31 +8,6 @@ const SOUND_PATTERN = /^([\dA-Za-z][\w.]*(?::\d+)?)(.*)$/
 // Repeats, lengths, speeds, chance and euclidean rhythms, in any order: `*2`, `@3`, `?`, `(3,8)`.
 const MODIFIER_PATTERN = /^(?:[!*/@]\d*\.?\d+|!|\?\d*\.?\d*|\(\s*\d+\s*(?:,\s*\d+\s*){1,2}\))*$/
 const BRACKETS = { subdivide: ['[', ']'], alternate: ['<', '>'] } as const
-
-const closePart = (state: SplitState): SplitState => {
-  const part = state.current.trim()
-  return { parts: part.length > 0 ? [...state.parts, part] : state.parts, current: '', depth: 0 }
-}
-
-// Splits mini notation at a separator outside every bracket, which the code scanner cannot do
-// since `<` is a comparison in code but an alternation here.
-const splitMiniNotation = (text: string, isSeparator: (character: string) => boolean): string[] =>
-  closePart(
-    [...text].reduce<SplitState>(
-      (state, character) => {
-        if (state.depth === 0 && isSeparator(character)) {
-          return { ...closePart(state), depth: 0 }
-        }
-        const depthChange = OPENERS.has(character) ? 1 : CLOSERS.has(character) ? -1 : 0
-        return {
-          ...state,
-          current: state.current + character,
-          depth: Math.max(0, state.depth + depthChange)
-        }
-      },
-      { parts: [], current: '', depth: 0 }
-    )
-  ).parts
 
 const findClosingBracket = (token: string, closer: string): number =>
   [...token].reduce(

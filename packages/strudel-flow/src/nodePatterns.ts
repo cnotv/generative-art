@@ -217,7 +217,7 @@ const PATTERN_GENERATORS: PatternGenerators = {
   pad: generatePadPattern,
   beats: generateBeatsPattern,
   chords: generateChordsPattern,
-  notes: (data) => generateMiniNotationPattern('note', data.pattern),
+  notes: (data) => generateMiniNotationPattern(data.head ?? 'note', data.pattern),
   samples: (data) => generateMiniNotationPattern('s', data.pattern),
   code: generateCodePattern,
   voice: generateVoicePattern,

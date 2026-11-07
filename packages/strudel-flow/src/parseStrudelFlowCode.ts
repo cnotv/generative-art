@@ -1,6 +1,8 @@
 import {
+  isStringLiteral,
   isStrudelCodeSyntaxValid,
   isWrappedInParentheses,
+  readStringLiteral,
   splitStatements,
   splitTopLevel,
   stripLineComments
@@ -23,6 +25,7 @@ import {
   createStrudelFlowNodeData,
   isStrudelFlowInstrumentKind
 } from './nodeDefaults'
+import { inlineStrudelFlowPatternVariables, readStrudelFlowVariables } from './patternVariables'
 import { normalizeStrudelFlowBeatsPerCycle, normalizeStrudelFlowBeatsPerMinute } from './tempo'
 import type {
   StrudelFlowBeatsData,
@@ -83,6 +86,7 @@ const KEY_ALIASES: Record<string, string> = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 
 const VOICE_CALLS = new Set(['sound', 's'])
 const MASK_CALL = 'mask'
 const SAMPLE_HEADS = new Set(['s', 'sound'])
+const CHORD_HEAD = 'chord'
 const LABEL_PATTERN = /^(_?\$|[A-Z_a-z]\w*)\s*:(?!:)\s*/
 const SETUP_PATTERN = /^(const|let|var|function|async|await|import|class)\b/
 const TEMPO_PATTERN = /^setc(pm|ps)\s*\(([^)]*)\)$/
@@ -105,21 +109,6 @@ const EFFECT_CALLS: Record<string, EffectCall> = {
   decay: { kind: 'envelope', field: 'decay' },
   sustain: { kind: 'envelope', field: 'sustain' },
   release: { kind: 'envelope', field: 'release' }
-}
-
-const isStringLiteral = (value: string): boolean => /^(["'`])[\S\s]*\1$/.test(value.trim())
-
-const readStringLiteral = (literal: string): string => {
-  const trimmed = literal.trim()
-  if (trimmed.startsWith('"')) {
-    try {
-      const parsed: unknown = JSON.parse(trimmed)
-      return typeof parsed === 'string' ? parsed : trimmed.slice(1, -1)
-    } catch {
-      return trimmed.slice(1, -1)
-    }
-  }
-  return trimmed.slice(1, -1).replace(/\\'/g, "'")
 }
 
 const readCall = (segment: string): Call | null => {
@@ -399,6 +388,14 @@ const readMiniNotationHead = (head: Call): StrudelFlowNodeData | null => {
   if (head.name === 'note') {
     return { kind: 'notes', pattern: readStringLiteral(head.argument), notation: 'auto' }
   }
+  if (head.name === CHORD_HEAD) {
+    return {
+      kind: 'notes',
+      pattern: readStringLiteral(head.argument),
+      notation: 'names',
+      head: CHORD_HEAD
+    }
+  }
   return SAMPLE_HEADS.has(head.name)
     ? { kind: 'samples', pattern: readStringLiteral(head.argument) }
     : null
@@ -446,58 +443,21 @@ const setEffectField = (
   value: number
 ): StrudelFlowNodeData => Object.assign({}, effect, { [field]: value })
 
-const withCall = (data: StrudelFlowNodeData, call: Call): StrudelFlowNodeData =>
-  Object.assign({}, data, {
-    calls: [...(data.calls ?? []), { method: call.name, argument: call.argument }]
-  })
-
 const replaceLast = (list: StrudelFlowNodeData[], data: StrudelFlowNodeData) => [
   ...list.slice(0, -1),
   data
 ]
 
-// A call no dedicated node covers sits on the node it follows: the last effect, or the one
-// instrument it starts from. A visual only draws the pattern, and after a stack with nothing
-// chained yet there is no single node, so the calls there gather on an Effect node.
-const startEffectNode = (state: EffectChainState, call: Call): EffectChainState => ({
+// A call no dedicated node covers gets an Effect node of its own, never a place on the node
+// before it, so every node shows only what it controls.
+const addGenericCall = (state: EffectChainState, call: Call): EffectChainState => ({
   ...state,
-  effects: [...state.effects, withCall({ kind: 'effect', calls: [] }, call)]
+  effects: [
+    ...state.effects,
+    { kind: 'effect', calls: [{ method: call.name, argument: call.argument }] }
+  ],
+  fieldsOnLast: []
 })
-
-const addCallToOnlyBranch = (state: EffectChainState, call: Call): EffectChainState => {
-  const [onlyBranch] = state.branches
-  const branchEffect = onlyBranch?.effects.at(-1)
-  if (state.branches.length !== 1 || onlyBranch === undefined) {
-    return startEffectNode(state, call)
-  }
-  if (branchEffect !== undefined) {
-    return branchEffect.kind === 'visualizer'
-      ? startEffectNode(state, call)
-      : {
-          ...state,
-          branches: [
-            {
-              ...onlyBranch,
-              effects: replaceLast(onlyBranch.effects, withCall(branchEffect, call))
-            }
-          ]
-        }
-  }
-  const [onlyInstrument] = onlyBranch.instruments
-  return onlyBranch.instruments.length === 1 && onlyInstrument !== undefined
-    ? { ...state, branches: [{ ...onlyBranch, instruments: [withCall(onlyInstrument, call)] }] }
-    : startEffectNode(state, call)
-}
-
-const addGenericCall = (state: EffectChainState, call: Call): EffectChainState => {
-  const lastEffect = state.effects.at(-1)
-  if (lastEffect === undefined) {
-    return addCallToOnlyBranch(state, call)
-  }
-  return lastEffect.kind === 'visualizer'
-    ? startEffectNode(state, call)
-    : { ...state, effects: replaceLast(state.effects, withCall(lastEffect, call)) }
-}
 
 // A mask, a voice and a visual each get a node of their own, whatever comes before them; a mask
 // whatever its argument, since it decides what plays at all.
@@ -520,7 +480,7 @@ const readStandaloneEffect = (call: Call): StrudelFlowNodeData | null => {
 }
 
 // Consecutive calls of one effect, such as `.lpf(800).lpq(4)`, share a node until a field
-// repeats; a call with a pattern or a slider for its argument stays a call on the node before.
+// repeats; a call with a pattern or a slider for its argument gets an Effect node instead.
 const addEffectCall = (state: EffectChainState, call: Call): EffectChainState => {
   const standalone = readStandaloneEffect(call)
   if (standalone !== null) {
@@ -559,8 +519,8 @@ const applyCalls = (chain: ParsedChain, calls: Call[]): ParsedChain => {
 
 /**
  * Reads one pattern expression into its instrument branches and the effects after them. A
- * call the editor has a node for becomes that node, any other call sits on the node it
- * follows, and a head it cannot read stays a Code instrument.
+ * call the editor has a node for becomes that node, any other call an Effect node of its
+ * own, and a head it cannot read stays a Code instrument.
  * @param expression - one pattern, such as `note("c e").lpf(800).fast(2)`
  * @returns the branches and the shared effects in signal order
  */
@@ -661,12 +621,13 @@ const takeReusable = (
       }
 }
 
-// The code says nothing about how a node is drawn, so a reused node keeps its notation.
+// The code says nothing about how a node is drawn, so a reused node keeps its notation, as long
+// as it drew the same kind of line: chord symbols only read as names or text.
 const keepDrawingChoices = (
   data: StrudelFlowNodeData,
   reused: StrudelFlowNode | null
 ): StrudelFlowNodeData =>
-  data.kind === 'notes' && reused?.data.kind === 'notes'
+  data.kind === 'notes' && reused?.data.kind === 'notes' && reused.data.head === data.head
     ? {
         ...data,
         notation: reused.data.notation,
@@ -849,9 +810,10 @@ export const parseStrudelFlowCode = (
     return null
   }
   const program = readProgram(code)
+  const variables = readStrudelFlowVariables(program.setup)
   const built = program.blocks
     .map((block) => {
-      const chain = readChain(block.expression)
+      const chain = readChain(inlineStrudelFlowPatternVariables(block.expression, variables))
       return { ...chain, branches: muteBranches(chain.branches, block.muted) }
     })
     .reduce(addChain, {

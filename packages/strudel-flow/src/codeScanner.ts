@@ -199,3 +199,70 @@ export const isWrappedInParentheses = (expression: string): boolean => {
   ).closesEarly
   return !closesEarly
 }
+
+type MiniNotationSplit = { parts: string[]; current: string; depth: number }
+
+const MINI_NOTATION_OPENERS = new Set(['[', '<', '(', '{'])
+const MINI_NOTATION_CLOSERS = new Set([']', '>', ')', '}'])
+
+const closeMiniNotationPart = (state: MiniNotationSplit): MiniNotationSplit => {
+  const part = state.current.trim()
+  return { parts: part.length > 0 ? [...state.parts, part] : state.parts, current: '', depth: 0 }
+}
+
+/**
+ * Splits mini notation at a separator outside every bracket, which `splitTopLevel` cannot do
+ * since `<` is a comparison in code but an alternation here.
+ * @param text - the mini notation to split
+ * @param isSeparator - whether a character separates parts
+ * @returns the trimmed, non-empty parts in order
+ */
+export const splitMiniNotation = (
+  text: string,
+  isSeparator: (character: string) => boolean
+): string[] =>
+  closeMiniNotationPart(
+    [...text].reduce<MiniNotationSplit>(
+      (state, character) => {
+        if (state.depth === 0 && isSeparator(character)) {
+          return { ...closeMiniNotationPart(state), depth: 0 }
+        }
+        const depthChange = MINI_NOTATION_OPENERS.has(character)
+          ? 1
+          : MINI_NOTATION_CLOSERS.has(character)
+            ? -1
+            : 0
+        return {
+          ...state,
+          current: state.current + character,
+          depth: Math.max(0, state.depth + depthChange)
+        }
+      },
+      { parts: [], current: '', depth: 0 }
+    )
+  ).parts
+
+/**
+ * Whether a piece of code is one quoted string.
+ * @param value - the code
+ * @returns true for `"..."`, `'...'` or a template string
+ */
+export const isStringLiteral = (value: string): boolean => /^(["'`])[\S\s]*\1$/.test(value.trim())
+
+/**
+ * Reads the text a quoted string holds.
+ * @param literal - a quoted string, as `isStringLiteral` accepts
+ * @returns the string's content without its quotes
+ */
+export const readStringLiteral = (literal: string): string => {
+  const trimmed = literal.trim()
+  if (trimmed.startsWith('"')) {
+    try {
+      const parsed: unknown = JSON.parse(trimmed)
+      return typeof parsed === 'string' ? parsed : trimmed.slice(1, -1)
+    } catch {
+      return trimmed.slice(1, -1)
+    }
+  }
+  return trimmed.slice(1, -1).replace(/\\'/g, "'")
+}

@@ -248,6 +248,7 @@ const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
     notation:
       STRUDEL_FLOW_NOTATION_OPTIONS.find((option) => option.value === raw.notation)?.value ??
       STRUDEL_FLOW_NOTES_DEFAULTS.notation,
+    ...(raw.head === 'chord' ? { head: 'chord' } : {}),
     ...(raw.showPattern === true ? { showPattern: true } : {})
   }),
   samples: (raw) => ({

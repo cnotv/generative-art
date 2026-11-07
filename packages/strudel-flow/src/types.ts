@@ -84,10 +84,12 @@ export type StrudelFlowNotation = 'auto' | 'guitar' | 'bass' | 'sheet' | 'piano'
 /** The view a notation resolves to once Auto has looked at the sound. */
 export type StrudelFlowNotationView = Exclude<StrudelFlowNotation, 'auto'>
 
-/** A `note("...")` line in mini notation. */
+/** A `note("...")` line in mini notation, or a `chord("...")` line of chord symbols. */
 export type StrudelFlowNotesData = StrudelFlowMuteFlag & {
   kind: 'notes'
   pattern: string
+  /** Set for chord symbols, written as `chord("...")`; a note line leaves it out. */
+  head?: 'chord'
   notation: StrudelFlowNotation
   /** Shows the mini notation text beside a drawn notation; Mini notation itself always shows it. */
   showPattern?: boolean
