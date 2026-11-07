@@ -88,8 +88,12 @@ const categoryPositions = computed(() =>
 )
 const itemPositions = computed(() => {
   const items = activeCategoryData.value?.items ?? []
+  // A lone item owns the whole ring, so its label sits at the top instead of the wedge midpoint of a 360 degree span.
   return items.map((_, index) =>
-    polar(ITEM_RADIUS, ITEM_START_ANGLE - ((index + 0.5) * 360) / items.length)
+    polar(
+      ITEM_RADIUS,
+      items.length === 1 ? 90 : ITEM_START_ANGLE - ((index + 0.5) * 360) / items.length
+    )
   )
 })
 
