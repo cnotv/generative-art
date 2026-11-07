@@ -3,6 +3,8 @@ import type {
   StrudelFlowNotation,
   StrudelFlowNotationView,
   StrudelFlowSampleFamily,
+  StrudelFlowSampleModifierKind,
+  StrudelFlowSampleModifierOption,
   StrudelFlowVisualName
 } from './types'
 
@@ -373,25 +375,39 @@ export const STRUDEL_FLOW_SHEET_TIE_SAG = 0.7
 export const STRUDEL_FLOW_SHEET_BRACKET_RISE = 3
 export const STRUDEL_FLOW_SHEET_STROKE_WIDTH = 0.12
 
-/** What can follow a sample in a Samples step: a repeat, a length, a speed or a rhythm. */
+/**
+ * What can follow a sample in a Samples step, in plain words: a speed, a repeat, a length, a
+ * chance or a rhythm. `kind` picks the icon and the group the step's menu files it under.
+ */
 export const STRUDEL_FLOW_SAMPLE_MODIFIER_OPTIONS = [
-  { value: '', label: 'Once' },
-  { value: '*2', label: '×2' },
-  { value: '*3', label: '×3' },
-  { value: '*4', label: '×4' },
-  { value: '*8', label: '×8' },
-  { value: '!2', label: 'Repeat 2' },
-  { value: '!3', label: 'Repeat 3' },
-  { value: '!4', label: 'Repeat 4' },
-  { value: '@2', label: 'Hold 2' },
-  { value: '@3', label: 'Hold 3' },
-  { value: '/2', label: 'Every 2nd cycle' },
-  { value: '/4', label: 'Every 4th cycle' },
-  { value: '?', label: 'Sometimes' },
-  { value: '(3,8)', label: 'Euclid 3 of 8' },
-  { value: '(5,8)', label: 'Euclid 5 of 8' },
-  { value: '(3,8,2)', label: 'Euclid 3 of 8, shifted' }
-]
+  { value: '', label: 'Once', kind: 'once' },
+  { value: '*2', label: '2 hits in its step', kind: 'faster' },
+  { value: '*3', label: '3 hits in its step', kind: 'faster' },
+  { value: '*4', label: '4 hits in its step', kind: 'faster' },
+  { value: '*8', label: '8 hits in its step', kind: 'faster' },
+  { value: '!2', label: 'Repeat over 2 steps', kind: 'repeat' },
+  { value: '!3', label: 'Repeat over 3 steps', kind: 'repeat' },
+  { value: '!4', label: 'Repeat over 4 steps', kind: 'repeat' },
+  { value: '@2', label: 'Last 2 steps', kind: 'hold' },
+  { value: '@3', label: 'Last 3 steps', kind: 'hold' },
+  { value: '/2', label: 'Every 2nd cycle', kind: 'slower' },
+  { value: '/4', label: 'Every 4th cycle', kind: 'slower' },
+  { value: '?', label: 'Sometimes', kind: 'chance' },
+  { value: '(3,8)', label: '3 hits spread over 8', kind: 'rhythm' },
+  { value: '(5,8)', label: '5 hits spread over 8', kind: 'rhythm' },
+  { value: '(3,8,2)', label: '3 over 8, shifted by 2', kind: 'rhythm' }
+] as const satisfies readonly StrudelFlowSampleModifierOption[]
+
+/** The groups the modifier menu lists, in order, each named for what it does to the step. */
+export const STRUDEL_FLOW_SAMPLE_MODIFIER_KINDS = [
+  { id: 'once', label: 'Plays' },
+  { id: 'faster', label: 'Faster' },
+  { id: 'repeat', label: 'Repeat' },
+  { id: 'hold', label: 'Longer' },
+  { id: 'slower', label: 'Slower' },
+  { id: 'chance', label: 'Chance' },
+  { id: 'rhythm', label: 'Rhythm' }
+] as const satisfies readonly { id: StrudelFlowSampleModifierKind; label: string }[]
 
 /**
  * Instrument families the sample picker sorts by, matched in order against a sample's name, so

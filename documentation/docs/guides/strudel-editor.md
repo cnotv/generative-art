@@ -277,15 +277,19 @@ Each track is written as a plain sample line, such as `s("~ cp ~ cp*2")`, so typ
 that reads back as a Beats track too. Below the shortlist, each track's picker also lists every
 other sample and drum machine in the library, grouped and named as in the sounds tab.
 
-The Samples node shows its line as steps rather than mini notation. Each step is a sample with a
-picker and a **plays** list (once, `×2`, repeat, hold, every other cycle, sometimes, or a euclidean
-rhythm such as 3 of 8), a rest, or a group: **Squeezed into one step** writes `[…]` and **One per
-cycle** writes `<…>`, each with its own steps inside. **+ Sample**, **Rest** and **Group** add a
-step to the end of a row, and **Layer** adds a row that plays alongside, written after a comma.
-Anything the controls cannot show, such as a `{…}%4` polymeter, stays as a text step. The
-**Mini notation** switch shows the whole line as text under the steps, for editing by hand.
+The Samples node shows its line as numbered step tiles rather than mini notation; the steps share
+one cycle, left to right. A sample tile has the sample's picker, with its instrument icon, and a
+**plays** list whose icon shows what it does: once, faster (2 to 8 hits in its step), repeat over
+several steps, last several steps, slower (every 2nd or 4th cycle), sometimes, or a spread rhythm
+such as 3 hits over 8. A rest tile shows a pause icon; picking a sample on it fills that step. A
+group tile holds its own steps, and its two icon buttons choose **Fit in one step** (`[…]`) or
+**One per cycle** (`<…>`). Under each row the plus picker adds a sample, the pause button a rest
+and the bracket button a group; **Add layer** adds a row that plays alongside, written after a
+comma, and each layer can be removed from its label. Anything the controls cannot show, such as a
+`{…}%4` polymeter, stays as a text step. The **Mini notation** switch shows the whole line as text
+under the steps, for editing by hand.
 
-![A Samples node showing bd*2, a squeezed group, a one-per-cycle group and a euclidean percussion layer, cabled into a Gain node and a Mask node](/img/strudel-flow/samples-gain-mask.webp)
+![A Samples node with numbered step tiles: bd twice in its step, a fit-in-one-step group, a one-per-cycle group and a second layer, cabled into a Gain node and a Mask node](/img/strudel-flow/samples-gain-mask.webp)
 
 On a desktop pointer every sample picker, on a Beats track or a Samples step, opens a panel with a
 search field, the instrument families down the side (kicks, snares, hi-hats, claps, toms, cymbals,

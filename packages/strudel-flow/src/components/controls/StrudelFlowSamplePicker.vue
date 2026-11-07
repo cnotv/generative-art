@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import type { Component } from 'vue'
 import { ChevronDown, Search } from 'lucide-vue-next'
 import { STRUDEL_FLOW_SAMPLE_FAMILIES } from '../../config'
 import { findStrudelFlowSampleFamily, STRUDEL_FLOW_OTHER_SAMPLE_FAMILY } from '../../sampleFamilies'
@@ -14,6 +15,8 @@ const props = defineProps<{
   groups: StrudelFlowSampleGroup[]
   /** Shown while nothing is picked; the picker then adds rather than replaces. */
   placeholder?: string
+  /** Drawn beside the placeholder, such as a plus to add or a pause for a rest. */
+  emptyIcon?: Component
 }>()
 
 const emit = defineEmits<{
@@ -196,8 +199,8 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
     @click="isOpen ? close() : open()"
   >
     <component
-      :is="familyIcon(triggerFamilyId)"
-      v-if="modelValue.length > 0"
+      :is="modelValue.length > 0 ? familyIcon(triggerFamilyId) : emptyIcon"
+      v-if="modelValue.length > 0 || emptyIcon !== undefined"
       class="strudel-flow-sample-picker__icon"
       aria-hidden="true"
     />

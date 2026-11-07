@@ -1877,74 +1877,170 @@
   justify-content: space-between;
 }
 
-/* Samples: the line as steps, groups and layers instead of mini notation. */
+/* Samples: each step a numbered tile, a group a tile holding its own steps. */
 .strudel-flow-sample-steps {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
 }
 
+.strudel-flow-sample-steps__hint {
+  margin: 0;
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
+}
+
 .strudel-flow-sample-steps__layer {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-1-5);
+  flex-direction: column;
+  gap: var(--spacing-1);
 }
 
 .strudel-flow-sample-steps__layer-label {
-  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
   color: var(--sf-muted-foreground);
   font-size: var(--font-size-xs);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.strudel-flow-sample-steps__step,
-.strudel-flow-sample-steps__group {
-  display: inline-flex;
-  align-items: center;
+.strudel-flow-sample-steps__layer-label > svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.strudel-flow-sample-steps__sequence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--spacing-1-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strudel-flow-sample-steps__tile {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-1);
+  min-width: 7rem;
   padding: var(--spacing-1);
   border: 1px solid var(--sf-border);
   border-radius: var(--radius-md);
+  background: var(--sf-card);
+}
+
+.strudel-flow-sample-steps__tile--rest {
   background: color-mix(in srgb, var(--sf-muted) 60%, transparent);
 }
 
-.strudel-flow-sample-steps__group {
-  flex-direction: column;
-  align-items: stretch;
+.strudel-flow-sample-steps__tile--group {
   border-style: dashed;
+  background: color-mix(in srgb, var(--sf-muted) 40%, transparent);
 }
 
-.strudel-flow-sample-steps__group-header {
+.strudel-flow-sample-steps__tile .strudel-flow-sample-picker__trigger {
+  width: 100%;
+}
+
+.strudel-flow-sample-steps__tile-header {
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
 }
 
-.strudel-flow-sample-steps__select {
-  width: auto;
+.strudel-flow-sample-steps__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--sf-muted);
+  color: var(--sf-muted-foreground);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
 }
 
-.strudel-flow-sample-steps__select select {
-  height: 1.75rem;
-  padding: 0 1.5rem 0 var(--spacing-1-5);
+.strudel-flow-sample-steps__remove {
+  margin-left: auto;
+}
+
+.strudel-flow-sample-steps__bracket {
+  display: inline-flex;
+  gap: 0.125rem;
+  padding: 0.125rem;
   border: 1px solid var(--sf-border);
   border-radius: var(--radius-sm);
-  background: var(--sf-card);
-  color: var(--sf-card-foreground);
-  font-size: var(--font-size-xs);
 }
 
-.strudel-flow-sample-steps__rest {
-  padding: 0 var(--spacing-1-5);
+.strudel-flow-sample-steps__bracket-button,
+.strudel-flow-sample-steps__add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--sf-muted-foreground);
+  cursor: pointer;
+}
+
+.strudel-flow-sample-steps__add-button {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px dashed var(--sf-border);
+}
+
+.strudel-flow-sample-steps__bracket-button svg,
+.strudel-flow-sample-steps__add-button svg,
+.strudel-flow-sample-steps__modifier-icon {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.strudel-flow-sample-steps__bracket-button:hover,
+.strudel-flow-sample-steps__add-button:hover {
+  color: var(--sf-card-foreground);
+}
+
+.strudel-flow-sample-steps__bracket-button--active {
+  background: var(--sf-accent-soft);
+  color: var(--sf-card-foreground);
+}
+
+.strudel-flow-sample-steps__bracket-button:focus-visible,
+.strudel-flow-sample-steps__add-button:focus-visible {
+  outline: 2px solid var(--sf-ring);
+  outline-offset: 1px;
+}
+
+.strudel-flow-sample-steps__modifier {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  color: var(--sf-muted-foreground);
+}
+
+.strudel-flow-sample-steps__modifier .strudel-flow-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.strudel-flow-sample-steps__modifier select {
+  height: 1.75rem;
   font-size: var(--font-size-xs);
 }
 
 .strudel-flow-sample-steps__add {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: flex;
   align-items: center;
   gap: var(--spacing-1);
 }
