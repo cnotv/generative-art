@@ -33,8 +33,8 @@ const emit = defineEmits<{
 
 const MENU_SIZE = 380
 const CENTER = MENU_SIZE / 2
-const CATEGORY_RADIUS = 146
-const ITEM_RADIUS = 76
+const CATEGORY_RADIUS = 73
+const ITEM_RADIUS = 145
 const ITEM_START_ANGLE = 150
 const CATEGORY_META = [
   { label: 'Instruments', category: 'Instruments', icon: markRaw(Piano) },
@@ -65,6 +65,8 @@ const NODE_ICONS: Record<StrudelFlowNodeKind, Component> = {
 
 const isOpen = ref(false)
 const activeCategory = ref(0)
+// Buttons ignore the pointer so the whole wedge is the target; focus feeds the same key.
+const hoveredSector = ref<string | null>(null)
 const categories = computed(() =>
   CATEGORY_META.map((meta) => ({
     ...meta,
@@ -124,11 +126,11 @@ const sectorPath = (
 }
 
 const categorySector = (index: number): string =>
-  sectorPath(index, categories.value.length, 178, 112, categoryStartAngle.value)
+  sectorPath(index, categories.value.length, 110, 36, categoryStartAngle.value)
 const itemSector = (index: number): string =>
   activeCategoryData.value === null
     ? ''
-    : sectorPath(index, activeCategoryData.value.items.length, 110, 36, ITEM_START_ANGLE)
+    : sectorPath(index, activeCategoryData.value.items.length, 178, 112, ITEM_START_ANGLE)
 
 const positionStyle = (position: { x: number; y: number }): Record<string, string> => ({
   left: `${(position.x / MENU_SIZE) * 100}%`,
@@ -184,13 +186,23 @@ defineExpose({ open })
           :key="`category-${index}`"
           :d="categorySector(index)"
           class="strudel-flow-radial__sector"
-          :class="{ 'strudel-flow-radial__sector--active': activeCategory === index }"
+          :class="{
+            'strudel-flow-radial__sector--active': activeCategory === index,
+            'strudel-flow-radial__sector--hover': hoveredSector === `category-${index}`
+          }"
+          @mouseenter="hoveredSector = `category-${index}`"
+          @mouseleave="hoveredSector = null"
+          @click="activeCategory = index"
         />
         <path
-          v-for="(_, index) in activeCategoryData?.items ?? []"
+          v-for="(item, index) in activeCategoryData?.items ?? []"
           :key="`item-${index}`"
           :d="itemSector(index)"
           class="strudel-flow-radial__sector strudel-flow-radial__sector--item"
+          :class="{ 'strudel-flow-radial__sector--hover': hoveredSector === `item-${index}` }"
+          @mouseenter="hoveredSector = `item-${index}`"
+          @mouseleave="hoveredSector = null"
+          @click="addNode(item.kind)"
         />
       </svg>
       <button
@@ -203,6 +215,8 @@ defineExpose({ open })
         :aria-label="category.label"
         :aria-expanded="activeCategory === index"
         @click="activeCategory = index"
+        @focus="hoveredSector = `category-${index}`"
+        @blur="hoveredSector = null"
       >
         <component :is="category.icon" class="strudel-flow-radial__icon" aria-hidden="true" />
         <span>{{ category.label }}</span>
@@ -215,6 +229,8 @@ defineExpose({ open })
         :style="positionStyle(itemPositions[index] ?? { x: CENTER, y: CENTER })"
         :aria-label="`Add ${item.title} node`"
         @click="addNode(item.kind)"
+        @focus="hoveredSector = `item-${index}`"
+        @blur="hoveredSector = null"
       >
         <component
           :is="NODE_ICONS[item.kind]"
