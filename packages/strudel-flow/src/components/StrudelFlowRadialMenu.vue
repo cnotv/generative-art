@@ -101,6 +101,14 @@ const polar = (radius: number, angle: number): { x: number; y: number } => {
   }
 }
 
+const ringPath = (radius: number, sweep: 0 | 1): string =>
+  [
+    `M ${CENTER + radius} ${CENTER}`,
+    `A ${radius} ${radius} 0 1 ${sweep} ${CENTER - radius} ${CENTER}`,
+    `A ${radius} ${radius} 0 1 ${sweep} ${CENTER + radius} ${CENTER}`,
+    'Z'
+  ].join(' ')
+
 const sectorPath = (
   index: number,
   count: number,
@@ -109,6 +117,10 @@ const sectorPath = (
   startAngle = 180
 ): string => {
   const slice = 360 / count
+  // A single wedge spans the full turn, where start and end coincide and an arc draws nothing.
+  if (count === 1) {
+    return `${ringPath(outer, 1)} ${ringPath(inner, 0)}`
+  }
   const start = startAngle - index * slice
   const end = start - slice
   const outerStart = polar(outer, start)
