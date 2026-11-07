@@ -229,8 +229,7 @@ const PATTERN_GENERATORS: PatternGenerators = {
   mask: generateMaskPattern,
   envelope: generateEnvelopePattern,
   visualizer: generateVisualizerPattern,
-  // An Effect node is nothing but its calls, which every node chains after its own pattern.
-  effect: (_data, input) => input
+  effect: (data, input) => (input.length === 0 ? '' : `${input}${chainCalls(data.calls)}`)
 }
 
 const generateWith = <Kind extends StrudelFlowNodeData['kind']>(
@@ -246,10 +245,5 @@ const generateWith = <Kind extends StrudelFlowNodeData['kind']>(
  * @param input - the pattern arriving from upstream, empty for an instrument
  * @returns the node's Strudel expression, or an empty string when it makes no sound
  */
-export const generateStrudelFlowNodePattern = (
-  data: StrudelFlowNodeData,
-  input: string
-): string => {
-  const pattern = generateWith(data, input)
-  return pattern.length === 0 ? pattern : `${pattern}${chainCalls(data.calls ?? [])}`
-}
+export const generateStrudelFlowNodePattern = (data: StrudelFlowNodeData, input: string): string =>
+  generateWith(data, input)

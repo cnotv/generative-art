@@ -31,10 +31,7 @@ const readKey = (node: StrudelFlowNode): NodeKey | null => {
     return fixed.names.length === 0 ? null : fixed
   }
   const instrument = isStrudelFlowInstrumentKind(node.data.kind)
-  const code = generateStrudelFlowNodePattern(
-    { ...node.data, calls: [] },
-    instrument ? '' : EFFECT_INPUT
-  )
+  const code = generateStrudelFlowNodePattern(node.data, instrument ? '' : EFFECT_INPUT)
   const name = (instrument ? HEAD_PATTERN : METHOD_PATTERN).exec(code)?.[1]
   return name === undefined ? null : { chained: !instrument, names: [name] }
 }

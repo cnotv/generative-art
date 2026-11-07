@@ -242,7 +242,7 @@ the beats in one cycle (**B/C**).
 | **Mask**       | effect     | `mask`: which steps or cycles play                                                  |
 | **Envelope**   | effect     | `attack`, `decay`, `sustain` and `release`                                          |
 | **Visualizer** | effect     | a pianoroll, punchcard, scope, spiral, pitch wheel or spectrum, picked from a list  |
-| **Effect**     | effect     | chained calls with no single node to sit on, such as after a whole `stack(...)`     |
+| **Effect**     | effect     | one chained call no other node covers, such as `.jux(rev)`                          |
 | **Voice**      | sound      | the synth or sample bank, written as `sound("…")`                                   |
 
 A Notes node draws its notes so they read as music. **Auto** picks the notation
@@ -316,19 +316,18 @@ run of ones and zeros shows as switches, and anything else, such as `"<1!40 0!8>
 named in the setup, is edited as text.
 
 A call with no dedicated node, such as `.sometimesBy(.2, x => x.ply(2))` or
-`.jux(rev)`, gets an **Effect** node of its own, wired after the node it follows in the code;
-reading code never adds a call to another node. Common ones get controls: a
+`.jux(rev)`, gets an **Effect** node of its own, wired after the node it follows in the code. No
+other node holds calls: to chain one more, add an Effect node from the radial menu and wire it in.
+Common ones get controls: a
 step per cycle to switch on and off for `struct`, a knob for the chance of
 `sometimesBy`, `someCyclesBy` and `degradeBy`, the amount and subdivision of `swingBy`, and knobs
 for `fast`, `slow`, `ply`, `late`, `early`, `velocity`, `speed`, `crush`, `shape` and `hpf`. Any
 other call, or one whose argument the controls cannot show (a pattern where a number goes), is
 written as `.name(argument)` to edit in place. So is a dedicated call whose argument is a signal
-or a slider, such as `.lpf(sine.range(300, 3000))`. Remove a call with its cross, or add one by hand from
-the node's **…** menu with **Add call**.
+or a slider, such as `.lpf(sine.range(300, 3000))`. Remove a call with its cross.
 
 Each node header has a **…** menu with **View code**, which shows what the node writes, **Go to
-code**, which switches to the code editor with the node's call selected, **Add call** and
-**Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
+code**, which switches to the code editor with the node's call selected, and **Remove**. An instrument also has a speaker button that mutes it with `.hush()`; muting every
 instrument of a group writes the whole block as `_$:`. Drag a node by its header to arrange the
 canvas. Connect an output dot to an input by dragging, or click the output and then the input.
 Delete or Backspace removes a selected node and its cables. Every cable has a disconnect button on

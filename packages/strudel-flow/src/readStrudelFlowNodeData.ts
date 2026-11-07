@@ -43,7 +43,6 @@ import {
 } from './readStoredValue'
 import type {
   StrudelFlowCall,
-  StrudelFlowCallList,
   StrudelFlowChordsData,
   StrudelFlowDrumRow,
   StrudelFlowNodeData,
@@ -221,14 +220,6 @@ const readCalls = (value: unknown): StrudelFlowCall[] =>
     ? value.filter(isStoredCall).map((call) => ({ method: call.method, argument: call.argument }))
     : []
 
-const readCallList = (
-  kind: StrudelFlowNodeKind,
-  raw: Record<string, unknown>
-): StrudelFlowCallList => {
-  const calls = readCalls(raw.calls)
-  return kind === 'effect' || calls.length === 0 ? {} : { calls }
-}
-
 type NodeDataReader = (raw: Record<string, unknown>) => StrudelFlowNodeData
 
 const NODE_DATA_READERS: { [Kind in StrudelFlowNodeKind]: NodeDataReader } = {
@@ -355,5 +346,5 @@ export const readStrudelFlowNodeData = (
   rawData: unknown
 ): StrudelFlowNodeData => {
   const raw = isStoredRecord(rawData) ? rawData : {}
-  return { ...NODE_DATA_READERS[kind](raw), ...readCallList(kind, raw) }
+  return NODE_DATA_READERS[kind](raw)
 }

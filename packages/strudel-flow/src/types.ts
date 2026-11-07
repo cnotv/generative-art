@@ -362,12 +362,7 @@ export type StrudelFlowCallField =
       perCycle: boolean
     }
 
-/** Calls no dedicated node covers, chained after the node they follow in the code. */
-export type StrudelFlowCallList = {
-  calls?: StrudelFlowCall[]
-}
-
-/** Chained calls with no single node to sit on, such as the ones after a whole `stack(...)`. */
+/** A chained call no dedicated node covers, such as `.jux(rev)`, as a node of its own. */
 export type StrudelFlowEffectData = {
   kind: 'effect'
   calls: StrudelFlowCall[]
@@ -437,25 +432,23 @@ export type StrudelFlowVisualizerData = {
   options: string
 }
 
-export type StrudelFlowNodeData = StrudelFlowCallList &
-  (
-    | StrudelFlowPadData
-    | StrudelFlowBeatsData
-    | StrudelFlowChordsData
-    | StrudelFlowNotesData
-    | StrudelFlowSamplesData
-    | StrudelFlowCodeData
-    | StrudelFlowVoiceData
-    | StrudelFlowFilterData
-    | StrudelFlowDelayData
-    | StrudelFlowSpaceData
-    | StrudelFlowGainData
-    | StrudelFlowLevelData
-    | StrudelFlowMaskData
-    | StrudelFlowEnvelopeData
-    | StrudelFlowVisualizerData
-    | StrudelFlowEffectData
-  )
+export type StrudelFlowNodeData =
+  | StrudelFlowPadData
+  | StrudelFlowBeatsData
+  | StrudelFlowChordsData
+  | StrudelFlowNotesData
+  | StrudelFlowSamplesData
+  | StrudelFlowCodeData
+  | StrudelFlowVoiceData
+  | StrudelFlowFilterData
+  | StrudelFlowDelayData
+  | StrudelFlowSpaceData
+  | StrudelFlowGainData
+  | StrudelFlowLevelData
+  | StrudelFlowMaskData
+  | StrudelFlowEnvelopeData
+  | StrudelFlowVisualizerData
+  | StrudelFlowEffectData
 
 export type StrudelFlowNodePosition = {
   x: number

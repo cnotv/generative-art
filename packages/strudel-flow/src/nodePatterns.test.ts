@@ -240,12 +240,10 @@ describe('generateStrudelFlowNodePattern', () => {
     expect(patternWithoutInput).toBe('')
   })
 
-  it("chains a node's own calls after its pattern, skipping calls with no name", () => {
+  it("chains an Effect node's calls after its input, skipping calls with no name", () => {
     // Arrange
     const data = {
-      kind: 'filter' as const,
-      cutoff: 800,
-      resonance: 1,
+      kind: 'effect' as const,
       calls: [
         { method: 'mask', argument: '"1 0"' },
         { method: ' ', argument: '2' },
@@ -258,7 +256,7 @@ describe('generateStrudelFlowNodePattern', () => {
     const patternWithoutInput = generateStrudelFlowNodePattern(data, '')
 
     // Assert
-    expect(pattern).toBe('s("bd").lpf(800).lpq(1).mask("1 0").jux(rev)')
+    expect(pattern).toBe('s("bd").mask("1 0").jux(rev)')
     expect(patternWithoutInput).toBe('')
   })
 })

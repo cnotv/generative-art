@@ -378,7 +378,7 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.edges.map((edge) => edge.id)).toEqual(['same', 'beats-filter'])
   })
 
-  it('reads the calls chained onto a node and an Effect node stored with one call', () => {
+  it('drops calls stored on a node other than Effect and reads an Effect node stored with one call', () => {
     // Arrange
     const storedValue = storePatch({
       nodes: [
@@ -406,8 +406,7 @@ describe('parseStrudelFlowPatch', () => {
     expect(patch?.nodes[0]?.data).toEqual({
       kind: 'notes',
       pattern: 'c3',
-      notation: 'auto',
-      calls: [{ method: 'mask', argument: '"1 0"' }]
+      notation: 'auto'
     })
     expect(patch?.nodes[1]?.data).toEqual({
       kind: 'effect',

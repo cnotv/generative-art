@@ -303,8 +303,7 @@ const singleBeats = (branch: Branch): StrudelFlowBeatsData | null => {
   return branch.instruments.length === 1 &&
     branch.effects.length === 0 &&
     instrument?.kind === 'beats' &&
-    instrument.muted !== true &&
-    (instrument.calls ?? []).length === 0
+    instrument.muted !== true
     ? instrument
     : null
 }
@@ -678,10 +677,8 @@ const connect = (state: BuildState, source: string, target: string): BuildState 
   edges: [...state.edges, { id: `${source}-${target}`, source, target }]
 })
 
-const callListHeight = (data: StrudelFlowNodeData): number => {
-  const callCount = data.calls?.length ?? 0
-  return callCount === 0 ? 0 : CALL_LIST_HEIGHT + callCount * CALL_ROW_HEIGHT
-}
+const callListHeight = (data: StrudelFlowNodeData): number =>
+  data.kind === 'effect' ? CALL_LIST_HEIGHT + data.calls.length * CALL_ROW_HEIGHT : 0
 
 const heightOf = (data: StrudelFlowNodeData): number =>
   getStrudelFlowNodeSize(data.kind).height + callListHeight(data) + ROW_GAP
