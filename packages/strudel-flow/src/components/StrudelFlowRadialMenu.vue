@@ -8,6 +8,8 @@ import {
   Code,
   Disc3,
   Drum,
+  EyeOff,
+  Gauge,
   Grid3x3,
   Music,
   Music2,
@@ -48,7 +50,9 @@ const NODE_ICONS: Record<StrudelFlowNodeKind, Component> = {
   filter: markRaw(SlidersHorizontal),
   delay: markRaw(Clock),
   space: markRaw(Waves),
+  gain: markRaw(Gauge),
   level: markRaw(Volume1),
+  mask: markRaw(EyeOff),
   envelope: markRaw(Activity),
   visualizer: markRaw(AudioWaveform),
   effect: markRaw(Wand2)

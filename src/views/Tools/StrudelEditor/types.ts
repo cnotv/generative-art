@@ -107,6 +107,8 @@ export type StrudelCodeMirror = {
   applyEvaluation: (meta: StrudelEvaluationMeta) => void
   highlight: (activeHaps: unknown[], time: number) => void
   clearHighlights: () => void
+  /** Selects a span of the code, scrolls it into view and focuses the editor. */
+  selectRange: (from: number, to: number) => void
   destroy: () => void
 }
 

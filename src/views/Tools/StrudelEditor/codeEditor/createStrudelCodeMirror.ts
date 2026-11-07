@@ -162,6 +162,14 @@ export const createStrudelCodeMirror = (options: StrudelCodeMirrorOptions): Stru
       updateMiniLocations(view, meta.miniLocations)
       flash(view)
     },
+    selectRange: (from: number, to: number): void => {
+      const length = view.state.doc.length
+      view.dispatch({
+        selection: { anchor: Math.min(from, length), head: Math.min(to, length) },
+        scrollIntoView: true
+      })
+      view.focus()
+    },
     highlight: (activeHaps: unknown[], time: number): void => {
       highlightMiniLocations(view, time, activeHaps)
     },

@@ -7,11 +7,13 @@ import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import '../styles/flowCanvas.scss'
+import StrudelFlowCable from './StrudelFlowCable.vue'
 import StrudelFlowNode from './StrudelFlowNode.vue'
 import StrudelFlowRadialMenu from './StrudelFlowRadialMenu.vue'
 import StrudelFlowToolbar from './StrudelFlowToolbar.vue'
 import { getStrudelFlowVisualizerWidgetIds } from '../compileStrudelFlow'
 import { STRUDEL_FLOW_REFERENCE } from '../config'
+import { STRUDEL_FLOW_OVERLAY_TARGET } from './overlayTargetKey'
 import { STRUDEL_FLOW_VISUALIZER_WIDGET_IDS } from './visualizerWidgetIdsKey'
 import { STRUDEL_FLOW_NOTATION_CONTEXT } from './notation/notationContextKey'
 import { findStrudelFlowNotesSound } from '../notationPick'
@@ -44,12 +46,16 @@ const emit = defineEmits<{
   connect: [sourceNodeId: string, targetNodeId: string]
   'update-node': [nodeId: string, data: StrudelFlowNodeData]
   'remove-node': [nodeId: string]
+  'show-code': [nodeId: string]
   'add-node': [kind: StrudelFlowNodeKind]
   'update:beatsPerMinute': [beatsPerMinute: number]
   'update:beatsPerCycle': [beatsPerCycle: number]
 }>()
 
-const DEFAULT_EDGE_OPTIONS = { type: 'default' }
+const DEFAULT_EDGE_OPTIONS = { type: 'strudel' }
+
+const shell = ref<HTMLElement | null>(null)
+provide(STRUDEL_FLOW_OVERLAY_TARGET, shell)
 
 provide(
   STRUDEL_FLOW_VISUALIZER_WIDGET_IDS,
@@ -129,7 +135,7 @@ const openRadialMenu = (): void => {
 </script>
 
 <template>
-  <div class="strudel-flow-editor-shell" @contextmenu.prevent="openRadialMenu">
+  <div ref="shell" class="strudel-flow-editor-shell" @contextmenu.prevent="openRadialMenu">
     <VueFlow
       class="strudel-flow-editor"
       :nodes="nodes"
@@ -158,7 +164,11 @@ const openRadialMenu = (): void => {
           :voice-groups="voiceGroups ?? []"
           @update="onNodeUpdated(nodeProperties.id, $event)"
           @remove="onNodeRemoved"
+          @show-code="emit('show-code', $event)"
         />
+      </template>
+      <template #edge-strudel="edgeProperties">
+        <StrudelFlowCable v-bind="edgeProperties" />
       </template>
     </VueFlow>
     <StrudelFlowToolbar

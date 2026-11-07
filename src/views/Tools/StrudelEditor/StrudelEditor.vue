@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from 'vue'
 import {
   Boxes,
   Cable,
@@ -16,7 +24,7 @@ import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { FLOW_SYNC_DELAY_MS, STRUDEL_LICENSE_NOTE } from './config'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
-import { useStrudelFlow } from '@webgamekit/strudel-flow'
+import { findStrudelFlowNodeCode, useStrudelFlow } from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
 import { readLegacyStrudelAnchor, readStrudelAddress, writeStrudelAddress } from './strudelAddress'
 import { useStrudelHints } from './hints/useStrudelHints'
@@ -297,6 +305,18 @@ const visibleTools = computed(() =>
 
 const drawerTitle = computed(() => tabList.find((tab) => tab.id === activeTab.value)?.label ?? '')
 
+const codeEditor = ref<InstanceType<typeof StrudelCodeEditor> | null>(null)
+
+// The flow keeps its graph, so switching back after looking at the code shows the same patch.
+const onShowNodeCode = async (nodeId: string): Promise<void> => {
+  const range = findStrudelFlowNodeCode(patternCode.value, flowNodes.value, flowEdges.value, nodeId)
+  onEditorModeChange('code')
+  await nextTick()
+  if (range !== null) {
+    codeEditor.value?.selectRange(range.from, range.to)
+  }
+}
+
 const onFlowNodesConnected = (sourceNodeId: string, targetNodeId: string): void => {
   connectFlowNodes(sourceNodeId, targetNodeId)
 }
@@ -339,6 +359,7 @@ onBeforeUnmount(() => {
       </header>
       <StrudelCodeEditor
         v-show="editorMode === 'code'"
+        ref="codeEditor"
         class="strudel-editor__code-editor"
         :code="patternCode"
         @update:code="updatePatternCode"
@@ -358,6 +379,7 @@ onBeforeUnmount(() => {
           @connect="onFlowNodesConnected"
           @update-node="updateFlowNodeData"
           @remove-node="removeFlowNode"
+          @show-code="onShowNodeCode"
           @add-node="addFlowNode"
           @update:beats-per-minute="setFlowBeatsPerMinute"
           @update:beats-per-cycle="setFlowBeatsPerCycle"
