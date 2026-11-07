@@ -50,7 +50,7 @@ type ParsedChain = { branches: Branch[]; effects: StrudelFlowNodeData[] }
 
 type Tempo = { beatsPerMinute: number; beatsPerCycle: number }
 
-type EffectKind = 'filter' | 'delay' | 'space' | 'level' | 'envelope'
+type EffectKind = 'filter' | 'delay' | 'space' | 'gain' | 'level' | 'envelope'
 
 type EffectCall = { kind: EffectKind; field: string }
 
@@ -80,6 +80,7 @@ const VISUAL_CALLS = new Map<string, StrudelFlowVisualName>(
 const DRUM_TOKEN_PATTERN = /^(\d*[A-Za-z]\w*(?::\d+)?)(![2-4]|\/[2-4]|@[2-4]|\*[2-4])?$/
 const KEY_ALIASES: Record<string, string> = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' }
 const VOICE_CALLS = new Set(['sound', 's'])
+const MASK_CALL = 'mask'
 const SAMPLE_HEADS = new Set(['s', 'sound'])
 const LABEL_PATTERN = /^(_?\$|[A-Z_a-z]\w*)\s*:(?!:)\s*/
 const SETUP_PATTERN = /^(const|let|var|function|async|await|import|class)\b/
@@ -96,7 +97,7 @@ const EFFECT_CALLS: Record<string, EffectCall> = {
   roomfade: { kind: 'space', field: 'roomFade' },
   roomlp: { kind: 'space', field: 'roomLowPass' },
   roomdim: { kind: 'space', field: 'roomDim' },
-  gain: { kind: 'level', field: 'gain' },
+  gain: { kind: 'gain', field: 'gain' },
   pan: { kind: 'level', field: 'pan' },
   postgain: { kind: 'level', field: 'postgain' },
   attack: { kind: 'envelope', field: 'attack' },
@@ -497,31 +498,32 @@ const addGenericCall = (state: EffectChainState, call: Call): EffectChainState =
     : { ...state, effects: replaceLast(state.effects, withCall(lastEffect, call)) }
 }
 
+// A mask, a voice and a visual each get a node of their own, whatever comes before them; a mask
+// whatever its argument, since it decides what plays at all.
+const readStandaloneEffect = (call: Call): StrudelFlowNodeData | null => {
+  if (call.name === MASK_CALL && call.argument.length > 0) {
+    return { kind: 'mask', argument: call.argument }
+  }
+  if (VOICE_CALLS.has(call.name) && isStringLiteral(call.argument)) {
+    return { kind: 'voice', sound: readStringLiteral(call.argument) }
+  }
+  const visual = VISUAL_CALLS.get(call.name)
+  return visual === undefined
+    ? null
+    : {
+        kind: 'visualizer',
+        visual,
+        placement: call.name.startsWith('_') ? 'inline' : 'background',
+        options: call.argument
+      }
+}
+
 // Consecutive calls of one effect, such as `.lpf(800).lpq(4)`, share a node until a field
 // repeats; a call with a pattern or a slider for its argument stays a call on the node before.
 const addEffectCall = (state: EffectChainState, call: Call): EffectChainState => {
-  if (VOICE_CALLS.has(call.name) && isStringLiteral(call.argument)) {
-    return {
-      ...state,
-      effects: [...state.effects, { kind: 'voice', sound: readStringLiteral(call.argument) }],
-      fieldsOnLast: []
-    }
-  }
-  const visual = VISUAL_CALLS.get(call.name)
-  if (visual !== undefined) {
-    return {
-      ...state,
-      effects: [
-        ...state.effects,
-        {
-          kind: 'visualizer',
-          visual,
-          placement: call.name.startsWith('_') ? 'inline' : 'background',
-          options: call.argument
-        }
-      ],
-      fieldsOnLast: []
-    }
+  const standalone = readStandaloneEffect(call)
+  if (standalone !== null) {
+    return { ...state, effects: [...state.effects, standalone], fieldsOnLast: [] }
   }
   const descriptor = EFFECT_CALLS[call.name]
   const value = readNumber(call.argument)

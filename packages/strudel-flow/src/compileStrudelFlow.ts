@@ -172,7 +172,7 @@ const applyEffects = (
       : generateStrudelFlowNodePattern(node.data, currentPattern)
   }, pattern)
 
-type InstrumentPath = { pattern: string; effectIds: string[] }
+type InstrumentPath = { nodeId: string; pattern: string; effectIds: string[] }
 
 type ComponentPlan = { label: string; branches: InstrumentPath[]; sharedIds: string[] }
 
@@ -195,6 +195,7 @@ const planComponent = (
     const downstream = collectDownstream(node.id, outgoing, [])
     return [
       {
+        nodeId: node.id,
         pattern: !isComponentMuted && isMuted(node) ? `${pattern}.hush()` : pattern,
         effectIds: ordered.filter((nodeId) => downstream.includes(nodeId))
       }
@@ -207,6 +208,7 @@ const planComponent = (
   return {
     label: isComponentMuted ? '_$:' : '$:',
     branches: paths.map((path) => ({
+      nodeId: path.nodeId,
       pattern: path.pattern,
       effectIds: path.effectIds.slice(0, path.effectIds.length - sharedLength)
     })),
@@ -314,4 +316,22 @@ export const getStrudelFlowVisualizerWidgetIds = (
       return [nodeId, `${STRUDEL_FLOW_WIDGET_ID_PREFIX}${call}_${index}`]
     })
   )
+}
+
+/**
+ * The nodes in the order their code appears in the compiled program: each block's instruments,
+ * each followed by the effects only it passes through, then the effects the block shares.
+ * @param nodes - the patch's nodes
+ * @param edges - the patch's cables
+ * @returns node ids in code order; a node that writes no code is left out
+ */
+export const getStrudelFlowCodeOrder = (
+  nodes: StrudelFlowNode[],
+  edges: StrudelFlowEdge[]
+): string[] => {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]))
+  return planComponents(nodes, edges, nodesById).flatMap((plan) => [
+    ...plan.branches.flatMap((branch) => [branch.nodeId, ...branch.effectIds]),
+    ...plan.sharedIds
+  ])
 }

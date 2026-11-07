@@ -11,7 +11,9 @@ export type StrudelFlowNodeKind =
   | 'filter'
   | 'delay'
   | 'space'
+  | 'gain'
   | 'level'
+  | 'mask'
   | 'envelope'
   | 'visualizer'
   | 'effect'
@@ -263,6 +265,64 @@ export type StrudelFlowTabLayout = {
 export type StrudelFlowSamplesData = StrudelFlowMuteFlag & {
   kind: 'samples'
   pattern: string
+  /** Shows the mini notation text under the step editor. */
+  showPattern?: boolean
+}
+
+/**
+ * One step of a Samples line as its editor shows it: a rest, a sample, a bracketed group of
+ * steps, or a piece of mini notation the editor has no control for, kept as text.
+ */
+export type StrudelFlowSampleStep =
+  | { kind: 'rest' }
+  | {
+      kind: 'sound'
+      /** The sample name, with a variant number such as `bd:3` when it has one. */
+      sound: string
+      /** What follows the name, such as `*2`, `@3` or `(3,8)`, or empty. */
+      modifier: string
+    }
+  | {
+      kind: 'group'
+      /** `[a b]` squeezes its steps into one; `<a b>` plays one of them each cycle. */
+      bracket: 'subdivide' | 'alternate'
+      layers: StrudelFlowSampleLayer[]
+      modifier: string
+    }
+  | { kind: 'text'; text: string }
+
+/** Steps played one after another; layers separated by commas play together. */
+export type StrudelFlowSampleLayer = StrudelFlowSampleStep[]
+
+/** What a modifier does to a Samples step, which picks its icon and its menu group. */
+export type StrudelFlowSampleModifierKind =
+  | 'once'
+  | 'faster'
+  | 'repeat'
+  | 'hold'
+  | 'slower'
+  | 'chance'
+  | 'rhythm'
+
+/** One modifier a Samples step can take, as its menu lists it. */
+export type StrudelFlowSampleModifierOption = {
+  value: string
+  label: string
+  kind: StrudelFlowSampleModifierKind
+}
+
+/** An instrument family the sample picker sorts samples into, with the names that belong to it. */
+export type StrudelFlowSampleFamily = {
+  id: string
+  label: string
+  /** A regular expression source matched against the lowercase sample name. */
+  match: string
+}
+
+/** Where a node's code sits in the program, as character offsets. */
+export type StrudelFlowCodeRange = {
+  from: number
+  to: number
 }
 
 /** Any expression the other instruments cannot describe, kept verbatim. */
@@ -333,11 +393,21 @@ export type StrudelFlowSpaceData = {
   roomDim: number
 }
 
+export type StrudelFlowGainData = {
+  kind: 'gain'
+  gain: number
+}
+
 export type StrudelFlowLevelData = {
   kind: 'level'
-  gain: number
   pan: number
   postgain: number
+}
+
+/** `.mask(...)`: which steps or cycles of the pattern play. The argument is kept as written. */
+export type StrudelFlowMaskData = {
+  kind: 'mask'
+  argument: string
 }
 
 export type StrudelFlowEnvelopeData = {
@@ -377,7 +447,9 @@ export type StrudelFlowNodeData = StrudelFlowCallList &
     | StrudelFlowFilterData
     | StrudelFlowDelayData
     | StrudelFlowSpaceData
+    | StrudelFlowGainData
     | StrudelFlowLevelData
+    | StrudelFlowMaskData
     | StrudelFlowEnvelopeData
     | StrudelFlowVisualizerData
     | StrudelFlowEffectData

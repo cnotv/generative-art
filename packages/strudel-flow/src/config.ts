@@ -2,6 +2,9 @@ import type {
   StrudelFlowCallParameter,
   StrudelFlowNotation,
   StrudelFlowNotationView,
+  StrudelFlowSampleFamily,
+  StrudelFlowSampleModifierKind,
+  StrudelFlowSampleModifierOption,
   StrudelFlowVisualName
 } from './types'
 
@@ -371,3 +374,72 @@ export const STRUDEL_FLOW_SHEET_TIE_OFFSET = 0.7
 export const STRUDEL_FLOW_SHEET_TIE_SAG = 0.7
 export const STRUDEL_FLOW_SHEET_BRACKET_RISE = 3
 export const STRUDEL_FLOW_SHEET_STROKE_WIDTH = 0.12
+
+/**
+ * What can follow a sample in a Samples step, in plain words: a speed, a repeat, a length, a
+ * chance or a rhythm. `kind` picks the icon and the group the step's menu files it under.
+ */
+export const STRUDEL_FLOW_SAMPLE_MODIFIER_OPTIONS = [
+  { value: '', label: 'Once', kind: 'once' },
+  { value: '*2', label: '2 hits in its step', kind: 'faster' },
+  { value: '*3', label: '3 hits in its step', kind: 'faster' },
+  { value: '*4', label: '4 hits in its step', kind: 'faster' },
+  { value: '*8', label: '8 hits in its step', kind: 'faster' },
+  { value: '!2', label: 'Repeat over 2 steps', kind: 'repeat' },
+  { value: '!3', label: 'Repeat over 3 steps', kind: 'repeat' },
+  { value: '!4', label: 'Repeat over 4 steps', kind: 'repeat' },
+  { value: '@2', label: 'Last 2 steps', kind: 'hold' },
+  { value: '@3', label: 'Last 3 steps', kind: 'hold' },
+  { value: '/2', label: 'Every 2nd cycle', kind: 'slower' },
+  { value: '/4', label: 'Every 4th cycle', kind: 'slower' },
+  { value: '?', label: 'Sometimes', kind: 'chance' },
+  { value: '(3,8)', label: '3 hits spread over 8', kind: 'rhythm' },
+  { value: '(5,8)', label: '5 hits spread over 8', kind: 'rhythm' },
+  { value: '(3,8,2)', label: '3 over 8, shifted by 2', kind: 'rhythm' }
+] as const satisfies readonly StrudelFlowSampleModifierOption[]
+
+/** The groups the modifier menu lists, in order, each named for what it does to the step. */
+export const STRUDEL_FLOW_SAMPLE_MODIFIER_KINDS = [
+  { id: 'once', label: 'Plays' },
+  { id: 'faster', label: 'Faster' },
+  { id: 'repeat', label: 'Repeat' },
+  { id: 'hold', label: 'Longer' },
+  { id: 'slower', label: 'Slower' },
+  { id: 'chance', label: 'Chance' },
+  { id: 'rhythm', label: 'Rhythm' }
+] as const satisfies readonly { id: StrudelFlowSampleModifierKind; label: string }[]
+
+/**
+ * Instrument families the sample picker sorts by, matched in order against a sample's name, so
+ * `808bd` and `rolandtr909_bd` both land under Kicks. Anything unmatched is Other.
+ */
+export const STRUDEL_FLOW_SAMPLE_FAMILIES: StrudelFlowSampleFamily[] = [
+  { id: 'kick', label: 'Kicks', match: '(^|[_\\d])(bd|kick)|kick|bassdrum' },
+  { id: 'snare', label: 'Snares', match: '(^|[_\\d])(sd|sn|rim|rs)(\\b|_|$|\\d)|snare|rimshot' },
+  { id: 'hihat', label: 'Hi-hats', match: '(^|[_\\d])(hh|oh|ch|hc|ho|oc)|hat' },
+  { id: 'clap', label: 'Claps', match: '(^|[_\\d])cp|clap|hand' },
+  { id: 'tom', label: 'Toms', match: '(^|[_\\d])(lt|mt|ht|lc|mc|hc)(\\b|_|$|\\d)|tom' },
+  {
+    id: 'cymbal',
+    label: 'Cymbals',
+    match: '(^|[_\\d])(cr|cy|cb|rd)(\\b|_|$|\\d)|ride|crash|cymbal|cowbell'
+  },
+  {
+    id: 'percussion',
+    label: 'Percussion',
+    match: 'perc|tabla|conga|bongo|shaker|tamb|tok|tink|click|stomp|clave|glass|can|bottle|wood'
+  },
+  { id: 'bass', label: 'Bass', match: 'bass|sub|jvbass|jungbass' },
+  { id: 'keys', label: 'Keys', match: 'piano|keys|rhodes|organ|epiano|casio|wurli|clav|pad|arpy' },
+  {
+    id: 'strings',
+    label: 'Guitar and strings',
+    match: 'guitar|gtr|string|violin|cello|harp|pluck'
+  },
+  { id: 'voice', label: 'Voices', match: 'voc|voice|vox|choir|speech|sing|numbers|alphabet|mouth' },
+  {
+    id: 'fx',
+    label: 'Effects and noise',
+    match: 'fx|noise|glitch|sweep|wind|metal|industrial|space'
+  }
+]

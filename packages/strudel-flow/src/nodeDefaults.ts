@@ -13,7 +13,9 @@ import type {
   StrudelFlowEffectData,
   StrudelFlowEnvelopeData,
   StrudelFlowFilterData,
+  StrudelFlowGainData,
   StrudelFlowLevelData,
+  StrudelFlowMaskData,
   StrudelFlowNodeData,
   StrudelFlowNodeKind,
   StrudelFlowNotesData,
@@ -124,11 +126,20 @@ export const STRUDEL_FLOW_SPACE_DEFAULTS: StrudelFlowSpaceData = {
   roomDim: 8000
 }
 
+export const STRUDEL_FLOW_GAIN_DEFAULTS: StrudelFlowGainData = {
+  kind: 'gain',
+  gain: 1
+}
+
 export const STRUDEL_FLOW_LEVEL_DEFAULTS: StrudelFlowLevelData = {
   kind: 'level',
-  gain: 1,
   pan: 0.5,
   postgain: 1
+}
+
+export const STRUDEL_FLOW_MASK_DEFAULTS: StrudelFlowMaskData = {
+  kind: 'mask',
+  argument: '"<1 1 1 0>"'
 }
 
 export const STRUDEL_FLOW_ENVELOPE_DEFAULTS: StrudelFlowEnvelopeData = {
@@ -184,7 +195,9 @@ const NODE_DATA_FACTORIES: { [Kind in StrudelFlowNodeKind]: () => StrudelFlowNod
   filter: () => ({ ...STRUDEL_FLOW_FILTER_DEFAULTS }),
   delay: () => ({ ...STRUDEL_FLOW_DELAY_DEFAULTS }),
   space: () => ({ ...STRUDEL_FLOW_SPACE_DEFAULTS }),
+  gain: () => ({ ...STRUDEL_FLOW_GAIN_DEFAULTS }),
   level: () => ({ ...STRUDEL_FLOW_LEVEL_DEFAULTS }),
+  mask: () => ({ ...STRUDEL_FLOW_MASK_DEFAULTS }),
   envelope: () => ({ ...STRUDEL_FLOW_ENVELOPE_DEFAULTS }),
   visualizer: () => ({ ...STRUDEL_FLOW_VISUALIZER_DEFAULTS }),
   effect: () => ({

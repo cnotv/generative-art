@@ -87,6 +87,7 @@ vi.mock('./codeEditor/createStrudelCodeMirror', () => ({
       applyEvaluation: () => undefined,
       highlight: () => undefined,
       clearHighlights: () => undefined,
+      selectRange: (from: number, to: number) => codeField.setSelectionRange(from, to),
       destroy: () => codeField.remove()
     }
   }

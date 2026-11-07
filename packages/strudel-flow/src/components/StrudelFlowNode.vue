@@ -2,7 +2,7 @@
 import { computed, inject, markRaw, ref } from 'vue'
 import type { Component } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
-import { Code2, Ellipsis, ListPlus, Trash2, Volume2, VolumeX } from 'lucide-vue-next'
+import { Code2, Ellipsis, ListPlus, SquareCode, Trash2, Volume2, VolumeX } from 'lucide-vue-next'
 import StrudelFlowBeatsControls from './controls/StrudelFlowBeatsControls.vue'
 import StrudelFlowCallList from './controls/StrudelFlowCallList.vue'
 import StrudelFlowChordsControls from './controls/StrudelFlowChordsControls.vue'
@@ -10,9 +10,12 @@ import StrudelFlowCodeControls from './controls/StrudelFlowCodeControls.vue'
 import StrudelFlowDelayControls from './controls/StrudelFlowDelayControls.vue'
 import StrudelFlowEnvelopeControls from './controls/StrudelFlowEnvelopeControls.vue'
 import StrudelFlowFilterControls from './controls/StrudelFlowFilterControls.vue'
+import StrudelFlowGainControls from './controls/StrudelFlowGainControls.vue'
 import StrudelFlowLevelControls from './controls/StrudelFlowLevelControls.vue'
+import StrudelFlowMaskControls from './controls/StrudelFlowMaskControls.vue'
 import StrudelFlowPadControls from './controls/StrudelFlowPadControls.vue'
 import StrudelFlowPatternControls from './controls/StrudelFlowPatternControls.vue'
+import StrudelFlowSamplesControls from './controls/StrudelFlowSamplesControls.vue'
 import StrudelFlowVisualizerControls from './controls/StrudelFlowVisualizerControls.vue'
 import StrudelFlowVisualPreview from './controls/StrudelFlowVisualPreview.vue'
 import StrudelFlowSpaceControls from './controls/StrudelFlowSpaceControls.vue'
@@ -34,6 +37,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   update: [data: StrudelFlowNodeData]
   remove: [nodeId: string]
+  showCode: [nodeId: string]
 }>()
 
 // An Effect node is only its calls, which every node shows under its own controls.
@@ -42,13 +46,15 @@ const NODE_CONTROLS: Record<Exclude<StrudelFlowNodeKind, 'effect'>, Component> =
   beats: markRaw(StrudelFlowBeatsControls),
   chords: markRaw(StrudelFlowChordsControls),
   notes: markRaw(StrudelFlowPatternControls),
-  samples: markRaw(StrudelFlowPatternControls),
+  samples: markRaw(StrudelFlowSamplesControls),
   code: markRaw(StrudelFlowCodeControls),
   voice: markRaw(StrudelFlowVoiceControls),
   filter: markRaw(StrudelFlowFilterControls),
   delay: markRaw(StrudelFlowDelayControls),
   space: markRaw(StrudelFlowSpaceControls),
+  gain: markRaw(StrudelFlowGainControls),
   level: markRaw(StrudelFlowLevelControls),
+  mask: markRaw(StrudelFlowMaskControls),
   envelope: markRaw(StrudelFlowEnvelopeControls),
   visualizer: markRaw(StrudelFlowVisualizerControls)
 }
@@ -95,6 +101,11 @@ const onMuteToggle = (): void => {
 const onCodeToggle = (): void => {
   isCodeVisible.value = !isCodeVisible.value
   isMenuOpen.value = false
+}
+
+const onShowCode = (): void => {
+  isMenuOpen.value = false
+  emit('showCode', props.id)
 }
 
 const onAddCall = (): void => {
@@ -171,6 +182,16 @@ const onRemove = (): void => {
         >
           <Code2 aria-hidden="true" />
           {{ isCodeVisible ? 'Hide code' : 'View code' }}
+        </button>
+        <button
+          type="button"
+          class="strudel-flow-node__menu-item"
+          role="menuitem"
+          @pointerdown.stop
+          @click.stop="onShowCode"
+        >
+          <SquareCode aria-hidden="true" />
+          Go to code
         </button>
         <button
           v-if="canTakeCalls"

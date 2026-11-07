@@ -95,6 +95,18 @@ watch(
   }
 )
 
+/**
+ * Selects a span of the code, as the flow's Go to code does for a node.
+ * @param from - the first character
+ * @param to - the character after the last
+ */
+const selectRange = (from: number, to: number): void => {
+  revealEditor()
+  codeMirror.value?.selectRange(from, to)
+}
+
+defineExpose({ selectRange })
+
 onUnmounted(() => {
   isUnmounted = true
   canvasResizeObserver?.disconnect()
