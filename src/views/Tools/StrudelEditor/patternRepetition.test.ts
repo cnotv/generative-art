@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { findLoopBars, findRepetitionCycles } from './patternRepetition'
+import { arrange, note } from '@strudel/core'
+import { readScheduledHaps } from './strudelOfflineRender'
+import { findLoopBars, findPatternRepetition, findRepetitionCycles } from './patternRepetition'
 import type { StrudelScheduledHap } from './types'
 
 const hap = (beginCycle: number, durationCycles: number, note: string): StrudelScheduledHap => ({
@@ -80,5 +82,49 @@ describe('findLoopBars', () => {
 
     // Assert
     expect(loopBars).toBeNull()
+  })
+})
+
+const readSongHaps = (pattern: unknown, maxCycles: number): StrudelScheduledHap[] =>
+  readScheduledHaps(
+    pattern,
+    { format: 'wav', fileName: '', sampleRate: 48000, startCycle: 0, endCycle: maxCycles * 2 },
+    0.5
+  )
+
+describe('findPatternRepetition', () => {
+  it('measures every section of an arrange, not just its first bar', () => {
+    // Arrange
+    const verse = note('c3 e3 g3 e3')
+    const chorus = note('<f3 a3> c4')
+    const song = arrange([8, verse], [8, chorus], [4, verse])
+
+    // Act
+    const repetitionCycles = findPatternRepetition(readSongHaps(song, 64), 64)
+
+    // Assert
+    expect(repetitionCycles).toBe(20)
+  })
+
+  it('measures a coin sped up with fast(2) as half a cycle', () => {
+    // Arrange
+    const coin = note('b5 e6@3 ~@4').fast(2)
+
+    // Act
+    const repetitionCycles = findPatternRepetition(readSongHaps(coin, 64), 64)
+
+    // Assert
+    expect(repetitionCycles).toBe(0.5)
+  })
+
+  it('reports no repetition when nothing repeats inside the limit', () => {
+    // Arrange
+    const haps = Array.from({ length: 32 }, (_, bar) => hap(bar, 1, `n${bar}`))
+
+    // Act
+    const repetitionCycles = findPatternRepetition(haps, 16)
+
+    // Assert
+    expect(repetitionCycles).toBeNull()
   })
 })

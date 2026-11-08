@@ -49,7 +49,8 @@ loads on the first Apply, not when the game starts, so a game that nobody edits 
   such as the rolling rumble, has the end of its file blended into its start so the repeat does not
   click.
 - A **one-shot** sound, such as a bump, is rendered for one repetition of its pattern, measured
-  from the code, so `fast(2)` does not render twice. One with a silent tail for its reverb, such
+  from the code, so `fast(2)` does not render twice and a one-shot of several bars renders all of
+  them. One with a silent tail for its reverb, such
   as the finish chime, sets its cycles instead, as the shipped file does.
 - The result is scaled to a normal level, so a pattern that is quiet in the editor is not quiet in
   the game.

@@ -625,9 +625,16 @@ straight into the editor, already naming the first device found:
 ## Exporting a WAV or MIDI file
 
 The **export** tab saves the code on screen as a file. Choose the format, the cycle to start at
-and how many cycles to export: the default is one. A pattern can repeat inside a cycle, as the
-Coin example does with `fast(2)`, so **One repetition** measures how long a single play of it
-lasts and sets the length to that, which can be a fraction of a cycle: Coin then exports as one
+and how many cycles to export. **Cycles** fills itself in with the length of the whole song: the
+fewest cycles after which every pattern has finished, every section of an `arrange` included, so
+Stoner riff exports all sixteen bars and a one-bar sound such as Coin exports one cycle. The tab
+measures when it opens and again shortly after the code changes, but never while the music
+plays, since measuring evaluates the code and would stop it; it waits until you press Stop. A
+count you type stays until the tab is closed. A song that does not repeat within
+`STRUDEL_MAX_SONG_CYCLES` (64) cycles, such as one built on `rand`, keeps the count it has.
+
+A pattern can also repeat inside a cycle, as Coin does with `fast(2)`, so **One repetition** sets
+the length to a single play of it, which can be a fraction of a cycle: Coin then exports as one
 coin, half a cycle long. The file name defaults to the date. Playback stops while it renders, and Play works
 again as soon as the file is saved.
 

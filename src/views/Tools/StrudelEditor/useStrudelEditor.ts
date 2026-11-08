@@ -178,6 +178,12 @@ export const useStrudelEditor = (
 
   const timeline = useStrudelTimeline({ editorStatus, getPlayback: () => playbackReference.value })
 
+  const reportError = (message: string): void => {
+    editorStatus.value = 'error'
+    errorMessage.value = message
+    appendLog(message, 'error')
+  }
+
   const playPattern = async (): Promise<void> => {
     errorMessage.value = ''
     appendLog('Playing pattern...')
@@ -195,14 +201,10 @@ export const useStrudelEditor = (
         // The engine keeps the previous pattern going when new code fails, which would leave
         // sound playing under a Play button; only the code on screen should ever play.
         await playback.stopPlayback()
-        editorStatus.value = 'error'
-        errorMessage.value = evaluationResult.errorMessage ?? 'Pattern failed to evaluate'
-        appendLog(errorMessage.value, 'error')
+        reportError(evaluationResult.errorMessage ?? 'Pattern failed to evaluate')
       }
     } catch (error) {
-      editorStatus.value = 'error'
-      errorMessage.value = error instanceof Error ? error.message : 'Pattern failed to evaluate'
-      appendLog(errorMessage.value, 'error')
+      reportError(error instanceof Error ? error.message : 'Pattern failed to evaluate')
     }
   }
 
@@ -210,9 +212,7 @@ export const useStrudelEditor = (
     try {
       await playbackReference.value?.stopPlayback()
     } catch (error) {
-      editorStatus.value = 'error'
-      errorMessage.value = error instanceof Error ? error.message : 'Pattern failed to stop'
-      appendLog(errorMessage.value, 'error')
+      reportError(error instanceof Error ? error.message : 'Pattern failed to stop')
       return
     }
     editorStatus.value = 'idle'
@@ -223,7 +223,8 @@ export const useStrudelEditor = (
     loadPlayback: () => loadCachedPlayback(playbackReference, playbackLoader, playbackHooks),
     patternCode,
     editorStatus,
-    appendLog
+    appendLog,
+    activeTab
   })
 
   const { loadPatternCode, playLoadedPattern, loadListedPattern } = useStrudelPatternLoad({

@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { nextTick } from 'vue'
 import {
   DEFAULT_STRUDEL_EXAMPLE_ID,
+  STRUDEL_EXPORT_MEASURE_DELAY_MS,
   STRUDEL_SAVED_CODE_STORAGE_KEY,
   STRUDEL_SAVED_PATTERNS_STORAGE_KEY,
   ELECTRO_TUNES,
@@ -1415,6 +1416,78 @@ describe('useStrudelEditor transcription', () => {
     expect(playback.measureRepetition).toHaveBeenCalledWith(patternCode.value)
     expect(repetitionCycles.value).toBe(0.5)
     expect(editorStatus.value).toBe('idle')
+  })
+
+  describe('measuring the song for the export by itself', () => {
+    const buildMeasuringEditor = () => {
+      const playback = { ...buildSuccessfulPlayback(), measureRepetition: vi.fn(async () => 20) }
+      const editor = useStrudelEditor({
+        initialExamples: buildExampleList(),
+        playbackLoader: vi.fn(async () => playback)
+      })
+      return { playback, ...editor }
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('measures the code on screen when the export tab opens', async () => {
+      // Arrange
+      const { playback, patternCode, setActiveTab, repetitionCycles } = buildMeasuringEditor()
+
+      // Act
+      setActiveTab('export')
+      await vi.advanceTimersByTimeAsync(STRUDEL_EXPORT_MEASURE_DELAY_MS)
+
+      // Assert
+      expect(playback.measureRepetition).toHaveBeenCalledWith(patternCode.value)
+      expect(repetitionCycles.value).toBe(20)
+    })
+
+    it('measures again once the code changes while the export tab is open', async () => {
+      // Arrange
+      const { playback, patternCode, setActiveTab } = buildMeasuringEditor()
+      setActiveTab('export')
+      await vi.advanceTimersByTimeAsync(STRUDEL_EXPORT_MEASURE_DELAY_MS)
+
+      // Act
+      patternCode.value = 's("bd sd")'
+      await vi.advanceTimersByTimeAsync(STRUDEL_EXPORT_MEASURE_DELAY_MS)
+
+      // Assert
+      expect(playback.measureRepetition).toHaveBeenLastCalledWith('s("bd sd")')
+    })
+
+    it('leaves the music playing rather than measuring', async () => {
+      // Arrange
+      const { playback, editorStatus, setActiveTab } = buildMeasuringEditor()
+      editorStatus.value = 'playing'
+
+      // Act
+      setActiveTab('export')
+      await vi.advanceTimersByTimeAsync(STRUDEL_EXPORT_MEASURE_DELAY_MS)
+
+      // Assert
+      expect(playback.measureRepetition).not.toHaveBeenCalled()
+    })
+
+    it('measures nothing while another tab is open', async () => {
+      // Arrange
+      const { playback, patternCode, setActiveTab } = buildMeasuringEditor()
+      setActiveTab('sounds')
+
+      // Act
+      patternCode.value = 's("bd sd")'
+      await vi.advanceTimersByTimeAsync(STRUDEL_EXPORT_MEASURE_DELAY_MS)
+
+      // Assert
+      expect(playback.measureRepetition).not.toHaveBeenCalled()
+    })
   })
 
   it.each([
