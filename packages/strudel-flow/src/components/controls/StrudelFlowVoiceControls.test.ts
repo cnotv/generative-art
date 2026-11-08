@@ -24,7 +24,7 @@ const optionValues = (wrapper: ReturnType<typeof mount>): string[] =>
   wrapper.findAll('select[aria-label="Voice"] option').map((option) => option.attributes('value')!)
 
 describe('StrudelFlowVoiceControls sound picker', () => {
-  it('offers the host sounds under their headings after the four waveforms', () => {
+  it('offers the host sounds under their headings after the waveforms', () => {
     // Arrange
     const wrapper = mount(StrudelFlowVoiceControls, {
       props: { data: { kind: 'voice', sound: 'sawtooth' }, voiceGroups: VOICE_GROUPS }
@@ -36,7 +36,7 @@ describe('StrudelFlowVoiceControls sound picker', () => {
       .map((group) => group.attributes('label'))
 
     // Assert
-    expect(headings).toEqual(['Synths', 'Bass'])
+    expect(headings).toEqual(['Waveforms', 'Synths', 'Bass'])
     expect(optionValues(wrapper).slice(0, 4)).toEqual(['triangle', 'sawtooth', 'square', 'sine'])
     expect(optionValues(wrapper)).toContain('gm_electric_bass_finger')
   })
@@ -90,6 +90,6 @@ describe('StrudelFlowVoiceControls sound picker', () => {
     const values = optionValues(wrapper)
 
     // Assert
-    expect(values).toEqual(['triangle', 'sawtooth', 'square', 'sine', 'gm_electric_guitar_clean'])
+    expect(values).toEqual(['gm_electric_guitar_clean', 'triangle', 'sawtooth', 'square', 'sine'])
   })
 })

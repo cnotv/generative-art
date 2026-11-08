@@ -105,7 +105,9 @@ const triggerText = computed(() =>
     ? (props.placeholder ?? '')
     : (current.value?.label ?? props.modelValue)
 )
-const triggerFamilyId = computed(() => findStrudelFlowSampleFamily(props.modelValue).id)
+const triggerFamilyId = computed(() =>
+  props.modelValue.length === 0 ? ALL_FAMILIES : findStrudelFlowSampleFamily(props.modelValue).id
+)
 
 const nativeGroups = computed(() =>
   shownGroups.value
@@ -139,7 +141,9 @@ const close = (): void => {
 
 const open = (): void => {
   query.value = ''
-  activeFamilyId.value = ALL_FAMILIES
+  activeFamilyId.value = families.value.some((family) => family.id === triggerFamilyId.value)
+    ? triggerFamilyId.value
+    : ALL_FAMILIES
   placePopover()
   isOpen.value = true
   void nextTick(() => searchField.value?.focus())

@@ -169,10 +169,10 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
     await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
 
     // Act
-    await document.body.querySelector<HTMLElement>('button[title^="casio"]')?.click()
+    await document.body.querySelector<HTMLElement>('button[title^="rolandtr909_bd"]')?.click()
 
     // Assert
-    expect(previewSound).toHaveBeenCalledExactlyOnceWith('casio')
+    expect(previewSound).toHaveBeenCalledExactlyOnceWith('rolandtr909_bd')
   })
 
   it('plays a sample from its play button without picking it', async () => {
@@ -188,11 +188,13 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
     await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
 
     // Act
-    document.body.querySelector<HTMLElement>('button[aria-label^="Play Casio"]')?.click()
+    document.body
+      .querySelector<HTMLElement>('button[aria-label^="Play Bass drum, Roland TR909"]')
+      ?.click()
     await nextTick()
 
     // Assert
-    expect(previewSound).toHaveBeenCalledExactlyOnceWith('casio')
+    expect(previewSound).toHaveBeenCalledExactlyOnceWith('rolandtr909_bd')
     expect(wrapper.emitted('update:modelValue')).toBeUndefined()
     expect(document.body.querySelector('.strudel-flow-sample-picker')).not.toBeNull()
   })
@@ -225,7 +227,21 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
       ...document.body.querySelectorAll('.strudel-flow-sample-picker__family span:first-of-type')
     ].map((family) => family.textContent)
     expect(families).toEqual(['All', 'Kicks', 'Keys'])
-    expect(optionLabels()).toEqual(['Bass drum', 'Casio', 'Bass drum'])
+  })
+
+  it('opens on the family of the current sample rather than on all of them', async () => {
+    // Arrange
+    const wrapper = await mountPicker()
+
+    // Act
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Assert
+    const activeFamily = document.body.querySelector(
+      '.strudel-flow-sample-picker__family[aria-pressed="true"]'
+    )
+    expect(activeFamily?.textContent).toContain('Kicks')
+    expect(optionLabels()).toEqual(['Bass drum', 'Bass drum'])
   })
 
   it('narrows the list by search and picks the first match on Enter', async () => {

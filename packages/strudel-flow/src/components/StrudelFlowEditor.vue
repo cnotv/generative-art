@@ -19,6 +19,7 @@ import { STRUDEL_FLOW_VISUALIZER_WIDGET_IDS } from './visualizerWidgetIdsKey'
 import { STRUDEL_FLOW_NOTATION_CONTEXT } from './notation/notationContextKey'
 import { findStrudelFlowNotesSound } from '../notationPick'
 import { canUseStrudelFlowConnection } from '../connections'
+import { isStrudelFlowSoloed, planStrudelFlowSolo } from '../solo'
 import type {
   StrudelFlowEdge,
   StrudelFlowNode as StrudelFlowNodeType,
@@ -125,6 +126,15 @@ const onNodeUpdated = (nodeId: string, data: StrudelFlowNodeData): void => {
   emit('update-node', nodeId, data)
 }
 
+const onNodeSoloed = (nodeId: string): void => {
+  planStrudelFlowSolo(props.nodes, props.edges, nodeId).forEach((change) => {
+    const target = props.nodes.find((node) => node.id === change.nodeId)
+    if (target !== undefined) {
+      emit('update-node', change.nodeId, { ...target.data, muted: change.muted })
+    }
+  })
+}
+
 const onNodeRemoved = (nodeId: string): void => {
   emit('remove-node', nodeId)
 }
@@ -166,7 +176,9 @@ const openRadialMenu = (): void => {
           :selected="nodeProperties.selected"
           :sample-groups="sampleGroups ?? []"
           :voice-groups="voiceGroups ?? []"
+          :is-soloed="isStrudelFlowSoloed(nodes, edges, nodeProperties.id)"
           @update="onNodeUpdated(nodeProperties.id, $event)"
+          @solo="onNodeSoloed"
           @remove="onNodeRemoved"
           @show-code="emit('show-code', $event)"
         />
