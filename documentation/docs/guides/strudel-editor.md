@@ -567,6 +567,8 @@ Eleven presets ship built in, so the example songs sound the same for everyone: 
 
 The **Instruments** tab selects a preset and shows the sliders of its kind. **Play preview** plays a short phrase for the kind, and **Download WAV** renders the same phrase offline as `<preset>-preview.wav`. Tweaks to a built-in preset are kept in this browser and **Reset** restores the shipped values. **Duplicate** makes a copy; **Create** makes a new preset of any kind; a preset you made can be renamed and deleted. Built-in presets cannot be renamed or deleted.
 
+In flow mode every preset is in the pickers, rendered or not: a guitar, bass, acoustic or organ preset under the **Voice** node, as "Electric guitar: chainsaw" and so on, filed under its family (guitars under Guitar and strings), and a drum kit's pieces under the **Samples** and **Beats** pickers. So notes imported from a tab can be played on a preset by picking it on the Voice node they feed. A preset renders the first time it is previewed or played, which takes a second or two.
+
 ![The Instruments tab: the preset list, five sliders, Play preview, Download WAV and Reset, and the preset and AI tone sections](/img/strudel-editor/instruments-tab.webp)
 
 A name is lowercase letters and digits, starts with a letter, is at most 16 characters, is not used by another preset and does not collide with a sound Strudel already has (`sawtooth`, or the front of a drum machine such as `rolandtr909`). The tab says what to change.

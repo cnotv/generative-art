@@ -1,5 +1,6 @@
-import { afterEach, describe, it, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import StrudelEditor from './StrudelEditor.vue'
 import { ELECTRO_TUNES, STRUDEL_EXAMPLES, STRUDEL_SAVED_CODE_STORAGE_KEY } from './config'
@@ -133,6 +134,11 @@ const clickMode = async (
 }
 
 describe('StrudelEditor view', () => {
+  // The flow pickers list the instrument presets from their store.
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   afterEach(clearSavedState)
 
   it('renders the code with no top play button, and keeps the license note in the drawer', async () => {

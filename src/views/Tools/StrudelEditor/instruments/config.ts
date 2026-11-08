@@ -90,9 +90,30 @@ export const INSTRUMENT_KINDS: Record<InstrumentKind, InstrumentKindDefinition> 
       { id: 'sustain', label: 'Sustain', hint: 'Ring time' }
     ],
     articulations: [
-      { id: 'chord', notes: ELECTRIC_NOTES, durationSeconds: 4, peak: 0.89 },
-      { id: 'mute', notes: ELECTRIC_NOTES, durationSeconds: 0.6, peak: 0.89 },
-      { id: 'note', notes: ELECTRIC_LEAD_NOTES, durationSeconds: 3, peak: 0.89 }
+      {
+        id: 'chord',
+        label: 'Power chord',
+        familyId: 'strings',
+        notes: ELECTRIC_NOTES,
+        durationSeconds: 4,
+        peak: 0.89
+      },
+      {
+        id: 'mute',
+        label: 'Palm mute',
+        familyId: 'strings',
+        notes: ELECTRIC_NOTES,
+        durationSeconds: 0.6,
+        peak: 0.89
+      },
+      {
+        id: 'note',
+        label: 'Note',
+        familyId: 'strings',
+        notes: ELECTRIC_LEAD_NOTES,
+        durationSeconds: 3,
+        peak: 0.89
+      }
     ],
     assistantPrompt: `You set the five knobs of an electric guitar through a fuzz pedal and a 4x12 cabinet. Every knob is a number from 0 to 1.
 drive: 0 is a clean guitar, 0.3 a crunch, 0.75 a wall of fuzz with endless sustain, 1 the harshest chainsaw.
@@ -114,8 +135,22 @@ Answer with the five numbers and one or two sentences explaining the choices in 
       { id: 'sustain', label: 'Sustain', hint: 'Ring time' }
     ],
     articulations: [
-      { id: 'note', notes: BASS_NOTES, durationSeconds: 3, peak: 0.89 },
-      { id: 'mute', notes: BASS_NOTES, durationSeconds: 0.5, peak: 0.89 }
+      {
+        id: 'note',
+        label: 'Note',
+        familyId: 'bass',
+        notes: BASS_NOTES,
+        durationSeconds: 3,
+        peak: 0.89
+      },
+      {
+        id: 'mute',
+        label: 'Muted note',
+        familyId: 'bass',
+        notes: BASS_NOTES,
+        durationSeconds: 0.5,
+        peak: 0.89
+      }
     ],
     assistantPrompt: `You set the five knobs of a bass guitar through a gentle drive into a bass cabinet. Every knob is a number from 0 to 1.
 drive: 0 is clean, 0.5 is a growl, 1 is a thick fuzz.
@@ -136,9 +171,30 @@ Answer with the five numbers and one or two sentences explaining the choices in 
       { id: 'width', label: 'Width', hint: 'Mono to wide stereo' }
     ],
     articulations: [
-      { id: 'chord', notes: ELECTRIC_NOTES, durationSeconds: 4, peak: 0.89 },
-      { id: 'mute', notes: ELECTRIC_NOTES, durationSeconds: 0.6, peak: 0.89 },
-      { id: 'note', notes: ELECTRIC_LEAD_NOTES, durationSeconds: 3, peak: 0.89 }
+      {
+        id: 'chord',
+        label: 'Power chord',
+        familyId: 'strings',
+        notes: ELECTRIC_NOTES,
+        durationSeconds: 4,
+        peak: 0.89
+      },
+      {
+        id: 'mute',
+        label: 'Palm mute',
+        familyId: 'strings',
+        notes: ELECTRIC_NOTES,
+        durationSeconds: 0.6,
+        peak: 0.89
+      },
+      {
+        id: 'note',
+        label: 'Note',
+        familyId: 'strings',
+        notes: ELECTRIC_LEAD_NOTES,
+        durationSeconds: 3,
+        peak: 0.89
+      }
     ],
     assistantPrompt: `You set the five knobs of an acoustic guitar. Every knob is a number from 0 to 1.
 body: the wooden resonance of the box. Low is thin, high is a big warm dreadnought.
@@ -158,7 +214,16 @@ Answer with the five numbers and one or two sentences explaining the choices in 
       { id: 'drive', label: 'Drive', hint: 'Soft overdrive of the amp' },
       { id: 'vibrato', label: 'Vibrato', hint: 'Chorus and vibrato depth' }
     ],
-    articulations: [{ id: 'note', notes: ORGAN_NOTES, durationSeconds: 3, peak: 0.89 }],
+    articulations: [
+      {
+        id: 'note',
+        label: 'Note',
+        familyId: 'keys',
+        notes: ORGAN_NOTES,
+        durationSeconds: 3,
+        peak: 0.89
+      }
+    ],
     assistantPrompt: `You set the five knobs of a tonewheel organ. Every knob is a number from 0 to 1.
 body: the low drawbars (16 foot, 8 foot, 5 and a third foot). High is a deep, round sound.
 brightness: the upper drawbars. Low is flute like, high is a screaming full organ.
@@ -178,15 +243,64 @@ Answer with the five numbers and one or two sentences explaining the choices in 
       { id: 'room', label: 'Room', hint: 'Dry to a big room' }
     ],
     articulations: [
-      { id: 'kick', notes: [], durationSeconds: 0.6, peak: 0.8 },
-      { id: 'snare', notes: [], durationSeconds: 0.7, peak: 0.8 },
-      { id: 'tomhi', notes: [], durationSeconds: 0.7, peak: 0.75 },
-      { id: 'tommid', notes: [], durationSeconds: 0.8, peak: 0.75 },
-      { id: 'tomlow', notes: [], durationSeconds: 0.9, peak: 0.75 },
-      { id: 'hatclosed', notes: [], durationSeconds: 0.2, peak: 0.45 },
-      { id: 'hatopen', notes: [], durationSeconds: 0.8, peak: 0.5 },
-      { id: 'ride', notes: [], durationSeconds: 2, peak: 0.5 },
-      { id: 'crash', notes: [], durationSeconds: 2.5, peak: 0.55 }
+      { id: 'kick', label: 'Kick', familyId: 'kick', notes: [], durationSeconds: 0.6, peak: 0.8 },
+      {
+        id: 'snare',
+        label: 'Snare',
+        familyId: 'snare',
+        notes: [],
+        durationSeconds: 0.7,
+        peak: 0.8
+      },
+      {
+        id: 'tomhi',
+        label: 'High tom',
+        familyId: 'tom',
+        notes: [],
+        durationSeconds: 0.7,
+        peak: 0.75
+      },
+      {
+        id: 'tommid',
+        label: 'Mid tom',
+        familyId: 'tom',
+        notes: [],
+        durationSeconds: 0.8,
+        peak: 0.75
+      },
+      {
+        id: 'tomlow',
+        label: 'Low tom',
+        familyId: 'tom',
+        notes: [],
+        durationSeconds: 0.9,
+        peak: 0.75
+      },
+      {
+        id: 'hatclosed',
+        label: 'Closed hi-hat',
+        familyId: 'hihat',
+        notes: [],
+        durationSeconds: 0.2,
+        peak: 0.45
+      },
+      {
+        id: 'hatopen',
+        label: 'Open hi-hat',
+        familyId: 'hihat',
+        notes: [],
+        durationSeconds: 0.8,
+        peak: 0.5
+      },
+      { id: 'ride', label: 'Ride', familyId: 'cymbal', notes: [], durationSeconds: 2, peak: 0.5 },
+      {
+        id: 'crash',
+        label: 'Crash',
+        familyId: 'cymbal',
+        notes: [],
+        durationSeconds: 2.5,
+        peak: 0.55
+      }
     ],
     assistantPrompt: `You set the five knobs of a synthesised drum kit. Every knob is a number from 0 to 1.
 tune: pitch of the drums. 0.5 is neutral, low is deeper, high is tighter and higher.

@@ -533,6 +533,7 @@ const readPreviewStartTime = (webaudioModule: Record<string, unknown>): number =
  */
 export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
   const webaudioModule = await prepareStrudelPreview()
+  await prepareInstrumentsForCode(soundName)
   const needsNote = soundType === 'synth' || soundType === 'soundfont'
   const soundValue = {
     s: soundName,

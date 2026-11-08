@@ -1,3 +1,5 @@
+import type { StrudelFlowSampleGroup } from '@webgamekit/strudel-flow'
+
 export type InstrumentKind =
   | 'electric-guitar'
   | 'bass-guitar'
@@ -22,6 +24,10 @@ export type InstrumentKnobDefinition = {
 
 export type InstrumentArticulationDefinition = {
   id: string
+  /** How the flow editor's sound pickers name it, such as "Palm mute". */
+  label: string
+  /** The flow sound picker's family, since a preset's own name says nothing about what it is. */
+  familyId: string
   /** Sampled pitches; empty for an unpitched sound such as a drum. */
   notes: string[]
   durationSeconds: number
@@ -200,4 +206,12 @@ export type StoredInstruments = {
   userPresets: InstrumentPreset[]
   tweaks: Record<string, InstrumentKnobs>
   selectedName: string
+}
+
+/** Every preset's sounds for the flow editor's pickers, pitched ones apart from drums. */
+export type InstrumentPickerGroups = {
+  /** Instruments that play notes, for the Voice node. */
+  voiceGroups: StrudelFlowSampleGroup[]
+  /** Unpitched sounds such as a drum kit's pieces, for the sample and beat nodes. */
+  sampleGroups: StrudelFlowSampleGroup[]
 }
