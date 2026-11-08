@@ -14,6 +14,7 @@ import StrudelFlowToolbar from './StrudelFlowToolbar.vue'
 import { getStrudelFlowVisualizerWidgetIds } from '../compileStrudelFlow'
 import { STRUDEL_FLOW_REFERENCE } from '../config'
 import { STRUDEL_FLOW_OVERLAY_TARGET } from './overlayTargetKey'
+import { STRUDEL_FLOW_PREVIEW_SOUND } from './previewSoundKey'
 import { STRUDEL_FLOW_VISUALIZER_WIDGET_IDS } from './visualizerWidgetIdsKey'
 import { STRUDEL_FLOW_NOTATION_CONTEXT } from './notation/notationContextKey'
 import { findStrudelFlowNotesSound } from '../notationPick'
@@ -38,6 +39,8 @@ const props = defineProps<{
   voiceGroups?: StrudelFlowSampleGroup[]
   /** Reads a Notes node's pattern into bars, for its notation; without it only the text shows. */
   noteReader?: StrudelFlowNoteReader
+  /** Plays a sound by name when one is picked; without it picking is silent. */
+  previewSound?: (soundName: string) => void
 }>()
 
 const emit = defineEmits<{
@@ -56,6 +59,7 @@ const DEFAULT_EDGE_OPTIONS = { type: 'strudel' }
 
 const shell = ref<HTMLElement | null>(null)
 provide(STRUDEL_FLOW_OVERLAY_TARGET, shell)
+provide(STRUDEL_FLOW_PREVIEW_SOUND, (soundName: string) => props.previewSound?.(soundName))
 
 provide(
   STRUDEL_FLOW_VISUALIZER_WIDGET_IDS,

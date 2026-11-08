@@ -6,6 +6,7 @@ import { STRUDEL_FLOW_SAMPLE_FAMILIES } from '../../config'
 import { findStrudelFlowSampleFamily, STRUDEL_FLOW_OTHER_SAMPLE_FAMILY } from '../../sampleFamilies'
 import type { StrudelFlowSampleGroup } from '../../types'
 import { STRUDEL_FLOW_OVERLAY_TARGET } from '../overlayTargetKey'
+import { STRUDEL_FLOW_PREVIEW_SOUND } from '../previewSoundKey'
 import { STRUDEL_FLOW_SAMPLE_FAMILY_ICONS } from '../sampleFamilyIcons'
 import StrudelFlowSelect from './StrudelFlowSelect.vue'
 
@@ -33,6 +34,7 @@ const POPOVER_GAP = 4
 const MAX_SHOWN_ENTRIES = 240
 
 const overlayTarget = inject(STRUDEL_FLOW_OVERLAY_TARGET, null)
+const previewSound = inject(STRUDEL_FLOW_PREVIEW_SOUND, null)
 // Fixed positioning breaks under the canvas's zoom transform, so the list draws beside it.
 const teleportTarget = computed(() => overlayTarget?.value ?? 'body')
 const trigger = ref<HTMLButtonElement | null>(null)
@@ -145,6 +147,7 @@ const open = (): void => {
 
 const pick = (value: string): void => {
   emit('update:modelValue', value)
+  previewSound?.(value)
   close()
   trigger.value?.focus()
 }

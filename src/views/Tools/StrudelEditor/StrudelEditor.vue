@@ -128,6 +128,13 @@ const onSoundPreview = (soundEntry: StrudelSoundEntry): void => {
   // A sound that cannot play has nothing to recover; the click simply stays silent.
   previewStrudelSound(soundEntry.name, soundEntry.type).catch(() => undefined)
 }
+
+const onFlowSoundPreview = (soundName: string): void => {
+  const soundEntry = soundEntries.value.find((entry) => entry.name === soundName)
+  if (soundEntry !== undefined) {
+    onSoundPreview(soundEntry)
+  }
+}
 let replayTimer: number | null = null
 let codeParseTimer: number | null = null
 
@@ -376,6 +383,7 @@ onBeforeUnmount(() => {
           :note-reader="readStrudelNoteBars"
           :sample-groups="sampleGroups"
           :voice-groups="voiceGroups"
+          :preview-sound="onFlowSoundPreview"
           @connect="onFlowNodesConnected"
           @update-node="updateFlowNodeData"
           @remove-node="removeFlowNode"

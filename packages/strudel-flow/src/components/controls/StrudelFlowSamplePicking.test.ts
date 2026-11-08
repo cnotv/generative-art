@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import StrudelFlowBeatsControls from './StrudelFlowBeatsControls.vue'
 import StrudelFlowSamplePicker from './StrudelFlowSamplePicker.vue'
+import { STRUDEL_FLOW_PREVIEW_SOUND } from '../previewSoundKey'
 import StrudelFlowSamplesControls from './StrudelFlowSamplesControls.vue'
 import { createStrudelFlowNodeData } from '../../nodeDefaults'
 import type { StrudelFlowSampleGroup, StrudelFlowSamplesData } from '../../types'
@@ -154,6 +155,25 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
     [...document.body.querySelectorAll('.strudel-flow-sample-picker__option-label')].map(
       (option) => option.textContent ?? ''
     )
+
+  it('plays the sound it picks, once, through the host preview', async () => {
+    // Arrange
+    useFinePointer()
+    const previewSound = vi.fn()
+    const wrapper = mount(StrudelFlowSamplePicker, {
+      props: { label: 'Track 1 sound', modelValue: 'bd', groups: SAMPLE_GROUPS },
+      global: { provide: { [STRUDEL_FLOW_PREVIEW_SOUND as symbol]: previewSound } },
+      attachTo: document.body
+    })
+    await nextTick()
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Act
+    await document.body.querySelector<HTMLElement>('button[title^="casio"]')?.click()
+
+    // Assert
+    expect(previewSound).toHaveBeenCalledExactlyOnceWith('casio')
+  })
 
   it('opens a searchable list sorted into instrument families', async () => {
     // Arrange
