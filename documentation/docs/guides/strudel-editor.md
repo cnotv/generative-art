@@ -62,7 +62,8 @@ The open tab is in the address too, so `/tools/StrudelEditor?tab=midi` opens on 
 and `?tab=flow` opens the flow canvas. The two combine: `?pattern=caverave&tab=export` opens
 Caverave with the export tab ready, which is how `scripts/strudel-export.mjs` and the render API
 reach it. Opening and closing a tab from the toolbar replaces the address rather than adding to Back,
-which steps through the patterns picked. Links from before the query, such as `#caverave` or
+which steps through the patterns picked. The editor mode is there as well: flow is `?mode=flow`,
+and code, the default, has no key, so `?pattern=dust-and-diesel&mode=flow` opens that pattern on the canvas. Links from before the query, such as `#caverave` or
 `#export`, still open what they named and are rewritten to the query form.
 
 Audio starts on the first Play press or the first click on a pattern, since browsers only allow

@@ -314,11 +314,13 @@ export type StrudelHint = {
   edits: StrudelCodeEdit[]
 }
 
-/** What the address names: `?pattern=<id>&tab=<tab id>`, both optional. */
+/** What the address names: `?pattern=<id>&tab=<tab id>&mode=<mode>`, all optional. */
 export type StrudelAddress = {
   patternId?: string
   /** As written in the address, so possibly not a tab at all. */
   tabName?: string
+  /** As written in the address, so possibly not a mode at all. */
+  modeName?: string
 }
 
 export type StrudelTabId =

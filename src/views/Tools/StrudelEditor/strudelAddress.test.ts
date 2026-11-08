@@ -8,6 +8,7 @@ describe('readStrudelAddress', () => {
     ['nothing', {}, { patternId: undefined, tabName: undefined }],
     ['a pattern', { pattern: 'caverave' }, { patternId: 'caverave', tabName: undefined }],
     ['a tab', { tab: 'export' }, { patternId: undefined, tabName: 'export' }],
+    ['a mode', { mode: 'flow' }, { patternId: undefined, tabName: undefined, modeName: 'flow' }],
     [
       'a pattern and a tab',
       { pattern: 'caverave', tab: 'export' },
@@ -54,6 +55,18 @@ describe('writeStrudelAddress', () => {
       { tab: 'import', pattern: 'scope' },
       { tabName: undefined },
       { tab: undefined, pattern: 'scope' }
+    ],
+    [
+      'sets the mode beside the others',
+      { pattern: 'scope', tab: 'midi' },
+      { modeName: 'flow' },
+      { pattern: 'scope', tab: 'midi', mode: 'flow' }
+    ],
+    [
+      'removes the mode and keeps the others',
+      { pattern: 'scope', mode: 'flow' },
+      { modeName: undefined },
+      { pattern: 'scope', mode: undefined }
     ],
     [
       'removes both and keeps what is not its own',

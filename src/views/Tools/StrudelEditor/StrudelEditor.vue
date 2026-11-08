@@ -254,8 +254,23 @@ const loadAddressedPattern = (patternId: string | undefined): void => {
   }
 }
 
+// Only a change of mode is acted on, so the address echoing the mode back never loops.
+const loadAddressedMode = (modeName: string | undefined): void => {
+  const mode = modeName === 'flow' ? 'flow' : 'code'
+  if (mode !== editorMode.value) {
+    onEditorModeChange(mode)
+  }
+}
+
 watch(() => readStrudelAddress(route.query).tabName, loadAddressedTab)
 watch(() => readStrudelAddress(route.query).patternId, loadAddressedPattern)
+watch(() => readStrudelAddress(route.query).modeName, loadAddressedMode)
+
+watch(editorMode, (mode) => {
+  void router.replace({
+    query: writeStrudelAddress(route.query, { modeName: mode === 'flow' ? 'flow' : undefined })
+  })
+})
 
 // Replaced rather than pushed, so the toolbar never fills Back with drawers opened and closed.
 watch(activeTab, (tabId) => {
@@ -271,9 +286,10 @@ const loadAddress = (): void => {
     void router.replace({ query: writeStrudelAddress(route.query, legacyAddress), hash: '' })
     return
   }
-  const { patternId, tabName } = readStrudelAddress(route.query)
+  const { patternId, tabName, modeName } = readStrudelAddress(route.query)
   loadAddressedTab(tabName)
   loadAddressedPattern(patternId)
+  loadAddressedMode(modeName)
 }
 
 const onPatternSelected = (patternId: string): void => {
