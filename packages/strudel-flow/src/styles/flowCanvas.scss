@@ -1670,6 +1670,10 @@
   transition: fill 150ms ease-out;
 }
 
+.strudel-flow-radial__sector {
+  cursor: pointer;
+}
+
 .strudel-flow-radial__sector--active {
   fill: color-mix(in srgb, var(--sf-accent) 14%, var(--sf-card));
 }
@@ -1677,6 +1681,11 @@
 .strudel-flow-radial__sector--item {
   fill: color-mix(in srgb, var(--sf-accent) 8%, var(--sf-card));
   stroke: color-mix(in srgb, var(--sf-accent) 35%, var(--sf-border));
+}
+
+.strudel-flow-radial__sector--hover,
+.strudel-flow-radial__sector--item.strudel-flow-radial__sector--hover {
+  fill: color-mix(in srgb, var(--sf-accent) 30%, var(--sf-card));
 }
 
 .strudel-flow-radial__category,
@@ -1688,7 +1697,8 @@
   border: 1px solid transparent;
   background: transparent;
   color: var(--sf-muted-foreground);
-  cursor: pointer;
+  outline: none;
+  pointer-events: none;
   transform: translate(-50%, -50%);
 }
 
@@ -1699,7 +1709,7 @@
   font-size: var(--font-size-xs);
 }
 
-.strudel-flow-radial__category:hover,
+.strudel-flow-radial__category:focus-visible,
 .strudel-flow-radial__category--active {
   color: var(--sf-card-foreground);
 }
@@ -1712,10 +1722,7 @@
   font-size: 0.625rem;
 }
 
-.strudel-flow-radial__item:hover,
 .strudel-flow-radial__item:focus-visible {
-  border-color: color-mix(in srgb, var(--sf-accent) 35%, transparent);
-  background: var(--sf-accent-soft);
   color: var(--sf-card-foreground);
 }
 
