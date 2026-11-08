@@ -601,12 +601,3 @@ export type ScoreTranscription = {
   bars: ScoreBar[]
   warnings: string[]
 }
-
-/** One sound in a preview phrase, timed from the phrase's start. */
-export type StrudelPreviewHit = {
-  sound: string
-  note?: string
-  offsetSeconds: number
-  durationSeconds: number
-  gain: number
-}

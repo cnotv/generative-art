@@ -46,8 +46,11 @@ export type InstrumentKindDefinition = {
    */
   techniques: string[]
   assistantPrompt: string
-  /** The pattern the tab shows as an example, with `{name}` standing for the preset. */
-  usageHint: string
+  /**
+   * Complete Strudel code the tab shows, copies, plays and downloads, one cycle long, with
+   * `{name}` standing for the preset.
+   */
+  example: string
 }
 
 /** Normalised so a0 is 1, as the audio cookbook's direct form I difference equation wants. */
@@ -194,16 +197,6 @@ export type InstrumentToneRequestOptions = {
   kind: InstrumentKind
   currentKnobs: InstrumentKnobs
   model: string
-}
-
-/** One note of a preview phrase: the articulation to play, not the full sound name. */
-export type InstrumentPreviewHit = {
-  articulation: string
-  /** Left out for an unpitched sound. */
-  note?: string
-  offsetSeconds: number
-  durationSeconds: number
-  gain: number
 }
 
 export type InstrumentNameCheck = { valid: true } | { valid: false; message: string }

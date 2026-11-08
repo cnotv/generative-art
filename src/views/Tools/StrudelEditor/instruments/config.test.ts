@@ -5,8 +5,7 @@ import {
   INSTRUMENT_KINDS,
   INSTRUMENT_KIND_IDS,
   INSTRUMENT_NAME_PATTERN,
-  INSTRUMENT_NEW_PRESET_KNOBS,
-  INSTRUMENT_PREVIEW_PHRASES
+  INSTRUMENT_NEW_PRESET_KNOBS
 } from './config'
 
 describe('the built-in presets', () => {
@@ -77,25 +76,18 @@ describe('the built-in presets', () => {
 })
 
 describe('the kinds', () => {
-  it.each(INSTRUMENT_KIND_IDS)(
-    '%s has labelled knobs, new preset values and a preview phrase',
-    (kind) => {
-      // Arrange
-      const definition = INSTRUMENT_KINDS[kind]
-      const articulationIds = definition.articulations.map(({ id }) => id)
+  it.each(INSTRUMENT_KIND_IDS)('%s has labelled knobs and new preset values', (kind) => {
+    // Arrange
+    const definition = INSTRUMENT_KINDS[kind]
 
-      // Act
-      const newKnobIds = Object.keys(INSTRUMENT_NEW_PRESET_KNOBS[kind]).sort()
-      const phrase = INSTRUMENT_PREVIEW_PHRASES[kind]
+    // Act
+    const newKnobIds = Object.keys(INSTRUMENT_NEW_PRESET_KNOBS[kind]).sort()
 
-      // Assert
-      expect(definition.knobs.every(({ label, hint }) => label !== '' && hint !== '')).toBe(true)
-      expect(newKnobIds).toEqual(definition.knobs.map(({ id }) => id).sort())
-      expect(phrase.length).toBeGreaterThan(3)
-      expect(phrase.every(({ articulation }) => articulationIds.includes(articulation))).toBe(true)
-      expect(definition.assistantPrompt).toContain(definition.knobs[0]?.id ?? '-')
-    }
-  )
+    // Assert
+    expect(definition.knobs.every(({ label, hint }) => label !== '' && hint !== '')).toBe(true)
+    expect(newKnobIds).toEqual(definition.knobs.map(({ id }) => id).sort())
+    expect(definition.assistantPrompt).toContain(definition.knobs[0]?.id ?? '-')
+  })
 
   it('gives every drum articulation a voice', () => {
     // Arrange
@@ -106,18 +98,5 @@ describe('the kinds', () => {
 
     // Assert
     expect(voiced).toBe(true)
-  })
-
-  it('keeps the preview phrases in time order, each hit on a sampled or unpitched sound', () => {
-    // Arrange
-    const phrases = Object.values(INSTRUMENT_PREVIEW_PHRASES)
-
-    // Act
-    const ordered = phrases.every((phrase) =>
-      phrase.every((hit, index) => hit.offsetSeconds >= (phrase[index - 1]?.offsetSeconds ?? 0))
-    )
-
-    // Assert
-    expect(ordered).toBe(true)
   })
 })

@@ -36,6 +36,10 @@ const findButton = (wrapper: Wrapper, label: string) =>
     .findAllComponents(Button)
     .find((button) => button.text() === label || button.attributes('aria-label') === label)
 
+const mockClipboard = (writeText: ReturnType<typeof vi.fn>): void => {
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+}
+
 const PREVIEW_WAV = new ArrayBuffer(8)
 
 const mountReady = async (): Promise<Wrapper> => {
@@ -108,24 +112,59 @@ describe('InstrumentsTab', () => {
   })
 
   it.each([
-    ['stoner', 'Play it as stoner', ':1 is palm mute, :2 is power chord'],
-    ['deathbass', 'Play it as deathbass', ':1 is muted note'],
-    ['blastkit', 'Sounds start with blastkit_', '']
-  ])(
-    'tells how to play %s and which index is which technique',
-    async (presetName, lead, techniques) => {
+    ['stoner', 'stoner:mute, stoner:chord'],
+    ['deathbass', 'deathbass:mute'],
+    ['doomorgan', '']
+  ])('lists the technique names of %s', async (presetName, techniques) => {
+    // Arrange
+    const wrapper = await mountReady()
+    await selectAndRender(presetName)
+
+    // Act
+    const hints = wrapper.findAll('.strudel-instruments__hint').map((hint) => hint.text())
+
+    // Assert
+    expect(hints.join(' ').includes(techniques)).toBe(true)
+  })
+
+  it.each(['stoner', 'fuzzbass', 'campfire', 'doomorgan', 'garagekit'])(
+    'shows, copies, plays and downloads the same code for %s',
+    async (presetName) => {
       // Arrange
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      mockClipboard(writeText)
       const wrapper = await mountReady()
       await selectAndRender(presetName)
 
       // Act
-      const hint = wrapper.find('.strudel-instruments__hint').text()
+      const shown = wrapper.find('pre code').element.textContent ?? ''
+      await findButton(wrapper, 'Copy')?.trigger('click')
+      await findButton(wrapper, 'Play preview')?.trigger('click')
+      await findButton(wrapper, 'Download WAV')?.trigger('click')
+      await flushPromises()
 
       // Assert
-      expect(hint).toContain(lead)
-      expect(hint).toContain(techniques)
+      expect(shown).toContain(`setcpm(`)
+      expect(shown).toContain(presetName)
+      expect(writeText).toHaveBeenCalledWith(shown)
+      expect(mockRenderWav).toHaveBeenCalledWith(shown)
+      expect(mockRenderWav).toHaveBeenCalledOnce()
+      expect(wrapper.text()).toContain('Copied')
     }
   )
+
+  it('says why the code could not be copied', async () => {
+    // Arrange
+    mockClipboard(vi.fn().mockRejectedValue(new Error('denied')))
+    const wrapper = await mountReady()
+
+    // Act
+    await findButton(wrapper, 'Copy')?.trigger('click')
+    await flushPromises()
+
+    // Assert
+    expect(wrapper.text()).toContain('Could not copy')
+  })
 
   it('moves a tweak into the preset when a slider changes', async () => {
     // Arrange
@@ -171,7 +210,7 @@ describe('InstrumentsTab', () => {
 
       // Assert
       const [code] = mockRenderWav.mock.calls[0] ?? []
-      expect(code).toContain('s("blastkit_')
+      expect(code).toContain('s("blastkit_kick')
       expect(mockPlayWav).toHaveBeenCalledOnce()
       expect(findButton(wrapper, 'Stop preview')).toBeDefined()
     })
@@ -203,7 +242,7 @@ describe('InstrumentsTab', () => {
 
       // Assert
       expect(mockRenderWav).toHaveBeenCalledOnce()
-      expect(mockRenderWav.mock.calls[0]?.[0]).toContain('s("fuzzbass_note")')
+      expect(mockRenderWav.mock.calls[0]?.[0]).toContain('s("fuzzbass")')
       expect(mockDownloadFile).toHaveBeenCalledWith(PREVIEW_WAV, 'fuzzbass-preview', 'wav')
     })
 

@@ -15,6 +15,22 @@ export const endNoteAtEvent = (hapValue: Record<string, unknown>): Record<string
     : { ...hapValue, clip: 1 }
 
 /**
+ * Turns a technique named in the pattern, as in `s("chainsaw:mute")`, into the sample index the
+ * combined sound is registered with. Mini notation hands the word over as `n`.
+ * @param hapValue - the event's values as superdough receives them
+ * @param techniqueIds - the preset kind's techniques, in sample index order
+ * @returns the values with a word in `n` replaced by its index; an unknown word picks the first
+ * technique, and a number or nothing is left alone
+ */
+export const readTechniqueIndex = (
+  hapValue: Record<string, unknown>,
+  techniqueIds: string[]
+): Record<string, unknown> =>
+  typeof hapValue.n === 'string'
+    ? { ...hapValue, n: Math.max(0, techniqueIds.indexOf(hapValue.n)) }
+    : hapValue
+
+/**
  * The preset's sounds that play notes; a drum keeps ringing its whole sample.
  * @param preset - a preset
  * @returns its pitched sound names: the combined sound named after the preset, then each
@@ -28,19 +44,21 @@ export const readPitchedSoundNames = (preset: InstrumentPreset): string[] => {
 }
 
 /**
- * Registers each sound again with a trigger that applies `endNoteAtEvent`, keeping its data, so
- * the sounds tab and the pickers still read it as the same sample.
+ * Registers each pitched sound of a preset again with a trigger that applies `endNoteAtEvent`,
+ * keeping its data, so the sounds tab and the pickers still read it as the same sample. The
+ * combined sound also takes its techniques by name.
  * @param webaudioModule - the loaded `@strudel/webaudio` module
- * @param soundNames - sounds already registered by `samples`
+ * @param preset - the preset whose sounds `samples` already registered
  */
 export const makeNotesEndAtEvent = (
   webaudioModule: Record<string, unknown>,
-  soundNames: string[]
+  preset: InstrumentPreset
 ): void => {
+  const techniqueIds = INSTRUMENT_KINDS[preset.kind].techniques
   const soundMap = requireRecordModule(webaudioModule.soundMap)
   const sounds = requireRecordModule(requireCallable(soundMap.get).call(soundMap))
   const registerSound = requireCallable(webaudioModule.registerSound)
-  soundNames.forEach((soundName) => {
+  readPitchedSoundNames(preset).forEach((soundName) => {
     const sound = sounds[soundName]
     const onTrigger = isRecordModule(sound) ? toCallable(sound.onTrigger) : undefined
     if (onTrigger === undefined || !isRecordModule(sound)) {
@@ -49,7 +67,15 @@ export const makeNotesEndAtEvent = (
     registerSound(
       soundName,
       (time: unknown, hapValue: unknown, onEnded: unknown) =>
-        onTrigger(time, isRecordModule(hapValue) ? endNoteAtEvent(hapValue) : hapValue, onEnded),
+        onTrigger(
+          time,
+          isRecordModule(hapValue)
+            ? endNoteAtEvent(
+                soundName === preset.name ? readTechniqueIndex(hapValue, techniqueIds) : hapValue
+              )
+            : hapValue,
+          onEnded
+        ),
       sound.data
     )
   })

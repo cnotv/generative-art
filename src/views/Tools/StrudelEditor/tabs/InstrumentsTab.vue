@@ -35,8 +35,15 @@ const description = ref('')
 const newName = ref('')
 const newKind = ref<InstrumentKind>('electric-guitar')
 const renameValue = ref('')
-const { previewState, previewMessage, togglePreview, downloadPreview } =
-  useInstrumentPreview(selectedPreset)
+const {
+  exampleCode,
+  copyMessage,
+  previewState,
+  previewMessage,
+  togglePreview,
+  downloadPreview,
+  copyExample
+} = useInstrumentPreview(selectedPreset)
 const previewButtonLabel = computed(() =>
   previewState.value === 'idle' ? 'Play preview' : 'Stop preview'
 )
@@ -79,26 +86,13 @@ const onKindPicked = (kind: string): void => {
   }
 }
 
-const usageHint = computed(() =>
-  selectedPreset.value === undefined || kindDefinition.value === undefined
-    ? ''
-    : kindDefinition.value.usageHint.replaceAll('{name}', selectedPreset.value.name)
-)
-
-// Each technique past the first is reached by its sample index, so the tab says which is which.
-const techniqueHint = computed(() => {
-  const definition = kindDefinition.value
-  if (definition === undefined) {
-    return ''
-  }
-  return definition.techniques
+// Each technique past the first is reached by its name, so the tab lists them.
+const techniqueHint = computed(() =>
+  (kindDefinition.value?.techniques ?? [])
     .slice(1)
-    .map((id, techniqueIndex) => {
-      const label = definition.articulations.find((articulation) => articulation.id === id)?.label
-      return `:${techniqueIndex + 1} is ${(label ?? id).toLowerCase()}`
-    })
+    .map((id) => `${selectedPreset.value?.name}:${id}`)
     .join(', ')
-})
+)
 
 const statusMessage = computed(() => {
   const name = selectedPreset.value?.name ?? ''
@@ -106,7 +100,7 @@ const statusMessage = computed(() => {
   const messages = {
     idle: 'Waiting to render.',
     rendering: `Rendering ${name}...`,
-    ready: `Ready, rendered in ${seconds} s. Press play to hear it, or play it with the names below.`,
+    ready: `Ready, rendered in ${seconds} s. Play renders the example below, and pasting it into the editor sounds the same.`,
     error: `Could not render ${name}: ${errorByName.value[name] ?? ''}`
   }
   return messages[selectedStatus.value]
@@ -144,18 +138,13 @@ const onAsk = (): void => {
       <span class="strudel-instruments__label">Preset</span>
       <Select v-model="selectedName" :options="presetOptions" />
     </div>
-    <p v-if="usageHint" class="strudel-instruments__hint">
-      <template v-if="kindDefinition?.techniques.length">
-        Play it as <code>{{ selectedPreset?.name }}</code
-        >:
-      </template>
-      <template v-else>
-        Sounds start with <code>{{ selectedPreset?.name }}_</code>:
-      </template>
-      <code>{{ usageHint }}</code>
-      <template v-if="techniqueHint">
-        Add an index to pick a technique: {{ techniqueHint }}.</template
-      >
+    <pre
+      v-if="exampleCode"
+      class="strudel-instruments__example"
+      aria-label="Example code"
+    ><code>{{ exampleCode }}</code></pre>
+    <p v-if="techniqueHint" class="strudel-instruments__hint">
+      Single notes are the plain name; pick a technique by name: {{ techniqueHint }}.
     </p>
 
     <template v-if="selectedPreset && kindDefinition">
@@ -195,8 +184,12 @@ const onAsk = (): void => {
       >
         Download WAV
       </Button>
+      <Button variant="outline" size="sm" :disabled="!exampleCode" @click="copyExample">
+        Copy
+      </Button>
       <Button variant="outline" size="sm" @click="store.resetPreset">Reset</Button>
     </div>
+    <p v-if="copyMessage" class="strudel-instruments__hint" role="status">{{ copyMessage }}</p>
     <p v-if="previewState === 'rendering'" class="strudel-instruments__hint" role="status">
       Rendering the preview...
     </p>
@@ -317,6 +310,17 @@ const onAsk = (): void => {
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-muted-foreground);
+}
+
+.strudel-instruments__example {
+  margin: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+  overflow-x: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-sm);
+  color: var(--color-foreground);
+  background: var(--color-muted);
+  border-radius: var(--radius-md);
 }
 
 .strudel-instruments__knob {

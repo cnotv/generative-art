@@ -17,8 +17,8 @@ describe('buildInstrumentPickerGroups', () => {
   })
 
   it.each([
-    ['Electric guitar: chainsaw', ['chainsaw', 'chainsaw:1', 'chainsaw:2'], 'strings'],
-    ['Bass guitar: deathbass', ['deathbass', 'deathbass:1'], 'bass'],
+    ['Electric guitar: chainsaw', ['chainsaw', 'chainsaw:mute', 'chainsaw:chord'], 'strings'],
+    ['Bass guitar: deathbass', ['deathbass', 'deathbass:mute'], 'bass'],
     ['Organ: doomorgan', ['doomorgan'], 'keys']
   ])(
     'lists %s with the combined sound first, then its techniques',
@@ -86,8 +86,8 @@ describe('buildInstrumentPickerGroups', () => {
     // Assert
     expect(voiceGroups[0]?.samples.map(({ value }) => value)).toEqual([
       'mytone',
-      'mytone:1',
-      'mytone:2'
+      'mytone:mute',
+      'mytone:chord'
     ])
   })
 })

@@ -524,10 +524,17 @@ const readPreviewStartTime = (webaudioModule: Record<string, unknown>): number =
   readAudioTime(requireCallable(webaudioModule.getAudioContext)()) +
   STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
 
+const readSampleSelector = (selector: string | undefined): number | string | undefined => {
+  if (selector === undefined || selector === '') {
+    return undefined
+  }
+  return Number.isNaN(Number(selector)) ? selector : Number(selector)
+}
+
 /**
  * The value superdough plays for one picked sound. Strudel's own `s` control splits `name:2` into
- * the sound and its sample index, but superdough takes the two apart, so the index is split here.
- * @param soundName - a registered sound, with an optional sample index such as "chainsaw:1"
+ * the sound and its sample selector, but superdough takes the two apart, so it is split here.
+ * @param soundName - a registered sound, with an optional sample index or technique such as "chainsaw:1" or "chainsaw:mute"
  * @param soundType - its registration type; synths and soundfonts are given a note to play
  * @returns the sound, its index when there is one, a note when the type needs one, and a clip
  */
@@ -539,7 +546,7 @@ export const readPreviewSoundValue = (
   const needsNote = soundType === 'synth' || soundType === 'soundfont'
   return {
     s: sampleName,
-    n: sampleIndex === undefined || sampleIndex === '' ? undefined : Number(sampleIndex),
+    n: readSampleSelector(sampleIndex),
     note: needsNote ? STRUDEL_SOUND_PREVIEW_NOTE : undefined,
     clip: 1
   }

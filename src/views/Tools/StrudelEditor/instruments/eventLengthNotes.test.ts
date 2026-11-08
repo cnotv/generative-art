@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { endNoteAtEvent, makeNotesEndAtEvent, readPitchedSoundNames } from './eventLengthNotes'
+import {
+  endNoteAtEvent,
+  makeNotesEndAtEvent,
+  readPitchedSoundNames,
+  readTechniqueIndex
+} from './eventLengthNotes'
 
 describe('endNoteAtEvent', () => {
   it('ends a note with its event when the pattern says nothing about its length', () => {
@@ -51,7 +56,44 @@ describe('readPitchedSoundNames', () => {
   })
 })
 
+describe('readTechniqueIndex', () => {
+  it.each([
+    ['note', 0],
+    ['mute', 1],
+    ['chord', 2],
+    ['banjo', 0],
+    [2, 2],
+    [undefined, undefined]
+  ])('turns the technique %s into the sample index %s', (technique, expectedIndex) => {
+    // Arrange
+    const hapValue = { s: 'chainsaw', note: 'a1', n: technique }
+
+    // Act
+    const played = readTechniqueIndex(hapValue, ['note', 'mute', 'chord'])
+
+    // Assert
+    expect(played.n).toBe(expectedIndex)
+  })
+})
+
 describe('makeNotesEndAtEvent', () => {
+  it('lets the combined sound take a technique by name', () => {
+    // Arrange
+    const originalTrigger = vi.fn()
+    const registerSound = vi.fn()
+    const webaudioModule = {
+      registerSound,
+      soundMap: { get: () => ({ chainsaw: { onTrigger: originalTrigger, data: {} } }) }
+    }
+
+    // Act
+    makeNotesEndAtEvent(webaudioModule, { name: 'chainsaw', kind: 'electric-guitar', knobs: {} })
+    registerSound.mock.calls[0]?.[1](1, { s: 'chainsaw', n: 'chord' }, 'onEnded')
+
+    // Assert
+    expect(originalTrigger).toHaveBeenCalledWith(1, { s: 'chainsaw', n: 2, clip: 1 }, 'onEnded')
+  })
+
   it('registers each sound again with a trigger that ends its notes at their event', () => {
     // Arrange
     const originalTrigger = vi.fn()
@@ -63,7 +105,7 @@ describe('makeNotesEndAtEvent', () => {
     }
 
     // Act
-    makeNotesEndAtEvent(webaudioModule, ['chainsaw_note', 'missing_note'])
+    makeNotesEndAtEvent(webaudioModule, { name: 'chainsaw', kind: 'electric-guitar', knobs: {} })
     const [name, wrappedTrigger, data] = registerSound.mock.calls[0] ?? []
     wrappedTrigger(1.5, { s: 'chainsaw_note', note: 'a1' }, 'onEnded')
 

@@ -44,6 +44,12 @@ describe('readPreviewSoundValue', () => {
       { s: 'chainsaw', n: 1, note: undefined, clip: 1 }
     ],
     ['the second index', 'chainsaw:2', 'sample', { s: 'chainsaw', n: 2, note: undefined, clip: 1 }],
+    [
+      'a named technique',
+      'chainsaw:mute',
+      'sample',
+      { s: 'chainsaw', n: 'mute', note: undefined, clip: 1 }
+    ],
     ['a synth', 'sawtooth', 'synth', { s: 'sawtooth', n: undefined, note: 57, clip: 1 }]
   ])('splits the sample index from the name of %s', (_case, soundName, soundType, expected) => {
     // Arrange

@@ -4,7 +4,6 @@ import type {
   InstrumentKindDefinition,
   InstrumentKind,
   InstrumentPreset,
-  InstrumentPreviewHit,
   DrumVoice,
   OrganDrawbar,
   StringModel
@@ -124,7 +123,10 @@ mids: 0 is scooped, 0.5 is neutral, 1 is a mid hump.
 sustain: how long the strings ring. Low is short and dry, high rings for seconds.
 References: Kyuss is scooped mids, plenty of bass, high drive. Sleep is a huge low end with a mid hump. Nirvana is the mids forward with less drive. Entombed is maximum drive, scooped mids, boosted lows and highs, tight sustain.
 Answer with the five numbers and one or two sentences explaining the choices in guitar terms.`,
-    usageHint: 'note("a1 a1 c2 ds2").s("{name}")'
+    example: `setcpm(72/4)
+$: note("a1 ~ ~ c2 ~ ~ ds2 ~").s("{name}:chord")
+$: note("~ a1 a1 ~ a1 a1 ~ a1").s("{name}:mute")
+`
   },
   'bass-guitar': {
     label: 'Bass guitar',
@@ -161,7 +163,10 @@ attack: 0 is a soft finger pluck, 1 is a hard pick with a bright click.
 mids: 0 is scooped, 0.5 is neutral, 1 is a mid hump that cuts through guitars.
 sustain: how long the strings ring. Low is short and tight, high rings for seconds.
 Answer with the five numbers and one or two sentences explaining the choices in bass terms.`,
-    usageHint: 'note("a1 a1 c2 ds2").s("{name}")'
+    example: `setcpm(72/4)
+$: note("a0 ~ a0 c1 ~ ds1 e1 ~").s("{name}")
+$: note("~ a0 ~ ~ a0 ~ ~ a0").s("{name}:mute")
+`
   },
   'acoustic-guitar': {
     label: 'Acoustic guitar',
@@ -206,7 +211,10 @@ sustain: how long the strings ring. Low is short and dry, high rings for seconds
 strum: how slowly the strings of a chord are raked. 0 is a quick rake, 1 is a slow strum.
 width: 0 is mono, 1 is a wide stereo image.
 Answer with the five numbers and one or two sentences explaining the choices in guitar terms.`,
-    usageHint: 'note("a2 c3 ds3").s("{name}")'
+    example: `setcpm(80/4)
+$: note("a2 ~ ~ c3 ~ ~ e3 ~").s("{name}:chord")
+$: note("~ ~ a3 ~ c4 ~ ~ e4").s("{name}")
+`
   },
   organ: {
     label: 'Organ',
@@ -235,7 +243,9 @@ percussion: a key click and a short decaying third harmonic, like Hammond percus
 drive: soft overdrive of the amplifier. 0 is clean, 1 is a growling Leslie cabinet.
 vibrato: depth of the vibrato and chorus. 0 is none.
 Answer with the five numbers and one or two sentences explaining the choices in organ terms.`,
-    usageHint: 'note("<[c3,ds3,g3] [f3,a3,c4]>").s("{name}")'
+    example: `setcpm(70/4)
+$: note("[c3,ds3,g3] [f3,a3,c4] [g3,b3,d4] [c3,ds3,g3]").s("{name}").gain(0.5)
+`
   },
   'drum-kit': {
     label: 'Drum kit',
@@ -315,7 +325,11 @@ drive: saturation. 0 is clean, 1 is crunchy.
 room: 0 is a dry booth, 1 is a big roomy hall.
 References: death metal is a tight, clicky kit with a short decay and almost no room. Stoner rock and grunge are a big roomy kit with a longer decay and less click.
 Answer with the five numbers and one or two sentences explaining the choices in drummer terms.`,
-    usageHint: 's("{name}_kick {name}_snare")'
+    example: `setcpm(100/4)
+$: s("{name}_kick ~ {name}_snare ~ {name}_kick {name}_kick {name}_snare ~").gain(0.5)
+$: s("{name}_hatclosed*8").gain(0.3)
+$: s("{name}_crash ~ ~ ~").gain(0.3)
+`
   }
 }
 
@@ -627,64 +641,6 @@ export const INSTRUMENT_DRUM = {
   roomTapGains: [0.7, 0.5, 0.35, 0.25],
   roomLowpassHz: 5000,
   noiseSeedOffset: 7
-}
-
-/** Phrases the tab plays and downloads; the articulation becomes `<preset>_<articulation>`. */
-export const INSTRUMENT_PREVIEW_PHRASES: Record<InstrumentKind, InstrumentPreviewHit[]> = {
-  'electric-guitar': [
-    { articulation: 'chord', note: 'c2', offsetSeconds: 0, durationSeconds: 0.8, gain: 1.2 },
-    { articulation: 'mute', note: 'c2', offsetSeconds: 0.83, durationSeconds: 0.2, gain: 1.2 },
-    { articulation: 'mute', note: 'c2', offsetSeconds: 1.04, durationSeconds: 0.2, gain: 1.2 },
-    { articulation: 'chord', note: 'ds2', offsetSeconds: 1.25, durationSeconds: 0.4, gain: 1.2 },
-    { articulation: 'chord', note: 'f2', offsetSeconds: 1.67, durationSeconds: 0.4, gain: 1.2 },
-    { articulation: 'chord', note: 'c2', offsetSeconds: 2.08, durationSeconds: 2.4, gain: 1.2 },
-    { articulation: 'note', note: 'c3', offsetSeconds: 4.58, durationSeconds: 0.2, gain: 1 },
-    { articulation: 'note', note: 'ds3', offsetSeconds: 4.79, durationSeconds: 0.2, gain: 1 },
-    { articulation: 'note', note: 'f3', offsetSeconds: 5, durationSeconds: 1.5, gain: 1 }
-  ],
-  'bass-guitar': [
-    { articulation: 'note', note: 'a1', offsetSeconds: 0, durationSeconds: 0.6, gain: 1.4 },
-    { articulation: 'mute', note: 'a1', offsetSeconds: 0.67, durationSeconds: 0.17, gain: 1.4 },
-    { articulation: 'mute', note: 'a1', offsetSeconds: 0.83, durationSeconds: 0.17, gain: 1.4 },
-    { articulation: 'note', note: 'c2', offsetSeconds: 1, durationSeconds: 0.6, gain: 1.4 },
-    { articulation: 'note', note: 'ds2', offsetSeconds: 1.67, durationSeconds: 0.3, gain: 1.4 },
-    { articulation: 'note', note: 'e2', offsetSeconds: 2, durationSeconds: 0.3, gain: 1.4 },
-    { articulation: 'note', note: 'a1', offsetSeconds: 2.33, durationSeconds: 1.5, gain: 1.4 }
-  ],
-  'acoustic-guitar': [
-    { articulation: 'chord', note: 'a2', offsetSeconds: 0, durationSeconds: 1.1, gain: 1.4 },
-    { articulation: 'chord', note: 'a2', offsetSeconds: 1.2, durationSeconds: 0.5, gain: 1.2 },
-    { articulation: 'mute', note: 'a2', offsetSeconds: 1.8, durationSeconds: 0.3, gain: 1.2 },
-    { articulation: 'chord', note: 'c3', offsetSeconds: 2.4, durationSeconds: 1.1, gain: 1.4 },
-    { articulation: 'chord', note: 'ds3', offsetSeconds: 3.6, durationSeconds: 1.6, gain: 1.4 },
-    { articulation: 'note', note: 'a3', offsetSeconds: 5.2, durationSeconds: 0.4, gain: 1 },
-    { articulation: 'note', note: 'c4', offsetSeconds: 5.6, durationSeconds: 1.4, gain: 1 }
-  ],
-  organ: [
-    { articulation: 'note', note: 'c3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.8 },
-    { articulation: 'note', note: 'ds3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.8 },
-    { articulation: 'note', note: 'g3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.8 },
-    { articulation: 'note', note: 'f3', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.8 },
-    { articulation: 'note', note: 'a3', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.8 },
-    { articulation: 'note', note: 'c4', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.8 },
-    { articulation: 'note', note: 'g2', offsetSeconds: 3, durationSeconds: 2, gain: 0.8 },
-    { articulation: 'note', note: 'b3', offsetSeconds: 3, durationSeconds: 2, gain: 0.8 },
-    { articulation: 'note', note: 'd4', offsetSeconds: 3, durationSeconds: 2, gain: 0.8 }
-  ],
-  'drum-kit': [
-    { articulation: 'crash', offsetSeconds: 0, durationSeconds: 1.2, gain: 0.5 },
-    { articulation: 'kick', offsetSeconds: 0, durationSeconds: 0.3, gain: 0.9 },
-    { articulation: 'hatclosed', offsetSeconds: 0.3, durationSeconds: 0.15, gain: 0.7 },
-    { articulation: 'snare', offsetSeconds: 0.6, durationSeconds: 0.3, gain: 0.9 },
-    { articulation: 'hatclosed', offsetSeconds: 0.9, durationSeconds: 0.15, gain: 0.7 },
-    { articulation: 'kick', offsetSeconds: 1.2, durationSeconds: 0.3, gain: 0.9 },
-    { articulation: 'hatopen', offsetSeconds: 1.5, durationSeconds: 0.3, gain: 0.7 },
-    { articulation: 'snare', offsetSeconds: 1.8, durationSeconds: 0.3, gain: 0.9 },
-    { articulation: 'tomhi', offsetSeconds: 2.1, durationSeconds: 0.2, gain: 0.8 },
-    { articulation: 'tommid', offsetSeconds: 2.25, durationSeconds: 0.2, gain: 0.8 },
-    { articulation: 'tomlow', offsetSeconds: 2.4, durationSeconds: 0.4, gain: 0.8 },
-    { articulation: 'ride', offsetSeconds: 2.8, durationSeconds: 1, gain: 0.6 }
-  ]
 }
 
 /**

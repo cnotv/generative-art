@@ -11,7 +11,7 @@ const toDrumSamples = (preset: InstrumentPreset) =>
       familyId: articulation.familyId
     }))
 
-// The combined sound leads, then each technique past the first as the sample index Strudel reads.
+// The combined sound leads, then each technique past the first by name, as `preset:mute`.
 const toPitchedSamples = (preset: InstrumentPreset) => {
   const { articulations, techniques } = INSTRUMENT_KINDS[preset.kind]
   const techniqueArticulations = techniques.flatMap((id) =>
@@ -21,7 +21,7 @@ const toPitchedSamples = (preset: InstrumentPreset) => {
   return firstTechnique === undefined
     ? []
     : techniqueArticulations.map((articulation, techniqueIndex) => ({
-        value: techniqueIndex === 0 ? preset.name : `${preset.name}:${techniqueIndex}`,
+        value: techniqueIndex === 0 ? preset.name : `${preset.name}:${articulation.id}`,
         label:
           techniqueIndex === 0 ? preset.name : `${preset.name} ${articulation.label.toLowerCase()}`,
         familyId: firstTechnique.familyId
