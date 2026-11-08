@@ -654,9 +654,9 @@ $: stack(
   s("garagekit_crash").struct("x").gain(.19).mask("<0!12 1 0!11 1 0!7 1 0!2 1>")
 )._punchcard()
 $: stack(
-  note(roots).struct("x ~ ~ x ~ x x ~").s("fuzzbass_note").clip(1).gain(.19).mask("<0!4 1!8 0!20 1!3 0>"),
-  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").s("fuzzbass_note").clip(1).gain(.19).mask(breakBars),
-  note(roots).struct("x x ~ x x ~ x x").s("fuzzbass_note").clip(1).gain(.19).mask(chorusBars)
+  note(roots).struct("x ~ ~ x ~ x x ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.19).mask("<0!4 1!8 0!20 1!3 0>"),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.19).mask(breakBars),
+  note(roots).struct("x x ~ x x ~ x x").add(note(-12)).s("fuzzbass_note").clip(1).gain(.19).mask(chorusBars)
 )._scope()
 $: stack(
   note(riff).add(note(roots)).s("stoner_chord").cut(1).gain(.14).mask(riffBars),
@@ -749,8 +749,8 @@ $: stack(
   s("garagekit_crash").struct("x").gain(.2).mask("<0!8 1 0!15 1 0!11 1 0!2 1>")
 )._punchcard()
 $: stack(
-  note(roots).struct("x ~ ~ x ~ ~ x ~").s("grungebass_note").clip(1).gain(.31).mask(quiet),
-  note(roots).struct("x x x x x x x x").s("grungebass_note").clip(1).gain(.31).mask(loud)
+  note(roots).struct("x ~ ~ x ~ ~ x ~").add(note(-12)).s("grungebass_note").clip(1).gain(.31).mask(quiet),
+  note(roots).struct("x x x x x x x x").add(note(-12)).s("grungebass_note").clip(1).gain(.31).mask(loud)
 )._scope()
 $: stack(
   n("0 1 2 1 0 1 2 1").chord(changes).voicing().s("jangle_note").clip(1).gain(.22).mask(quiet),
@@ -803,8 +803,8 @@ $: stack(
   s("blastkit_crash").struct("x").gain(.19).cut(3).mask("<0!4 1 0!7 1 0!7 1 0!7 1 0!7 1 0!2 1>")
 )._punchcard()
 $: stack(
-  note(riff).add(note(roots)).s("deathbass_note").clip(1).gain(.27).mask(tremoloBars),
-  note(roots).struct("x ~ ~ x ~ ~ x ~").s("deathbass_note").clip(1).gain(.27).mask(grooveBars)
+  note(riff).add(note(roots)).add(note(-12)).s("deathbass_note").clip(1).gain(.27).mask(tremoloBars),
+  note(roots).struct("x ~ ~ x ~ ~ x ~").add(note(-12)).s("deathbass_note").clip(1).gain(.27).mask(grooveBars)
 )._scope()
 $: stack(
   note(riff).add(note(roots)).s("chainsaw_note").clip(1).gain(.18).mask(tremoloBars),
@@ -1777,7 +1777,8 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
       {
         role: 'bass',
         label: 'a picked bass doubling the riff',
-        snippet: 'note("<[a1*8 bb1*8] [a1*8 eb2*8]>").s("deathbass_note").clip(1).gain(.45)',
+        snippet:
+          'note("<[a1*8 bb1*8] [a1*8 eb2*8]>").add(note(-12)).s("deathbass_note").clip(1).gain(.45)',
         reason: 'The bass picks the riff in unison with the guitar, with a bright attack.'
       },
       {
