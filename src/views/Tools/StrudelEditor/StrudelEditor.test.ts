@@ -488,6 +488,37 @@ describe('StrudelEditor view', () => {
     expect(router.currentRoute.value.query).toEqual({ pattern: ELECTRO_TUNES[0].id })
   })
 
+  it('opens in flow mode when the address names it, and drops the key on a switch to code', async () => {
+    // Arrange
+    await router.replace({ query: { mode: 'flow' } })
+    const wrapper = await mountEditorView()
+    await flushPromises()
+    const openedInFlow = wrapper.find('.strudel-editor__flow').exists()
+
+    // Act
+    await router.replace({ query: {} })
+    await flushPromises()
+
+    // Assert
+    expect(openedInFlow).toBe(true)
+    expect(wrapper.find('.strudel-editor__flow').exists()).toBe(false)
+    expect(router.currentRoute.value.query).toEqual({})
+  })
+
+  it('writes the flow mode into the address when it opens', async () => {
+    // Arrange
+    await router.replace({ query: { pattern: ELECTRO_TUNES[0].id } })
+    const wrapper = await mountEditorView()
+
+    // Act
+    await router.replace({ query: { pattern: ELECTRO_TUNES[0].id, mode: 'flow' } })
+    await flushPromises()
+
+    // Assert
+    expect(wrapper.find('.strudel-editor__flow').exists()).toBe(true)
+    expect(router.currentRoute.value.query).toEqual({ pattern: ELECTRO_TUNES[0].id, mode: 'flow' })
+  })
+
   it('opens the import tab from the link in the MIDI tab', async () => {
     // Arrange
     await router.replace({ query: { tab: 'midi' } })

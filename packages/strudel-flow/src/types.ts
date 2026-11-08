@@ -332,6 +332,9 @@ export type StrudelFlowCodeRange = {
   to: number
 }
 
+/** A node's call in the program, with the node that wrote it. */
+export type StrudelFlowNodeCodeRange = StrudelFlowCodeRange & { nodeId: string }
+
 /** Any expression the other instruments cannot describe, kept verbatim. */
 export type StrudelFlowCodeData = StrudelFlowMuteFlag & {
   kind: 'code'

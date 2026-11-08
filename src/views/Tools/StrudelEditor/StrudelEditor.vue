@@ -24,7 +24,12 @@ import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { FLOW_SYNC_DELAY_MS, STRUDEL_LICENSE_NOTE } from './config'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
-import { findStrudelFlowNodeCode, useStrudelFlow } from '@webgamekit/strudel-flow'
+import {
+  findStrudelFlowNodeCode,
+  findStrudelFlowPlayingNodeIds,
+  getStrudelFlowNodeCodeRanges,
+  useStrudelFlow
+} from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
 import { readLegacyStrudelAnchor, readStrudelAddress, writeStrudelAddress } from './strudelAddress'
 import { useStrudelHints } from './hints/useStrudelHints'
@@ -92,7 +97,9 @@ const {
   loopBars,
   loopMeasured,
   seekToCycle,
-  holdPlayingPosition
+  holdPlayingPosition,
+  playingCode,
+  playingSourceOffsets
 } = useStrudelEditor()
 
 const {
@@ -112,6 +119,19 @@ const {
 } = useStrudelFlow()
 
 const editorMode = ref<StrudelEditorMode>('code')
+const flowNodeCodeRanges = computed(() =>
+  getStrudelFlowNodeCodeRanges(playingCode.value, flowNodes.value, flowEdges.value)
+)
+const playingFlowNodeIds = computed(() =>
+  editorMode.value === 'flow'
+    ? findStrudelFlowPlayingNodeIds(
+        flowNodeCodeRanges.value,
+        playingSourceOffsets.value,
+        flowNodes.value,
+        flowEdges.value
+      )
+    : []
+)
 const { soundEntries, sampleGroups, voiceGroups, soundsStatus, loadSounds } = useStrudelSounds()
 
 // The sound list registers the whole library, so it loads only once something shows it.
@@ -234,8 +254,23 @@ const loadAddressedPattern = (patternId: string | undefined): void => {
   }
 }
 
+// Only a change of mode is acted on, so the address echoing the mode back never loops.
+const loadAddressedMode = (modeName: string | undefined): void => {
+  const mode = modeName === 'flow' ? 'flow' : 'code'
+  if (mode !== editorMode.value) {
+    onEditorModeChange(mode)
+  }
+}
+
 watch(() => readStrudelAddress(route.query).tabName, loadAddressedTab)
 watch(() => readStrudelAddress(route.query).patternId, loadAddressedPattern)
+watch(() => readStrudelAddress(route.query).modeName, loadAddressedMode)
+
+watch(editorMode, (mode) => {
+  void router.replace({
+    query: writeStrudelAddress(route.query, { modeName: mode === 'flow' ? 'flow' : undefined })
+  })
+})
 
 // Replaced rather than pushed, so the toolbar never fills Back with drawers opened and closed.
 watch(activeTab, (tabId) => {
@@ -251,9 +286,10 @@ const loadAddress = (): void => {
     void router.replace({ query: writeStrudelAddress(route.query, legacyAddress), hash: '' })
     return
   }
-  const { patternId, tabName } = readStrudelAddress(route.query)
+  const { patternId, tabName, modeName } = readStrudelAddress(route.query)
   loadAddressedTab(tabName)
   loadAddressedPattern(patternId)
+  loadAddressedMode(modeName)
 }
 
 const onPatternSelected = (patternId: string): void => {
@@ -390,6 +426,7 @@ onBeforeUnmount(() => {
           :sample-groups="sampleGroups"
           :voice-groups="voiceGroups"
           :preview-sound="onFlowSoundPreview"
+          :playing-node-ids="playingFlowNodeIds"
           @connect="onFlowNodesConnected"
           @update-node="updateFlowNodeData"
           @remove-node="removeFlowNode"

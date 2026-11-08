@@ -1326,6 +1326,29 @@ describe('useStrudelEditor editor attachment', () => {
     expect(editorHandle.clearVisuals).toHaveBeenCalledTimes(1)
   })
 
+  it('tracks the source offsets of the playing haps and clears them on stop', async () => {
+    // Arrange
+    const capturedHooks: StrudelPlaybackHooks[] = []
+    const { playPattern, playingSourceOffsets } = useStrudelEditor({
+      initialExamples: buildExampleList(),
+      playbackLoader: async (hooks) => {
+        capturedHooks.push(hooks)
+        return buildSuccessfulPlayback()
+      }
+    })
+    await playPattern()
+    const hap = { context: { locations: [{ start: 12, end: 16 }] } }
+
+    // Act
+    capturedHooks[0]?.onFrame([hap], 1)
+    const whilePlaying = playingSourceOffsets.value.map((list) => [...list])
+    capturedHooks[0]?.onStopped()
+
+    // Assert
+    expect(whilePlaying).toEqual([[12]])
+    expect(playingSourceOffsets.value).toEqual([])
+  })
+
   it('stops reaching an editor once it is detached', async () => {
     // Arrange
     const editorHandle = buildEditorHandle()

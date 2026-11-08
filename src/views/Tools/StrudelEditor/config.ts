@@ -776,6 +776,8 @@ export const STRUDEL_SAVED_PATTERNS_STORAGE_KEY = 'strudel-editor-saved-patterns
 export const STRUDEL_PATTERN_QUERY_KEY = 'pattern'
 /** The query key naming the open drawer tab, as in `?tab=export`. */
 export const STRUDEL_TAB_QUERY_KEY = 'tab'
+/** The query key naming the editor mode, as in `?mode=flow`; code is the default and has none. */
+export const STRUDEL_MODE_QUERY_KEY = 'mode'
 /** Starts every saved pattern's id, so none can collide with an example's or a tune's. */
 export const STRUDEL_SAVED_PATTERN_ID_PREFIX = 'saved-'
 /** The id of a saved pattern whose name has no letters or digits to make one from. */

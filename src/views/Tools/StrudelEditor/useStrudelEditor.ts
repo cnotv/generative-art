@@ -27,7 +27,7 @@ import type {
   StrudelTranscriptionState,
   TranscriptionRunner
 } from './types'
-import { loadDefaultStrudelPlayback } from './strudelPlayback'
+import { loadDefaultStrudelPlayback, readHapSourceOffsets } from './strudelPlayback'
 import { runTranscription } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 import { useStrudelTimeline } from './timeline/useStrudelTimeline'
@@ -67,6 +67,10 @@ type StrudelEditorState = StrudelTranscriptionState & {
   editorStatus: Ref<StrudelEditorStatus>
   /** True while a pattern plays and the code on screen has changed since it started. */
   hasUnplayedChanges: ComputedRef<boolean>
+  /** The code last evaluated, which the source offsets of the playing notes refer to. */
+  playingCode: Ref<string>
+  /** Where in `playingCode` each sounding note comes from, one list per note, empty while stopped. */
+  playingSourceOffsets: Ref<number[][]>
   errorMessage: Ref<string>
   examples: StrudelExample[]
   electroTunes: StrudelExample[]
@@ -116,11 +120,21 @@ const loadCachedPlayback = async (
 
 // Playback outlives any one editor instance, so it reaches the editor through this ref.
 const createPlaybackHooks = (
-  editorHandle: Ref<StrudelEditorHandle | null>
+  editorHandle: Ref<StrudelEditorHandle | null>,
+  playingSourceOffsets: Ref<number[][]>
 ): StrudelPlaybackHooks => ({
   onEvaluated: (meta) => editorHandle.value?.applyEvaluation(meta),
-  onFrame: (activeHaps, time) => editorHandle.value?.highlight(activeHaps, time),
+  onFrame: (activeHaps, time) => {
+    editorHandle.value?.highlight(activeHaps, time)
+    const offsets = readHapSourceOffsets(activeHaps)
+    // Frames come every animation tick; a new array each time would re-render the flow at 60 Hz.
+    const joinOffsets = (lists: number[][]): string => lists.map((list) => list.join()).join(';')
+    if (joinOffsets(offsets) !== joinOffsets(playingSourceOffsets.value)) {
+      playingSourceOffsets.value = offsets
+    }
+  },
   onStopped: () => {
+    playingSourceOffsets.value = []
     editorHandle.value?.clearHighlights()
     editorHandle.value?.clearVisuals()
   },
@@ -154,12 +168,13 @@ export const useStrudelEditor = (
   const activeTab = ref<StrudelTabId | null>(null)
   const { logEntries, appendLog, clearLogEntries } = useStrudelLog()
   const playingCode = ref('')
+  const playingSourceOffsets = ref<number[][]>([])
   const hasUnplayedChanges = computed(
     () => editorStatus.value === 'playing' && patternCode.value !== playingCode.value
   )
   const editorHandle = shallowRef<StrudelEditorHandle | null>(null)
 
-  const playbackHooks = createPlaybackHooks(editorHandle)
+  const playbackHooks = createPlaybackHooks(editorHandle, playingSourceOffsets)
 
   const timeline = useStrudelTimeline({ editorStatus, getPlayback: () => playbackReference.value })
 
@@ -274,6 +289,8 @@ export const useStrudelEditor = (
     patternCode,
     editorStatus,
     hasUnplayedChanges,
+    playingCode,
+    playingSourceOffsets,
     errorMessage,
     examples: exampleList,
     electroTunes: ELECTRO_TUNES,

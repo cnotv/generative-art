@@ -129,6 +129,11 @@
     var(--sf-shadow);
 }
 
+.strudel-flow-node--playing {
+  outline: 2px solid var(--sf-card-foreground);
+  outline-offset: 2px;
+}
+
 .strudel-flow-node__header {
   display: flex;
   align-items: center;
