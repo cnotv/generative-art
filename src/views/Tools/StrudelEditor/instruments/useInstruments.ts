@@ -1,18 +1,13 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { isRecordModule, requireCallable, requireRecordModule } from '../strudelModules'
-import {
-  INSTRUMENT_REGENERATE_DELAY_MS,
-  INSTRUMENT_STORAGE_KEY_API_KEY,
-  INSTRUMENT_STORAGE_KEY_MODEL,
-  INSTRUMENT_TAG_PREFIX
-} from './config'
-import { askInstrumentToneAssistant, readKnownInstrumentToneModel } from './instrumentToneAssistant'
+import { useAiSettings } from '../ai/useAiSettings'
+import { INSTRUMENT_REGENERATE_DELAY_MS, INSTRUMENT_TAG_PREFIX } from './config'
+import { askInstrumentToneAssistant } from './instrumentToneAssistant'
 import { createPresetLibrary } from './presetLibrary'
 import { findReferencedInstrumentPresets } from './presetScan'
 import { makeNotesEndAtEvent } from './eventLengthNotes'
 import { registerInstrument } from './registerInstrument'
-import { readStored, writeStored } from './storage'
 import type { InstrumentPreset, InstrumentRenderStatus } from './types'
 
 // One import shared by every caller, so the sound list and a render never load the engine twice.
@@ -54,8 +49,6 @@ export const useInstruments = defineStore('instruments', () => {
   const statusByName = ref<Record<string, InstrumentRenderStatus>>({})
   const errorByName = ref<Record<string, string>>({})
   const renderMillisecondsByName = ref<Record<string, number>>({})
-  const apiKey = ref(readStored(INSTRUMENT_STORAGE_KEY_API_KEY) ?? '')
-  const model = ref(readKnownInstrumentToneModel(readStored(INSTRUMENT_STORAGE_KEY_MODEL)))
   const assistantBusy = ref(false)
   const assistantExplanation = ref('')
   const assistantError = ref('')
@@ -139,8 +132,6 @@ export const useInstruments = defineStore('instruments', () => {
       }, INSTRUMENT_REGENERATE_DELAY_MS)
     }
   )
-  watch(apiKey, (nextKey) => writeStored(INSTRUMENT_STORAGE_KEY_API_KEY, nextKey || null))
-  watch(model, (nextModel) => writeStored(INSTRUMENT_STORAGE_KEY_MODEL, nextModel || null))
 
   const selectedStatus = computed<InstrumentRenderStatus>(
     () => statusByName.value[selectedPreset.value?.name ?? ''] ?? 'idle'
@@ -152,24 +143,21 @@ export const useInstruments = defineStore('instruments', () => {
     )
   }
 
-  const forgetApiKey = (): void => {
-    apiKey.value = ''
-  }
-
   const askAssistant = async (description: string): Promise<void> => {
     const preset = selectedPreset.value
     if (preset === undefined) {
       return
     }
+    const settings = useAiSettings()
     assistantBusy.value = true
     assistantError.value = ''
     try {
       const suggestion = await askInstrumentToneAssistant({
-        apiKey: apiKey.value,
+        apiKey: settings.apiKey,
         description,
         kind: preset.kind,
         currentKnobs: preset.knobs,
-        model: model.value
+        model: settings.soundModel
       })
       library.setKnobs(suggestion.knobs)
       assistantExplanation.value = suggestion.explanation
@@ -188,8 +176,6 @@ export const useInstruments = defineStore('instruments', () => {
     statusByName,
     errorByName,
     renderMillisecondsByName,
-    apiKey,
-    model,
     assistantBusy,
     assistantExplanation,
     assistantError,
@@ -205,7 +191,6 @@ export const useInstruments = defineStore('instruments', () => {
     duplicatePreset: library.duplicatePreset,
     renamePreset: library.renamePreset,
     deletePreset: library.deletePreset,
-    forgetApiKey,
     askAssistant
   }
 })

@@ -1,5 +1,14 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { STRUDEL_AI_MODEL_OPTIONS } from '../ai/config'
+import { useAiSettings } from '../ai/useAiSettings'
+
+const aiSettings = useAiSettings()
+const { apiKey, composeModel, soundModel } = storeToRefs(aiSettings)
 
 const theme = ref<'light' | 'dark'>('dark')
 const panelPosition = ref<'bottom' | 'right'>('bottom')
@@ -20,6 +29,35 @@ const positions: { value: 'bottom' | 'right'; label: string }[] = [
 
 <template>
   <div class="strudel-settings">
+    <section class="strudel-settings__field" aria-label="AI">
+      <h3 class="strudel-settings__label">AI</h3>
+      <Input
+        v-model="apiKey"
+        type="password"
+        autocomplete="off"
+        placeholder="OpenRouter key"
+        aria-label="OpenRouter key"
+      />
+      <p class="strudel-settings__hint">
+        The key is kept only in this browser's local storage, on this device. It is sent to
+        OpenRouter and nowhere else.
+      </p>
+      <div class="strudel-settings__actions">
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="apiKey.length === 0"
+          @click="aiSettings.forgetApiKey"
+        >
+          Forget key
+        </Button>
+      </div>
+      <span class="strudel-settings__hint">Compose model</span>
+      <Select v-model="composeModel" :options="STRUDEL_AI_MODEL_OPTIONS" />
+      <span class="strudel-settings__hint">Sound model, for the Instruments tab's AI tone</span>
+      <Select v-model="soundModel" :options="STRUDEL_AI_MODEL_OPTIONS" />
+    </section>
+
     <div class="strudel-settings__field">
       <label class="strudel-settings__label">Theme</label>
       <div class="strudel-settings__options">
@@ -100,6 +138,7 @@ const positions: { value: 'bottom' | 'right'; label: string }[] = [
 }
 
 .strudel-settings__label {
+  margin: 0;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-muted-foreground);
@@ -144,6 +183,11 @@ const positions: { value: 'bottom' | 'right'; label: string }[] = [
 
 .strudel-settings__checkbox input {
   accent-color: var(--color-primary);
+}
+
+.strudel-settings__actions {
+  display: flex;
+  gap: var(--spacing-2);
 }
 
 .strudel-settings__hint {

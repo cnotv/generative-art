@@ -1,28 +1,12 @@
-import { isRecordModule } from '../strudelModules'
-import {
-  INSTRUMENT_ASSISTANT_ERRORS,
-  INSTRUMENT_DEFAULT_MODEL,
-  INSTRUMENT_KINDS,
-  INSTRUMENT_MODEL_OPTIONS,
-  INSTRUMENT_OPENROUTER_URL
-} from './config'
+import { STRUDEL_AI_ERRORS } from '../ai/config'
+import { askOpenRouter, buildStrictJsonFormat } from '../ai/openRouter'
+import { INSTRUMENT_KINDS } from './config'
 import type {
   InstrumentKind,
   InstrumentKnobs,
   InstrumentToneRequestOptions,
   InstrumentToneSuggestion
 } from './types'
-
-/**
- * The model the dropdown should show. A model saved before the list changed falls back to the
- * default so the dropdown never shows a blank choice.
- * @param storedModel - the model id kept in local storage, if any
- * @returns a model id from the dropdown's options
- */
-export const readKnownInstrumentToneModel = (storedModel: string | null): string =>
-  storedModel !== null && INSTRUMENT_MODEL_OPTIONS.some(({ value }) => value === storedModel)
-    ? storedModel
-    : INSTRUMENT_DEFAULT_MODEL
 
 /**
  * The strict JSON schema a kind's answer must match: its own knobs plus an explanation.
@@ -44,27 +28,6 @@ export const buildInstrumentToneSchema = (kind: InstrumentKind): Record<string, 
 
 const clampToUnit = (value: number): number => Math.min(1, Math.max(0, value))
 
-const readMessageContent = (responseBody: unknown): string => {
-  const firstChoice =
-    isRecordModule(responseBody) && Array.isArray(responseBody.choices)
-      ? responseBody.choices[0]
-      : undefined
-  const message = isRecordModule(firstChoice) ? firstChoice.message : undefined
-  const content = isRecordModule(message) ? message.content : undefined
-  if (typeof content !== 'string') {
-    throw new Error(INSTRUMENT_ASSISTANT_ERRORS.badAnswer)
-  }
-  return content
-}
-
-const parseJson = (text: string): unknown => {
-  try {
-    return JSON.parse(text)
-  } catch {
-    throw new Error(INSTRUMENT_ASSISTANT_ERRORS.badAnswer)
-  }
-}
-
 /**
  * The chat completion body that asks the model for a kind's knobs as strict JSON.
  * @param options - the wanted sound in words, the kind and its knobs as they are, and the model id
@@ -84,14 +47,10 @@ export const buildInstrumentToneRequest = ({
       content: `Current knobs: ${JSON.stringify(currentKnobs)}\nWanted sound: ${description}`
     }
   ],
-  response_format: {
-    type: 'json_schema',
-    json_schema: {
-      name: `${kind.replaceAll('-', '_')}_knobs`,
-      strict: true,
-      schema: buildInstrumentToneSchema(kind)
-    }
-  }
+  response_format: buildStrictJsonFormat(
+    `${kind.replaceAll('-', '_')}_knobs`,
+    buildInstrumentToneSchema(kind)
+  )
 })
 
 /**
@@ -109,7 +68,7 @@ export const parseInstrumentKnobs = (
     INSTRUMENT_KINDS[kind].knobs.map(({ id }) => {
       const value = parsed[id]
       if (typeof value !== 'number' || !Number.isFinite(value)) {
-        throw new Error(INSTRUMENT_ASSISTANT_ERRORS.badAnswer)
+        throw new Error(STRUDEL_AI_ERRORS.badAnswer)
       }
       return [id, clampToUnit(value)]
     })
@@ -118,57 +77,32 @@ export const parseInstrumentKnobs = (
 /**
  * Reads the model's answer, checking every field and clamping each knob to 0 to 1.
  * @param kind - the kind the answer is for
- * @param responseBody - the parsed OpenRouter response
+ * @param parsed - the JSON object the model answered with
  * @returns the knobs and the model's explanation
- * @throws {Error} a readable error when the answer is missing a field or is not JSON
+ * @throws {Error} a readable error when a knob is missing
  */
-export const parseInstrumentToneResponse = (
+export const parseInstrumentToneAnswer = (
   kind: InstrumentKind,
-  responseBody: unknown
-): InstrumentToneSuggestion => {
-  const parsed = parseJson(readMessageContent(responseBody))
-  if (!isRecordModule(parsed)) {
-    throw new Error(INSTRUMENT_ASSISTANT_ERRORS.badAnswer)
-  }
-  return {
-    knobs: parseInstrumentKnobs(kind, parsed),
-    explanation: typeof parsed.explanation === 'string' ? parsed.explanation : ''
-  }
-}
-
-const readStatusMessage = (status: number): string => {
-  if (status === 401 || status === 403) {
-    return INSTRUMENT_ASSISTANT_ERRORS.unauthorised
-  }
-  if (status === 402) {
-    return INSTRUMENT_ASSISTANT_ERRORS.noCredit
-  }
-  if (status === 429) {
-    return INSTRUMENT_ASSISTANT_ERRORS.rateLimited
-  }
-  return `${INSTRUMENT_ASSISTANT_ERRORS.other} (${status}).`
-}
+  parsed: Record<string, unknown>
+): InstrumentToneSuggestion => ({
+  knobs: parseInstrumentKnobs(kind, parsed),
+  explanation: typeof parsed.explanation === 'string' ? parsed.explanation : ''
+})
 
 /**
- * Asks OpenRouter for knob settings. The key goes only in the Authorization header of this one
- * request to OpenRouter.
- * @param options - the request options plus the user's own key and, for tests, a fetch
+ * Asks OpenRouter for knob settings.
+ * @param options - the request options plus the player's own key and, for tests, a fetch
  * @returns the suggested knobs and explanation
  * @throws {Error} a readable error for a refused key, no credit, a network failure or a bad answer
  */
 export const askInstrumentToneAssistant = async (
   options: InstrumentToneRequestOptions & { apiKey: string; fetchImplementation?: typeof fetch }
-): Promise<InstrumentToneSuggestion> => {
-  const { apiKey, fetchImplementation = fetch } = options
-  const response = await fetchImplementation(INSTRUMENT_OPENROUTER_URL, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildInstrumentToneRequest(options))
-  }).catch(() => {
-    throw new Error(INSTRUMENT_ASSISTANT_ERRORS.network)
-  })
-  if (!response.ok) {
-    throw new Error(readStatusMessage(response.status))
-  }
-  return parseInstrumentToneResponse(options.kind, await response.json().catch(() => null))
-}
+): Promise<InstrumentToneSuggestion> =>
+  parseInstrumentToneAnswer(
+    options.kind,
+    await askOpenRouter({
+      apiKey: options.apiKey,
+      body: buildInstrumentToneRequest(options),
+      fetchImplementation: options.fetchImplementation
+    })
+  )

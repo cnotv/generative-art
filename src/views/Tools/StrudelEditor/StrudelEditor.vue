@@ -16,6 +16,7 @@ import {
   Music,
   Save,
   Settings,
+  Sparkles,
   Terminal,
   Volume2,
   X
@@ -40,6 +41,7 @@ import { previewStrudelSound } from './strudelPlayback'
 import type { StrudelEditorMode, StrudelSoundEntry, StrudelTabId } from './types'
 import FlowTab from './tabs/FlowTab.vue'
 import InstrumentsTab from './tabs/InstrumentsTab.vue'
+import ComposeTab from './tabs/ComposeTab.vue'
 import HintsTab from './tabs/HintsTab.vue'
 import PatternLibrary from './tabs/PatternLibrary.vue'
 import SoundsTab from './tabs/SoundsTab.vue'
@@ -349,6 +351,7 @@ const toolbarTools = [
   { id: 'midi', label: 'MIDI', icon: Cable },
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
   { id: 'instruments', label: 'Instruments', icon: Guitar },
+  { id: 'compose', label: 'Compose', icon: Sparkles },
   { id: 'console', label: 'Console', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'flow', label: 'Nodes', icon: Boxes },
@@ -522,6 +525,11 @@ onBeforeUnmount(() => {
           @preview="onSoundPreview"
         />
         <InstrumentsTab v-else-if="activeTab === 'instruments'" />
+        <ComposeTab
+          v-else-if="activeTab === 'compose'"
+          :code="patternCode"
+          @apply="updatePatternCode"
+        />
         <MidiTab v-else-if="activeTab === 'midi'" @code="updatePatternCode" />
         <ExportTab
           v-else-if="activeTab === 'export'"
