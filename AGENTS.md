@@ -107,7 +107,7 @@ A PR body links to these homes; a section growing into an explanation belongs in
 - **Verify notes:** `documentation/docs/guides/visual-verification-with-screenshots.md`; shots: `pnpm capture`
 - **Checks:** `pnpm lint`, `pnpm lint:css`, `pnpm test:unit`; **Security:** `pnpm audit --prod`, no threat model
 - **Docs home:** `documentation/docs/`, homes above; **Docs build:** `pnpm docs:build`
-- **Preview deploys:** the `deploy/netlify` check's `targetUrl`, with the view's route appended; PR media (no `pr-preview` workflow): `media-capture` screenshot and MP4, video via `scripts/gh-video.mjs` else the `pr-media` branch, all in the body before ready
+- **Preview deploys:** the `deploy/netlify` check's `targetUrl`, with the view's route appended; PR media (no `pr-preview` workflow): `media-capture` screenshot and one GIF, the GIF committed to `pr-media` and linked by a sha pinned raw URL (`documentation/docs/guides/videos-in-pull-requests.md`), all in the body before ready
 - **Scoped rules and local skills:** `.claude/rules/` and `.claude/skills/`, indexed below
 
 ### Done checklist
