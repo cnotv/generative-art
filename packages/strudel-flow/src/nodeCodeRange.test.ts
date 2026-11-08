@@ -106,32 +106,38 @@ describe('getStrudelFlowNodeCodeRanges', () => {
   })
 })
 
-describe('findStrudelFlowPlayingNodeIds', () => {
-  const ranges = () => {
-    const patch = parsedSong()
-    return getStrudelFlowNodeCodeRanges(SONG, patch.nodes, patch.edges)
+const playingIds = (code: string, offsetsPerHap: number[][]): string[] => {
+  const patch = parseStrudelFlowCode(code)
+  if (patch === null) {
+    throw new Error('the code does not parse')
   }
+  const ranges = getStrudelFlowNodeCodeRanges(code, patch.nodes, patch.edges)
+  return findStrudelFlowPlayingNodeIds(ranges, offsetsPerHap, patch.nodes, patch.edges)
+}
+
+describe('findStrudelFlowPlayingNodeIds', () => {
+  const RIFF = 'const riff = "<[d2 ~ d2 f2]>"\n$: note(riff).s("gm_electric_bass_pick").lpf(700)'
 
   it('finds the head node for an offset inside its mini-notation', () => {
     // Arrange
     const offset = SONG.indexOf('bd*4')
 
     // Act
-    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset]])
+    const ids = playingIds(SONG, [[offset]])
 
     // Assert
     expect(ids).toEqual(['beats-1'])
   })
 
-  it('finds the gain node for an offset inside its arguments', () => {
+  it('finds the instrument upstream of a gain node whose arguments sound', () => {
     // Arrange
     const offset = SONG.indexOf('.3)')
 
     // Act
-    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset]])
+    const ids = playingIds(SONG, [[offset]])
 
     // Assert
-    expect(ids).toEqual(['gain-2'])
+    expect(ids).toEqual(['beats-2'])
   })
 
   it('ignores an offset in the setup line', () => {
@@ -139,7 +145,7 @@ describe('findStrudelFlowPlayingNodeIds', () => {
     const offset = SONG.indexOf('const body')
 
     // Act
-    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset]])
+    const ids = playingIds(SONG, [[offset]])
 
     // Assert
     expect(ids).toEqual([])
@@ -150,7 +156,7 @@ describe('findStrudelFlowPlayingNodeIds', () => {
     const offset = SONG.indexOf('bd*4')
 
     // Act
-    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset], [offset + 1]])
+    const ids = playingIds(SONG, [[offset], [offset + 1]])
 
     // Assert
     expect(ids).toEqual(['beats-1'])
@@ -159,16 +165,40 @@ describe('findStrudelFlowPlayingNodeIds', () => {
   it.each([
     ['head first', ['note("c2 e2")', '"sawtooth"']],
     ['head last', ['"sawtooth"', 'note("c2 e2")']]
-  ])('gives only the leftmost node of one hap, %s', (_label, snippets) => {
+  ])('prefers the notes node over the voice in one hap, %s', (_label, snippets) => {
     // Arrange
     const offsets = snippets.map((snippet) => SONG.indexOf(snippet) + 1)
-    const notesId = findStrudelFlowPlayingNodeIds(ranges(), [[SONG.indexOf('c2 e2')]])
 
     // Act
-    const ids = findStrudelFlowPlayingNodeIds(ranges(), [offsets])
+    const ids = playingIds(SONG, [offsets])
 
     // Assert
-    expect(ids).toEqual(notesId)
-    expect(ids).toHaveLength(1)
+    expect(ids).toEqual(['notes-1'])
+  })
+
+  it.each([
+    ['the riff and the voice', ['"<[d2', '"gm_electric_bass_pick"']],
+    ['the voice alone', ['"gm_electric_bass_pick"']]
+  ])('lights the notes node when a note sounds from %s', (_label, snippets) => {
+    // Arrange
+    const offsets = snippets.map((snippet) => RIFF.indexOf(snippet) + 1)
+
+    // Act
+    const ids = playingIds(RIFF, [offsets])
+
+    // Assert
+    expect(ids).toEqual(['notes-1'])
+  })
+
+  it('lights nothing when the only owner is an effect shared by two instruments', () => {
+    // Arrange
+    const code = '$: stack(s("bd*4"), note("c2 e2")).lpf(700)'
+    const offset = code.indexOf('700')
+
+    // Act
+    const ids = playingIds(code, [[offset]])
+
+    // Assert
+    expect(ids).toEqual([])
   })
 })

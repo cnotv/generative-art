@@ -138,18 +138,57 @@ export const findStrudelFlowNodeCode = (
   return found === undefined ? null : { from: found.from, to: found.to }
 }
 
+const leftmostRange = (ranges: StrudelFlowNodeCodeRange[]): StrudelFlowNodeCodeRange | null =>
+  ranges.reduce<StrudelFlowNodeCodeRange | null>(
+    (leftmost, range) => (leftmost === null || range.from < leftmost.from ? range : leftmost),
+    null
+  )
+
+// Follows cables back from a node to the instruments that feed it; the guard stops a cycle.
+const findUpstreamInstrumentIds = (
+  nodesById: Map<string, StrudelFlowNode>,
+  edges: StrudelFlowEdge[],
+  nodeId: string,
+  seen: string[] = []
+): string[] => {
+  const node = nodesById.get(nodeId)
+  if (node === undefined || seen.includes(nodeId)) {
+    return []
+  }
+  if (isStrudelFlowInstrumentKind(node.data.kind)) {
+    return [nodeId]
+  }
+  const visited = [...seen, nodeId]
+  return edges
+    .filter((edge) => edge.target === nodeId)
+    .flatMap((edge) => findUpstreamInstrumentIds(nodesById, edges, edge.source, visited))
+}
+
 /**
- * Finds the nodes a sounding note came from. A note carries a location for each piece of
- * mini-notation it was built from, in no reliable order, so each offset is mapped to its node
- * (the narrowest range wins) and the leftmost node, the head of the chain, owns the note.
+ * Finds the instruments a sounding note came from. A note carries a location for each piece of
+ * mini-notation it was built from, in no reliable order, and a note held in a setup variable has
+ * none in any node. Each offset is mapped to its node (the narrowest range wins); the leftmost
+ * instrument among them owns the note, else the instruments upstream of the owners do, when
+ * there is exactly one.
+ * ponytail: a note whose mini-notation lives in a setup variable and passes through a shared
+ * effect lights nothing; give the parser source offsets for setup variables to light it.
  * @param ranges - every node's code ranges
  * @param offsetsPerHap - for each sounding note, the character offsets of its locations
- * @returns the id of the node owning each note, once each
+ * @param nodes - the patch's nodes
+ * @param edges - the patch's cables
+ * @returns the id of the instrument each note came from, once each
  */
 export const findStrudelFlowPlayingNodeIds = (
   ranges: StrudelFlowNodeCodeRange[],
-  offsetsPerHap: number[][]
+  offsetsPerHap: number[][],
+  nodes: StrudelFlowNode[],
+  edges: StrudelFlowEdge[]
 ): string[] => {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]))
+  const isInstrumentRange = (range: StrudelFlowNodeCodeRange): boolean => {
+    const node = nodesById.get(range.nodeId)
+    return node !== undefined && isStrudelFlowInstrumentKind(node.data.kind)
+  }
   const narrowestOwner = (offset: number): StrudelFlowNodeCodeRange | null =>
     ranges
       .filter((range) => range.from <= offset && offset < range.to)
@@ -161,13 +200,17 @@ export const findStrudelFlowPlayingNodeIds = (
         null
       )
   const headIds = offsetsPerHap.flatMap((offsets) => {
-    const head = offsets
-      .flatMap((offset) => narrowestOwner(offset) ?? [])
-      .reduce<StrudelFlowNodeCodeRange | null>(
-        (leftmost, range) => (leftmost === null || range.from < leftmost.from ? range : leftmost),
-        null
+    const owners = offsets.flatMap((offset) => narrowestOwner(offset) ?? [])
+    const instrument = leftmostRange(owners.filter(isInstrumentRange))
+    if (instrument !== null) {
+      return [instrument.nodeId]
+    }
+    const heads = [
+      ...new Set(
+        owners.flatMap((owner) => findUpstreamInstrumentIds(nodesById, edges, owner.nodeId))
       )
-    return head === null ? [] : [head.nodeId]
+    ]
+    return heads.length === 1 ? heads : []
   })
   return [...new Set(headIds)]
 }

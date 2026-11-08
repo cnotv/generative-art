@@ -124,7 +124,12 @@ const flowNodeCodeRanges = computed(() =>
 )
 const playingFlowNodeIds = computed(() =>
   editorMode.value === 'flow'
-    ? findStrudelFlowPlayingNodeIds(flowNodeCodeRanges.value, playingSourceOffsets.value)
+    ? findStrudelFlowPlayingNodeIds(
+        flowNodeCodeRanges.value,
+        playingSourceOffsets.value,
+        flowNodes.value,
+        flowEdges.value
+      )
     : []
 )
 const { soundEntries, sampleGroups, voiceGroups, soundsStatus, loadSounds } = useStrudelSounds()
