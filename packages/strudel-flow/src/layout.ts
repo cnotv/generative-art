@@ -98,3 +98,33 @@ export const findStrudelFlowNodePosition = (
   ).flat()
   return candidates.find(isFree) ?? { x: STRUDEL_FLOW_NODE_START_X, y: STRUDEL_FLOW_NODE_START_Y }
 }
+
+const bottomOf = (node: StrudelFlowNode): number => node.position.y + sizeOf(node).height
+const rightOf = (node: StrudelFlowNode): number => node.position.x + sizeOf(node).width
+
+// Clears the blocker by the shorter of two moves: down under it, or right of it. A node stacked
+// in a column goes down; a neighbour in the same row of the chain goes right.
+const clearBlocker = (node: StrudelFlowNode, blocker: StrudelFlowNode): StrudelFlowNode => {
+  const downBy = bottomOf(blocker) + NODE_GAP - node.position.y
+  const rightBy = rightOf(blocker) + NODE_GAP - node.position.x
+  return rightBy < downBy && node.position.x >= blocker.position.x
+    ? { ...node, position: { ...node.position, x: node.position.x + rightBy } }
+    : { ...node, position: { ...node.position, y: node.position.y + downBy } }
+}
+
+/**
+ * Moves overlapping nodes apart using the sizes the canvas measured. The layout only knows a
+ * node's expected size, and one with an open accordion or a long pattern renders larger, so
+ * the node next to it would otherwise be drawn underneath.
+ * @param nodes - nodes with their measured dimensions
+ * @returns the nodes, each moved clear of whatever it overlapped, in the same order
+ */
+export const separateStrudelFlowNodes = (nodes: StrudelFlowNode[]): StrudelFlowNode[] => {
+  const settled = [...nodes]
+    .sort((left, right) => left.position.y - right.position.y || left.position.x - right.position.x)
+    .reduce<StrudelFlowNode[]>((placed, node) => {
+      const blocker = placed.find((other) => doStrudelFlowNodesOverlap(node, other))
+      return [...placed, blocker === undefined ? node : clearBlocker(node, blocker)]
+    }, [])
+  return nodes.map((node) => settled.find((placed) => placed.id === node.id) ?? node)
+}

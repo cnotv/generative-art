@@ -812,6 +812,18 @@ const settleReusedPositions = (
   )
 }
 
+// Positions carry over only between edits of the same program. Matching by kind in order across
+// a different set of nodes, such as a freshly loaded song, hands nodes positions meant for other
+// ones and scatters the graph, so a changed set of nodes takes the layout instead.
+const hasSameNodeKinds = (nodes: StrudelFlowNode[], others: StrudelFlowNode[]): boolean => {
+  const kindsOf = (list: StrudelFlowNode[]): string =>
+    list
+      .map((node) => node.data.kind)
+      .sort()
+      .join(',')
+  return kindsOf(nodes) === kindsOf(others)
+}
+
 /**
  * Rebuilds a flow patch from Strudel code, so whatever the code editor holds also shows as a
  * graph. Recognised calls become their dedicated nodes, any other chained call a generic Effect
@@ -830,18 +842,21 @@ export const parseStrudelFlowCode = (
   }
   const program = readProgram(code)
   const variables = readStrudelFlowVariables(program.setup)
-  const built = program.blocks
-    .map((block) => {
-      const chain = readChain(inlineStrudelFlowPatternVariables(block.expression, variables))
-      return { ...chain, branches: muteBranches(chain.branches, block.muted) }
-    })
-    .reduce(addChain, {
-      nodes: [],
-      edges: [],
-      reusable: existingNodes,
-      layoutPositions: {},
-      rowTop: STRUDEL_FLOW_NODE_START_Y
-    })
+  const build = (reusable: StrudelFlowNode[]): BuildState =>
+    program.blocks
+      .map((block) => {
+        const chain = readChain(inlineStrudelFlowPatternVariables(block.expression, variables))
+        return { ...chain, branches: muteBranches(chain.branches, block.muted) }
+      })
+      .reduce(addChain, {
+        nodes: [],
+        edges: [],
+        reusable,
+        layoutPositions: {},
+        rowTop: STRUDEL_FLOW_NODE_START_Y
+      })
+  const fresh = build([])
+  const built = hasSameNodeKinds(fresh.nodes, existingNodes) ? build(existingNodes) : fresh
   return {
     nodes: settleReusedPositions(built.nodes, built.layoutPositions),
     edges: built.edges,

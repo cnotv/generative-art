@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, provide, ref, watch } from 'vue'
+import { computed, nextTick, provide, ref, shallowRef, watch } from 'vue'
 import { Controls } from '@vue-flow/controls'
 import { VueFlow } from '@vue-flow/core'
 import type { Connection, VueFlowStore } from '@vue-flow/core'
@@ -19,6 +19,7 @@ import { STRUDEL_FLOW_VISUALIZER_WIDGET_IDS } from './visualizerWidgetIdsKey'
 import { STRUDEL_FLOW_NOTATION_CONTEXT } from './notation/notationContextKey'
 import { findStrudelFlowNotesSound } from '../notationPick'
 import { canUseStrudelFlowConnection } from '../connections'
+import { separateStrudelFlowNodes } from '../layout'
 import { isStrudelFlowSoloed, planStrudelFlowSolo } from '../solo'
 import type {
   StrudelFlowEdge,
@@ -79,7 +80,8 @@ provide(
 )
 
 const radialMenu = ref<{ open: () => void } | null>(null)
-const flowStore = ref<VueFlowStore | null>(null)
+// Shallow, so the store's own refs, such as its node list, stay refs.
+const flowStore = shallowRef<VueFlowStore | null>(null)
 const fitAfterNodesMeasured = ref(false)
 const DELETE_KEYS = ['Backspace', 'Delete']
 
@@ -99,7 +101,31 @@ const onPaneReady = (store: VueFlowStore): void => {
   flowStore.value = store
 }
 
+// A node renders taller than the layout expected when it holds an open accordion or a long
+// pattern, so once the canvas has measured them, anything left underneath moves clear.
+const separateMeasuredNodes = (): void => {
+  const measured = flowStore.value?.getNodes.value ?? []
+  const separated = separateStrudelFlowNodes(measured)
+  const hasMoved = separated.some(
+    (node, index) =>
+      node.position.x !== measured[index]?.position.x ||
+      node.position.y !== measured[index]?.position.y
+  )
+  if (hasMoved) {
+    emit('update:nodes', separated)
+  }
+}
+
+const measuredSizes = computed(() =>
+  (flowStore.value?.getNodes.value ?? [])
+    .map((node) => `${node.dimensions.width}x${node.dimensions.height}`)
+    .join()
+)
+
+watch(measuredSizes, () => nextTick(separateMeasuredNodes))
+
 const onNodesInitialized = (): void => {
+  separateMeasuredNodes()
   if (!fitAfterNodesMeasured.value) {
     return
   }

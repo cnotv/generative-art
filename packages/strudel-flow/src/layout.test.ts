@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findStrudelFlowNodePosition } from './layout'
+import { findStrudelFlowNodePosition, separateStrudelFlowNodes } from './layout'
 import { createStrudelFlowNodeData } from './nodeDefaults'
 import type { StrudelFlowNode, StrudelFlowNodeKind } from './types'
 
@@ -41,5 +41,21 @@ describe('findStrudelFlowNodePosition', () => {
     const position = findStrudelFlowNodePosition([first, second], 'filter')
 
     expect(position.y).toBe(400)
+  })
+})
+
+describe('separateStrudelFlowNodes', () => {
+  it('moves a node that sits under a taller one below it and keeps the rest', () => {
+    // Arrange
+    const samples = { ...node('samples', 80, 100, { width: 480, height: 570 }), id: 'samples-1' }
+    const notes = { ...node('notes', 80, 450, { width: 384, height: 300 }), id: 'notes-1' }
+    const gain = { ...node('gain', 80, 2000, { width: 256, height: 200 }), id: 'gain-1' }
+
+    // Act
+    const result = separateStrudelFlowNodes([samples, notes, gain])
+
+    // Assert
+    expect(result.map((item) => item.id)).toEqual(['samples-1', 'notes-1', 'gain-1'])
+    expect(result.map((item) => item.position.y)).toEqual([100, 100 + 570 + 32, 2000])
   })
 })
