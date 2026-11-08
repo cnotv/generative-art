@@ -25,7 +25,6 @@ import type {
   StrudelPlayback,
   StrudelPlaybackHooks,
   StrudelPlaybackPosition,
-  StrudelPreviewHit,
   StrudelRenderResult,
   StrudelUnknownCallable
 } from './types'
@@ -548,26 +547,6 @@ export const previewStrudelSound = async (soundName: string, soundType: string):
   )
 }
 
-/**
- * Plays a short phrase of hits outside any pattern, so an instrument can be heard without
- * writing code. Every hit is scheduled up front against one start time, so they keep time.
- * @param hits - the sounds, notes and timings to play
- * @throws {Error} when the browser keeps the audio context suspended, so the phrase would be silent
- */
-export const previewStrudelPhrase = async (hits: StrudelPreviewHit[]): Promise<void> => {
-  const webaudioModule = await prepareStrudelPreview()
-  const playSound = requireCallable(webaudioModule.superdough)
-  await Promise.all(
-    hits.map(({ sound, note }) => loadPreviewSound(webaudioModule, { s: sound, note, clip: 1 }))
-  )
-  const startTime = readPreviewStartTime(webaudioModule)
-  await Promise.all(
-    hits.map(({ sound, note, offsetSeconds, durationSeconds, gain }) =>
-      playSound({ s: sound, note, gain, clip: 1 }, startTime + offsetSeconds, durationSeconds)
-    )
-  )
-}
-
 const SILENT_PLAYBACK_HOOKS: StrudelPlaybackHooks = {
   onEvaluated: () => undefined,
   onFrame: () => undefined,
@@ -577,23 +556,58 @@ const SILENT_PLAYBACK_HOOKS: StrudelPlaybackHooks = {
 
 const silentPlayback: { loading: Promise<StrudelPlayback> | null } = { loading: null }
 
-/**
- * Renders code offline to a WAV file and downloads it, outside the editor's own playback, so a
- * file can be made from the Instruments tab without touching what is in the code editor.
- * @param patternCode - Strudel code that sets its own tempo and plays one cycle
- * @param fileName - the download's name without its extension
- * @returns whether the file was made, and the reason when it was not
- */
-export const downloadStrudelCodeAsWav = async (
-  patternCode: string,
-  fileName: string
-): Promise<StrudelEvaluationResult> => {
+const loadSilentPlayback = (): Promise<StrudelPlayback> => {
   silentPlayback.loading ??= loadDefaultStrudelPlayback(SILENT_PLAYBACK_HOOKS).catch(
     (error: unknown) => {
       silentPlayback.loading = null
       throw error
     }
   )
-  const playback = await silentPlayback.loading
-  return playback.renderToWav(patternCode, { ...EXPORT_DEFAULT_OPTIONS, fileName })
+  return silentPlayback.loading
+}
+
+/**
+ * Renders code offline to a WAV file, outside the editor's own playback, so the Instruments tab
+ * can make a preview without touching what is in the code editor.
+ * @param patternCode - Strudel code that sets its own tempo and plays one cycle
+ * @returns the WAV file
+ * @throws {Error} when the code does not render
+ */
+export const renderStrudelCodeToWav = async (patternCode: string): Promise<ArrayBuffer> => {
+  await prepareInstrumentsForCode(patternCode)
+  const playback = await loadSilentPlayback()
+  const result = await playback.renderToWavBytes(patternCode, EXPORT_DEFAULT_OPTIONS)
+  if (!result.success || result.file === undefined) {
+    throw new Error(result.errorMessage ?? 'The code did not render.')
+  }
+  return result.file
+}
+
+/**
+ * Plays a rendered WAV once on the page's audio and hands back a way to stop it. One buffer,
+ * unlike sounds scheduled one by one, can be stopped at any moment. The audio is unlocked
+ * before anything is awaited, so call it straight from the click.
+ * @param loadWav - gives the file to play, rendering it if needed
+ * @param onEnded - called once when it finishes or is stopped
+ * @returns a function that stops it
+ * @throws {Error} when the browser keeps the audio context suspended, so it would be silent
+ */
+export const playStrudelWavPreview = async (
+  loadWav: () => Promise<ArrayBuffer>,
+  onEnded: () => void
+): Promise<() => void> => {
+  const audioContext = unlockPageAudioContext()
+  if (audioContext === null) {
+    throw new Error('This browser has no Web Audio.')
+  }
+  const wav = await loadWav()
+  await assertAudioRunning(audioContext)
+  // decodeAudioData detaches the buffer it is given, and the caller keeps its copy for later.
+  const audioBuffer = await audioContext.decodeAudioData(structuredClone(wav))
+  const source = audioContext.createBufferSource()
+  source.buffer = audioBuffer
+  source.connect(audioContext.destination)
+  source.addEventListener('ended', onEnded, { once: true })
+  source.start()
+  return () => source.stop()
 }

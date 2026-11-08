@@ -215,3 +215,6 @@ export type InstrumentPickerGroups = {
   /** Unpitched sounds such as a drum kit's pieces, for the sample and beat nodes. */
   sampleGroups: StrudelFlowSampleGroup[]
 }
+
+/** The Instruments tab's preview: rendering it, playing it, or neither. */
+export type InstrumentPreviewState = 'idle' | 'rendering' | 'playing'

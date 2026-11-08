@@ -8,15 +8,18 @@ import { INSTRUMENT_BUILT_IN_PRESETS, INSTRUMENT_NAME_ERRORS } from '../instrume
 import { useInstruments } from '../instruments/useInstruments'
 import InstrumentsTab from './InstrumentsTab.vue'
 
-const { mockPreviewPhrase, mockDownload } = vi.hoisted(() => ({
-  mockPreviewPhrase: vi.fn(),
-  mockDownload: vi.fn()
+const { mockRenderWav, mockPlayWav, mockStopWav, mockDownloadFile } = vi.hoisted(() => ({
+  mockRenderWav: vi.fn(),
+  mockPlayWav: vi.fn(),
+  mockStopWav: vi.fn(),
+  mockDownloadFile: vi.fn()
 }))
 
 vi.mock('../strudelPlayback', () => ({
-  previewStrudelPhrase: mockPreviewPhrase,
-  downloadStrudelCodeAsWav: mockDownload
+  renderStrudelCodeToWav: mockRenderWav,
+  playStrudelWavPreview: mockPlayWav
 }))
+vi.mock('../strudelOfflineRender', () => ({ downloadExportFile: mockDownloadFile }))
 vi.mock('../instruments/registerInstrument', () => ({
   registerInstrument: vi.fn().mockResolvedValue(undefined)
 }))
@@ -28,7 +31,11 @@ vi.mock('@strudel/webaudio', () => ({
 type Wrapper = ReturnType<typeof mount>
 
 const findButton = (wrapper: Wrapper, label: string) =>
-  wrapper.findAllComponents(Button).find((button) => button.text() === label)
+  wrapper
+    .findAllComponents(Button)
+    .find((button) => button.text() === label || button.attributes('aria-label') === label)
+
+const PREVIEW_WAV = new ArrayBuffer(8)
 
 const mountReady = async (): Promise<Wrapper> => {
   const wrapper = mount(InstrumentsTab)
@@ -47,8 +54,13 @@ describe('InstrumentsTab', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
-    mockPreviewPhrase.mockReset().mockResolvedValue(undefined)
-    mockDownload.mockReset().mockResolvedValue({ success: true })
+    mockRenderWav.mockReset().mockResolvedValue(PREVIEW_WAV)
+    mockStopWav.mockReset()
+    mockDownloadFile.mockReset()
+    mockPlayWav.mockReset().mockImplementation(async (loadWav: () => Promise<ArrayBuffer>) => {
+      await loadWav()
+      return mockStopWav
+    })
   })
 
   it('renders the selected preset when the tab opens', async () => {
@@ -127,39 +139,57 @@ describe('InstrumentsTab', () => {
       expect(download?.attributes('disabled') !== undefined).toBe(expectedDisabled)
     })
 
-    it('plays the preview of the selected preset', async () => {
+    it('plays the rendered preview of the selected preset, then shows a stop button', async () => {
       // Arrange
       const wrapper = await mountReady()
       await selectAndRender('blastkit')
 
       // Act
       await findButton(wrapper, 'Play preview')?.trigger('click')
+      await flushPromises()
 
       // Assert
-      const [hits] = mockPreviewPhrase.mock.calls[0] ?? []
-      expect(hits.length).toBeGreaterThan(3)
-      expect(hits.every(({ sound }: { sound: string }) => sound.startsWith('blastkit_'))).toBe(true)
+      const [code] = mockRenderWav.mock.calls[0] ?? []
+      expect(code).toContain('s("blastkit_')
+      expect(mockPlayWav).toHaveBeenCalledOnce()
+      expect(findButton(wrapper, 'Stop preview')).toBeDefined()
     })
 
-    it('downloads the preview as a file named after the preset', async () => {
+    it('stops the preview from the same button', async () => {
+      // Arrange
+      const wrapper = await mountReady()
+      await findButton(wrapper, 'Play preview')?.trigger('click')
+      await flushPromises()
+
+      // Act
+      await findButton(wrapper, 'Stop preview')?.trigger('click')
+
+      // Assert
+      expect(mockStopWav).toHaveBeenCalledOnce()
+      expect(findButton(wrapper, 'Play preview')).toBeDefined()
+    })
+
+    it('downloads the preview it played, without rendering it again', async () => {
       // Arrange
       const wrapper = await mountReady()
       await selectAndRender('fuzzbass')
+      await findButton(wrapper, 'Play preview')?.trigger('click')
+      await flushPromises()
 
       // Act
       await findButton(wrapper, 'Download WAV')?.trigger('click')
       await flushPromises()
 
       // Assert
-      const [code, fileName] = mockDownload.mock.calls[0] ?? []
-      expect(fileName).toBe('fuzzbass-preview')
-      expect(code).toContain('s("fuzzbass_note")')
+      expect(mockRenderWav).toHaveBeenCalledOnce()
+      expect(mockRenderWav.mock.calls[0]?.[0]).toContain('s("fuzzbass_note")')
+      expect(mockDownloadFile).toHaveBeenCalledWith(PREVIEW_WAV, 'fuzzbass-preview', 'wav')
     })
 
-    it('shows why a download failed', async () => {
+    it('shows why a preview could not render', async () => {
       // Arrange
       const wrapper = await mountReady()
-      mockDownload.mockResolvedValue({ success: false, errorMessage: 'no audio' })
+      mockRenderWav.mockRejectedValue(new Error('no audio'))
 
       // Act
       await findButton(wrapper, 'Download WAV')?.trigger('click')

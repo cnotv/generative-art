@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
+import { Play, Square } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -10,13 +11,9 @@ import {
   INSTRUMENT_KIND_OPTIONS,
   INSTRUMENT_MODEL_OPTIONS
 } from '../instruments/config'
-import {
-  buildInstrumentPreviewCode,
-  buildInstrumentPreviewHits
-} from '../instruments/previewPhrase'
 import { isInstrumentKind } from '../instruments/presetScan'
+import { useInstrumentPreview } from '../instruments/useInstrumentPreview'
 import { useInstruments } from '../instruments/useInstruments'
-import { downloadStrudelCodeAsWav, previewStrudelPhrase } from '../strudelPlayback'
 import type { InstrumentKind } from '../instruments/types'
 
 const store = useInstruments()
@@ -38,8 +35,11 @@ const description = ref('')
 const newName = ref('')
 const newKind = ref<InstrumentKind>('electric-guitar')
 const renameValue = ref('')
-const downloadMessage = ref('')
-const downloadBusy = ref(false)
+const { previewState, previewMessage, togglePreview, downloadPreview } =
+  useInstrumentPreview(selectedPreset)
+const previewButtonLabel = computed(() =>
+  previewState.value === 'idle' ? 'Play preview' : 'Stop preview'
+)
 
 // Presets render when selected, so opening the tab renders the one that is showing.
 onMounted(() => {
@@ -91,7 +91,7 @@ const statusMessage = computed(() => {
   const messages = {
     idle: 'Waiting to render.',
     rendering: `Rendering ${name}...`,
-    ready: `Ready, rendered in ${seconds} s. Press Play preview, or play it with the names below.`,
+    ready: `Ready, rendered in ${seconds} s. Press play to hear it, or play it with the names below.`,
     error: `Could not render ${name}: ${errorByName.value[name] ?? ''}`
   }
   return messages[selectedStatus.value]
@@ -109,35 +109,6 @@ const canRename = computed(() => renameCheck.value?.valid === true)
 const canAsk = computed(
   () => !assistantBusy.value && apiKey.value.length > 0 && description.value.trim().length > 0
 )
-
-// Called straight from the click, so the audio unlock inside it still counts as the user's gesture.
-const onPlayPreview = (): void => {
-  if (selectedPreset.value !== undefined) {
-    previewStrudelPhrase(buildInstrumentPreviewHits(selectedPreset.value)).catch(() => undefined)
-  }
-}
-
-const onDownload = async (): Promise<void> => {
-  const preset = selectedPreset.value
-  if (preset === undefined) {
-    return
-  }
-  downloadBusy.value = true
-  downloadMessage.value = ''
-  try {
-    const result = await downloadStrudelCodeAsWav(
-      buildInstrumentPreviewCode(preset),
-      `${preset.name}-preview`
-    )
-    downloadMessage.value = result.success
-      ? ''
-      : (result.errorMessage ?? 'Could not render the file.')
-  } catch (error) {
-    downloadMessage.value = error instanceof Error ? error.message : 'Could not render the file.'
-  } finally {
-    downloadBusy.value = false
-  }
-}
 
 const onCreate = (): void => {
   if (store.createPreset(newName.value, newKind.value).valid) {
@@ -180,21 +151,32 @@ const onAsk = (): void => {
     </template>
 
     <div class="strudel-instruments__actions">
-      <Button size="sm" :disabled="selectedStatus !== 'ready'" @click="onPlayPreview">
-        Play preview
+      <Button
+        size="icon"
+        :disabled="selectedStatus !== 'ready'"
+        :aria-label="previewButtonLabel"
+        :title="previewButtonLabel"
+        :aria-busy="previewState === 'rendering'"
+        @click="togglePreview"
+      >
+        <Play v-if="previewState === 'idle'" :size="16" aria-hidden="true" />
+        <Square v-else :size="16" aria-hidden="true" />
       </Button>
       <Button
         variant="outline"
         size="sm"
-        :disabled="selectedStatus !== 'ready' || downloadBusy"
-        @click="onDownload"
+        :disabled="selectedStatus !== 'ready'"
+        @click="downloadPreview"
       >
-        {{ downloadBusy ? 'Rendering...' : 'Download WAV' }}
+        Download WAV
       </Button>
       <Button variant="outline" size="sm" @click="store.resetPreset">Reset</Button>
     </div>
-    <p v-if="downloadMessage" class="strudel-instruments__error" role="alert">
-      {{ downloadMessage }}
+    <p v-if="previewState === 'rendering'" class="strudel-instruments__hint" role="status">
+      Rendering the preview...
+    </p>
+    <p v-if="previewMessage" class="strudel-instruments__error" role="alert">
+      {{ previewMessage }}
     </p>
 
     <section class="strudel-instruments__section" aria-label="Manage presets">
