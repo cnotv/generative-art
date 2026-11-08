@@ -78,8 +78,11 @@ export type StrudelPlayback = {
     patternCode: string,
     exportOptions: StrudelExportOptions
   ) => Promise<StrudelRenderResult>
-  /** How many cycles one repetition of the code lasts, read without playing it. */
-  measureRepetition: (patternCode: string) => Promise<number>
+  /**
+   * How many cycles one play of the whole code lasts, every section included, read without
+   * playing it; null when it does not repeat within `STRUDEL_MAX_SONG_CYCLES`.
+   */
+  measureRepetition: (patternCode: string) => Promise<number | null>
   /** Downloads the notes that start inside the cycles as a standard MIDI file. */
   renderToMidi: (
     patternCode: string,

@@ -74,3 +74,19 @@ export const findLoopBars = (haps: StrudelScheduledHap[], maxBars: number): numb
     ) ?? null
   )
 }
+
+/**
+ * How long one play of the whole code is: every pattern in it, every section of an
+ * `arrange`, has finished by then. A pattern that repeats inside its first bar, such as a coin
+ * sped up with `.fast(2)`, comes out as that fraction of a cycle.
+ * @param haps - the events of the first `maxCycles * 2` cycles, so every candidate is seen twice
+ * @param maxCycles - the longest song to look for
+ * @returns the length in cycles, or null when nothing repeats within `maxCycles`
+ */
+export const findPatternRepetition = (
+  haps: StrudelScheduledHap[],
+  maxCycles: number
+): number | null => {
+  const loopCycles = findLoopBars(haps, maxCycles)
+  return loopCycles === 1 ? findRepetitionCycles(haps) : loopCycles
+}

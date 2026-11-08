@@ -53,14 +53,29 @@ const hasValidRange = computed(
 const readCycle = (value: string | number): number => Math.floor(Number(value))
 const readCycleLength = (value: string | number): number => Number(value)
 
+// The count follows the measured song until someone types one or asks for a single repetition.
+// A song is whole cycles, so a coin that repeats twice a cycle still exports one cycle.
+const lengthChoice = ref<'song' | 'repetition' | 'typed'>('song')
+
 watch(
-  () => props.repetitionCycles,
-  (measuredCycles) => {
-    if (measuredCycles !== null) {
-      cycleCount.value = measuredCycles
+  [() => props.repetitionCycles, lengthChoice],
+  ([measuredCycles, choice]) => {
+    if (measuredCycles !== null && choice !== 'typed') {
+      cycleCount.value = choice === 'song' ? Math.max(1, measuredCycles) : measuredCycles
     }
-  }
+  },
+  { immediate: true }
 )
+
+const onCycleCountTyped = (value: string | number): void => {
+  lengthChoice.value = 'typed'
+  cycleCount.value = readCycleLength(value)
+}
+
+const onOneRepetition = (): void => {
+  lengthChoice.value = 'repetition'
+  emit('measureRepetition')
+}
 
 const onFormatChange = (nextFormat: string): void => {
   format.value = nextFormat === 'midi' ? 'midi' : 'wav'
@@ -95,8 +110,9 @@ const onExport = (): void => {
           <p class="strudel-export__intro">
             WAV is the sound as it plays, rendered offline and faster than real time. MIDI is its
             notes, for a DAW or a synth: drum samples become General MIDI drums, other samples and
-            effects are left out. One repetition sets the length to a single play of the pattern, so
-            a coin sped up with fast(2) comes out once. Playback stops while it renders.
+            effects are left out. Cycles fills in the length of the whole song, every section
+            included, until you type a count. One repetition sets the length to a single play of the
+            pattern, so a coin sped up with fast(2) comes out once. Playback stops while it renders.
           </p>
         </AccordionContent>
       </AccordionItem>
@@ -141,7 +157,7 @@ const onExport = (): void => {
           type="number"
           :step="0.25"
           :model-value="cycleCount"
-          @update:model-value="cycleCount = readCycleLength($event)"
+          @update:model-value="onCycleCountTyped"
         />
       </label>
     </div>
@@ -150,7 +166,7 @@ const onExport = (): void => {
       variant="secondary"
       class="strudel-export__button"
       :disabled="isRendering"
-      @click="emit('measureRepetition')"
+      @click="onOneRepetition"
     >
       One repetition
     </Button>

@@ -105,7 +105,7 @@ export const crossfadeLoopSeam = (wav: ArrayBuffer): ArrayBuffer => {
 export const renderStrudelSound = async (code: string, slot: SoundSlot): Promise<ArrayBuffer> => {
   const playback = await loadPlayback()
   const endCycle =
-    slot.cycles ?? (slot.kind === 'loop' ? 1 : await playback.measureRepetition(code))
+    slot.cycles ?? (slot.kind === 'loop' ? 1 : ((await playback.measureRepetition(code)) ?? 1))
   const result = await playback.renderToWavBytes(code, {
     format: 'wav',
     startCycle: 0,

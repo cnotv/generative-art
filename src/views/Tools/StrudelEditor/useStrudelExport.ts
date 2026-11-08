@@ -1,10 +1,13 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { Ref } from 'vue'
+import { debounce } from '@/utils/lodash'
+import { STRUDEL_EXPORT_MEASURE_DELAY_MS, STRUDEL_MAX_SONG_CYCLES } from './config'
 import type {
   StrudelEditorStatus,
   StrudelExportOptions,
   StrudelExportStatus,
-  StrudelPlayback
+  StrudelPlayback,
+  StrudelTabId
 } from './types'
 
 type StrudelExportHooks = {
@@ -13,12 +16,16 @@ type StrudelExportHooks = {
   /** Rendering stops whatever was playing, so the editor's play state has to follow. */
   editorStatus: Ref<StrudelEditorStatus>
   appendLog: (message: string, level?: 'info' | 'warn' | 'error') => void
+  /** The export tab's cycle count follows the code on screen only while it is showing. */
+  activeTab: Ref<StrudelTabId | null>
 }
 
 /**
  * The WAV and MIDI export: renders the code on screen offline through the playback engine and reports
  * how it went.
  * @param hooks - the playback, the code and play state it works on, and the log
+ * While the export tab is open and nothing plays, it measures how long the code lasts so the
+ * cycle count can cover the whole song.
  * @returns the export status, its error, and the action that starts it
  */
 export const useStrudelExport = (
@@ -60,18 +67,38 @@ export const useStrudelExport = (
     }
   }
 
+  const describeRepetition = (cycles: number | null): string =>
+    cycles === null
+      ? `No repeat within ${STRUDEL_MAX_SONG_CYCLES} cycles`
+      : `One repetition: ${cycles} ${cycles === 1 ? 'cycle' : 'cycles'}`
+
   const measureRepetition = async (): Promise<void> => {
     exportError.value = ''
     try {
       const playback = await hooks.loadPlayback()
       repetitionCycles.value = await playback.measureRepetition(hooks.patternCode.value)
       hooks.editorStatus.value = 'idle'
-      hooks.appendLog(`One repetition: ${repetitionCycles.value} of a cycle`)
+      hooks.appendLog(describeRepetition(repetitionCycles.value))
     } catch (error) {
       hooks.editorStatus.value = 'idle'
       fail(error instanceof Error ? error.message : 'Pattern failed to evaluate')
     }
   }
+
+  // Measuring evaluates the code, which would cut off whatever is playing, so it waits for quiet.
+  const measureQuietly = debounce(async (): Promise<void> => {
+    if (hooks.activeTab.value !== 'export' || hooks.editorStatus.value === 'playing') {
+      return
+    }
+    try {
+      const playback = await hooks.loadPlayback()
+      repetitionCycles.value = await playback.measureRepetition(hooks.patternCode.value)
+    } catch {
+      // Code half way through an edit does not evaluate; Play reports why.
+    }
+  }, STRUDEL_EXPORT_MEASURE_DELAY_MS)
+
+  watch([hooks.activeTab, hooks.patternCode, hooks.editorStatus], () => void measureQuietly())
 
   return { exportStatus, exportError, exportPattern, repetitionCycles, measureRepetition }
 }

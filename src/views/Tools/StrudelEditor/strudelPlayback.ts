@@ -6,6 +6,7 @@ import {
   STRUDEL_SOUND_PREVIEW_LEAD_SECONDS,
   STRUDEL_SOUND_PREVIEW_NOTE,
   STRUDEL_SOUND_PREVIEW_SECONDS,
+  STRUDEL_MAX_SONG_CYCLES,
   STRUDEL_TIMELINE_MAX_LOOP_BARS
 } from './config'
 import {
@@ -13,7 +14,7 @@ import {
   readScheduledHaps,
   renderStrudelPatternToWav
 } from './strudelOfflineRender'
-import { findLoopBars, findRepetitionCycles } from './patternRepetition'
+import { findLoopBars, findPatternRepetition } from './patternRepetition'
 import { isRecordModule, requireCallable, requireRecordModule, toCallable } from './strudelModules'
 import { useInstruments } from './instruments/useInstruments'
 import { loadStrudelSoundLibrary } from './strudelSoundLibrary'
@@ -26,6 +27,7 @@ import type {
   StrudelPlaybackHooks,
   StrudelPlaybackPosition,
   StrudelRenderResult,
+  StrudelScheduledHap,
   StrudelUnknownCallable
 } from './types'
 
@@ -381,6 +383,13 @@ export const loadDefaultStrudelPlayback = async (
     return pattern
   }
 
+  const readOpeningHaps = (pattern: unknown, cycleCount: number): StrudelScheduledHap[] =>
+    readScheduledHaps(
+      pattern,
+      { ...EXPORT_DEFAULT_OPTIONS, startCycle: 0, endCycle: cycleCount },
+      readCyclesPerSecond(replScheduler)
+    )
+
   const exportAs =
     (
       format: StrudelExportFormat,
@@ -424,28 +433,14 @@ export const loadDefaultStrudelPlayback = async (
       latestPattern === null
         ? null
         : findLoopBars(
-            readScheduledHaps(
-              latestPattern,
-              {
-                ...EXPORT_DEFAULT_OPTIONS,
-                startCycle: 0,
-                endCycle: STRUDEL_TIMELINE_MAX_LOOP_BARS * 2
-              },
-              readCyclesPerSecond(replScheduler)
-            ),
+            readOpeningHaps(latestPattern, STRUDEL_TIMELINE_MAX_LOOP_BARS * 2),
             STRUDEL_TIMELINE_MAX_LOOP_BARS
           ),
-    measureRepetition: async (patternCode: string): Promise<number> => {
-      const pattern = await evaluateForExport(patternCode)
-      const cyclesPerSecond = readCyclesPerSecond(replScheduler)
-      return findRepetitionCycles(
-        readScheduledHaps(
-          pattern,
-          { ...EXPORT_DEFAULT_OPTIONS, startCycle: 0, endCycle: 1 },
-          cyclesPerSecond
-        )
-      )
-    },
+    measureRepetition: async (patternCode: string): Promise<number | null> =>
+      findPatternRepetition(
+        readOpeningHaps(await evaluateForExport(patternCode), STRUDEL_MAX_SONG_CYCLES * 2),
+        STRUDEL_MAX_SONG_CYCLES
+      ),
     renderToWavBytes: (patternCode: string, exportOptions: StrudelExportOptions) =>
       renderWavBytes(
         () => evaluateForExport(patternCode),
