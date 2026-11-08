@@ -1,4 +1,4 @@
-export type StrudelComposerAction = 'compose' | 'revise' | 'review'
+export type StrudelComposerAction = 'compose' | 'revise' | 'review' | 'fix'
 
 export type StrudelComposerActionDefinition = {
   id: StrudelComposerAction
@@ -9,7 +9,7 @@ export type StrudelComposerActionDefinition = {
 
 export type StrudelComposerRequestOptions = {
   action: StrudelComposerAction
-  /** What the player wants, in their own words. */
+  /** What the player wants, in their own words, or for a fix the error the editor reported. */
   request: string
   currentCode: string
   model: string

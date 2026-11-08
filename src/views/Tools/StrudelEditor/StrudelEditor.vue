@@ -528,6 +528,7 @@ onBeforeUnmount(() => {
         <ComposeTab
           v-else-if="activeTab === 'compose'"
           :code="patternCode"
+          :editor-error="editorStatus === 'error' ? errorMessage : ''"
           @apply="updatePatternCode"
         />
         <MidiTab v-else-if="activeTab === 'midi'" @code="updatePatternCode" />

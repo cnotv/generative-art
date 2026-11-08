@@ -592,9 +592,11 @@ The **Compose** tab sends a request in your own words, together with the code in
 - **Revise** rewrites the code in the editor as the request asks, keeping what it does not mention.
 - **Review** comments on the code and suggests changes, without writing any.
 
+When the code in the editor fails to run, the tab shows the error and a **Fix error** button, which sends the code and the error back to the model to repair, keeping the music as it is. The answer is applied like any other.
+
 The answer shows in the tab: the model's explanation and, for Compose and Revise, the code. **Apply** puts that code in the editor, replacing what was there; Ctrl+Z in the editor brings the old code back. With **Auto apply** ticked, the code goes into the editor as soon as it arrives. A pattern that is playing picks up the new code as it would after typing. Revise and Review need code in the editor; all three need a key.
 
-The model is told how a song is written here: the tempo with `setcpm`, one `$:` block per layer with its own sound, a chord plan written once as a `const`, sections with `arrange`, and the names of the instrument presets it can play. A request that runs while the drawer shows another tab still lands, and is still applied with Auto apply on.
+The model is told how a song is written here: pattern strings in double quotes (a single-quoted string is plain JavaScript, so `'<Am F>'.rootNotes(2)` fails), the tempo with `setcpm`, one `$:` block per layer with its own sound, a chord plan written once as a `const`, sections with `arrange`, and the names of the instrument presets it can play. A request that runs while the drawer shows another tab still lands, and is still applied with Auto apply on.
 
 ### AI settings
 

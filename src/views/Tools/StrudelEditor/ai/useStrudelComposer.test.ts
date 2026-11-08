@@ -119,6 +119,29 @@ describe('useStrudelComposer', () => {
     expect(JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)).model).toBe('qwen/qwen3.8-flash')
   })
 
+  it('sends the editor error as the request of a fix, keeping the typed request', async () => {
+    // Arrange
+    const mockFetch = stubOpenRouter(COMPOSED)
+    const composer = useStrudelComposer()
+    composer.request = 'house'
+    const applyCode = vi.fn()
+
+    // Act
+    await composer.run(
+      'fix',
+      'const plan = [1]\n$: plan.rootNotes(2)',
+      applyCode,
+      'plan.rootNotes is not a function'
+    )
+
+    // Assert
+    const userMessage = JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)).messages[1].content
+    expect(userMessage).toContain('plan.rootNotes is not a function')
+    expect(userMessage).not.toContain('house')
+    expect(composer.request).toBe('house')
+    expect(composer.answer?.action).toBe('fix')
+  })
+
   it('never applies a review and shows its explanation', async () => {
     // Arrange
     stubOpenRouter({ explanation: 'The kick is too loud.', code: '' })

@@ -31,14 +31,17 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
 
   /**
    * Sends the request and the current code to the compose model.
-   * @param action - compose a new piece, revise the code, or review it
+   * @param action - compose a new piece, revise the code, review it, or fix an error
    * @param currentCode - the code in the editor
    * @param applyCode - writes code into the editor, called at once when Auto apply is on
+   * @param requestText - what to send as the request; a fix sends the editor's error instead of
+   * what the player typed, which stays in the field
    */
   const run = async (
     action: StrudelComposerAction,
     currentCode: string,
-    applyCode: (code: string) => void
+    applyCode: (code: string) => void,
+    requestText = request.value
   ): Promise<void> => {
     const settings = useAiSettings()
     busyAction.value = action
@@ -46,7 +49,7 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
     try {
       answer.value = await askStrudelComposer({
         action,
-        request: request.value.trim(),
+        request: requestText.trim(),
         currentCode,
         model: settings.composeModel,
         presetNames: useInstruments().presets.map(({ name }) => name),

@@ -52,6 +52,13 @@ describe('buildStrudelComposerRequest', () => {
     }
   )
 
+  it('teaches that only double-quoted strings are patterns, with a chord plan that runs', () => {
+    // Assert
+    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('single-quoted string')
+    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('const chords = "<')
+    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('chords.rootNotes(2).note()')
+  })
+
   it('leaves the preset line out when there are no presets', () => {
     // Act
     const body = JSON.parse(

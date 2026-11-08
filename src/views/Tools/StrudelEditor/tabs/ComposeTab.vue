@@ -9,7 +9,8 @@ import { useAiSettings } from '../ai/useAiSettings'
 import { useStrudelComposer } from '../ai/useStrudelComposer'
 import type { StrudelComposerAction } from '../ai/types'
 
-const props = defineProps<{ code: string }>()
+// editorError is what the editor reported when the code last failed to run, or empty.
+const props = defineProps<{ code: string; editorError: string }>()
 
 const emit = defineEmits<{ apply: [code: string] }>()
 
@@ -27,12 +28,26 @@ const canRun = (action: StrudelComposerAction): boolean =>
   request.value.trim().length > 0 &&
   (action === 'compose' || props.code.trim().length > 0)
 
+const requestActions = STRUDEL_COMPOSER_ACTIONS.filter(({ id }) => id !== 'fix')
+
+const canFix = computed(
+  () =>
+    busyAction.value === null &&
+    apiKey.value.length > 0 &&
+    props.editorError.length > 0 &&
+    props.code.trim().length > 0
+)
+
 const canApply = computed(
   () => answer.value !== null && answer.value.code.length > 0 && !answerApplied.value
 )
 
 const onRun = (action: StrudelComposerAction): void => {
   void composer.run(action, props.code, applyCode)
+}
+
+const onFix = (): void => {
+  void composer.run('fix', props.code, applyCode, props.editorError)
 }
 </script>
 
@@ -45,7 +60,7 @@ const onRun = (action: StrudelComposerAction): void => {
     />
     <div class="strudel-compose__actions">
       <Button
-        v-for="action in STRUDEL_COMPOSER_ACTIONS"
+        v-for="action in requestActions"
         :key="action.id"
         size="sm"
         :variant="action.id === 'compose' ? 'default' : 'outline'"
@@ -56,6 +71,24 @@ const onRun = (action: StrudelComposerAction): void => {
         {{ busyAction === action.id ? `${action.label}...` : action.label }}
       </Button>
     </div>
+    <section
+      v-if="props.editorError"
+      class="strudel-compose__fix"
+      aria-label="Fix the error in the editor"
+    >
+      <p class="strudel-compose__error">The code fails to run: {{ props.editorError }}</p>
+      <div class="strudel-compose__actions">
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="!canFix"
+          :aria-busy="busyAction === 'fix'"
+          @click="onFix"
+        >
+          {{ busyAction === 'fix' ? 'Fixing...' : 'Fix error' }}
+        </Button>
+      </div>
+    </section>
     <div class="strudel-compose__checkbox">
       <Checkbox id="strudel-compose-auto-apply" v-model="autoApply" />
       <label for="strudel-compose-auto-apply">Auto apply the code to the editor</label>
@@ -100,6 +133,12 @@ const onRun = (action: StrudelComposerAction): void => {
 
 .strudel-compose__actions {
   display: flex;
+  gap: var(--spacing-2);
+}
+
+.strudel-compose__fix {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-2);
 }
 

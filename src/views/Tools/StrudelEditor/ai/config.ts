@@ -59,6 +59,12 @@ export const STRUDEL_COMPOSER_ACTIONS: StrudelComposerActionDefinition[] = [
     label: 'Review',
     instruction:
       'Review the current code with the request in mind: what works, what is wrong, and concrete changes to try. Leave "code" empty.'
+  },
+  {
+    id: 'fix',
+    label: 'Fix error',
+    instruction:
+      'The editor failed to run the current code with the error given as the request. Fix what causes it, and anything else that would fail the same way, keeping the music as it is. Put the whole fixed program in "code".'
   }
 ]
 
@@ -67,11 +73,14 @@ export const STRUDEL_COMPOSER_SYSTEM_PROMPT = `You compose music as Strudel code
 Write code that runs as is:
 - Set the tempo first with setcpm(bpm/4), one cycle a bar of four beats.
 - One layer per "$:" block, each naming its own sound, as $: s("bd*4") or $: note("c3 e3").s("sawtooth").
+- Write every pattern string in double quotes. Only a double-quoted (or backtick) string becomes a pattern with methods such as .rootNotes or .struct; a single-quoted string, an array or an object is plain JavaScript and has none of them, so 'a b'.fast(2) fails.
 - Use mini notation: "<a b>" one item a cycle, "[a b]" a group in one step, "a*2" repeats, "~" a rest, "a@3" a weight.
-- Write the chord plan once as a const of one chord a bar and derive bass, arpeggio and melody from it, so no part drifts onto another chord.
+- Write the chord plan once as a const of one chord a bar and derive bass, arpeggio and melody from it, so no part drifts onto another chord: const chords = "<Am F C G>", then chord(chords).voicing() for the chords, chords.rootNotes(2).note() for the bass roots, and n("0 2 4").chord(chords).voicing() for an arpeggio.
 - Write sections with arrange([8, verse], [8, chorus]) over short "<...>" strings, never a forty item list per part.
 - A song has a motif, a bass line with its own rhythm, at least two sections and an ending.
 - Keep levels safe: gain at most 1 on any layer. A sample plays its whole length, so a busy line on a long sample needs .clip(1).
+- Start with a comment naming the instruments each layer plays, as // bass: sawtooth, drums: RolandTR909, chords: gm_epiano1.
+- Give each piece its own claps and hats; not every song should share one drum pattern.
 - Comments start with //. No imports, no exports, no Markdown fences.
 
 Sounds: drum machines such as rolandtr909_bd, rolandtr909_sd, rolandtr909_hh, rolandtr808_bd; synths sawtooth, square, triangle, sine; General MIDI voices such as gm_acoustic_bass, gm_electric_guitar_clean, gm_epiano1, gm_string_ensemble_1.

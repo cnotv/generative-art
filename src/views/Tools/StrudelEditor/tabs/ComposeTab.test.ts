@@ -4,7 +4,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useAiSettings } from '../ai/useAiSettings'
 import ComposeTab from './ComposeTab.vue'
 
-const mountComposeTab = (code: string) => mount(ComposeTab, { props: { code } })
+const mountComposeTab = (code: string, editorError = '') =>
+  mount(ComposeTab, { props: { code, editorError } })
 
 const findButton = (wrapper: ReturnType<typeof mountComposeTab>, label: string) =>
   wrapper.findAll('button').find((button) => button.text() === label)
@@ -54,6 +55,38 @@ describe('ComposeTab', () => {
     expect(
       ['Compose', 'Revise', 'Review'].map((label) => findButton(wrapper, label)?.element.disabled)
     ).toEqual(expectedDisabled)
+  })
+
+  it.each([
+    ['', false],
+    ['plan.rootNotes is not a function', true]
+  ])('with the editor error %j, offers Fix error: %s', (errorMessage, expectedShown) => {
+    // Arrange
+    useAiSettings().apiKey = 'secret-key'
+
+    // Act
+    const wrapper = mountComposeTab('$: plan.rootNotes(2)', errorMessage)
+
+    // Assert
+    expect(findButton(wrapper, 'Fix error') !== undefined).toBe(expectedShown)
+    expect(wrapper.text().includes(errorMessage)).toBe(true)
+  })
+
+  it('sends the editor error to the model on Fix error, with no request typed', async () => {
+    // Arrange
+    useAiSettings().apiKey = 'secret-key'
+    stubOpenRouter({ explanation: 'Made the plan a pattern.', code: '$: s("bd")' })
+    const wrapper = mountComposeTab('$: plan.rootNotes(2)', 'plan.rootNotes is not a function')
+
+    // Act
+    await findButton(wrapper, 'Fix error')?.trigger('click')
+    await flushPromises()
+
+    // Assert
+    const fetchMock = vi.mocked(fetch)
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    expect(body.messages[1].content).toContain('plan.rootNotes is not a function')
+    expect(wrapper.text()).toContain('Made the plan a pattern.')
   })
 
   it('shows the composed code and applies it on Apply', async () => {
