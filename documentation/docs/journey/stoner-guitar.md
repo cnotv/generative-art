@@ -4,7 +4,7 @@ sidebar_position: 40
 
 # Stoner guitar
 
-A playable fuzz guitar for the Strudel Editor, built from a physical model rather than recordings or generated audio.
+A playable fuzz guitar for the Strudel Editor, since generalised into the [instrument kinds](./instrument-kinds.md), built from a physical model rather than recordings or generated audio.
 
 ## Why a model and not generated audio
 
@@ -38,13 +38,13 @@ The sounds are sampled every three semitones, so the sampler never repitches one
 
 ## Measurements
 
-| Check                       | Result                                                           |
-| --------------------------- | ---------------------------------------------------------------- |
-| Render of the whole bank    | about 2 seconds in Node for 80 seconds of stereo audio           |
-| Guitar tab ready after load | 3.4 seconds including the page load, in headless Chromium        |
-| One chord, exported         | no lead silence, first sample 0, mids 2 dB under the bass band   |
-| Energy above 5 kHz          | air band about 35 dB under the bass band, as the cabinet intends |
-| Example song, 53 seconds    | true peak -1.1 dBFS, lead silence 0 ms, harmony check clean      |
+| Check                            | Result                                                           |
+| -------------------------------- | ---------------------------------------------------------------- |
+| Render of the whole bank         | about 2 seconds in Node for 80 seconds of stereo audio           |
+| Instruments tab ready after load | 3.4 seconds including the page load, in headless Chromium        |
+| One chord, exported              | no lead silence, first sample 0, mids 2 dB under the bass band   |
+| Energy above 5 kHz               | air band about 35 dB under the bass band, as the cabinet intends |
+| Example song, 53 seconds         | true peak -1.1 dBFS, lead silence 0 ms, harmony check clean      |
 
 A fuzz that is already clipping hard at low drive makes the drive slider do very little, so the drive range starts below unity gain. Peak level of a clipped signal after the cabinet filters is no guide to crest factor: filtering the squared off wave makes it ring, so the compression test uses the raw plucked string.
 

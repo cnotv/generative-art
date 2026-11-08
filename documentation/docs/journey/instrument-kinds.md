@@ -1,0 +1,92 @@
+---
+sidebar_position: 41
+---
+
+# Instrument kinds and presets
+
+The [stoner guitar](./stoner-guitar.md) grew into five kinds of instrument that a song can mix: electric guitar, bass guitar, acoustic guitar, organ and drum kit. This page records why they are built the way they are and what was measured. It does not say how they sound: nothing here was listened to.
+
+## One preset, one set of sounds
+
+A preset is a name, a kind and five knobs between 0 and 1. It registers one sound for each articulation of its kind, named after the preset, so `chainsaw` and `stoner` are two different guitars in one song. Each kind is data: its knobs with their labels, its articulations with the notes they are sampled at and their lengths, and the constants of its signal chain. The render code picks the chain by kind.
+
+```mermaid
+flowchart LR
+  P[Preset: name, kind, knobs] --> K{Kind}
+  K --> E[Plucked strings, fuzz, cabinet]
+  K --> B[Plucked string, gentle drive, bass cabinet]
+  K --> A[Plucked strings, wooden body resonances]
+  K --> O[Nine sine drawbars, percussion, overdrive, vibrato]
+  K --> D[Modes, noise and click per drum, room]
+  E --> W[Worker renders WAV files]
+  B --> W
+  A --> W
+  O --> W
+  D --> W
+  W --> S[Sampler: pitched map or plain list]
+```
+
+## Why presets render lazily
+
+A preset bank costs a few seconds of worker time and tens of megabytes of decoded audio. Eleven presets rendered at load would cost about fifteen seconds of work and several hundred megabytes before anyone pressed Play, on a machine that may be a phone. So a preset renders in two cases only: it is selected in the tab, or the code about to play or export names one of its sounds. The code is scanned for the sound names, each referenced preset is rendered, and the pattern starts after they are all ready. The same path serves the offline export, which is why the export script produces the same file as playback without any extra step.
+
+A render is cached by preset name and knob values, so playing again costs nothing, and editing a slider renders only the edited preset. Renders run one behind another, so two quick edits never register out of order. A failed render is recorded on the preset and leaves every other sound working.
+
+```mermaid
+sequenceDiagram
+  participant Code as Code to play or export
+  participant Scan as Name scan
+  participant Store as Preset store
+  participant Worker as Render worker
+  participant Sampler as Sampler
+  Code->>Scan: pattern text
+  Scan->>Store: presets whose sounds it names
+  Store->>Store: skip those already cached for these knobs
+  Store->>Worker: render the rest, one after another
+  Worker->>Sampler: WAV files as blob addresses
+  Sampler-->>Code: pattern starts
+```
+
+## Why the built-in presets ship in configuration
+
+An example song has to sound the same for everyone, so its presets cannot depend on what is in one person's browser. The eleven built-in presets are literal data in the configuration. A tweak is saved apart from the preset as a difference, and Reset removes it, so the shipped values are never overwritten and a later release can improve a preset for people who never touched it. The presets a person makes are saved as they are.
+
+A preset name becomes the front of its sound names, so it is checked: lowercase letters and digits, a letter first, unique, and not a sound Strudel already has. Collisions are checked against the live sound map, with the presets' own sounds left out, since a preset's name is not taken by itself.
+
+## The models
+
+The plucked string is the same extended Karplus-Strong loop for the three string kinds. What differs is data: the bass is an octave lower with a finger or pick attack set by how soft the noise burst is, the acoustic spreads the strings of a chord over 4 to 30 ms and adds three wooden resonances near 100, 200 and 400 Hz instead of a fuzz and cabinet. Drive at zero keeps the clipping stages nearly linear, so the same chain gives a clean guitar.
+
+The organ is additive: nine sine drawbars at the tonewheel footages, with the low three set by one knob and the upper six by another. Percussion is a decaying third harmonic and a short filtered click. A soft overdrive follows, then a vibrato made from a slowly swept delay mixed with the dry sound, started at a different point in each channel.
+
+The drums are modal and noise synthesis. A membrane is a few damped sines that start high and fall, which gives a kick its thump and a tom its pitch. A snare adds filtered noise for the wires. The cymbals are sums of inharmonic sine partials with filtered noise, the crash longer and noisier. Drive saturates, and the room is four darkened early reflections per side at different delays for left and right, which is cheap and gives a stereo image. A tight, clicky kit and a big roomy one differ only in the knobs.
+
+## Measurements
+
+Render time in headless Chromium, through the worker, for the whole bank of each preset.
+
+| Preset     | Kind            | Sounds | Render time |
+| ---------- | --------------- | ------ | ----------- |
+| stoner     | electric guitar | 34     | 2.8 s       |
+| seattle    | electric guitar | 34     | 2.1 s       |
+| jangle     | electric guitar | 34     | 2.1 s       |
+| chainsaw   | electric guitar | 34     | 2.2 s       |
+| fuzzbass   | bass guitar     | 20     | 0.8 s       |
+| grungebass | bass guitar     | 20     | 0.8 s       |
+| deathbass  | bass guitar     | 20     | 0.8 s       |
+| campfire   | acoustic guitar | 34     | 0.8 s       |
+| doomorgan  | organ           | 13     | 0.7 s       |
+| garagekit  | drum kit        | 9      | 0.2 s       |
+| blastkit   | drum kit        | 9      | 0.2 s       |
+
+The articulations of one preset of each new kind were exported through the editor, one repetition each, and measured. All 18 have no lead silence, a last sample of exactly 0 and a true peak between -2.5 and -5.9 dBFS at the editor's default gain. The hats and cymbals sit 30 to 42 dB above their bass band in the air band, and the kick holds its energy in the bass and sub bands, as intended.
+
+Automated tests check each kind: pitch within 10 cents by autocorrelation from a0 to c5, a kick with most of its energy under 150 Hz, hats with most of theirs above 5 kHz, silent ends, the peak, and the same samples for the same seed.
+
+## The tempo checks
+
+A genre at the wrong speed reads as another genre, so each song's BPM is written in its first line and in the tempo call, and then measured from its MIDI export: the shortest gap between onsets on the busiest pitched track, multiplied back to beats. Sun Bleached, Paper Skies and Hollow Chambers measure 96.00, 112.00 and 200.00. At 200 BPM a sixteenth is 75 ms, shorter than any drum or string sample, so every tremolo, gallop and blast event is clipped to its length and the open hat and cymbals are choked. See [genre songs](./strudel-genre-songs.md).
+
+## What is not checked
+
+Nobody has listened to any of it. The tone defaults, the balance of the three songs and whether the death metal kit is clicky enough are guesses made from numbers.

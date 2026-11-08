@@ -86,7 +86,7 @@ and every track matches note for note at the same times: 4 to 5 tracks a song, n
 and none added. The six songs went from 21,000 to 14,600 characters. The eight earlier style songs were already
 written with `!` and short strings, so they only gained shared constants for masks they repeated and
 one drum bank per group, again with every track matching; Tideline, Harbour Steps, Wire Fence and
-Lift Off had nothing left to share. Every one of the fourteen now names its instruments in a
+Lift Off had nothing left to share. Every one of the first fourteen now names its instruments in a
 comment under its style line.
 
 ## The briefs
@@ -152,3 +152,27 @@ peaked above 0 dBTP, the synthwave on the bars where its bass and kick land toge
 
 None of these numbers says the songs are good. They have not been listened to, and the next step
 for each is a person hearing it.
+
+## Three songs for the instrument presets
+
+Three more songs play the instrument presets of the Instruments tab, so they sound the same for everyone: Sun Bleached (stoner rock), Paper Skies (grunge) and Hollow Chambers (death metal). Death metal had no style, so it gained one and a section in [the genre guide](../guides/strudel-genres.md). The tempo is the first thing checked, since a genre at the wrong speed reads as another genre.
+
+| Song            | Style       | Written BPM | BPM from the MIDI file | Form                                                                    |
+| --------------- | ----------- | ----------- | ---------------------- | ----------------------------------------------------------------------- |
+| Sun Bleached    | stoner rock | 96          | 96.00                  | intro 4, verse 8, chorus 8, half time break 4, chorus 8, outro 4        |
+| Paper Skies     | grunge      | 112         | 112.00                 | quiet verse 8, loud chorus 8, twice, bridge 4, outro 4                  |
+| Hollow Chambers | death metal | 200         | 200.00                 | intro 4, blast 8, half time groove 8, tremolo 8, final blast 8, outro 4 |
+
+The measured value is the shortest gap between note onsets on the busiest pitched track, multiplied back to beats (eighths in the first two, tremolo sixteenths in the third), and the file's own tempo agrees. Drums are not in the MIDI file, since a drum preset sound has no pitch, so the guitar and bass carry the check.
+
+- **Sun Bleached** is a different feel from the 72 BPM riff and the 80 BPM Dust and Diesel: faster, in A, with the guitar riff, the bass and the kick each on its own rhythm. The chorus adds ride, claps and a doom organ, and the break drops to half time.
+- **Paper Skies** is a clean `jangle` arpeggio over a `campfire` acoustic strum and a light kick against a `seattle` fuzz chorus with pumping eighth bass and a pentatonic hook. The bridge holds an organ.
+- **Hollow Chambers** tremolo picks sixteenths at 200 BPM in drop A, with a semitone and a tritone around the root, a half time groove of palm muted gallops, and a blast beat in two forms. Every kick and snare is clipped to its event: a sixteenth is 75 ms, and a 0.6 s kick sample would otherwise run on through the next hits.
+
+| Song            | Loudness   | True peak |
+| --------------- | ---------- | --------- |
+| Sun Bleached    | -15.0 LUFS | -2.3 dBTP |
+| Paper Skies     | -14.8 LUFS | -1.7 dBTP |
+| Hollow Chambers | -12.3 LUFS | -1.6 dBTP |
+
+The first mixes peaked at or above 0 dBTP in the choruses, where fuzz guitar, bass and drums land together, so every gain was lowered rather than the file normalised. The harmony check reports only fifths, flat sevenths and passing fourths of the lead over power chords, which belong: the chord track holds only roots, because the fifth and octave are inside the sample. None of these numbers says the songs are good. They have not been listened to.

@@ -82,7 +82,7 @@ export const INSTRUMENT_KINDS: Record<InstrumentKind, InstrumentKindDefinition> 
       {
         id: 'drive',
         label: 'Drive',
-        hint: 'Clean at 0, crunch in the middle, a wall of fuzz at 1'
+        hint: 'Clean to fuzz'
       },
       { id: 'tone', label: 'Tone', hint: 'Treble' },
       { id: 'bass', label: 'Bass', hint: 'Low end before the fuzz' },

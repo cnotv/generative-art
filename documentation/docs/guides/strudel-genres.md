@@ -184,6 +184,20 @@ here needs:
 - **Signature.** Distorted guitar, drop tuning, feedback, dry drums, room.
 - **Common miss.** A pop-punk progression with no dynamic contrast and a scale-run lead.
 
+### Death metal
+
+- **Form.** Intro 4, blast verse 8, half time groove 8, tremolo riff 8, final blast 8, outro 4.
+  Change section on the bar, with a tom fill and a crash on the last bar before it.
+- **Rhythm.** About 200 BPM. Blast beats: kick and snare alternating on sixteenths, or the snare on
+  eighths over sixteenth kicks. The groove drops to half time, with the snare on beat three and a
+  ride. Cut every drum event, or the blast smears.
+- **Harmony.** A riff, not a chord loop. Drop A or B, chromatic and tritone movement (a semitone
+  up, then the tritone) around a pedal root. No thirds on the power chords.
+- **Melody.** A short chromatic phrase with a tritone leap over the riff, not a scale run.
+- **Signature.** Tremolo picked sixteenths, palm muted gallops, a scooped, bass heavy guitar with
+  boosted highs, a picked bass in unison with the riff, a tight clicky kit.
+- **Common miss.** A tempo of 120, a kick that rings through the blast, and a pentatonic lead.
+
 ### Classical
 
 - **Form.** A 8, B 8, A' 8, coda 8. Phrases are four bars, in antecedent and consequent pairs.

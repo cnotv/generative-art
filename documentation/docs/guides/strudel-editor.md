@@ -30,10 +30,10 @@ flow tab:
 - **patterns**: your saved patterns, then the examples, then the songs: the electro tunes
   Caverave and Dinofunk, three songs typed in from guitar tabs (the Megalovania riff, Breakfast
   in America by Supertramp and the Come as You Are riff by Nirvana, played on the General MIDI
-  guitars), and one original song for each hint style. Those fourteen are Concrete Hours
+  guitars), and one original song for each hint style, and a second stoner rock and grunge song. Those songs are Concrete Hours
   (techno), Second Floor (house), Long Way Down (drum and bass), Corner Store (hip hop),
   Tideline (ambient), Lift Off (trance), Harbour Steps (dub), Wire Fence (breakbeat), Neon Drive
-  (synthwave), Dust and Diesel (stoner rock), Rust and Rain (grunge), Winter Court (classical),
+  (synthwave), Dust and Diesel and Sun Bleached (stoner rock), Rust and Rain and Paper Skies (grunge), Hollow Chambers (death metal), Winter Court (classical),
   Uptown Strut (funk) and Blue Hour (jazz). They are written
   as `$:` layers with a `.mask` holding one number a bar, so each layer can be read, muted or
   rearranged on its own, and the hints tab finds nothing missing in them. Each is a link that puts
@@ -98,7 +98,7 @@ The style comes from the first of these that names one, and the tab says which:
 1. the **Style** picker at the top of the tab;
 2. the comment on the code's first line, such as `// deep house groove` or `// my first dnb tune`;
 3. a guess from the code, which needs a tempo inside the style's range and the instruments that
-   define it: a kick for most; a snare too for drum and bass, hip hop and grunge; a bass too for
+   define it: a kick for most; a snare too for drum and bass, hip hop, grunge and death metal (a kick, a snare and chords); a bass too for
    dub and synthwave; bass and chords for stoner rock; chords, melody and bass for classical and
    jazz; bass, chords and percussion for funk; chords for ambient; and a sampled break for
    breakbeat.
@@ -106,8 +106,8 @@ The style comes from the first of these that names one, and the tab says which:
 Most songs are none of these, so a guitar riff at 120 BPM gets no style rather than the nearest
 one, and the tab asks you to name or pick it.
 
-There are fourteen styles: techno, house, drum and bass, hip hop, ambient, trance, dub,
-breakbeat, synthwave, stoner rock, grunge, classical, funk and jazz. Each has a usual tempo
+There are fifteen styles: techno, house, drum and bass, hip hop, ambient, trance, dub,
+breakbeat, synthwave, stoner rock, grunge, death metal, classical, funk and jazz. Each has a usual tempo
 range, the instruments it is built from, and the visuals that
 suit it. The table is `STRUDEL_MUSIC_STYLES` in the editor's `config.ts`, and nothing is sent
 anywhere.
@@ -544,29 +544,40 @@ one file on its own writes exactly its single import code either way. The audio 
 left alone: it writes one `stack(...)` of drums, bass and chords, where a pianoroll would draw the
 drums too.
 
-## The stoner guitar
+## Instruments
 
-The editor ships a distorted guitar that is built in your browser, so no audio files are downloaded. It registers three sounds: `stoner_chord` (a power chord of root, fifth and octave), `stoner_mute` (the same chord palm muted, for chugs) and `stoner_note` (a single string). The note you give is the root.
+The editor ships physically modelled instruments, built in your browser, so no audio files are downloaded. An instrument is a **preset**: a name, a kind and the kind's five knobs. A preset registers one sound per articulation, spelt `<preset>_<articulation>`, so one song can mix several presets.
 
 ```js
-note('c2 c2 ds2 f2').s('stoner_chord')
+$: note('a1 a1 c2 ds2').s('chainsaw_chord').cut(1)
+$: s('blastkit_kick*4').clip(1)
 ```
 
-The **Guitar** tab has five sliders. Moving one renders the sounds again after a short pause, and the tab shows when they are ready. The tone is remembered on this device. **Play riff** plays a short phrase through all three sounds, so a tone change can be heard without writing a pattern.
+| Kind            | Articulations                                                                         | Knobs                                         |
+| --------------- | ------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Electric guitar | `chord` (root, fifth, octave), `mute` (palm muted chord), `note`                      | drive, tone, bass, mids, sustain              |
+| Bass guitar     | `note`, `mute`                                                                        | drive, tone, attack, mids, sustain            |
+| Acoustic guitar | `chord` (strummed), `mute`, `note`                                                    | body, brightness, sustain, strum speed, width |
+| Organ           | `note`                                                                                | body, brightness, percussion, drive, vibrato  |
+| Drum kit        | `kick`, `snare`, `tomhi`, `tommid`, `tomlow`, `hatclosed`, `hatopen`, `ride`, `crash` | tune, decay, punch, drive, room               |
 
-![The Guitar tab: five tone sliders, Play riff and Reset, and the AI tone section with its model dropdown](/img/strudel-editor/guitar-tab.webp)
+A pitched articulation takes the note you give; electric guitar and acoustic chords play it as the root. Guitars are sampled down to a1 for drop A, the bass down to a0. Drums are unpitched, so they take no note. Every knob runs 0 to 1, and drive near 0 gives a clean guitar.
 
-| Slider  | What it does                          |
-| ------- | ------------------------------------- |
-| Drive   | the fuzz gain                         |
-| Tone    | the treble: dark and woolly to bright |
-| Bass    | the low end boosted ahead of the fuzz |
-| Mids    | scooped, neutral or a hump            |
-| Sustain | how long the strings ring             |
+Eleven presets ship built in, so the example songs sound the same for everyone: `stoner`, `seattle` (a grunge fuzz), `jangle` (clean to crunch), `chainsaw` (death metal), `fuzzbass`, `grungebass`, `deathbass`, `campfire` (acoustic), `doomorgan`, `garagekit` (a roomy kit) and `blastkit` (a tight, clicky one).
 
-The **AI tone** section turns a description such as "dry desert fuzz, scooped mids" into slider settings through OpenRouter. It needs your own OpenRouter key, which is kept only in this browser's local storage and is sent only to OpenRouter. "Forget key" removes it. The model dropdown lists OpenRouter models that answer in strict JSON, Claude Haiku 5.5 by default; the assistant only moves the sliders, so you can still adjust them. The "Stoner riff" example plays all three sounds with a bass line and drums.
+The **Instruments** tab selects a preset and shows the sliders of its kind. **Play preview** plays a short phrase for the kind, and **Download WAV** renders the same phrase offline as `<preset>-preview.wav`. Tweaks to a built-in preset are kept in this browser and **Reset** restores the shipped values. **Duplicate** makes a copy; **Create** makes a new preset of any kind; a preset you made can be renamed and deleted. Built-in presets cannot be renamed or deleted.
 
-Why it is built this way, and how it was measured: [Stoner guitar](../journey/stoner-guitar.md).
+![The Instruments tab: the preset list, five sliders, Play preview, Download WAV and Reset, and the preset and AI tone sections](/img/strudel-editor/instruments-tab.webp)
+
+A name is lowercase letters and digits, starts with a letter, is at most 16 characters, is not used by another preset and does not collide with a sound Strudel already has (`sawtooth`, or the front of a drum machine such as `rolandtr909`). The tab says what to change.
+
+A preset renders when it is selected, and when code that is about to play or export names one of its sounds; the pattern waits for it. Nothing else is rendered, so an unused preset costs nothing. Moving a slider renders only that preset again, after a short pause. A preset's sounds appear in the Sounds tab under `Kind: name` once it has rendered. Deleting or renaming a preset does not unregister sounds already made; they go at the next reload.
+
+The **AI tone** section turns a description such as "dry desert fuzz, scooped mids" into slider settings for the selected kind through OpenRouter. It needs your own OpenRouter key, which is kept only in this browser's local storage and is sent only to OpenRouter. "Forget key" removes it. The model dropdown lists OpenRouter models that answer in strict JSON, Claude Haiku 5.5 by default; the assistant only moves the sliders, so you can still adjust them.
+
+Exporting and importing presets as a file is not offered; presets live in this browser's local storage.
+
+Why it is built this way, and how it was measured: [Stoner guitar](../journey/stoner-guitar.md) and [Instrument kinds](../journey/instrument-kinds.md).
 
 ## MIDI devices
 
