@@ -1,3 +1,4 @@
+import type { StrudelPreviewHit } from '../types'
 import type { StonerGuitarTone, StonerGuitarToneKnob } from './types'
 
 export const STONER_GUITAR_DEFAULT_TONE: StonerGuitarTone = {
@@ -109,3 +110,19 @@ export const STONER_GUITAR_ASSISTANT_ERRORS = {
   badAnswer: 'The model did not return usable tone settings. Try again or pick another model.',
   other: 'OpenRouter returned an error'
 }
+
+/**
+ * The Guitar tab's Play button: a riff at 72 BPM, an eighth note being 0.42 s, that sounds each
+ * of the three sounds. Chords ring, mutes chug between them, and a short lead line ends it.
+ */
+export const STONER_GUITAR_PREVIEW_PHRASE: StrudelPreviewHit[] = [
+  { sound: 'stoner_chord', note: 'c2', offsetSeconds: 0, durationSeconds: 0.8, gain: 0.6 },
+  { sound: 'stoner_mute', note: 'c2', offsetSeconds: 0.83, durationSeconds: 0.2, gain: 0.6 },
+  { sound: 'stoner_mute', note: 'c2', offsetSeconds: 1.04, durationSeconds: 0.2, gain: 0.6 },
+  { sound: 'stoner_chord', note: 'ds2', offsetSeconds: 1.25, durationSeconds: 0.4, gain: 0.6 },
+  { sound: 'stoner_chord', note: 'f2', offsetSeconds: 1.67, durationSeconds: 0.4, gain: 0.6 },
+  { sound: 'stoner_chord', note: 'c2', offsetSeconds: 2.08, durationSeconds: 2.4, gain: 0.6 },
+  { sound: 'stoner_note', note: 'c3', offsetSeconds: 4.58, durationSeconds: 0.2, gain: 0.5 },
+  { sound: 'stoner_note', note: 'ds3', offsetSeconds: 4.79, durationSeconds: 0.2, gain: 0.5 },
+  { sound: 'stoner_note', note: 'f3', offsetSeconds: 5, durationSeconds: 1.5, gain: 0.5 }
+]

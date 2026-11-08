@@ -8,8 +8,10 @@ import { Slider } from '@/components/ui/slider'
 import {
   STONER_GUITAR_KNOB_LABELS,
   STONER_GUITAR_MODEL_OPTIONS,
+  STONER_GUITAR_PREVIEW_PHRASE,
   STONER_GUITAR_USAGE_HINT
 } from '../guitar/config'
+import { previewStrudelPhrase } from '../strudelPlayback'
 import { loadStrudelSoundLibrary } from '../strudelSoundLibrary'
 import { useStonerGuitar } from '../guitar/useStonerGuitar'
 
@@ -37,7 +39,7 @@ const statusMessage = computed(() => {
   const messages = {
     idle: 'Waiting for the sound library.',
     rendering: 'Rendering the guitar sounds...',
-    ready: 'Ready. Play it with the name below.',
+    ready: 'Ready. Press Play riff to hear it, or play it with the names below.',
     error: `Could not render the guitar: ${errorMessage.value}`
   }
   return messages[status.value]
@@ -46,6 +48,11 @@ const statusMessage = computed(() => {
 const canAsk = computed(
   () => !assistantBusy.value && apiKey.value.length > 0 && description.value.trim().length > 0
 )
+
+// Called straight from the click, so the audio unlock inside it still counts as the user's gesture.
+const onPlayRiff = (): void => {
+  previewStrudelPhrase(STONER_GUITAR_PREVIEW_PHRASE).catch(() => undefined)
+}
 
 const onAsk = (): void => {
   void askAssistant(description.value.trim())
@@ -74,7 +81,10 @@ const onAsk = (): void => {
         @update:model-value="setKnob(knob.id, $event[0] ?? 0)"
       />
     </div>
-    <Button variant="outline" size="sm" @click="resetTone">Reset</Button>
+    <div class="strudel-guitar__actions">
+      <Button size="sm" :disabled="status !== 'ready'" @click="onPlayRiff">Play riff</Button>
+      <Button variant="outline" size="sm" @click="resetTone">Reset</Button>
+    </div>
 
     <section class="strudel-guitar__assistant" aria-label="AI tone">
       <h4 class="strudel-guitar__title">AI tone</h4>

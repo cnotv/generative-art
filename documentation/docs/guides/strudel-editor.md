@@ -552,7 +552,9 @@ The editor ships a distorted guitar that is built in your browser, so no audio f
 note('c2 c2 ds2 f2').s('stoner_chord')
 ```
 
-The **Guitar** tab has five sliders. Moving one renders the sounds again after a short pause, and the tab shows when they are ready. The tone is remembered on this device.
+The **Guitar** tab has five sliders. Moving one renders the sounds again after a short pause, and the tab shows when they are ready. The tone is remembered on this device. **Play riff** plays a short phrase through all three sounds, so a tone change can be heard without writing a pattern.
+
+![The Guitar tab: five tone sliders, Play riff and Reset, and the AI tone section with its model dropdown](/img/strudel-editor/guitar-tab.webp)
 
 | Slider  | What it does                          |
 | ------- | ------------------------------------- |

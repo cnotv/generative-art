@@ -24,6 +24,7 @@ import type {
   StrudelPlayback,
   StrudelPlaybackHooks,
   StrudelPlaybackPosition,
+  StrudelPreviewHit,
   StrudelRenderResult,
   StrudelUnknownCallable
 } from './types'
@@ -466,7 +467,8 @@ const loadPreviewSound = async (
   webaudioModule: Record<string, unknown>,
   soundValue: Record<string, unknown>
 ): Promise<void> => {
-  const soundName = String(soundValue.s)
+  // A pitched sound keeps one file per sampled note, so each note is loaded on its own.
+  const soundName = `${String(soundValue.s)}:${String(soundValue.note ?? '')}`
   if (loadedPreviewSounds.has(soundName)) {
     return
   }
@@ -489,13 +491,12 @@ const assertAudioRunning = async (audioContext: unknown): Promise<void> => {
 }
 
 /**
- * Plays one sound on its own, as clicking a name in strudel.cc's sounds tab does. Unlocks the
- * page's audio first, inside the click, for the same iOS reason Play does.
- * @param soundName - a registered sound, such as "bd" or "gm_piano"
- * @param soundType - its registration type; synths and soundfonts are given a note to play
- * @throws {Error} when the browser keeps the audio context suspended, so the sound would be silent
+ * Gets the engine ready to play a preview. Unlocks the page's audio first, synchronously inside
+ * the click, for the same iOS reason Play does, then waits for every sound to be registered.
+ * @returns the engine module
+ * @throws {Error} when the browser keeps the audio context suspended, so the preview would be silent
  */
-export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
+const prepareStrudelPreview = async (): Promise<Record<string, unknown>> => {
   const gestureAudioContext = unlockPageAudioContext()
   const webaudioModule = requireRecordModule(await import('@strudel/webaudio'))
   if (gestureAudioContext !== null) {
@@ -503,19 +504,52 @@ export const previewStrudelSound = async (soundName: string, soundType: string):
   }
   await requireCallable(webaudioModule.initAudio)()
   await loadStrudelSoundLibrary()
+  await assertAudioRunning(requireCallable(webaudioModule.getAudioContext)())
+  return webaudioModule
+}
+
+const readPreviewStartTime = (webaudioModule: Record<string, unknown>): number =>
+  readAudioTime(requireCallable(webaudioModule.getAudioContext)()) +
+  STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
+
+/**
+ * Plays one sound on its own, as clicking a name in strudel.cc's sounds tab does.
+ * @param soundName - a registered sound, such as "bd" or "gm_piano"
+ * @param soundType - its registration type; synths and soundfonts are given a note to play
+ * @throws {Error} when the browser keeps the audio context suspended, so the sound would be silent
+ */
+export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
+  const webaudioModule = await prepareStrudelPreview()
   const needsNote = soundType === 'synth' || soundType === 'soundfont'
   const soundValue = {
     s: soundName,
     note: needsNote ? STRUDEL_SOUND_PREVIEW_NOTE : undefined,
     clip: 1
   }
-  const audioContext = requireCallable(webaudioModule.getAudioContext)()
-  await assertAudioRunning(audioContext)
   await loadPreviewSound(webaudioModule, soundValue)
-  const startTime = readAudioTime(audioContext) + STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
   await requireCallable(webaudioModule.superdough)(
     soundValue,
-    startTime,
+    readPreviewStartTime(webaudioModule),
     STRUDEL_SOUND_PREVIEW_SECONDS
+  )
+}
+
+/**
+ * Plays a short phrase of hits outside any pattern, so an instrument can be heard without
+ * writing code. Every hit is scheduled up front against one start time, so they keep time.
+ * @param hits - the sounds, notes and timings to play
+ * @throws {Error} when the browser keeps the audio context suspended, so the phrase would be silent
+ */
+export const previewStrudelPhrase = async (hits: StrudelPreviewHit[]): Promise<void> => {
+  const webaudioModule = await prepareStrudelPreview()
+  const playSound = requireCallable(webaudioModule.superdough)
+  await Promise.all(
+    hits.map(({ sound, note }) => loadPreviewSound(webaudioModule, { s: sound, note, clip: 1 }))
+  )
+  const startTime = readPreviewStartTime(webaudioModule)
+  await Promise.all(
+    hits.map(({ sound, note, offsetSeconds, durationSeconds, gain }) =>
+      playSound({ s: sound, note, gain, clip: 1 }, startTime + offsetSeconds, durationSeconds)
+    )
   )
 }
