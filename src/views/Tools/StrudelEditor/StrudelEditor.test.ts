@@ -204,6 +204,7 @@ describe('StrudelEditor view', () => {
       'Export',
       'MIDI',
       'Sounds',
+      'Guitar',
       'Console',
       'Settings',
       'Hints'

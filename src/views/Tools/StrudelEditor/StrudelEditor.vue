@@ -12,6 +12,7 @@ import {
   Boxes,
   Cable,
   CircleHelp,
+  Guitar,
   Music,
   Save,
   Settings,
@@ -38,6 +39,7 @@ import { useStrudelSounds } from './useStrudelSounds'
 import { previewStrudelSound } from './strudelPlayback'
 import type { StrudelEditorMode, StrudelSoundEntry, StrudelTabId } from './types'
 import FlowTab from './tabs/FlowTab.vue'
+import GuitarTab from './tabs/GuitarTab.vue'
 import HintsTab from './tabs/HintsTab.vue'
 import PatternLibrary from './tabs/PatternLibrary.vue'
 import SoundsTab from './tabs/SoundsTab.vue'
@@ -342,6 +344,7 @@ const toolbarTools = [
   { id: 'export', label: 'Export', icon: Save },
   { id: 'midi', label: 'MIDI', icon: Cable },
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
+  { id: 'guitar', label: 'Guitar', icon: Guitar },
   { id: 'console', label: 'Console', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'flow', label: 'Nodes', icon: Boxes },
@@ -514,6 +517,7 @@ onBeforeUnmount(() => {
           :sounds-status="soundsStatus"
           @preview="onSoundPreview"
         />
+        <GuitarTab v-else-if="activeTab === 'guitar'" />
         <MidiTab v-else-if="activeTab === 'midi'" @code="updatePatternCode" />
         <ExportTab
           v-else-if="activeTab === 'export'"

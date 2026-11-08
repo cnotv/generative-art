@@ -22,6 +22,9 @@ vi.mock('@strudel/webaudio', () => ({
   samples: mockSampleBankLoader,
   aliasBank: mockBankAliasLoader
 }))
+vi.mock('./guitar/useStonerGuitar', () => ({
+  useStonerGuitar: () => ({ registerSounds: async () => undefined })
+}))
 vi.mock('@strudel/soundfonts', () => ({
   registerSoundfonts: mockSoundfontRegistrar
 }))

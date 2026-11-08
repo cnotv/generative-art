@@ -141,6 +141,35 @@ $: stack(
   note("<[g4 eb4] [c5 ~] [d5 f5] [~ bb4]>*2").s("triangle").delay(.3).color("lightblue")
 ).pianoroll({ cycles: 4, playhead: .5, fold: 0, minMidi: 30, maxMidi: 84 })
 $: s("bd*4, [~ hh]*4").gain(.8)`
+  },
+  {
+    id: 'stoner-riff',
+    label: 'Stoner riff',
+    code: `// Stoner riff: a downtuned fuzz riff in C at 72 BPM
+// Sixteen bars: two bars of guitar alone, the riff, a lifted answer, a slow breakdown and a last hit.
+// Instruments: guitars stoner_chord and stoner_mute, bass sawtooth, drums default kit
+setcpm(18)
+
+const roots = arrange(
+  [8, "<c2 c2 ds2 f2>"],
+  [4, "<ds2 fs2 f2 c2>"],
+  [3, "c2"],
+  [1, "c2"]
+)
+const riffHits = "x ~ ~ ~ ~ ~ x ~ ~ ~ x ~ ~ ~ ~ ~"
+const chordHits = arrange([14, riffHits], [2, "x ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~"])
+const chugHits = arrange([14, "~ x x ~ x x ~ ~ ~ ~ x x ~ ~ ~ ~"], [2, silence])
+const bassHits = "x ~ x x ~ ~ x ~ x ~ x ~ ~ x ~ ~"
+const drummed = arrange([2, "0"], [13, "1"], [1, "0"])
+const lastBar = arrange([15, silence], [1, "x"])
+
+$: note(roots).s("stoner_chord").struct(chordHits).gain(.9)
+$: note(roots).s("stoner_mute").struct(chugHits).gain(.8)
+$: note(roots).add(note(-12)).s("sawtooth").struct(bassHits).lpf(300).decay(.25).sustain(.2).gain(.7)
+$: s("bd").struct(riffHits).mask(drummed).gain(.9)
+$: s("sd").struct("~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~").mask(drummed).gain(.8)
+$: s("hh*8").mask(drummed).gain(.4)
+$: s("cr").struct(lastBar).gain(.7)`
   }
 ]
 
@@ -966,6 +995,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'export', label: 'Export' },
   { id: 'midi', label: 'MIDI' },
   { id: 'sounds', label: 'Sounds' },
+  { id: 'guitar', label: 'Guitar' },
   { id: 'console', label: 'Console' },
   { id: 'settings', label: 'Settings' },
   { id: 'flow', label: 'Nodes' },

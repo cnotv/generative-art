@@ -54,6 +54,13 @@ describe('describeStrudelSound', () => {
       'Wavetables',
       'Digital bad day'
     ],
+    [
+      'a stoner guitar sound',
+      'stoner_chord',
+      { baseUrl: '', tag: 'stoner-guitar' },
+      'Stoner guitar',
+      'Stoner chord'
+    ],
     ['a synth', 'supersaw', { type: 'synth' }, 'Synths', 'Supersaw'],
     [
       'a soundfont',

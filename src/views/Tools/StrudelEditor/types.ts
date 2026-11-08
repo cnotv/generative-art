@@ -331,6 +331,7 @@ export type StrudelTabId =
   | 'export'
   | 'console'
   | 'settings'
+  | 'guitar'
 
 export type StrudelSoundEntry = {
   /** What code plays it by, as in `s("rolandtr909_bd")`. */

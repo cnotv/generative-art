@@ -5,6 +5,7 @@ import {
   STRUDEL_SAMPLE_BANKS,
   STRUDEL_SYNTHS_GROUP_LABEL
 } from './config'
+import { STONER_GUITAR_GROUP_LABEL, STONER_GUITAR_TAG } from './guitar/config'
 import type { StrudelSoundLibrary } from './types'
 
 const GENERAL_MIDI_PREFIX = 'gm_'
@@ -120,6 +121,9 @@ export const describeStrudelSound = (
       group: STRUDEL_GENERAL_MIDI_FAMILIES[familyIndex] ?? UNKNOWN_BANK_GROUP_LABEL,
       groupPosition: familyIndex + 1
     }
+  }
+  if (data.tag === STONER_GUITAR_TAG) {
+    return { label: readableName(name), group: STONER_GUITAR_GROUP_LABEL, groupPosition: 0 }
   }
   return describeSample(name, data.baseUrl, soundLibrary)
 }
