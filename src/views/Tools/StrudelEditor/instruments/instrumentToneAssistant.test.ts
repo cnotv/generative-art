@@ -1,18 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  INSTRUMENT_ASSISTANT_ERRORS,
-  INSTRUMENT_BUILT_IN_PRESETS,
-  INSTRUMENT_DEFAULT_MODEL,
-  INSTRUMENT_KINDS,
-  INSTRUMENT_KIND_IDS,
-  INSTRUMENT_OPENROUTER_URL
-} from './config'
+import { STRUDEL_AI_ERRORS, STRUDEL_AI_OPENROUTER_URL } from '../ai/config'
+import { INSTRUMENT_BUILT_IN_PRESETS, INSTRUMENT_KINDS, INSTRUMENT_KIND_IDS } from './config'
 import {
   askInstrumentToneAssistant,
   buildInstrumentToneRequest,
   buildInstrumentToneSchema,
-  parseInstrumentToneResponse,
-  readKnownInstrumentToneModel
+  parseInstrumentToneAnswer
 } from './instrumentToneAssistant'
 
 const buildResponseBody = (content: string): unknown => ({ choices: [{ message: { content } }] })
@@ -69,13 +62,10 @@ describe('buildInstrumentToneRequest', () => {
   )
 })
 
-describe('parseInstrumentToneResponse', () => {
+describe('parseInstrumentToneAnswer', () => {
   it('accepts a valid answer for a kind', () => {
-    // Arrange
-    const body = buildResponseBody(JSON.stringify(GUITAR_ANSWER))
-
     // Act
-    const suggestion = parseInstrumentToneResponse('electric-guitar', body)
+    const suggestion = parseInstrumentToneAnswer('electric-guitar', GUITAR_ANSWER)
 
     // Assert
     expect(suggestion.knobs).toEqual({ drive: 0.9, tone: 0.3, bass: 0.8, mids: 0.2, sustain: 0.7 })
@@ -87,111 +77,60 @@ describe('parseInstrumentToneResponse', () => {
     const answer = { tune: 0.2, decay: 0.1, punch: 0.9, drive: 0.4, room: 0, explanation: 'Tight.' }
 
     // Act
-    const suggestion = parseInstrumentToneResponse(
-      'drum-kit',
-      buildResponseBody(JSON.stringify(answer))
-    )
+    const suggestion = parseInstrumentToneAnswer('drum-kit', answer)
 
     // Assert
     expect(Object.keys(suggestion.knobs)).toEqual(['tune', 'decay', 'punch', 'drive', 'room'])
   })
 
   it('clamps knobs outside 0 to 1', () => {
-    // Arrange
-    const body = buildResponseBody(JSON.stringify({ ...GUITAR_ANSWER, drive: 4, bass: -2 }))
-
     // Act
-    const { knobs } = parseInstrumentToneResponse('electric-guitar', body)
+    const { knobs } = parseInstrumentToneAnswer('electric-guitar', {
+      ...GUITAR_ANSWER,
+      drive: 4,
+      bass: -2
+    })
 
     // Assert
     expect([knobs.drive, knobs.bass]).toEqual([1, 0])
   })
 
   it.each([
-    ['a missing knob', buildResponseBody(JSON.stringify({ ...GUITAR_ANSWER, mids: undefined }))],
-    ['a knob of another kind only', buildResponseBody(JSON.stringify({ tune: 1, decay: 1 }))],
-    ['a text knob', buildResponseBody(JSON.stringify({ ...GUITAR_ANSWER, tone: 'high' }))],
-    ['text that is not JSON', buildResponseBody('turn it up')],
-    ['no choices', {}],
-    ['JSON that is not an object', buildResponseBody('[1,2]')]
-  ])('rejects %s', (_case, body) => {
+    ['a missing knob', { ...GUITAR_ANSWER, mids: undefined }],
+    ['a knob of another kind only', { tune: 1, decay: 1 }],
+    ['a text knob', { ...GUITAR_ANSWER, tone: 'high' }]
+  ])('rejects %s', (_case, answer) => {
     // Arrange
-    const parse = (): unknown => parseInstrumentToneResponse('electric-guitar', body)
+    const parse = (): unknown => parseInstrumentToneAnswer('electric-guitar', answer)
 
     // Act and Assert
-    expect(parse).toThrow(INSTRUMENT_ASSISTANT_ERRORS.badAnswer)
+    expect(parse).toThrow(STRUDEL_AI_ERRORS.badAnswer)
   })
 })
 
 describe('askInstrumentToneAssistant', () => {
-  const ask = (fetchImplementation: typeof fetch): Promise<unknown> =>
-    askInstrumentToneAssistant({
-      apiKey: 'secret-key',
-      description: 'heavy',
-      kind: 'electric-guitar',
-      currentKnobs: STONER,
-      model: 'a/b',
-      fetchImplementation
-    })
-
-  it('posts to OpenRouter with the key in the header only', async () => {
+  it('posts the tone request to OpenRouter and reads the knobs from the answer', async () => {
     // Arrange
     const mockFetch = vi.fn<typeof fetch>(
       async () => new Response(JSON.stringify(buildResponseBody(JSON.stringify(GUITAR_ANSWER))))
     )
 
     // Act
-    await ask(mockFetch)
+    const suggestion = await askInstrumentToneAssistant({
+      apiKey: 'secret-key',
+      description: 'heavy',
+      kind: 'electric-guitar',
+      currentKnobs: STONER,
+      model: 'a/b',
+      fetchImplementation: mockFetch
+    })
 
     // Assert
     const [url, init] = mockFetch.mock.calls[0] ?? []
-    expect(url).toBe(INSTRUMENT_OPENROUTER_URL)
-    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer secret-key')
-    expect(String(init?.body)).not.toContain('secret-key')
-  })
-
-  it.each([
-    [401, INSTRUMENT_ASSISTANT_ERRORS.unauthorised],
-    [402, INSTRUMENT_ASSISTANT_ERRORS.noCredit],
-    [429, INSTRUMENT_ASSISTANT_ERRORS.rateLimited],
-    [500, `${INSTRUMENT_ASSISTANT_ERRORS.other} (500).`]
-  ])('turns status %i into a readable message', async (status, message) => {
-    // Arrange
-    const mockFetch = vi.fn(async () => new Response('', { status }))
-
-    // Act and Assert
-    await expect(ask(mockFetch)).rejects.toThrow(message)
-  })
-
-  it('turns a network failure into a readable message', async () => {
-    // Arrange
-    const mockFetch = vi.fn(async () => {
-      throw new TypeError('Failed to fetch')
-    })
-
-    // Act and Assert
-    await expect(ask(mockFetch)).rejects.toThrow(INSTRUMENT_ASSISTANT_ERRORS.network)
-  })
-
-  it('rejects a body that is not JSON', async () => {
-    // Arrange
-    const mockFetch = vi.fn(async () => new Response('not json'))
-
-    // Act and Assert
-    await expect(ask(mockFetch)).rejects.toThrow(INSTRUMENT_ASSISTANT_ERRORS.badAnswer)
-  })
-})
-
-describe('readKnownInstrumentToneModel', () => {
-  it.each([
-    ['a listed model', 'google/gemini-3.8-flash', 'google/gemini-3.8-flash'],
-    ['nothing stored', null, INSTRUMENT_DEFAULT_MODEL],
-    ['a model no longer listed', 'someone/old-model', INSTRUMENT_DEFAULT_MODEL]
-  ])('keeps only a model the dropdown offers: %s', (_case, storedModel, expectedModel) => {
-    // Arrange, Act
-    const model = readKnownInstrumentToneModel(storedModel)
-
-    // Assert
-    expect(model).toBe(expectedModel)
+    expect(url).toBe(STRUDEL_AI_OPENROUTER_URL)
+    expect(JSON.parse(String(init?.body)).response_format.json_schema.name).toBe(
+      'electric_guitar_knobs'
+    )
+    expect(suggestion.knobs.drive).toBe(0.9)
   })
 })

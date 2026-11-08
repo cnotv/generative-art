@@ -53,7 +53,8 @@ flow tab:
 - **reference**: function quick list
 - **export**: save the code as a WAV or MIDI file (below)
 - **console**: evaluation log
-- **settings**: theme and panel position
+- **compose**: write, revise or review the code with an AI model (below)
+- **settings**: theme, panel position, and the OpenRouter key and models the AI features use
 - **flow**: build a pattern from instrument and effect nodes (below)
 
 ![The sounds tab grouped by drum machine: under Roland TR909 and Sakata DPM48, sounds named Bass drum, Clap, Closed hi-hat and the rest, each with its code name and variation count](/img/strudel-editor/sounds-tab.webp)
@@ -577,11 +578,35 @@ A name is lowercase letters and digits, starts with a letter, is at most 16 char
 
 A preset renders when it is selected, and when code that is about to play or export names one of its sounds; the pattern waits for it. Nothing else is rendered, so an unused preset costs nothing. Moving a slider renders only that preset again, after a short pause. A preset's sounds appear in the Sounds tab under `Kind: name` once it has rendered. Deleting or renaming a preset does not unregister sounds already made; they go at the next reload.
 
-The **AI tone** section turns a description such as "dry desert fuzz, scooped mids" into slider settings for the selected kind through OpenRouter. It needs your own OpenRouter key, which is kept only in this browser's local storage and is sent only to OpenRouter. "Forget key" removes it. The model dropdown lists OpenRouter models that answer in strict JSON, Claude Haiku 5.5 by default; the assistant only moves the sliders, so you can still adjust them.
+The **AI tone** section turns a description such as "dry desert fuzz, scooped mids" into slider settings for the selected kind through OpenRouter. It uses the key and the **Sound model** set in the Settings tab (see [AI settings](#ai-settings)); the assistant only moves the sliders, so you can still adjust them.
 
 Exporting and importing presets as a file is not offered; presets live in this browser's local storage.
 
 Why it is built this way, and how it was measured: [Stoner guitar](../journey/stoner-guitar.md) and [Instrument kinds](../journey/instrument-kinds.md).
+
+## Composing with AI
+
+The **Compose** tab sends a request in your own words, together with the code in the editor, to a model on OpenRouter. Three buttons say what to do with it:
+
+- **Compose** writes a new piece from the request.
+- **Revise** rewrites the code in the editor as the request asks, keeping what it does not mention.
+- **Review** comments on the code and suggests changes, without writing any.
+
+When the code in the editor fails to run, the tab shows the error and a **Fix error** button, which sends the code and the error back to the model to repair, keeping the music as it is. The answer is applied like any other.
+
+The answer shows in the tab: the model's explanation and, for Compose and Revise, the code. **Apply** puts that code in the editor, replacing what was there; Ctrl+Z in the editor brings the old code back. With **Auto apply** ticked, the code goes into the editor as soon as it arrives. A pattern that is playing picks up the new code as it would after typing. Revise and Review need code in the editor; all three need a key.
+
+The model is told how a song is written here: pattern strings in double quotes (a single-quoted string is plain JavaScript, so `'<Am F>'.rootNotes(2)` fails), the tempo with `setcpm`, one `$:` block per layer with its own sound, a chord plan written once as a `const`, sections with `arrange`, and the names of the instrument presets it can play. A request that runs while the drawer shows another tab still lands, and is still applied with Auto apply on.
+
+### AI settings
+
+The **AI** section of the Settings tab holds what every AI feature shares:
+
+- your OpenRouter key, kept only in this browser's local storage and sent only to OpenRouter. **Forget key** removes it. A key entered in the Instruments tab before the AI section existed is still found;
+- the **Compose model**, used by the Compose tab, Claude Sonnet 5.5 by default;
+- the **Sound model**, used by the Instruments tab's AI tone, Claude Haiku 5.5 by default.
+
+Both dropdowns list the same OpenRouter models, the ones that answer in strict JSON.
 
 ## MIDI devices
 

@@ -21,30 +21,6 @@ export const INSTRUMENT_PEAK = 0.89
 export const INSTRUMENT_SECOND_TAKE_SEED_OFFSET = 1000
 
 export const INSTRUMENT_STORAGE_KEY = 'strudel-instruments'
-export const INSTRUMENT_STORAGE_KEY_API_KEY = 'strudel-instruments-openrouter-key'
-export const INSTRUMENT_STORAGE_KEY_MODEL = 'strudel-instruments-openrouter-model'
-
-export const INSTRUMENT_OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-export const INSTRUMENT_DEFAULT_MODEL = 'anthropic/claude-haiku-5.5'
-
-/** OpenRouter models that support strict JSON schema answers, checked against its model list. */
-export const INSTRUMENT_MODEL_OPTIONS = [
-  { value: 'anthropic/claude-haiku-5.5', label: 'Claude Haiku 5.5' },
-  { value: 'anthropic/claude-sonnet-5.5', label: 'Claude Sonnet 5.5' },
-  { value: 'google/gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
-  { value: 'openai/gpt-5.4-mini', label: 'GPT-5.4 Mini' },
-  { value: 'deepseek/deepseek-v4.1-flash', label: 'DeepSeek V4.1 Flash' },
-  { value: 'qwen/qwen3.8-flash', label: 'Qwen3.8 Flash' }
-]
-
-export const INSTRUMENT_ASSISTANT_ERRORS = {
-  unauthorised: 'OpenRouter did not accept the key. Check it and try again.',
-  noCredit: 'The OpenRouter account has no credit left for this model.',
-  rateLimited: 'OpenRouter is rate limiting this key. Wait a moment and try again.',
-  network: 'Could not reach OpenRouter. Check the connection and try again.',
-  badAnswer: 'The model did not return usable settings. Try again or pick another model.',
-  other: 'OpenRouter returned an error'
-}
 
 export const INSTRUMENT_NAME_ERRORS = {
   empty: 'Give the preset a name.',

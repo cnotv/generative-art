@@ -6,11 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import {
-  INSTRUMENT_KINDS,
-  INSTRUMENT_KIND_OPTIONS,
-  INSTRUMENT_MODEL_OPTIONS
-} from '../instruments/config'
+import { useAiSettings } from '../ai/useAiSettings'
+import { INSTRUMENT_KINDS, INSTRUMENT_KIND_OPTIONS } from '../instruments/config'
 import { isInstrumentKind } from '../instruments/presetScan'
 import { useInstrumentPreview } from '../instruments/useInstrumentPreview'
 import { useInstruments } from '../instruments/useInstruments'
@@ -24,12 +21,11 @@ const {
   isSelectedBuiltIn,
   errorByName,
   renderMillisecondsByName,
-  apiKey,
-  model,
   assistantBusy,
   assistantExplanation,
   assistantError
 } = storeToRefs(store)
+const { apiKey } = storeToRefs(useAiSettings())
 
 const description = ref('')
 const newName = ref('')
@@ -254,31 +250,12 @@ const onAsk = (): void => {
         placeholder="Dry desert fuzz, scooped mids"
         aria-label="Describe the tone"
       />
-      <Input
-        v-model="apiKey"
-        type="password"
-        autocomplete="off"
-        placeholder="OpenRouter key"
-        aria-label="OpenRouter key"
-      />
-      <p class="strudel-instruments__hint">
-        The key is kept only in this browser's local storage, on this device. It is sent to
-        OpenRouter and nowhere else.
+      <p v-if="apiKey.length === 0" class="strudel-instruments__hint">
+        Add your OpenRouter key in the Settings tab, where the model is picked too.
       </p>
-      <span class="strudel-instruments__label">Model</span>
-      <Select v-model="model" :options="INSTRUMENT_MODEL_OPTIONS" />
-
       <div class="strudel-instruments__actions">
         <Button size="sm" :disabled="!canAsk" @click="onAsk">
           {{ assistantBusy ? 'Asking...' : 'Ask' }}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          :disabled="apiKey.length === 0"
-          @click="store.forgetApiKey"
-        >
-          Forget key
         </Button>
       </div>
       <p v-if="assistantError" class="strudel-instruments__error" role="alert">
