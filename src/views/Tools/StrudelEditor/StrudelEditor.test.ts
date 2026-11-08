@@ -632,6 +632,25 @@ describe('StrudelEditor view', () => {
     expect(wrapper.find('.strudel-flow-tab [role="alert"]').exists()).toBe(false)
   })
 
+  it('previews an instrument preset from a flow picker before its sounds are registered', async () => {
+    // Arrange
+    const wrapper = await mountEditorView()
+    await clickMode(wrapper, 'Flow')
+    await vi.waitFor(() => {
+      expect(wrapper.find('.strudel-flow-editor-stub').exists()).toBe(true)
+    })
+    const flowEditor = wrapper.findComponent({ name: 'StrudelFlowEditorStub' })
+    const previewSound = flowEditor.vm.$attrs['preview-sound']
+
+    // Act
+    if (typeof previewSound === 'function') {
+      previewSound('chainsaw_chord')
+    }
+
+    // Assert
+    expect(mockPreviewSound).toHaveBeenCalledWith('chainsaw_chord', 'sample')
+  })
+
   it('returns to code mode when a listed pattern is picked from flow mode', async () => {
     // Arrange
     const wrapper = await mountEditorView()

@@ -147,21 +147,25 @@ watch(
   { immediate: true }
 )
 
-const onSoundPreview = (soundEntry: StrudelSoundEntry): void => {
+const previewSound = (soundName: string, soundType: string): void => {
   // A sound that cannot play is written to the Console tab rather than left silent unexplained.
-  previewStrudelSound(soundEntry.name, soundEntry.type).catch((error: unknown) =>
+  previewStrudelSound(soundName, soundType).catch((error: unknown) =>
     appendLog(
-      `Could not play ${soundEntry.name}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not play ${soundName}: ${error instanceof Error ? error.message : String(error)}`,
       'error'
     )
   )
 }
 
+const onSoundPreview = (soundEntry: StrudelSoundEntry): void => {
+  previewSound(soundEntry.name, soundEntry.type)
+}
+
+// An instrument preset is listed before it has rendered, so a sound missing from the loaded
+// list is still played, as a sample; the preview renders the preset first.
 const onFlowSoundPreview = (soundName: string): void => {
   const soundEntry = soundEntries.value.find((entry) => entry.name === soundName)
-  if (soundEntry !== undefined) {
-    onSoundPreview(soundEntry)
-  }
+  previewSound(soundName, soundEntry?.type ?? 'sample')
 }
 let replayTimer: number | null = null
 let codeParseTimer: number | null = null
