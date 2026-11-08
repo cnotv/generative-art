@@ -23,3 +23,11 @@ harmony from a MIDI export with `scripts/strudel-harmony.mjs` before calling a s
 Write sections once with `arrange([8, verse], [8, chorus])` over short `<...>` strings, not as a
 forty item list per part, and name any bar that comes back. Keep each layer's sample name in its
 own `$:` block, as `s("bd").struct(kicks)`: the hints tab cannot see names inside a constant.
+
+A sample plays its whole length unless the pattern sets `clip`, `legato`, `release`, `loop` or
+`cut`, so a busy line on a long sample stacks tails and clips the output. The Instruments tab's
+pitched presets end their notes with the event by default; any other long sample needs `.clip(1)`,
+or `.cut(n)` to ring until the next hit. A preset plays as `<name>` (single notes),
+`<name>:mute` and `<name>:chord`; the older `<name>_<technique>` names stay for the songs.
+Presets render only when code or a picker uses them, so anything listing sounds must list the
+presets themselves rather than read the sampler's registered sounds.

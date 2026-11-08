@@ -74,6 +74,8 @@ Only a concern that is genuinely shared by unrelated views earns a new root comp
   applies to app chrome; in-game and editor overlays use the LobbyUI kit instead, per the
   LobbyUI rules.
 
+- Never wrap a `Select` from `src/components/ui/` in a `<label>`: the label forwards the click and
+  the dropdown never opens. Put a `<span>` label beside it, as `HintsTab.vue` does.
 - Never add a wrapper element that adds no layout, semantics or behaviour the parent cannot
   already provide. If you are adding a `<div>` only to transfer styles the parent layout
   already handles, delete it and rely on the layout. In particular, do not wrap a single
