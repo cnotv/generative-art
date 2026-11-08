@@ -61,6 +61,25 @@ describe('parseStrudelFlowCode', () => {
     expect(compileStrudelFlow(parsed!)).toEqual(original)
   })
 
+  it('lays out a program with a different set of nodes fresh, whatever was on the canvas', () => {
+    // Arrange
+    const song = 'note("c3 g3").s("sawtooth").lpf(800)'
+    const scattered = parseStrudelFlowCode('s("bd*4")', [
+      {
+        ...createNode('samples-1', createStrudelFlowNodeData('samples')),
+        position: { x: 4000, y: 3000 }
+      }
+    ])!.nodes.map((node) => ({ ...node, position: { x: 4000, y: 3000 } }))
+
+    // Act
+    const parsed = parseStrudelFlowCode(song, scattered)
+
+    // Assert
+    expect(parsed?.nodes.every((node) => node.position.x < 2000 && node.position.y < 1000)).toBe(
+      true
+    )
+  })
+
   it('drops a previous position that would sit on a node of the new layout', () => {
     // Arrange
     const previousNodes = [
