@@ -107,6 +107,26 @@ describe('InstrumentsTab', () => {
     expect(labels).toEqual(expectedLabels)
   })
 
+  it.each([
+    ['stoner', 'Play it as stoner', ':1 is palm mute, :2 is power chord'],
+    ['deathbass', 'Play it as deathbass', ':1 is muted note'],
+    ['blastkit', 'Sounds start with blastkit_', '']
+  ])(
+    'tells how to play %s and which index is which technique',
+    async (presetName, lead, techniques) => {
+      // Arrange
+      const wrapper = await mountReady()
+      await selectAndRender(presetName)
+
+      // Act
+      const hint = wrapper.find('.strudel-instruments__hint').text()
+
+      // Assert
+      expect(hint).toContain(lead)
+      expect(hint).toContain(techniques)
+    }
+  )
+
   it('moves a tweak into the preset when a slider changes', async () => {
     // Arrange
     const wrapper = await mountReady()

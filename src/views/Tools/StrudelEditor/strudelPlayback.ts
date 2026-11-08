@@ -480,7 +480,7 @@ const loadPreviewSound = async (
   soundValue: Record<string, unknown>
 ): Promise<void> => {
   // A pitched sound keeps one file per sampled note, so each note is loaded on its own.
-  const soundName = `${String(soundValue.s)}:${String(soundValue.note ?? '')}`
+  const soundName = `${String(soundValue.s)}:${String(soundValue.note ?? '')}:${String(soundValue.n ?? '')}`
   if (loadedPreviewSounds.has(soundName)) {
     return
   }
@@ -525,20 +525,37 @@ const readPreviewStartTime = (webaudioModule: Record<string, unknown>): number =
   STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
 
 /**
+ * The value superdough plays for one picked sound. Strudel's own `s` control splits `name:2` into
+ * the sound and its sample index, but superdough takes the two apart, so the index is split here.
+ * @param soundName - a registered sound, with an optional sample index such as "chainsaw:1"
+ * @param soundType - its registration type; synths and soundfonts are given a note to play
+ * @returns the sound, its index when there is one, a note when the type needs one, and a clip
+ */
+export const readPreviewSoundValue = (
+  soundName: string,
+  soundType: string
+): Record<string, unknown> => {
+  const [sampleName = soundName, sampleIndex] = soundName.split(':')
+  const needsNote = soundType === 'synth' || soundType === 'soundfont'
+  return {
+    s: sampleName,
+    n: sampleIndex === undefined || sampleIndex === '' ? undefined : Number(sampleIndex),
+    note: needsNote ? STRUDEL_SOUND_PREVIEW_NOTE : undefined,
+    clip: 1
+  }
+}
+
+/**
  * Plays one sound on its own, as clicking a name in strudel.cc's sounds tab does.
- * @param soundName - a registered sound, such as "bd" or "gm_piano"
+ * @param soundName - a registered sound, such as "bd" or "gm_piano", with an optional ":index"
  * @param soundType - its registration type; synths and soundfonts are given a note to play
  * @throws {Error} when the browser keeps the audio context suspended, so the sound would be silent
  */
 export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
   const webaudioModule = await prepareStrudelPreview()
-  await prepareInstrumentsForCode(soundName)
-  const needsNote = soundType === 'synth' || soundType === 'soundfont'
-  const soundValue = {
-    s: soundName,
-    note: needsNote ? STRUDEL_SOUND_PREVIEW_NOTE : undefined,
-    clip: 1
-  }
+  // Quoted, since the scan finds a bare preset name only inside a pattern string.
+  await prepareInstrumentsForCode(`s("${soundName}")`)
+  const soundValue = readPreviewSoundValue(soundName, soundType)
   await loadPreviewSound(webaudioModule, soundValue)
   await requireCallable(webaudioModule.superdough)(
     soundValue,

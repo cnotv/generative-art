@@ -44,6 +44,17 @@ describe('checkInstrumentPresetName', () => {
     expect(check).toEqual({ valid: false, message: expectedMessage })
   })
 
+  it('still refuses a name equal to an existing sound, since the combined sound would shadow it', () => {
+    // Arrange
+    const foreignSounds = ['chainsaw']
+
+    // Act
+    const check = checkInstrumentPresetName('chainsaw', [], foreignSounds)
+
+    // Assert
+    expect(check).toEqual({ valid: false, message: INSTRUMENT_NAME_ERRORS.soundTaken })
+  })
+
   it('does not treat a longer sound name as a collision', () => {
     // Arrange
     const foreignSounds = ['bdrum']

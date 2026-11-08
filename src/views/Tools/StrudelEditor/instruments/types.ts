@@ -39,6 +39,12 @@ export type InstrumentKindDefinition = {
   label: string
   knobs: InstrumentKnobDefinition[]
   articulations: InstrumentArticulationDefinition[]
+  /**
+   * The articulation ids a preset's combined sound holds, in the order Strudel's sample index
+   * picks them: `s("name")` is the first, `s("name:1")` the second. Empty for a drum kit, which
+   * has no combined sound.
+   */
+  techniques: string[]
   assistantPrompt: string
   /** The pattern the tab shows as an example, with `{name}` standing for the preset. */
   usageHint: string

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { INSTRUMENT_BUILT_IN_PRESETS } from './config'
 import {
+  buildCombinedSampleMap,
   buildInstrumentSampleMap,
   buildInstrumentTag,
   registerInstrument
@@ -42,6 +43,49 @@ describe('buildInstrumentSampleMap', () => {
 
     // Assert
     expect(sampleMap).toEqual({ blastkit_kick: ['k'], blastkit_snare: ['s'] })
+  })
+})
+
+describe('buildCombinedSampleMap', () => {
+  const techniqueFiles: InstrumentWavFile[] = [
+    { soundName: 'stoner_note', noteName: 'c2', wav: new ArrayBuffer(4) },
+    { soundName: 'stoner_note', noteName: 'c5', wav: new ArrayBuffer(4) },
+    { soundName: 'stoner_mute', noteName: 'c2', wav: new ArrayBuffer(4) },
+    { soundName: 'stoner_chord', noteName: 'c2', wav: new ArrayBuffer(4) }
+  ]
+
+  it('holds one url per technique at each note, in the order note, mute, chord', () => {
+    // Arrange
+    const sampleMap = buildInstrumentSampleMap(techniqueFiles, ['n2', 'n5', 'm2', 'c2'])
+
+    // Act
+    const combined = buildCombinedSampleMap(stoner, sampleMap)
+
+    // Assert
+    expect(combined.stoner).toMatchObject({ c2: ['n2', 'm2', 'c2'] })
+  })
+
+  it('fills a note a technique lacks with the first technique url, so indices stay stable', () => {
+    // Arrange
+    const sampleMap = buildInstrumentSampleMap(techniqueFiles, ['n2', 'n5', 'm2', 'c2'])
+
+    // Act
+    const combined = buildCombinedSampleMap(stoner, sampleMap)
+
+    // Assert
+    expect(combined.stoner).toMatchObject({ c5: ['n5', 'n5', 'n5'] })
+  })
+
+  it('makes no combined sound for a drum kit', () => {
+    // Arrange
+    const sampleMap = buildInstrumentSampleMap(drumFiles, ['k', 's'])
+
+    // Act
+    const combined =
+      blastkit === undefined ? { unset: [] } : buildCombinedSampleMap(blastkit, sampleMap)
+
+    // Assert
+    expect(combined).toEqual({})
   })
 })
 
@@ -87,7 +131,11 @@ describe('registerInstrument', () => {
 
     // Assert
     expect(mockSamples).toHaveBeenLastCalledWith(
-      { stoner_chord: { c2: ['blob:5'], ds2: ['blob:6'] }, stoner_note: { c2: ['blob:7'] } },
+      {
+        stoner_chord: { c2: ['blob:5'], ds2: ['blob:6'] },
+        stoner_note: { c2: ['blob:7'] },
+        stoner: { c2: ['blob:7', 'blob:7', 'blob:5'], ds2: ['blob:6', 'blob:6', 'blob:6'] }
+      },
       '',
       { tag: 'instrument:electric-guitar:stoner' }
     )

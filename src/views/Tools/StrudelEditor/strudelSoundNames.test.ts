@@ -62,6 +62,13 @@ describe('describeStrudelSound', () => {
       'Stoner chord'
     ],
     [
+      'a preset combined sound',
+      'stoner',
+      { baseUrl: '', tag: 'instrument:electric-guitar:stoner' },
+      'Electric guitar: stoner',
+      'Stoner'
+    ],
+    [
       'a drum kit preset sound',
       'blastkit_kick',
       { baseUrl: '', tag: 'instrument:drum-kit:blastkit' },

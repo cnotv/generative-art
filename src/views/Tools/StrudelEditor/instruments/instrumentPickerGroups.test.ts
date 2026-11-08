@@ -17,12 +17,12 @@ describe('buildInstrumentPickerGroups', () => {
   })
 
   it.each([
-    ['Electric guitar: chainsaw', 'chainsaw_chord', 'chainsaw power chord', 'strings'],
-    ['Bass guitar: deathbass', 'deathbass_note', 'deathbass note', 'bass'],
-    ['Organ: doomorgan', 'doomorgan_note', 'doomorgan note', 'keys']
+    ['Electric guitar: chainsaw', ['chainsaw', 'chainsaw:1', 'chainsaw:2'], 'strings'],
+    ['Bass guitar: deathbass', ['deathbass', 'deathbass:1'], 'bass'],
+    ['Organ: doomorgan', ['doomorgan'], 'keys']
   ])(
-    'lists %s with its sounds filed under a family',
-    (groupLabel, soundName, soundLabel, familyId) => {
+    'lists %s with the combined sound first, then its techniques',
+    (groupLabel, values, familyId) => {
       // Arrange
       const presets = INSTRUMENT_BUILT_IN_PRESETS
 
@@ -32,9 +32,27 @@ describe('buildInstrumentPickerGroups', () => {
       )
 
       // Assert
-      expect(group?.samples).toContainEqual({ value: soundName, label: soundLabel, familyId })
+      expect(group?.samples.map(({ value }) => value)).toEqual(values)
+      expect(group?.samples.every((sample) => sample.familyId === familyId)).toBe(true)
     }
   )
+
+  it('labels the combined sound by the preset and each technique by its articulation', () => {
+    // Arrange
+    const presets = INSTRUMENT_BUILT_IN_PRESETS
+
+    // Act
+    const group = buildInstrumentPickerGroups(presets).voiceGroups.find(
+      ({ label }) => label === 'Electric guitar: chainsaw'
+    )
+
+    // Assert
+    expect(group?.samples.map(({ label }) => label)).toEqual([
+      'chainsaw',
+      'chainsaw palm mute',
+      'chainsaw power chord'
+    ])
+  })
 
   it('files a drum kit piece under its drum family', () => {
     // Arrange
@@ -67,9 +85,9 @@ describe('buildInstrumentPickerGroups', () => {
 
     // Assert
     expect(voiceGroups[0]?.samples.map(({ value }) => value)).toEqual([
-      'mytone_chord',
-      'mytone_mute',
-      'mytone_note'
+      'mytone',
+      'mytone:1',
+      'mytone:2'
     ])
   })
 })

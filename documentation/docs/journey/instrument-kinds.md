@@ -97,6 +97,12 @@ A pitched preset note now ends with its event, as a General MIDI soundfont note 
 | Three note shapes at default gain              | -0.4 dBFS          | -10.1 LUFS           |
 | Hollow Chambers, before and after              | -1.6 and -1.4 dBFS | -12.3 and -12.6 LUFS |
 
+## Why a preset is one instrument with techniques
+
+The Instruments tab played a preset as one instrument, while the flow editor's pickers listed it as three sounds, one per playing technique. Each of those sounded wrong on its own: a tab line played on the power chord sound turned every note into a three-note chord, and on the palm mute sound everything came out choked. The preview was a phrase that mixed the techniques, so nothing the picker offered matched what the tab promised.
+
+A preset is now also one sound named after it. Each sampled note holds the technique samples in a fixed order, and Strudel's own sample index chooses between them: nothing for a single note, then palm mute, then power chord. Where a technique has no sample at a pitch, because the chord and mute samples stop an octave below the single notes, the single note fills the slot so an index means the same technique across the whole range. The older per technique names remain, since the songs fix one technique for a whole part. Superdough takes the sound and the index apart where Strudel's control splits them, so the picker's preview does the same split before it plays.
+
 ## The tempo checks
 
 A genre at the wrong speed reads as another genre, so each song's BPM is written in its first line and in the tempo call, and then measured from its MIDI export: the shortest gap between onsets on the busiest pitched track, multiplied back to beats. Sun Bleached, Paper Skies and Hollow Chambers measure 96.00, 112.00 and 200.00. At 200 BPM a sixteenth is 75 ms, shorter than any drum or string sample, so every tremolo, gallop and blast event is clipped to its length and the open hat and cymbals are choked. See [genre songs](./strudel-genre-songs.md).

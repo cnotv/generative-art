@@ -17,12 +17,15 @@ export const endNoteAtEvent = (hapValue: Record<string, unknown>): Record<string
 /**
  * The preset's sounds that play notes; a drum keeps ringing its whole sample.
  * @param preset - a preset
- * @returns its pitched sound names, such as `chainsaw_note`
+ * @returns its pitched sound names: the combined sound named after the preset, then each
+ * articulation such as `chainsaw_note`
  */
-export const readPitchedSoundNames = (preset: InstrumentPreset): string[] =>
-  INSTRUMENT_KINDS[preset.kind].articulations
+export const readPitchedSoundNames = (preset: InstrumentPreset): string[] => {
+  const articulationNames = INSTRUMENT_KINDS[preset.kind].articulations
     .filter(({ notes }) => notes.length > 0)
     .map(({ id }) => `${preset.name}_${id}`)
+  return articulationNames.length > 0 ? [preset.name, ...articulationNames] : []
+}
 
 /**
  * Registers each sound again with a trigger that applies `endNoteAtEvent`, keeping its data, so

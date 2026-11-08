@@ -35,11 +35,11 @@ describe('readPitchedSoundNames', () => {
   it.each([
     [
       { name: 'chainsaw', kind: 'electric-guitar' as const, knobs: {} },
-      ['chainsaw_chord', 'chainsaw_mute', 'chainsaw_note']
+      ['chainsaw', 'chainsaw_chord', 'chainsaw_mute', 'chainsaw_note']
     ],
     [
       { name: 'deathbass', kind: 'bass-guitar' as const, knobs: {} },
-      ['deathbass_note', 'deathbass_mute']
+      ['deathbass', 'deathbass_note', 'deathbass_mute']
     ],
     [{ name: 'blastkit', kind: 'drum-kit' as const, knobs: {} }, []]
   ])('names the sounds of %o that play notes, never a drum', (preset, expectedNames) => {

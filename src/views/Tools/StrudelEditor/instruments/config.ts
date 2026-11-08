@@ -115,6 +115,7 @@ export const INSTRUMENT_KINDS: Record<InstrumentKind, InstrumentKindDefinition> 
         peak: 0.445
       }
     ],
+    techniques: ['note', 'mute', 'chord'],
     assistantPrompt: `You set the five knobs of an electric guitar through a fuzz pedal and a 4x12 cabinet. Every knob is a number from 0 to 1.
 drive: 0 is a clean guitar, 0.3 a crunch, 0.75 a wall of fuzz with endless sustain, 1 the harshest chainsaw.
 tone: treble. Low is dark and woolly, high is bright and fizzy.
@@ -123,7 +124,7 @@ mids: 0 is scooped, 0.5 is neutral, 1 is a mid hump.
 sustain: how long the strings ring. Low is short and dry, high rings for seconds.
 References: Kyuss is scooped mids, plenty of bass, high drive. Sleep is a huge low end with a mid hump. Nirvana is the mids forward with less drive. Entombed is maximum drive, scooped mids, boosted lows and highs, tight sustain.
 Answer with the five numbers and one or two sentences explaining the choices in guitar terms.`,
-    usageHint: 'note("a1 a1 c2 ds2").s("{name}_chord")'
+    usageHint: 'note("a1 a1 c2 ds2").s("{name}")'
   },
   'bass-guitar': {
     label: 'Bass guitar',
@@ -152,6 +153,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         peak: 0.445
       }
     ],
+    techniques: ['note', 'mute'],
     assistantPrompt: `You set the five knobs of a bass guitar through a gentle drive into a bass cabinet. Every knob is a number from 0 to 1.
 drive: 0 is clean, 0.5 is a growl, 1 is a thick fuzz.
 tone: treble. Low is dark and round, high is clanky.
@@ -159,7 +161,7 @@ attack: 0 is a soft finger pluck, 1 is a hard pick with a bright click.
 mids: 0 is scooped, 0.5 is neutral, 1 is a mid hump that cuts through guitars.
 sustain: how long the strings ring. Low is short and tight, high rings for seconds.
 Answer with the five numbers and one or two sentences explaining the choices in bass terms.`,
-    usageHint: 'note("a1 a1 c2 ds2").s("{name}_note")'
+    usageHint: 'note("a1 a1 c2 ds2").s("{name}")'
   },
   'acoustic-guitar': {
     label: 'Acoustic guitar',
@@ -196,6 +198,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         peak: 0.445
       }
     ],
+    techniques: ['note', 'mute', 'chord'],
     assistantPrompt: `You set the five knobs of an acoustic guitar. Every knob is a number from 0 to 1.
 body: the wooden resonance of the box. Low is thin, high is a big warm dreadnought.
 brightness: 0 is old dull strings, 1 is bright new strings.
@@ -203,7 +206,7 @@ sustain: how long the strings ring. Low is short and dry, high rings for seconds
 strum: how slowly the strings of a chord are raked. 0 is a quick rake, 1 is a slow strum.
 width: 0 is mono, 1 is a wide stereo image.
 Answer with the five numbers and one or two sentences explaining the choices in guitar terms.`,
-    usageHint: 'note("a2 c3 ds3").s("{name}_chord")'
+    usageHint: 'note("a2 c3 ds3").s("{name}")'
   },
   organ: {
     label: 'Organ',
@@ -224,6 +227,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         peak: 0.445
       }
     ],
+    techniques: ['note'],
     assistantPrompt: `You set the five knobs of a tonewheel organ. Every knob is a number from 0 to 1.
 body: the low drawbars (16 foot, 8 foot, 5 and a third foot). High is a deep, round sound.
 brightness: the upper drawbars. Low is flute like, high is a screaming full organ.
@@ -231,7 +235,7 @@ percussion: a key click and a short decaying third harmonic, like Hammond percus
 drive: soft overdrive of the amplifier. 0 is clean, 1 is a growling Leslie cabinet.
 vibrato: depth of the vibrato and chorus. 0 is none.
 Answer with the five numbers and one or two sentences explaining the choices in organ terms.`,
-    usageHint: 'note("<[c3,ds3,g3] [f3,a3,c4]>").s("{name}_note")'
+    usageHint: 'note("<[c3,ds3,g3] [f3,a3,c4]>").s("{name}")'
   },
   'drum-kit': {
     label: 'Drum kit',
@@ -302,6 +306,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         peak: 0.55
       }
     ],
+    techniques: [],
     assistantPrompt: `You set the five knobs of a synthesised drum kit. Every knob is a number from 0 to 1.
 tune: pitch of the drums. 0.5 is neutral, low is deeper, high is tighter and higher.
 decay: 0 is dead tight, 1 rings on.

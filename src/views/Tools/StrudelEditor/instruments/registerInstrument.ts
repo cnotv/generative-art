@@ -1,4 +1,4 @@
-import { INSTRUMENT_TAG_PREFIX } from './config'
+import { INSTRUMENT_KINDS, INSTRUMENT_TAG_PREFIX } from './config'
 import type {
   InstrumentPreset,
   InstrumentSampleMap,
@@ -68,8 +68,44 @@ export const buildInstrumentSampleMap = (
     }
   }, {})
 
+const readNoteUrls = (
+  sampleMap: InstrumentSampleMap,
+  soundName: string
+): Record<string, string[]> => {
+  const notes = sampleMap[soundName]
+  return notes === undefined || Array.isArray(notes) ? {} : notes
+}
+
 /**
- * Renders a preset and registers its sounds with superdough as `<name>_<articulation>`. New blob
+ * Folds a preset's techniques into the one sound named after the preset. Each sampled note holds
+ * one url per technique in the kind's technique order, so Strudel's sample index (`name:1`)
+ * picks the technique. A technique with no sample at a note takes the first technique's url, which
+ * keeps every index stable across the whole range.
+ * @param preset - the preset
+ * @param sampleMap - the preset's `<name>_<articulation>` sounds
+ * @returns `{ [name]: notes }`, or an empty map for a kind with no techniques such as a drum kit
+ */
+export const buildCombinedSampleMap = (
+  preset: InstrumentPreset,
+  sampleMap: InstrumentSampleMap
+): InstrumentSampleMap => {
+  const { techniques } = INSTRUMENT_KINDS[preset.kind]
+  if (techniques.length === 0) {
+    return {}
+  }
+  const urlsByTechnique = techniques.map((id) => readNoteUrls(sampleMap, `${preset.name}_${id}`))
+  const noteNames = [...new Set(urlsByTechnique.flatMap((urls) => Object.keys(urls)))]
+  const combinedNotes = Object.fromEntries(
+    noteNames.map((noteName) => {
+      const fallbackUrl = urlsByTechnique.map((urls) => urls[noteName]?.[0]).find(Boolean) ?? ''
+      return [noteName, urlsByTechnique.map((urls) => urls[noteName]?.[0] ?? fallbackUrl)]
+    })
+  )
+  return { [preset.name]: combinedNotes }
+}
+
+/**
+ * Renders a preset and registers its sounds with superdough as `<name>_<articulation>` and, for a pitched kind, as `<name>` holding every technique. New blob
  * urls skip the sampler's url cache, and the preset's old ones are released once the new ones
  * are registered.
  * @param options - the sampler's `samples` function, the preset, and for tests a renderer
@@ -86,7 +122,9 @@ export const registerInstrument = async ({
 }): Promise<void> => {
   const files = await renderFiles(preset)
   const urls = files.map(({ wav }) => URL.createObjectURL(new Blob([wav], { type: 'audio/wav' })))
-  await samples(buildInstrumentSampleMap(files, urls), '', { tag: buildInstrumentTag(preset) })
+  const articulationMap = buildInstrumentSampleMap(files, urls)
+  const sampleMap = { ...articulationMap, ...buildCombinedSampleMap(preset, articulationMap) }
+  await samples(sampleMap, '', { tag: buildInstrumentTag(preset) })
   blobUrlsByPreset[preset.name]?.forEach((url) => URL.revokeObjectURL(url))
   blobUrlsByPreset[preset.name] = urls
 }

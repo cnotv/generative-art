@@ -85,6 +85,21 @@ const usageHint = computed(() =>
     : kindDefinition.value.usageHint.replaceAll('{name}', selectedPreset.value.name)
 )
 
+// Each technique past the first is reached by its sample index, so the tab says which is which.
+const techniqueHint = computed(() => {
+  const definition = kindDefinition.value
+  if (definition === undefined) {
+    return ''
+  }
+  return definition.techniques
+    .slice(1)
+    .map((id, techniqueIndex) => {
+      const label = definition.articulations.find((articulation) => articulation.id === id)?.label
+      return `:${techniqueIndex + 1} is ${(label ?? id).toLowerCase()}`
+    })
+    .join(', ')
+})
+
 const statusMessage = computed(() => {
   const name = selectedPreset.value?.name ?? ''
   const seconds = ((renderMillisecondsByName.value[name] ?? 0) / 1000).toFixed(1)
@@ -130,7 +145,17 @@ const onAsk = (): void => {
       <Select v-model="selectedName" :options="presetOptions" />
     </div>
     <p v-if="usageHint" class="strudel-instruments__hint">
-      Sounds start with <code>{{ selectedPreset?.name }}_</code>: <code>{{ usageHint }}</code>
+      <template v-if="kindDefinition?.techniques.length">
+        Play it as <code>{{ selectedPreset?.name }}</code
+        >:
+      </template>
+      <template v-else>
+        Sounds start with <code>{{ selectedPreset?.name }}_</code>:
+      </template>
+      <code>{{ usageHint }}</code>
+      <template v-if="techniqueHint">
+        Add an index to pick a technique: {{ techniqueHint }}.</template
+      >
     </p>
 
     <template v-if="selectedPreset && kindDefinition">

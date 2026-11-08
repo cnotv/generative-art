@@ -17,6 +17,12 @@ describe('findReferencedInstrumentPresets', () => {
     ['no preset', 's("bd sd")', []],
     ['an articulation the kind lacks', 's("fuzzbass_chord")', []],
     ['a longer name ending in a preset name', 's("deathbass_note")', ['deathbass']],
+    ['a bare preset name', 's("chainsaw")', ['chainsaw']],
+    ['a bare name with an index', '.sound("chainsaw:2")', ['chainsaw']],
+    ['a bare name in a mini notation choice', 's("<chainsaw stoner:1>")', ['chainsaw', 'stoner']],
+    ['a bare name in single quotes', "s('stoner*2')", ['stoner']],
+    ['a bare name used as a drum kit sound', 's("blastkit")', []],
+    ['a bare name outside a string', '// chainsaw\nchainsaw.foo', []],
     ['a comment naming the preset only', '// the stoner sound\ns("bd")', []]
   ])('finds the presets in %s', (_case, code, expectedNames) => {
     // Arrange
