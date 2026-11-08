@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { STRUDEL_FLOW_SOUND_OPTIONS } from '../../config'
 import type { StrudelFlowSampleGroup, StrudelFlowVoiceData } from '../../types'
-import StrudelFlowSelect from './StrudelFlowSelect.vue'
+import StrudelFlowSamplePicker from './StrudelFlowSamplePicker.vue'
 
 const props = defineProps<{
   data: StrudelFlowVoiceData
@@ -19,27 +19,15 @@ const sound = computed(() => props.data.sound)
 const waveformValues = new Set(STRUDEL_FLOW_SOUND_OPTIONS.map((option) => option.value))
 
 // The four waveforms are listed above, so the host's copies of them are left out of the groups.
-const soundGroups = computed(() =>
-  (props.voiceGroups ?? [])
+const soundGroups = computed<StrudelFlowSampleGroup[]>(() => [
+  { label: 'Waveforms', samples: STRUDEL_FLOW_SOUND_OPTIONS },
+  ...(props.voiceGroups ?? [])
     .map((group) => ({
       label: group.label,
-      options: group.samples.filter((sample) => !waveformValues.has(sample.value))
+      samples: group.samples.filter((sample) => !waveformValues.has(sample.value))
     }))
-    .filter((group) => group.options.length > 0)
-)
-
-const isListed = computed(
-  () =>
-    waveformValues.has(sound.value) ||
-    soundGroups.value.some((group) => group.options.some((option) => option.value === sound.value))
-)
-
-// A sound read from code that the host does not list stays selectable next to the waveforms.
-const soundOptions = computed(() =>
-  isListed.value
-    ? STRUDEL_FLOW_SOUND_OPTIONS
-    : [...STRUDEL_FLOW_SOUND_OPTIONS, { value: sound.value, label: sound.value }]
-)
+    .filter((group) => group.samples.length > 0)
+])
 
 const setSound = (nextSound: string): void => {
   emit('update', { kind: 'voice', sound: nextSound })
@@ -72,10 +60,9 @@ const WAVEFORMS = [
         </svg>
       </button>
     </div>
-    <StrudelFlowSelect
+    <StrudelFlowSamplePicker
       label="Voice"
       :model-value="sound"
-      :options="soundOptions"
       :groups="soundGroups"
       @update:model-value="setSound"
     />

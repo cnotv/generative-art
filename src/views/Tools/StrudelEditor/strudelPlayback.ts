@@ -440,11 +440,43 @@ export const loadDefaultStrudelPlayback = async (
   }
 }
 
+// Superdough fetches a sample after it has been given a start time and then drops the hap if that
+// time has passed ("skip hap: still loading"), so a sample's first preview was silent. Playing it
+// once at zero gain fills the cache, and the audible note is scheduled after that.
+const loadedPreviewSounds = new Set<string>()
+
+const loadPreviewSound = async (
+  webaudioModule: Record<string, unknown>,
+  soundValue: Record<string, unknown>
+): Promise<void> => {
+  const soundName = String(soundValue.s)
+  if (loadedPreviewSounds.has(soundName)) {
+    return
+  }
+  const silentStart =
+    readAudioTime(requireCallable(webaudioModule.getAudioContext)()) +
+    STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
+  await requireCallable(webaudioModule.superdough)(
+    { ...soundValue, gain: 0 },
+    silentStart,
+    STRUDEL_SOUND_PREVIEW_SECONDS
+  )
+  loadedPreviewSounds.add(soundName)
+}
+
+const assertAudioRunning = async (audioContext: unknown): Promise<void> => {
+  await resumeAudioContext(audioContext)
+  if (!isRecordModule(audioContext) || audioContext.state !== 'running') {
+    throw new Error('The browser has not allowed audio yet. Click again to hear it.')
+  }
+}
+
 /**
  * Plays one sound on its own, as clicking a name in strudel.cc's sounds tab does. Unlocks the
  * page's audio first, inside the click, for the same iOS reason Play does.
  * @param soundName - a registered sound, such as "bd" or "gm_piano"
  * @param soundType - its registration type; synths and soundfonts are given a note to play
+ * @throws {Error} when the browser keeps the audio context suspended, so the sound would be silent
  */
 export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
   const gestureAudioContext = unlockPageAudioContext()
@@ -460,9 +492,10 @@ export const previewStrudelSound = async (soundName: string, soundType: string):
     note: needsNote ? STRUDEL_SOUND_PREVIEW_NOTE : undefined,
     clip: 1
   }
-  const startTime =
-    readAudioTime(requireCallable(webaudioModule.getAudioContext)()) +
-    STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
+  const audioContext = requireCallable(webaudioModule.getAudioContext)()
+  await assertAudioRunning(audioContext)
+  await loadPreviewSound(webaudioModule, soundValue)
+  const startTime = readAudioTime(audioContext) + STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
   await requireCallable(webaudioModule.superdough)(
     soundValue,
     startTime,

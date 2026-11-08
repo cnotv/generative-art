@@ -2165,6 +2165,35 @@
   gap: var(--spacing-1);
 }
 
+.strudel-flow-sample-picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.strudel-flow-sample-picker__item > .strudel-flow-sample-picker__option {
+  flex: 1;
+  min-width: 0;
+}
+
+.strudel-flow-sample-picker__play {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-1-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.strudel-flow-sample-picker__play:hover,
+.strudel-flow-sample-picker__play:focus-visible {
+  background: var(--sf-muted);
+}
+
 .strudel-flow-sample-picker__family,
 .strudel-flow-sample-picker__option {
   display: flex;

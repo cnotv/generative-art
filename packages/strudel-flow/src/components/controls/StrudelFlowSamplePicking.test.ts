@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import StrudelFlowBeatsControls from './StrudelFlowBeatsControls.vue'
 import StrudelFlowSamplePicker from './StrudelFlowSamplePicker.vue'
+import { STRUDEL_FLOW_PREVIEW_SOUND } from '../previewSoundKey'
 import StrudelFlowSamplesControls from './StrudelFlowSamplesControls.vue'
 import { createStrudelFlowNodeData } from '../../nodeDefaults'
 import type { StrudelFlowSampleGroup, StrudelFlowSamplesData } from '../../types'
@@ -155,6 +156,65 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
       (option) => option.textContent ?? ''
     )
 
+  it('plays the sound it picks, once, through the host preview', async () => {
+    // Arrange
+    useFinePointer()
+    const previewSound = vi.fn()
+    const wrapper = mount(StrudelFlowSamplePicker, {
+      props: { label: 'Track 1 sound', modelValue: 'bd', groups: SAMPLE_GROUPS },
+      global: { provide: { [STRUDEL_FLOW_PREVIEW_SOUND as symbol]: previewSound } },
+      attachTo: document.body
+    })
+    await nextTick()
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Act
+    await document.body.querySelector<HTMLElement>('button[title^="rolandtr909_bd"]')?.click()
+
+    // Assert
+    expect(previewSound).toHaveBeenCalledExactlyOnceWith('rolandtr909_bd')
+  })
+
+  it('plays a sample from its play button without picking it', async () => {
+    // Arrange
+    useFinePointer()
+    const previewSound = vi.fn()
+    const wrapper = mount(StrudelFlowSamplePicker, {
+      props: { label: 'Track 1 sound', modelValue: 'bd', groups: SAMPLE_GROUPS },
+      global: { provide: { [STRUDEL_FLOW_PREVIEW_SOUND as symbol]: previewSound } },
+      attachTo: document.body
+    })
+    await nextTick()
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Act
+    document.body
+      .querySelector<HTMLElement>('button[aria-label^="Play Bass drum, Roland TR909"]')
+      ?.click()
+    await nextTick()
+
+    // Assert
+    expect(previewSound).toHaveBeenCalledExactlyOnceWith('rolandtr909_bd')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    expect(document.body.querySelector('.strudel-flow-sample-picker')).not.toBeNull()
+  })
+
+  it('has no play button when the host gives no preview', async () => {
+    // Arrange
+    useFinePointer()
+    const wrapper = mount(StrudelFlowSamplePicker, {
+      props: { label: 'Track 1 sound', modelValue: 'bd', groups: SAMPLE_GROUPS },
+      attachTo: document.body
+    })
+    await nextTick()
+
+    // Act
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Assert
+    expect(document.body.querySelector('.strudel-flow-sample-picker__play')).toBeNull()
+  })
+
   it('opens a searchable list sorted into instrument families', async () => {
     // Arrange
     const wrapper = await mountPicker()
@@ -167,7 +227,21 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
       ...document.body.querySelectorAll('.strudel-flow-sample-picker__family span:first-of-type')
     ].map((family) => family.textContent)
     expect(families).toEqual(['All', 'Kicks', 'Keys'])
-    expect(optionLabels()).toEqual(['Bass drum', 'Casio', 'Bass drum'])
+  })
+
+  it('opens on the family of the current sample rather than on all of them', async () => {
+    // Arrange
+    const wrapper = await mountPicker()
+
+    // Act
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Assert
+    const activeFamily = document.body.querySelector(
+      '.strudel-flow-sample-picker__family[aria-pressed="true"]'
+    )
+    expect(activeFamily?.textContent).toContain('Kicks')
+    expect(optionLabels()).toEqual(['Bass drum', 'Bass drum'])
   })
 
   it('narrows the list by search and picks the first match on Enter', async () => {

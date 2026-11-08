@@ -2,7 +2,7 @@
 import { computed, inject, markRaw, ref } from 'vue'
 import type { Component } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
-import { Code2, Ellipsis, SquareCode, Trash2, Volume2, VolumeX } from 'lucide-vue-next'
+import { Code2, Ellipsis, Headphones, SquareCode, Trash2, Volume2, VolumeX } from 'lucide-vue-next'
 import StrudelFlowBeatsControls from './controls/StrudelFlowBeatsControls.vue'
 import StrudelFlowCallList from './controls/StrudelFlowCallList.vue'
 import StrudelFlowChordsControls from './controls/StrudelFlowChordsControls.vue'
@@ -35,12 +35,15 @@ const props = defineProps<{
   selected?: boolean
   sampleGroups?: StrudelFlowSampleGroup[]
   voiceGroups?: StrudelFlowSampleGroup[]
+  /** True while this node's instruments are the only ones playing. */
+  isSoloed?: boolean
 }>()
 
 const emit = defineEmits<{
   update: [data: StrudelFlowNodeData]
   remove: [nodeId: string]
   showCode: [nodeId: string]
+  solo: [nodeId: string]
 }>()
 
 // An Effect node is only its call, shown by the call list instead.
@@ -84,6 +87,8 @@ const visualizerWidgetIds = inject(STRUDEL_FLOW_VISUALIZER_WIDGET_IDS, null)
 const visualWidgetId = computed(() => visualizerWidgetIds?.value[props.id] ?? null)
 const isInstrument = computed(() => isStrudelFlowInstrumentKind(props.data.kind))
 const isMuted = computed(() => 'muted' in props.data && props.data.muted === true)
+const canSolo = computed(() => isInstrument.value || props.data.kind === 'voice')
+const soloLabel = computed(() => `${props.isSoloed ? 'End solo of' : 'Solo'} ${title.value}`)
 const inputLabel = computed(() => `${title.value} pattern input`)
 const outputLabel = computed(() => `${title.value} pattern output`)
 const muteLabel = computed(() => `${isMuted.value ? 'Unmute' : 'Mute'} ${title.value}`)
@@ -138,6 +143,18 @@ const onRemove = (): void => {
     />
     <header class="strudel-flow-node__header">
       <h3 class="strudel-flow-node__title">{{ title }}</h3>
+      <button
+        v-if="canSolo"
+        type="button"
+        class="strudel-flow-node__action nodrag"
+        :title="soloLabel"
+        :aria-label="soloLabel"
+        :aria-pressed="isSoloed === true"
+        @pointerdown.stop
+        @click.stop="emit('solo', id)"
+      >
+        <Headphones aria-hidden="true" />
+      </button>
       <button
         v-if="isInstrument"
         type="button"

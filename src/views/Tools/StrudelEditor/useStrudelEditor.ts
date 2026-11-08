@@ -71,6 +71,7 @@ type StrudelEditorState = StrudelTranscriptionState & {
   examples: StrudelExample[]
   electroTunes: StrudelExample[]
   logEntries: Ref<StrudelLogEntry[]>
+  appendLog: (message: string, level?: StrudelLogEntry['level']) => void
   /** The tab open in the drawer, or null while it is closed. */
   activeTab: Ref<StrudelTabId | null>
   tabList: { id: StrudelTabId; label: string }[]
@@ -291,6 +292,7 @@ export const useStrudelEditor = (
     stopPattern,
     ...strudelExport,
     setActiveTab,
+    appendLog,
     clearLogEntries,
     attachEditor,
     ...transcription,
