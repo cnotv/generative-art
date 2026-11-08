@@ -25,6 +25,7 @@ vi.mock('../instruments/registerInstrument', () => ({
 }))
 vi.mock('@strudel/webaudio', () => ({
   samples: vi.fn(),
+  registerSound: vi.fn(),
   soundMap: { get: () => ({ sawtooth: { data: { type: 'synth' } } }) }
 }))
 

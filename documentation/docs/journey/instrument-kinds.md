@@ -83,6 +83,20 @@ The articulations of one preset of each new kind were exported through the edito
 
 Automated tests check each kind: pitch within 10 cents by autocorrelation from a0 to c5, a kick with most of its energy under 150 Hz, hats with most of theirs above 5 kHz, silent ends, the peak, and the same samples for the same seed.
 
+## Why a note ends with its event
+
+The Instruments tab sounded right and the same preset sounded harsh and unfiltered once a Voice node played notes imported from a tab. Nothing in the tone differed. The difference was length: the preview cut every hit at the end of its event, while a pattern let every note ring its whole sample, up to four seconds of fuzz. A plain line of eighth notes therefore stacked a couple of dozen tails, summed past full scale and clipped in the output, and digital clipping reads as exactly the missing cabinet the listener hears.
+
+A pitched preset note now ends with its event, as a General MIDI soundfont note does, unless the pattern says how long it lasts with `clip`, `legato`, `release`, `loop` or `cut`. Drums keep ringing their whole sample, since a cymbal cut at a sixteenth note sounds broken. The rendered strings and organ also sit at -7 dBFS instead of -1, because a tab line often holds two or three notes at once and each one is a full mix of a distorted chord; the songs' own gains were doubled to match, so they are unchanged.
+
+| Same tab line on `chainsaw_note`, default gain | True peak          | Loudness             |
+| ---------------------------------------------- | ------------------ | -------------------- |
+| Every note rings its whole sample              | +0.4 dBFS          | -0.1 LUFS            |
+| Notes end with their event                     | -0.7 dBFS          | -7.0 LUFS            |
+| And the samples sit 6 dB lower                 | -6.7 dBFS          | -13.1 LUFS           |
+| Three note shapes at default gain              | -0.4 dBFS          | -10.1 LUFS           |
+| Hollow Chambers, before and after              | -1.6 and -1.4 dBFS | -12.3 and -12.6 LUFS |
+
 ## The tempo checks
 
 A genre at the wrong speed reads as another genre, so each song's BPM is written in its first line and in the tempo call, and then measured from its MIDI export: the shortest gap between onsets on the busiest pitched track, multiplied back to beats. Sun Bleached, Paper Skies and Hollow Chambers measure 96.00, 112.00 and 200.00. At 200 BPM a sixteenth is 75 ms, shorter than any drum or string sample, so every tremolo, gallop and blast event is clipped to its length and the open hat and cymbals are choked. See [genre songs](./strudel-genre-songs.md).

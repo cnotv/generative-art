@@ -15,6 +15,7 @@ const { mockRegister, mockSamples } = vi.hoisted(() => ({
 vi.mock('./registerInstrument', () => ({ registerInstrument: mockRegister }))
 vi.mock('@strudel/webaudio', () => ({
   samples: mockSamples,
+  registerSound: vi.fn(),
   soundMap: {
     get: () => ({
       sawtooth: { data: { type: 'synth' } },

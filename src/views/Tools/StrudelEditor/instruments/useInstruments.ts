@@ -10,6 +10,7 @@ import {
 import { askInstrumentToneAssistant, readKnownInstrumentToneModel } from './instrumentToneAssistant'
 import { createPresetLibrary } from './presetLibrary'
 import { findReferencedInstrumentPresets } from './presetScan'
+import { makeNotesEndAtEvent, readPitchedSoundNames } from './eventLengthNotes'
 import { registerInstrument } from './registerInstrument'
 import { readStored, writeStored } from './storage'
 import type { InstrumentPreset, InstrumentRenderStatus } from './types'
@@ -80,6 +81,7 @@ export const useInstruments = defineStore('instruments', () => {
     try {
       const webaudioModule = await loadWebaudio()
       await registerInstrument({ samples: requireCallable(webaudioModule.samples), preset })
+      makeNotesEndAtEvent(webaudioModule, readPitchedSoundNames(preset))
       renderState.renderedKeys.set(preset.name, key)
       renderMillisecondsByName.value = {
         ...renderMillisecondsByName.value,

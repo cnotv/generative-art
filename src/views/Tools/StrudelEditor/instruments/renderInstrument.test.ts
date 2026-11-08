@@ -147,7 +147,7 @@ describe.each([
 })
 
 describe('string instruments', () => {
-  it('keeps every pitched articulation at or under -1 dBFS', () => {
+  it('keeps every pitched articulation at or under -7 dBFS, leaving room for chords', () => {
     // Arrange
     const peaks = ['stoner', 'jangle', 'deathbass', 'campfire', 'doomorgan'].map((name) => {
       const kind = findPreset(name).kind
@@ -159,7 +159,7 @@ describe('string instruments', () => {
     const loudest = Math.max(...peaks)
 
     // Assert
-    expect(loudest).toBeLessThanOrEqual(0.89 + 1e-6)
+    expect(loudest).toBeLessThanOrEqual(0.445 + 1e-6)
   })
 
   it('plays a clean guitar at no drive and a compressed one at full drive', () => {

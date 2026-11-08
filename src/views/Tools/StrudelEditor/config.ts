@@ -163,8 +163,8 @@ const bassHits = "x ~ x x ~ ~ x ~ x ~ x ~ ~ x ~ ~"
 const drummed = arrange([2, "0"], [13, "1"], [1, "0"])
 const lastBar = arrange([15, silence], [1, "x"])
 
-$: note(roots).s("stoner_chord").struct(chordHits).gain(.2)
-$: note(roots).s("stoner_mute").struct(chugHits).gain(.16)
+$: note(roots).s("stoner_chord").struct(chordHits).cut(1).gain(.4)
+$: note(roots).s("stoner_mute").struct(chugHits).gain(.32)
 $: note(roots).add(note(-12)).s("sawtooth").struct(bassHits).lpf(300).decay(.25).sustain(.2).gain(.7)
 $: s("bd").struct(riffHits).mask(drummed).gain(.4)
 $: s("sd").struct("~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~").mask(drummed).gain(.4)
@@ -654,19 +654,19 @@ $: stack(
   s("garagekit_crash").struct("x").gain(.19).mask("<0!12 1 0!11 1 0!7 1 0!2 1>")
 )._punchcard()
 $: stack(
-  note(roots).struct("x ~ ~ x ~ x x ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.19).mask("<0!4 1!8 0!20 1!3 0>"),
-  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.19).mask(breakBars),
-  note(roots).struct("x x ~ x x ~ x x").add(note(-12)).s("fuzzbass_note").clip(1).gain(.19).mask(chorusBars)
+  note(roots).struct("x ~ ~ x ~ x x ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.38).mask("<0!4 1!8 0!20 1!3 0>"),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.38).mask(breakBars),
+  note(roots).struct("x x ~ x x ~ x x").add(note(-12)).s("fuzzbass_note").clip(1).gain(.38).mask(chorusBars)
 )._scope()
 $: stack(
-  note(riff).add(note(roots)).s("stoner_chord").cut(1).gain(.14).mask(riffBars),
-  note(roots).struct("x ~ ~ ~ x ~ x ~").s("stoner_chord").cut(1).gain(.14).mask(chorusBars),
-  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").s("stoner_chord").cut(1).gain(.14).mask(breakBars),
-  note(roots).struct("x x ~ x x ~ x x").s("stoner_mute").cut(1).gain(.1).mask(breakBars),
-  note(roots).struct("x ~").s("stoner_chord").clip(1).gain(.2).mask(lastBar),
-  note(roots).add(note("12,19,24")).s("doomorgan_note").clip(1).gain(.06).mask(chorusBars)
+  note(riff).add(note(roots)).s("stoner_chord").cut(1).gain(.28).mask(riffBars),
+  note(roots).struct("x ~ ~ ~ x ~ x ~").s("stoner_chord").cut(1).gain(.28).mask(chorusBars),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").s("stoner_chord").cut(1).gain(.28).mask(breakBars),
+  note(roots).struct("x x ~ x x ~ x x").s("stoner_mute").cut(1).gain(.2).mask(breakBars),
+  note(roots).struct("x ~").s("stoner_chord").clip(1).gain(.4).mask(lastBar),
+  note(roots).add(note("12,19,24")).s("doomorgan_note").clip(1).gain(.12).mask(chorusBars)
 )
-$: n(lead).scale("a3:minor:pentatonic").s("stoner_note").clip(1).gain(.1).mask(chorusBars)`
+$: n(lead).scale("a3:minor:pentatonic").s("stoner_note").clip(1).gain(.2).mask(chorusBars)`
   },
   {
     id: 'rust-and-rain',
@@ -749,17 +749,17 @@ $: stack(
   s("garagekit_crash").struct("x").gain(.2).mask("<0!8 1 0!15 1 0!11 1 0!2 1>")
 )._punchcard()
 $: stack(
-  note(roots).struct("x ~ ~ x ~ ~ x ~").add(note(-12)).s("grungebass_note").clip(1).gain(.31).mask(quiet),
-  note(roots).struct("x x x x x x x x").add(note(-12)).s("grungebass_note").clip(1).gain(.31).mask(loud)
+  note(roots).struct("x ~ ~ x ~ ~ x ~").add(note(-12)).s("grungebass_note").clip(1).gain(.62).mask(quiet),
+  note(roots).struct("x x x x x x x x").add(note(-12)).s("grungebass_note").clip(1).gain(.62).mask(loud)
 )._scope()
 $: stack(
-  n("0 1 2 1 0 1 2 1").chord(changes).voicing().s("jangle_note").clip(1).gain(.22).mask(quiet),
-  note(roots).add(note(12)).struct("x ~ x x ~ x x ~").s("campfire_chord").cut(1).gain(.17).mask(quiet),
-  note(roots).struct("x ~ x ~ x ~ x x").s("seattle_chord").cut(1).gain(.17).mask(loud),
-  note(roots).add(note("12,19")).s("doomorgan_note").clip(1).gain(.09).mask(bridgeBars),
-  note(roots).struct("x ~").s("seattle_chord").clip(1).gain(.17).mask(lastBar)
+  n("0 1 2 1 0 1 2 1").chord(changes).voicing().s("jangle_note").clip(1).gain(.44).mask(quiet),
+  note(roots).add(note(12)).struct("x ~ x x ~ x x ~").s("campfire_chord").cut(1).gain(.34).mask(quiet),
+  note(roots).struct("x ~ x ~ x ~ x x").s("seattle_chord").cut(1).gain(.34).mask(loud),
+  note(roots).add(note("12,19")).s("doomorgan_note").clip(1).gain(.18).mask(bridgeBars),
+  note(roots).struct("x ~").s("seattle_chord").clip(1).gain(.34).mask(lastBar)
 )
-$: n(hook).scale("g3:minor:pentatonic").s("seattle_note").clip(1).gain(.14).mask(loud)`
+$: n(hook).scale("g3:minor:pentatonic").s("seattle_note").clip(1).gain(.28).mask(loud)`
   },
   {
     id: 'hollow-chambers',
@@ -803,17 +803,17 @@ $: stack(
   s("blastkit_crash").struct("x").gain(.19).cut(3).mask("<0!4 1 0!7 1 0!7 1 0!7 1 0!7 1 0!2 1>")
 )._punchcard()
 $: stack(
-  note(riff).add(note(roots)).add(note(-12)).s("deathbass_note").clip(1).gain(.27).mask(tremoloBars),
-  note(roots).struct("x ~ ~ x ~ ~ x ~").add(note(-12)).s("deathbass_note").clip(1).gain(.27).mask(grooveBars)
+  note(riff).add(note(roots)).add(note(-12)).s("deathbass_note").clip(1).gain(.54).mask(tremoloBars),
+  note(roots).struct("x ~ ~ x ~ ~ x ~").add(note(-12)).s("deathbass_note").clip(1).gain(.54).mask(grooveBars)
 )._scope()
 $: stack(
-  note(riff).add(note(roots)).s("chainsaw_note").clip(1).gain(.18).mask(tremoloBars),
-  note(roots).struct("x ~ x x x ~ x x x ~ x x x ~ x x").s("chainsaw_mute").clip(1).gain(.18).mask(grooveBars),
-  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~").s("chainsaw_chord").cut(1).gain(.18).mask(grooveBars),
-  note(roots).struct("x ~ ~ ~ x ~ ~ ~").s("chainsaw_chord").cut(1).gain(.18).mask(outroBars),
-  note(roots).struct("x ~").s("chainsaw_chord").clip(1).gain(.18).mask(lastBar)
+  note(riff).add(note(roots)).s("chainsaw_note").clip(1).gain(.36).mask(tremoloBars),
+  note(roots).struct("x ~ x x x ~ x x x ~ x x x ~ x x").s("chainsaw_mute").clip(1).gain(.36).mask(grooveBars),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~").s("chainsaw_chord").cut(1).gain(.36).mask(grooveBars),
+  note(roots).struct("x ~ ~ ~ x ~ ~ ~").s("chainsaw_chord").cut(1).gain(.36).mask(outroBars),
+  note(roots).struct("x ~").s("chainsaw_chord").clip(1).gain(.36).mask(lastBar)
 )
-$: n(lead).scale("a3:chromatic").s("chainsaw_note").clip(1).gain(.11).mask("<0!20 1!16 0!4>")`
+$: n(lead).scale("a3:chromatic").s("chainsaw_note").clip(1).gain(.22).mask("<0!20 1!16 0!4>")`
   },
   {
     id: 'winter-court',
@@ -1778,21 +1778,21 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
         role: 'bass',
         label: 'a picked bass doubling the riff',
         snippet:
-          'note("<[a1*8 bb1*8] [a1*8 eb2*8]>").add(note(-12)).s("deathbass_note").clip(1).gain(.45)',
+          'note("<[a1*8 bb1*8] [a1*8 eb2*8]>").add(note(-12)).s("deathbass_note").clip(1).gain(.9)',
         reason: 'The bass picks the riff in unison with the guitar, with a bright attack.'
       },
       {
         role: 'chords',
         label: 'a tremolo picked riff',
         snippet:
-          'note("<[a1*4 a1*4 bb1*4 a1*4] [a1*4 eb2*4 a1*4 e2*4]>").s("chainsaw_note").clip(1).gain(.3)',
+          'note("<[a1*4 a1*4 bb1*4 a1*4] [a1*4 eb2*4 a1*4 e2*4]>").s("chainsaw_note").clip(1).gain(.6)',
         reason:
           'Sixteenth notes on one pitch, moving by a semitone and a tritone, are the riff; a drop tuning makes it heavy.'
       },
       {
         role: 'melody',
         label: 'a chromatic lead',
-        snippet: 'note("<[a3@2 bb3 a3] [eb4@2 d4 a3]>").s("chainsaw_note").clip(1).gain(.2)',
+        snippet: 'note("<[a3@2 bb3 a3] [eb4@2 d4 a3]>").s("chainsaw_note").clip(1).gain(.4)',
         reason:
           'A short chromatic phrase over the riff, with a tritone leap, instead of a scale run.'
       }

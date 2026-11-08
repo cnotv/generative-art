@@ -96,7 +96,7 @@ export const INSTRUMENT_KINDS: Record<InstrumentKind, InstrumentKindDefinition> 
         familyId: 'strings',
         notes: ELECTRIC_NOTES,
         durationSeconds: 4,
-        peak: 0.89
+        peak: 0.445
       },
       {
         id: 'mute',
@@ -104,7 +104,7 @@ export const INSTRUMENT_KINDS: Record<InstrumentKind, InstrumentKindDefinition> 
         familyId: 'strings',
         notes: ELECTRIC_NOTES,
         durationSeconds: 0.6,
-        peak: 0.89
+        peak: 0.445
       },
       {
         id: 'note',
@@ -112,7 +112,7 @@ export const INSTRUMENT_KINDS: Record<InstrumentKind, InstrumentKindDefinition> 
         familyId: 'strings',
         notes: ELECTRIC_LEAD_NOTES,
         durationSeconds: 3,
-        peak: 0.89
+        peak: 0.445
       }
     ],
     assistantPrompt: `You set the five knobs of an electric guitar through a fuzz pedal and a 4x12 cabinet. Every knob is a number from 0 to 1.
@@ -141,7 +141,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         familyId: 'bass',
         notes: BASS_NOTES,
         durationSeconds: 3,
-        peak: 0.89
+        peak: 0.445
       },
       {
         id: 'mute',
@@ -149,7 +149,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         familyId: 'bass',
         notes: BASS_NOTES,
         durationSeconds: 0.5,
-        peak: 0.89
+        peak: 0.445
       }
     ],
     assistantPrompt: `You set the five knobs of a bass guitar through a gentle drive into a bass cabinet. Every knob is a number from 0 to 1.
@@ -177,7 +177,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         familyId: 'strings',
         notes: ELECTRIC_NOTES,
         durationSeconds: 4,
-        peak: 0.89
+        peak: 0.445
       },
       {
         id: 'mute',
@@ -185,7 +185,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         familyId: 'strings',
         notes: ELECTRIC_NOTES,
         durationSeconds: 0.6,
-        peak: 0.89
+        peak: 0.445
       },
       {
         id: 'note',
@@ -193,7 +193,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         familyId: 'strings',
         notes: ELECTRIC_LEAD_NOTES,
         durationSeconds: 3,
-        peak: 0.89
+        peak: 0.445
       }
     ],
     assistantPrompt: `You set the five knobs of an acoustic guitar. Every knob is a number from 0 to 1.
@@ -221,7 +221,7 @@ Answer with the five numbers and one or two sentences explaining the choices in 
         familyId: 'keys',
         notes: ORGAN_NOTES,
         durationSeconds: 3,
-        peak: 0.89
+        peak: 0.445
       }
     ],
     assistantPrompt: `You set the five knobs of a tonewheel organ. Every knob is a number from 0 to 1.
@@ -627,44 +627,44 @@ export const INSTRUMENT_DRUM = {
 /** Phrases the tab plays and downloads; the articulation becomes `<preset>_<articulation>`. */
 export const INSTRUMENT_PREVIEW_PHRASES: Record<InstrumentKind, InstrumentPreviewHit[]> = {
   'electric-guitar': [
-    { articulation: 'chord', note: 'c2', offsetSeconds: 0, durationSeconds: 0.8, gain: 0.6 },
-    { articulation: 'mute', note: 'c2', offsetSeconds: 0.83, durationSeconds: 0.2, gain: 0.6 },
-    { articulation: 'mute', note: 'c2', offsetSeconds: 1.04, durationSeconds: 0.2, gain: 0.6 },
-    { articulation: 'chord', note: 'ds2', offsetSeconds: 1.25, durationSeconds: 0.4, gain: 0.6 },
-    { articulation: 'chord', note: 'f2', offsetSeconds: 1.67, durationSeconds: 0.4, gain: 0.6 },
-    { articulation: 'chord', note: 'c2', offsetSeconds: 2.08, durationSeconds: 2.4, gain: 0.6 },
-    { articulation: 'note', note: 'c3', offsetSeconds: 4.58, durationSeconds: 0.2, gain: 0.5 },
-    { articulation: 'note', note: 'ds3', offsetSeconds: 4.79, durationSeconds: 0.2, gain: 0.5 },
-    { articulation: 'note', note: 'f3', offsetSeconds: 5, durationSeconds: 1.5, gain: 0.5 }
+    { articulation: 'chord', note: 'c2', offsetSeconds: 0, durationSeconds: 0.8, gain: 1.2 },
+    { articulation: 'mute', note: 'c2', offsetSeconds: 0.83, durationSeconds: 0.2, gain: 1.2 },
+    { articulation: 'mute', note: 'c2', offsetSeconds: 1.04, durationSeconds: 0.2, gain: 1.2 },
+    { articulation: 'chord', note: 'ds2', offsetSeconds: 1.25, durationSeconds: 0.4, gain: 1.2 },
+    { articulation: 'chord', note: 'f2', offsetSeconds: 1.67, durationSeconds: 0.4, gain: 1.2 },
+    { articulation: 'chord', note: 'c2', offsetSeconds: 2.08, durationSeconds: 2.4, gain: 1.2 },
+    { articulation: 'note', note: 'c3', offsetSeconds: 4.58, durationSeconds: 0.2, gain: 1 },
+    { articulation: 'note', note: 'ds3', offsetSeconds: 4.79, durationSeconds: 0.2, gain: 1 },
+    { articulation: 'note', note: 'f3', offsetSeconds: 5, durationSeconds: 1.5, gain: 1 }
   ],
   'bass-guitar': [
-    { articulation: 'note', note: 'a1', offsetSeconds: 0, durationSeconds: 0.6, gain: 0.7 },
-    { articulation: 'mute', note: 'a1', offsetSeconds: 0.67, durationSeconds: 0.17, gain: 0.7 },
-    { articulation: 'mute', note: 'a1', offsetSeconds: 0.83, durationSeconds: 0.17, gain: 0.7 },
-    { articulation: 'note', note: 'c2', offsetSeconds: 1, durationSeconds: 0.6, gain: 0.7 },
-    { articulation: 'note', note: 'ds2', offsetSeconds: 1.67, durationSeconds: 0.3, gain: 0.7 },
-    { articulation: 'note', note: 'e2', offsetSeconds: 2, durationSeconds: 0.3, gain: 0.7 },
-    { articulation: 'note', note: 'a1', offsetSeconds: 2.33, durationSeconds: 1.5, gain: 0.7 }
+    { articulation: 'note', note: 'a1', offsetSeconds: 0, durationSeconds: 0.6, gain: 1.4 },
+    { articulation: 'mute', note: 'a1', offsetSeconds: 0.67, durationSeconds: 0.17, gain: 1.4 },
+    { articulation: 'mute', note: 'a1', offsetSeconds: 0.83, durationSeconds: 0.17, gain: 1.4 },
+    { articulation: 'note', note: 'c2', offsetSeconds: 1, durationSeconds: 0.6, gain: 1.4 },
+    { articulation: 'note', note: 'ds2', offsetSeconds: 1.67, durationSeconds: 0.3, gain: 1.4 },
+    { articulation: 'note', note: 'e2', offsetSeconds: 2, durationSeconds: 0.3, gain: 1.4 },
+    { articulation: 'note', note: 'a1', offsetSeconds: 2.33, durationSeconds: 1.5, gain: 1.4 }
   ],
   'acoustic-guitar': [
-    { articulation: 'chord', note: 'a2', offsetSeconds: 0, durationSeconds: 1.1, gain: 0.7 },
-    { articulation: 'chord', note: 'a2', offsetSeconds: 1.2, durationSeconds: 0.5, gain: 0.6 },
-    { articulation: 'mute', note: 'a2', offsetSeconds: 1.8, durationSeconds: 0.3, gain: 0.6 },
-    { articulation: 'chord', note: 'c3', offsetSeconds: 2.4, durationSeconds: 1.1, gain: 0.7 },
-    { articulation: 'chord', note: 'ds3', offsetSeconds: 3.6, durationSeconds: 1.6, gain: 0.7 },
-    { articulation: 'note', note: 'a3', offsetSeconds: 5.2, durationSeconds: 0.4, gain: 0.5 },
-    { articulation: 'note', note: 'c4', offsetSeconds: 5.6, durationSeconds: 1.4, gain: 0.5 }
+    { articulation: 'chord', note: 'a2', offsetSeconds: 0, durationSeconds: 1.1, gain: 1.4 },
+    { articulation: 'chord', note: 'a2', offsetSeconds: 1.2, durationSeconds: 0.5, gain: 1.2 },
+    { articulation: 'mute', note: 'a2', offsetSeconds: 1.8, durationSeconds: 0.3, gain: 1.2 },
+    { articulation: 'chord', note: 'c3', offsetSeconds: 2.4, durationSeconds: 1.1, gain: 1.4 },
+    { articulation: 'chord', note: 'ds3', offsetSeconds: 3.6, durationSeconds: 1.6, gain: 1.4 },
+    { articulation: 'note', note: 'a3', offsetSeconds: 5.2, durationSeconds: 0.4, gain: 1 },
+    { articulation: 'note', note: 'c4', offsetSeconds: 5.6, durationSeconds: 1.4, gain: 1 }
   ],
   organ: [
-    { articulation: 'note', note: 'c3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.4 },
-    { articulation: 'note', note: 'ds3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.4 },
-    { articulation: 'note', note: 'g3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.4 },
-    { articulation: 'note', note: 'f3', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.4 },
-    { articulation: 'note', note: 'a3', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.4 },
-    { articulation: 'note', note: 'c4', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.4 },
-    { articulation: 'note', note: 'g2', offsetSeconds: 3, durationSeconds: 2, gain: 0.4 },
-    { articulation: 'note', note: 'b3', offsetSeconds: 3, durationSeconds: 2, gain: 0.4 },
-    { articulation: 'note', note: 'd4', offsetSeconds: 3, durationSeconds: 2, gain: 0.4 }
+    { articulation: 'note', note: 'c3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.8 },
+    { articulation: 'note', note: 'ds3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.8 },
+    { articulation: 'note', note: 'g3', offsetSeconds: 0, durationSeconds: 1.4, gain: 0.8 },
+    { articulation: 'note', note: 'f3', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.8 },
+    { articulation: 'note', note: 'a3', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.8 },
+    { articulation: 'note', note: 'c4', offsetSeconds: 1.5, durationSeconds: 1.4, gain: 0.8 },
+    { articulation: 'note', note: 'g2', offsetSeconds: 3, durationSeconds: 2, gain: 0.8 },
+    { articulation: 'note', note: 'b3', offsetSeconds: 3, durationSeconds: 2, gain: 0.8 },
+    { articulation: 'note', note: 'd4', offsetSeconds: 3, durationSeconds: 2, gain: 0.8 }
   ],
   'drum-kit': [
     { articulation: 'crash', offsetSeconds: 0, durationSeconds: 1.2, gain: 0.5 },
@@ -681,3 +681,9 @@ export const INSTRUMENT_PREVIEW_PHRASES: Record<InstrumentKind, InstrumentPrevie
     { articulation: 'ride', offsetSeconds: 2.8, durationSeconds: 1, gain: 0.6 }
   ]
 }
+
+/**
+ * Pattern controls that already say how long a sound lasts, `cut` by choking it at the next one; a pitched preset note given none of
+ * them ends with its event, as a soundfont note does, instead of ringing its whole sample.
+ */
+export const INSTRUMENT_NOTE_LENGTH_CONTROLS = ['clip', 'legato', 'release', 'loop', 'cut']
