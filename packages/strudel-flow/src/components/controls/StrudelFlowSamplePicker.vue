@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Component } from 'vue'
-import { ChevronDown, Search } from 'lucide-vue-next'
+import { ChevronDown, Play, Search } from 'lucide-vue-next'
 import { STRUDEL_FLOW_SAMPLE_FAMILIES } from '../../config'
 import { findStrudelFlowSampleFamily, STRUDEL_FLOW_OTHER_SAMPLE_FAMILY } from '../../sampleFamilies'
 import type { StrudelFlowSampleGroup } from '../../types'
@@ -271,7 +271,11 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
             No sample matches.
           </p>
           <ul v-else class="strudel-flow-sample-picker__grid" aria-label="Samples">
-            <li v-for="entry in shownEntries" :key="entry.value">
+            <li
+              v-for="entry in shownEntries"
+              :key="entry.value"
+              class="strudel-flow-sample-picker__item"
+            >
               <button
                 type="button"
                 class="strudel-flow-sample-picker__option"
@@ -288,6 +292,15 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', onWindowPointerD
                   <span class="strudel-flow-sample-picker__option-label">{{ entry.label }}</span>
                   <span class="strudel-flow-sample-picker__option-group">{{ entry.group }}</span>
                 </span>
+              </button>
+              <button
+                v-if="previewSound !== null"
+                type="button"
+                class="strudel-flow-sample-picker__play"
+                :aria-label="`Play ${entry.label}, ${entry.group}`"
+                @click="previewSound(entry.value)"
+              >
+                <Play class="strudel-flow-sample-picker__icon" aria-hidden="true" />
               </button>
             </li>
           </ul>

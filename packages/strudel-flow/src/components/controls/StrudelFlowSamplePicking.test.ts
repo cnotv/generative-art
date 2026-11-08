@@ -175,6 +175,44 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
     expect(previewSound).toHaveBeenCalledExactlyOnceWith('casio')
   })
 
+  it('plays a sample from its play button without picking it', async () => {
+    // Arrange
+    useFinePointer()
+    const previewSound = vi.fn()
+    const wrapper = mount(StrudelFlowSamplePicker, {
+      props: { label: 'Track 1 sound', modelValue: 'bd', groups: SAMPLE_GROUPS },
+      global: { provide: { [STRUDEL_FLOW_PREVIEW_SOUND as symbol]: previewSound } },
+      attachTo: document.body
+    })
+    await nextTick()
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Act
+    document.body.querySelector<HTMLElement>('button[aria-label^="Play Casio"]')?.click()
+    await nextTick()
+
+    // Assert
+    expect(previewSound).toHaveBeenCalledExactlyOnceWith('casio')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    expect(document.body.querySelector('.strudel-flow-sample-picker')).not.toBeNull()
+  })
+
+  it('has no play button when the host gives no preview', async () => {
+    // Arrange
+    useFinePointer()
+    const wrapper = mount(StrudelFlowSamplePicker, {
+      props: { label: 'Track 1 sound', modelValue: 'bd', groups: SAMPLE_GROUPS },
+      attachTo: document.body
+    })
+    await nextTick()
+
+    // Act
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+
+    // Assert
+    expect(document.body.querySelector('.strudel-flow-sample-picker__play')).toBeNull()
+  })
+
   it('opens a searchable list sorted into instrument families', async () => {
     // Arrange
     const wrapper = await mountPicker()

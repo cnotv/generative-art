@@ -56,6 +56,7 @@ const {
   examples,
   electroTunes,
   logEntries,
+  appendLog,
   activeTab,
   tabList,
   selectPattern,
@@ -125,8 +126,13 @@ watch(
 )
 
 const onSoundPreview = (soundEntry: StrudelSoundEntry): void => {
-  // A sound that cannot play has nothing to recover; the click simply stays silent.
-  previewStrudelSound(soundEntry.name, soundEntry.type).catch(() => undefined)
+  // A sound that cannot play is written to the Console tab rather than left silent unexplained.
+  previewStrudelSound(soundEntry.name, soundEntry.type).catch((error: unknown) =>
+    appendLog(
+      `Could not play ${soundEntry.name}: ${error instanceof Error ? error.message : String(error)}`,
+      'error'
+    )
+  )
 }
 
 const onFlowSoundPreview = (soundName: string): void => {
