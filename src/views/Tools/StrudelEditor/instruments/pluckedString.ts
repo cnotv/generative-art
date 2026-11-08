@@ -1,12 +1,5 @@
 import { applyBiquad, lowpassCoefficients } from './biquad'
-import {
-  STONER_GUITAR_MUTED_DECAY_SECONDS,
-  STONER_GUITAR_MUTED_LOWPASS_HZ,
-  STONER_GUITAR_PICK_POSITION
-} from './config'
 import type { PluckedStringOptions } from './types'
-
-const EXCITATION_SOFTENING = 0.5
 
 /**
  * A small deterministic random generator, so a render is the same every time and a test can
@@ -24,20 +17,24 @@ export const createSeededRandom = (seed: number): (() => number) => {
   }
 }
 
-const buildNoiseBurst = (periodSamples: number, seed: number): Float32Array => {
+const buildNoiseBurst = (periodSamples: number, seed: number, softening: number): Float32Array => {
   const random = createSeededRandom(seed)
   const noise = Float32Array.from({ length: periodSamples }, () => random() * 2 - 1)
   const mean = noise.reduce((sum, sample) => sum + sample, 0) / periodSamples
   const softened = { previous: 0 }
   return noise.map((sample) => {
-    softened.previous += EXCITATION_SOFTENING * (sample - mean - softened.previous)
+    softened.previous += (1 - softening) * (sample - mean - softened.previous)
     return softened.previous
   })
 }
 
 // A pick near the bridge cancels the harmonics that have a node there; the comb is that cancellation.
-const applyPickPosition = (burst: Float32Array, periodSamples: number): Float32Array => {
-  const pickOffset = Math.max(1, Math.round(STONER_GUITAR_PICK_POSITION * periodSamples))
+const applyPickPosition = (
+  burst: Float32Array,
+  periodSamples: number,
+  pickPosition: number
+): Float32Array => {
+  const pickOffset = Math.max(1, Math.round(pickPosition * periodSamples))
   return Float32Array.from(
     { length: burst.length + pickOffset },
     (_, index) => (burst[index] ?? 0) - (burst[index - pickOffset] ?? 0)
@@ -53,15 +50,17 @@ const applyPickPosition = (burst: Float32Array, periodSamples: number): Float32A
  */
 export const renderPluckedString = (options: PluckedStringOptions): Float32Array => {
   const { frequency, sampleRate, durationSeconds, decaySeconds, seed, palmMuted } = options
+  const { softening, pickPosition, mutedDecaySeconds, mutedLowpassHz } = options
   const sampleCount = Math.round(sampleRate * durationSeconds)
   const loopDelay = sampleRate / frequency - 0.5
   const wholeDelay = Math.floor(loopDelay)
   const fraction = loopDelay - wholeDelay
-  const effectiveDecay = palmMuted ? STONER_GUITAR_MUTED_DECAY_SECONDS : decaySeconds
+  const effectiveDecay = palmMuted ? mutedDecaySeconds : decaySeconds
   const lossPerPass = 10 ** (-3 / (effectiveDecay * frequency))
   const excitation = applyPickPosition(
-    buildNoiseBurst(Math.round(sampleRate / frequency), seed),
-    sampleRate / frequency
+    buildNoiseBurst(Math.round(sampleRate / frequency), seed, softening),
+    sampleRate / frequency,
+    pickPosition
   )
   const output = new Float32Array(sampleCount)
   const readOutput = (index: number): number => (index < 0 ? 0 : (output[index] ?? 0))
@@ -74,7 +73,5 @@ export const renderPluckedString = (options: PluckedStringOptions): Float32Array
       fraction * readOutput(index - wholeDelay - 2)
     output[index] = (excitation[index] ?? 0) + lossPerPass * 0.5 * (delayed + delayedBefore)
   })
-  return palmMuted
-    ? applyBiquad(output, lowpassCoefficients(sampleRate, STONER_GUITAR_MUTED_LOWPASS_HZ))
-    : output
+  return palmMuted ? applyBiquad(output, lowpassCoefficients(sampleRate, mutedLowpassHz)) : output
 }

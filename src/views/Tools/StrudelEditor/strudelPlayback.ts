@@ -15,6 +15,7 @@ import {
 } from './strudelOfflineRender'
 import { findLoopBars, findRepetitionCycles } from './patternRepetition'
 import { isRecordModule, requireCallable, requireRecordModule, toCallable } from './strudelModules'
+import { useInstruments } from './instruments/useInstruments'
 import { loadStrudelSoundLibrary } from './strudelSoundLibrary'
 import type {
   StrudelEvaluationMeta,
@@ -133,6 +134,16 @@ const unlockPageAudioContext = (): AudioContext | null => {
   void audioContext.resume()
   playSilentSound(audioContext)
   return audioContext
+}
+
+// Instrument presets render only when code plays one of their sounds, so the pattern waits for
+// them. A failure is recorded on the preset and leaves the rest of the pattern playing.
+const prepareInstrumentsForCode = async (patternCode: string): Promise<void> => {
+  try {
+    await useInstruments().ensureRenderedForCode(patternCode)
+  } catch {
+    // Without an active store there are no presets to wait for.
+  }
 }
 
 const toUnknownList = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
@@ -362,6 +373,7 @@ export const loadDefaultStrudelPlayback = async (
   // Exporting evaluates without starting the scheduler, so nothing plays while a file renders.
   const evaluateForExport = async (patternCode: string): Promise<unknown> => {
     await stopFunction()
+    await prepareInstrumentsForCode(patternCode)
     latestEvaluationError = null
     const pattern: unknown = await evaluateFunction(patternCode, false)
     if (latestEvaluationError !== null || pattern === undefined) {
@@ -397,6 +409,7 @@ export const loadDefaultStrudelPlayback = async (
     evaluateCode: async (patternCode: string): Promise<StrudelEvaluationResult> => {
       // Each Play or Update is a tap, and iOS may have suspended the context since the last.
       void resumeAudioContext(audioContext)
+      await prepareInstrumentsForCode(patternCode)
       latestEvaluationError = null
       await evaluateFunction(patternCode)
       return latestEvaluationError === null
@@ -552,4 +565,34 @@ export const previewStrudelPhrase = async (hits: StrudelPreviewHit[]): Promise<v
       playSound({ s: sound, note, gain, clip: 1 }, startTime + offsetSeconds, durationSeconds)
     )
   )
+}
+
+const SILENT_PLAYBACK_HOOKS: StrudelPlaybackHooks = {
+  onEvaluated: () => undefined,
+  onFrame: () => undefined,
+  onStopped: () => undefined,
+  getDrawContext: () => null
+}
+
+const silentPlayback: { loading: Promise<StrudelPlayback> | null } = { loading: null }
+
+/**
+ * Renders code offline to a WAV file and downloads it, outside the editor's own playback, so a
+ * file can be made from the Instruments tab without touching what is in the code editor.
+ * @param patternCode - Strudel code that sets its own tempo and plays one cycle
+ * @param fileName - the download's name without its extension
+ * @returns whether the file was made, and the reason when it was not
+ */
+export const downloadStrudelCodeAsWav = async (
+  patternCode: string,
+  fileName: string
+): Promise<StrudelEvaluationResult> => {
+  silentPlayback.loading ??= loadDefaultStrudelPlayback(SILENT_PLAYBACK_HOOKS).catch(
+    (error: unknown) => {
+      silentPlayback.loading = null
+      throw error
+    }
+  )
+  const playback = await silentPlayback.loading
+  return playback.renderToWav(patternCode, { ...EXPORT_DEFAULT_OPTIONS, fileName })
 }

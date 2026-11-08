@@ -55,11 +55,25 @@ describe('describeStrudelSound', () => {
       'Digital bad day'
     ],
     [
-      'a stoner guitar sound',
+      'an electric guitar preset sound',
       'stoner_chord',
-      { baseUrl: '', tag: 'stoner-guitar' },
-      'Stoner guitar',
+      { baseUrl: '', tag: 'instrument:electric-guitar:stoner' },
+      'Electric guitar: stoner',
       'Stoner chord'
+    ],
+    [
+      'a drum kit preset sound',
+      'blastkit_kick',
+      { baseUrl: '', tag: 'instrument:drum-kit:blastkit' },
+      'Drum kit: blastkit',
+      'Blastkit kick'
+    ],
+    [
+      'a sound with an unknown instrument kind',
+      'odd_note',
+      { baseUrl: 'https://example.com/', tag: 'instrument:kazoo:odd' },
+      'Other samples',
+      'odd_note'
     ],
     ['a synth', 'supersaw', { type: 'synth' }, 'Synths', 'Supersaw'],
     [

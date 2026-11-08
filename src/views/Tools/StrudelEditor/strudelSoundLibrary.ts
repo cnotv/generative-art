@@ -4,10 +4,8 @@ import {
   STRUDEL_SAMPLE_BANKS,
   STRUDEL_SOUND_FILTERS
 } from './config'
-import { useStonerGuitar } from './guitar/useStonerGuitar'
 import { isRecordModule, requireCallable, requireRecordModule } from './strudelModules'
 import { describeStrudelSound } from './strudelSoundNames'
-import type { StonerGuitarSampleRegistrar } from './guitar/types'
 import type {
   StrudelDrumMachine,
   StrudelSoundEntry,
@@ -51,14 +49,6 @@ export const readStrudelDrumMachines = (aliasList: unknown): Record<string, Stru
       )
     : {}
 
-const registerGuitarSounds = async (samples: StonerGuitarSampleRegistrar): Promise<void> => {
-  try {
-    await useStonerGuitar().registerSounds(samples)
-  } catch {
-    // The guitar is an extra; without a store the other banks still register.
-  }
-}
-
 /**
  * Registers every sound strudel.cc preloads: the synths, the General MIDI soundfonts, each
  * sample bank and, once the banks are in, the drum machine aliases, which only rename banks
@@ -81,9 +71,6 @@ export const registerStrudelSoundLibrary = async (): Promise<StrudelSoundLibrary
   const bankAliasLoader = requireCallable(webaudioModule.aliasBank)
   requireCallable(webaudioModule.registerSynthSounds)()
   requireCallable(soundfontsModule.registerSoundfonts)()
-  // Rendered in a worker while the banks download; a failure is recorded for the Guitar tab and
-  // leaves every other sound working.
-  const guitarRegistration = registerGuitarSounds(sampleBankLoader)
   const [bankLists, aliasList] = await Promise.all([
     Promise.allSettled(STRUDEL_SAMPLE_BANKS.map(({ manifestUrl }) => fetchJson(manifestUrl))),
     fetchJson(STRUDEL_BANK_ALIASES_URL).catch(() => ({}))
@@ -95,7 +82,6 @@ export const registerStrudelSoundLibrary = async (): Promise<StrudelSoundLibrary
       await sampleBankLoader(bankList.value, baseUrl, { prebake: true, tag })
     }
   }, Promise.resolve())
-  await guitarRegistration
   // superdough adds lower-case keys to the list it is given, so it gets its own copy.
   await bankAliasLoader(isRecordModule(aliasList) ? { ...aliasList } : {})
   return { drumMachines: readStrudelDrumMachines(aliasList) }

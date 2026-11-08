@@ -331,7 +331,7 @@ export type StrudelTabId =
   | 'export'
   | 'console'
   | 'settings'
-  | 'guitar'
+  | 'instruments'
 
 export type StrudelSoundEntry = {
   /** What code plays it by, as in `s("rolandtr909_bd")`. */
@@ -604,7 +604,7 @@ export type ScoreTranscription = {
 /** One sound in a preview phrase, timed from the phrase's start. */
 export type StrudelPreviewHit = {
   sound: string
-  note: string
+  note?: string
   offsetSeconds: number
   durationSeconds: number
   gain: number

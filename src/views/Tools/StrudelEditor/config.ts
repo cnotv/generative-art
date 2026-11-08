@@ -995,7 +995,7 @@ export const STRUDEL_TABS: { id: StrudelTabId; label: string }[] = [
   { id: 'export', label: 'Export' },
   { id: 'midi', label: 'MIDI' },
   { id: 'sounds', label: 'Sounds' },
-  { id: 'guitar', label: 'Guitar' },
+  { id: 'instruments', label: 'Instruments' },
   { id: 'console', label: 'Console' },
   { id: 'settings', label: 'Settings' },
   { id: 'flow', label: 'Nodes' },

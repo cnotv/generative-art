@@ -34,10 +34,13 @@ export const useStrudelSounds = () => {
   const soundsStatus = ref<StrudelSoundsStatus>('idle')
 
   const loadSounds = async (): Promise<void> => {
-    if (soundsStatus.value === 'loading' || soundsStatus.value === 'ready') {
+    if (soundsStatus.value === 'loading') {
       return
     }
-    soundsStatus.value = 'loading'
+    // A reload keeps the list on screen, since instrument presets register their sounds when
+    // they are first rendered and the list has to pick them up.
+    const hadSounds = soundsStatus.value === 'ready'
+    soundsStatus.value = hadSounds ? 'ready' : 'loading'
     try {
       soundEntries.value = await readStrudelSoundEntries()
       soundsStatus.value = 'ready'
