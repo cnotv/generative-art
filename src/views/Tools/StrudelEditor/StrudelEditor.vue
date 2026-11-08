@@ -24,7 +24,12 @@ import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { FLOW_SYNC_DELAY_MS, STRUDEL_LICENSE_NOTE } from './config'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
-import { findStrudelFlowNodeCode, useStrudelFlow } from '@webgamekit/strudel-flow'
+import {
+  findStrudelFlowNodeCode,
+  findStrudelFlowPlayingNodeIds,
+  getStrudelFlowNodeCodeRanges,
+  useStrudelFlow
+} from '@webgamekit/strudel-flow'
 import { useStrudelEditor } from './useStrudelEditor'
 import { readLegacyStrudelAnchor, readStrudelAddress, writeStrudelAddress } from './strudelAddress'
 import { useStrudelHints } from './hints/useStrudelHints'
@@ -92,7 +97,9 @@ const {
   loopBars,
   loopMeasured,
   seekToCycle,
-  holdPlayingPosition
+  holdPlayingPosition,
+  playingCode,
+  playingSourceOffsets
 } = useStrudelEditor()
 
 const {
@@ -112,6 +119,14 @@ const {
 } = useStrudelFlow()
 
 const editorMode = ref<StrudelEditorMode>('code')
+const flowNodeCodeRanges = computed(() =>
+  getStrudelFlowNodeCodeRanges(playingCode.value, flowNodes.value, flowEdges.value)
+)
+const playingFlowNodeIds = computed(() =>
+  editorMode.value === 'flow'
+    ? findStrudelFlowPlayingNodeIds(flowNodeCodeRanges.value, playingSourceOffsets.value)
+    : []
+)
 const { soundEntries, sampleGroups, voiceGroups, soundsStatus, loadSounds } = useStrudelSounds()
 
 // The sound list registers the whole library, so it loads only once something shows it.
@@ -390,6 +405,7 @@ onBeforeUnmount(() => {
           :sample-groups="sampleGroups"
           :voice-groups="voiceGroups"
           :preview-sound="onFlowSoundPreview"
+          :playing-node-ids="playingFlowNodeIds"
           @connect="onFlowNodesConnected"
           @update-node="updateFlowNodeData"
           @remove-node="removeFlowNode"

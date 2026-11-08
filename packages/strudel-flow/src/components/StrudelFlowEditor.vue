@@ -42,6 +42,8 @@ const props = defineProps<{
   noteReader?: StrudelFlowNoteReader
   /** Plays a sound by name when one is picked; without it picking is silent. */
   previewSound?: (soundName: string) => void
+  /** The nodes whose notes sound now, outlined like the code editor outlines the playing token. */
+  playingNodeIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -177,6 +179,7 @@ const openRadialMenu = (): void => {
           :sample-groups="sampleGroups ?? []"
           :voice-groups="voiceGroups ?? []"
           :is-soloed="isStrudelFlowSoloed(nodes, edges, nodeProperties.id)"
+          :is-playing="playingNodeIds?.includes(nodeProperties.id) ?? false"
           @update="onNodeUpdated(nodeProperties.id, $event)"
           @solo="onNodeSoloed"
           @remove="onNodeRemoved"

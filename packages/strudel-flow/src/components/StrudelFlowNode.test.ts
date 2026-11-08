@@ -26,3 +26,21 @@ describe('StrudelFlowNode options menu', () => {
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
   })
 })
+
+describe('StrudelFlowNode playing state', () => {
+  it.each([
+    [true, true],
+    [false, false]
+  ])('marks the card as playing when isPlaying is %s', (isPlaying, expected) => {
+    // Arrange
+    const wrapper = mount(StrudelFlowNode, {
+      props: { id: 'gain-1', data: { kind: 'gain', gain: 0.5 }, isPlaying }
+    })
+
+    // Act
+    const marked = wrapper.classes('strudel-flow-node--playing')
+
+    // Assert
+    expect(marked).toBe(expected)
+  })
+})

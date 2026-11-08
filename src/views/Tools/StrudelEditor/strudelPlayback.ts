@@ -137,6 +137,23 @@ const unlockPageAudioContext = (): AudioContext | null => {
 const toUnknownList = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
 
 /**
+ * Where in the evaluated code each sounding note comes from: the start of every location of
+ * the hap. Strudel does not list the head of a chain first for chained controls, so the caller
+ * picks the leftmost owner.
+ * @param haps - the haps sounding now
+ * @returns one list of source offsets per hap that has locations
+ */
+export const readHapSourceOffsets = (haps: unknown[]): number[][] =>
+  haps.flatMap((hap) => {
+    const context = isRecordModule(hap) ? hap.context : undefined
+    const locations = isRecordModule(context) ? toUnknownList(context.locations) : []
+    const starts = locations.flatMap((location) =>
+      isRecordModule(location) && typeof location.start === 'number' ? [location.start] : []
+    )
+    return starts.length === 0 ? [] : [starts]
+  })
+
+/**
  * Where the transpiler found mini-notation and widgets in the code just evaluated.
  * @param evaluation - the object the REPL hands to afterEval
  * @returns the locations and widget configs, empty when absent

@@ -37,6 +37,8 @@ const props = defineProps<{
   voiceGroups?: StrudelFlowSampleGroup[]
   /** True while this node's instruments are the only ones playing. */
   isSoloed?: boolean
+  /** True while one of this node's notes sounds. */
+  isPlaying?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -125,7 +127,8 @@ const onRemove = (): void => {
     class="strudel-flow-node"
     :class="{
       'strudel-flow-node--selected': selected,
-      'strudel-flow-node--muted': isMuted
+      'strudel-flow-node--muted': isMuted,
+      'strudel-flow-node--playing': isPlaying
     }"
     :data-node-kind="data.kind"
   >

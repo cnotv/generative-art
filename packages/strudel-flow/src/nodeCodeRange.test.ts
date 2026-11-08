@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { compileStrudelFlow } from './compileStrudelFlow'
-import { findStrudelFlowNodeCode } from './nodeCodeRange'
+import {
+  findStrudelFlowNodeCode,
+  findStrudelFlowPlayingNodeIds,
+  getStrudelFlowNodeCodeRanges
+} from './nodeCodeRange'
 import { parseStrudelFlowCode } from './parseStrudelFlowCode'
 
 const SONG = `// a kick that drops out, with s() in a comment
@@ -63,5 +67,108 @@ describe('findStrudelFlowNodeCode', () => {
 
     // Assert
     expect(range).toBeNull()
+  })
+})
+
+describe('getStrudelFlowNodeCodeRanges', () => {
+  it('gives every node of the song its range', () => {
+    // Arrange
+    const patch = parsedSong()
+
+    // Act
+    const ranges = getStrudelFlowNodeCodeRanges(SONG, patch.nodes, patch.edges)
+
+    // Assert
+    const found = Object.fromEntries(
+      ranges.map((range) => [range.nodeId, SONG.slice(range.from, range.to)])
+    )
+    expect(found).toMatchObject({
+      'beats-1': 's("bd*4")',
+      'gain-2': 'gain(.3)',
+      'mask-2': 'mask(body)',
+      'voice-1': 's("sawtooth")'
+    })
+  })
+
+  it('gives a beats node one range for each sounding row', () => {
+    // Arrange
+    const code = '$: stack(\n  s("bd*4"),\n  s("hh*8")\n)'
+    const patch = parseStrudelFlowCode(code) ?? parsedSong()
+    const beatsNode = patch.nodes.find((node) => node.data.kind === 'beats')
+
+    // Act
+    const ranges = getStrudelFlowNodeCodeRanges(code, patch.nodes, patch.edges)
+
+    // Assert
+    const own = ranges.filter((range) => range.nodeId === beatsNode?.id)
+    expect(own.length).toBeGreaterThan(0)
+    expect(own.map((range) => code.slice(range.from, range.to))).toContain('s("bd*4")')
+  })
+})
+
+describe('findStrudelFlowPlayingNodeIds', () => {
+  const ranges = () => {
+    const patch = parsedSong()
+    return getStrudelFlowNodeCodeRanges(SONG, patch.nodes, patch.edges)
+  }
+
+  it('finds the head node for an offset inside its mini-notation', () => {
+    // Arrange
+    const offset = SONG.indexOf('bd*4')
+
+    // Act
+    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset]])
+
+    // Assert
+    expect(ids).toEqual(['beats-1'])
+  })
+
+  it('finds the gain node for an offset inside its arguments', () => {
+    // Arrange
+    const offset = SONG.indexOf('.3)')
+
+    // Act
+    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset]])
+
+    // Assert
+    expect(ids).toEqual(['gain-2'])
+  })
+
+  it('ignores an offset in the setup line', () => {
+    // Arrange
+    const offset = SONG.indexOf('const body')
+
+    // Act
+    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset]])
+
+    // Assert
+    expect(ids).toEqual([])
+  })
+
+  it('lists a node once however many haps fall in it', () => {
+    // Arrange
+    const offset = SONG.indexOf('bd*4')
+
+    // Act
+    const ids = findStrudelFlowPlayingNodeIds(ranges(), [[offset], [offset + 1]])
+
+    // Assert
+    expect(ids).toEqual(['beats-1'])
+  })
+
+  it.each([
+    ['head first', ['note("c2 e2")', '"sawtooth"']],
+    ['head last', ['"sawtooth"', 'note("c2 e2")']]
+  ])('gives only the leftmost node of one hap, %s', (_label, snippets) => {
+    // Arrange
+    const offsets = snippets.map((snippet) => SONG.indexOf(snippet) + 1)
+    const notesId = findStrudelFlowPlayingNodeIds(ranges(), [[SONG.indexOf('c2 e2')]])
+
+    // Act
+    const ids = findStrudelFlowPlayingNodeIds(ranges(), [offsets])
+
+    // Assert
+    expect(ids).toEqual(notesId)
+    expect(ids).toHaveLength(1)
   })
 })
