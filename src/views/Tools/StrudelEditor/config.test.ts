@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { INSTRUMENT_BUILT_IN_PRESETS } from './instruments/config'
 import {
   ELECTRO_TUNES,
   STRUDEL_SAMPLE_BANKS,
@@ -183,7 +184,7 @@ describe('STRUDEL_MUSIC_STYLES snippets', () => {
     }
   )
 
-  it.each(snippetsOfRole('hihat'))(
+  it.each(snippetsOfRole('hihat').filter(({ snippet }) => /\bs\("(?:hh|oh)/.test(snippet)))(
     '$styleId hi-hats are not turned down, as the dirt-samples hat is already quiet',
     ({ snippet }) => {
       // Arrange
@@ -233,7 +234,15 @@ describe('STRUDEL_MUSIC_STYLES snippets', () => {
   })
 })
 
-const ADDED_STYLE_IDS = ['synthwave', 'stoner-rock', 'grunge', 'classical', 'funk', 'jazz'] as const
+const ADDED_STYLE_IDS = [
+  'synthwave',
+  'stoner-rock',
+  'grunge',
+  'death-metal',
+  'classical',
+  'funk',
+  'jazz'
+] as const
 
 describe('the added styles', () => {
   it.each(ADDED_STYLE_IDS)('ships a %s style', (styleId) => {
@@ -245,5 +254,98 @@ describe('the added styles', () => {
 
     // Assert
     expect(hasStyle).toBe(true)
+  })
+})
+
+const INSTRUMENT_SONGS = [
+  { id: 'sun-bleached', styleId: 'stoner-rock', bpm: 96, bars: 36 },
+  { id: 'paper-skies', styleId: 'grunge', bpm: 112, bars: 40 },
+  { id: 'hollow-chambers', styleId: 'death-metal', bpm: 200, bars: 40 }
+] as const
+
+describe('the songs that use the instrument presets', () => {
+  const findSong = (songId: string): string =>
+    ELECTRO_TUNES.find((tune) => tune.id === songId)?.code ?? ''
+
+  it.each(INSTRUMENT_SONGS)(
+    '$id writes its $bpm BPM in the first line and sets it exactly',
+    ({ id, bpm }) => {
+      // Arrange
+      const code = findSong(id)
+
+      // Act
+      const [firstLine = ''] = code.split('\n')
+      const setcpmArgument = /setcpm\((\d+)\/4\)/.exec(code)?.[1]
+
+      // Assert
+      expect(firstLine).toContain(`${bpm} BPM`)
+      expect(Number(setcpmArgument)).toBe(bpm)
+    }
+  )
+
+  it.each(INSTRUMENT_SONGS)(
+    '$id keeps its tempo inside the range of the $styleId style',
+    ({ styleId, bpm }) => {
+      // Arrange
+      const style = STRUDEL_MUSIC_STYLES.find((candidate) => candidate.id === styleId)
+
+      // Act
+      const inRange =
+        bpm >= (style?.minBeatsPerMinute ?? Infinity) && bpm <= (style?.maxBeatsPerMinute ?? 0)
+
+      // Assert
+      expect(inRange).toBe(true)
+    }
+  )
+
+  it.each(INSTRUMENT_SONGS)(
+    '$id plays built-in presets, so it sounds the same for everyone',
+    ({ id }) => {
+      // Arrange
+      const code = findSong(id)
+      const soundNames = [
+        ...code.matchAll(
+          /\b([a-z][\da-z]*)_(?:chord|mute|note|kick|snare|hat\w+|tom\w+|ride|crash)\b/g
+        )
+      ]
+
+      // Act
+      const presetNames = new Set(soundNames.map(([, presetName]) => presetName))
+      const builtInNames = INSTRUMENT_BUILT_IN_PRESETS.map(({ name }) => name)
+
+      // Assert
+      expect(presetNames.size).toBeGreaterThan(2)
+      expect([...presetNames].filter((name) => !builtInNames.includes(name))).toEqual([])
+    }
+  )
+
+  it.each(INSTRUMENT_SONGS)(
+    '$id names every instrument in a comment and puts its sections in arrange',
+    ({ id }) => {
+      // Arrange
+      const code = findSong(id)
+
+      // Act
+      const instrumentComment = code.split('\n').find((line) => line.startsWith('// Instruments:'))
+
+      // Assert
+      expect(instrumentComment).toBeDefined()
+      expect(code).toContain('arrange(')
+    }
+  )
+
+  it('cuts every drum event at fast tempos, so a blast beat does not smear', () => {
+    // Arrange
+    const code = findSong('hollow-chambers')
+    const kickAndSnareLines = code
+      .split('\n')
+      .filter((line) => /blastkit_(?:kick|snare)\b/.test(line))
+
+    // Act
+    const allClipped = kickAndSnareLines.every((line) => line.includes('.clip(1)'))
+
+    // Assert
+    expect(kickAndSnareLines.length).toBeGreaterThanOrEqual(2)
+    expect(allClipped).toBe(true)
   })
 })

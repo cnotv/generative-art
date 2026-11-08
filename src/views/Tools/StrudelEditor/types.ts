@@ -175,6 +175,7 @@ export type StrudelMusicStyleId =
   | 'synthwave'
   | 'stoner-rock'
   | 'grunge'
+  | 'death-metal'
   | 'classical'
   | 'funk'
   | 'jazz'

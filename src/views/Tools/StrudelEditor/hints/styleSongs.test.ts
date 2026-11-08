@@ -20,21 +20,23 @@ const songsNamingStyle = (styleId: string) =>
 
 describe('the song for each style', () => {
   it.each(STRUDEL_MUSIC_STYLES.map((style) => ({ styleId: style.id, style })))(
-    '$styleId has exactly one, which its hints find complete',
+    '$styleId has at least one, and its hints find each complete',
     ({ styleId, style }) => {
       // Arrange
       const songs = songsNamingStyle(styleId)
-      const code = songs[0]?.code ?? ''
-      const context = { code, facts: readStrudelCodeFacts(code), style }
+      const incompleteHints = songs.flatMap(({ code }) => {
+        const context = { code, facts: readStrudelCodeFacts(code), style }
+        return [...buildMissingHints(context), ...buildReviewHints(context)].map(
+          (hint) => hint.title
+        )
+      })
 
       // Act
-      const missingHints = buildMissingHints(context).map((hint) => hint.title)
-      const reviewHints = buildReviewHints(context).map((hint) => hint.title)
+      const songCount = songs.length
 
       // Assert
-      expect(songs).toHaveLength(1)
-      expect(missingHints).toEqual([])
-      expect(reviewHints).toEqual([])
+      expect(songCount).toBeGreaterThanOrEqual(1)
+      expect(incompleteHints).toEqual([])
     }
   )
 
@@ -42,13 +44,15 @@ describe('the song for each style', () => {
     '$styleId is arranged in sections rather than one loop',
     ({ styleId }) => {
       // Arrange
-      const code = songsNamingStyle(styleId)[0]?.code ?? ''
+      const codes = songsNamingStyle(styleId).map(({ code }) => code)
 
       // Act
-      const sectionCount = code.match(/\.mask\(("<|[a-z])|arrange\(/g)?.length ?? 0
+      const sectionCounts = codes.map(
+        (code) => code.match(/\.mask\(("<|[a-z])|arrange\(/g)?.length ?? 0
+      )
 
       // Assert
-      expect(sectionCount).toBeGreaterThanOrEqual(2)
+      expect(sectionCounts.every((sectionCount) => sectionCount >= 2)).toBe(true)
     }
   )
 })

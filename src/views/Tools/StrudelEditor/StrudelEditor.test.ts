@@ -305,7 +305,10 @@ describe('StrudelEditor view', () => {
       'Wire Fence (breakbeat)',
       'Neon Drive (synthwave)',
       'Dust and Diesel (stoner rock)',
+      'Sun Bleached (stoner rock)',
       'Rust and Rain (grunge)',
+      'Paper Skies (grunge)',
+      'Hollow Chambers (death metal)',
       'Winter Court (classical)',
       'Uptown Strut (funk)',
       'Blue Hour (jazz)'

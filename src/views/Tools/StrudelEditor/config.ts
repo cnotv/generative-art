@@ -617,6 +617,58 @@ $: note(lead).add(note(-12)).s("gm_distortion_guitar").shape(.5).lpf(1500).attac
   .room(.45).delay(.25).delaytime(.375).delayfeedback(.35).gain(.5).postgain(.4)`
   },
   {
+    id: 'sun-bleached',
+    label: 'Sun Bleached (stoner rock)',
+    code: `// Sun Bleached: a stoner rock song in A minor at 96 BPM
+// Thirty-six bars: intro, verse, chorus, half time break, chorus, outro. The guitar plays the riff, the bass
+// answers it on another rhythm, the kick sits between them, and the chorus opens onto ride, claps and organ.
+// Instruments: guitar stoner_chord and stoner_mute, lead stoner_note, bass fuzzbass_note, drums garagekit, organ doomorgan_note, claps default cp
+setcpm(96/4)
+
+const plan = (intro, verse, chorus, breakdown, outro) =>
+  arrange([4, intro], [8, verse], [8, chorus], [4, breakdown], [8, chorus], [4, outro])
+const roots = plan("<a1 a1 a1 e2>", "<a1 a1 c2 e2>", "<f2 f2 g2 a1>", "<a1 a1 e2 a1>", "<a1 a1 a1 a1>")
+const riff = "<[0 ~ 0 0 ~ 3 7 ~] [0 ~ 0 0 ~ 3 5 ~]>"
+const lead = "<[3 ~ 5 ~ 3 ~ 2 3] [5 ~ 6 ~ 5 ~ 3 4]>"
+
+const riffBars = "<1!12 0!20 1!3 0>"
+const chorusBars = "<0!12 1!8 0!4 1!8 0!4>"
+const breakBars = "<0!20 1!4 0!12>"
+const lastBar = "<0!35 1>"
+const verseKick = cat("x ~ ~ ~ ~ ~ x ~ ~ ~ x ~ ~ ~ ~ ~", "x ~ ~ x ~ ~ ~ ~ ~ ~ x ~ ~ x ~ ~")
+const chorusKick = "x ~ ~ ~ ~ ~ x ~ x ~ ~ ~ ~ ~ x ~"
+const kicks = arrange(
+  [4, "x ~ ~ ~ x ~ ~ ~"], [8, verseKick], [8, chorusKick], [4, "x ~ ~ ~ ~ ~ ~ ~"],
+  [8, chorusKick], [3, verseKick], [1, silence]
+)
+const backbeat = arrange([4, silence], [16, "~ ~ x ~ ~ ~ x ~"], [4, "~ ~ ~ ~ x ~ ~ ~"], [8, "~ ~ x ~ ~ ~ x ~"], [3, "~ ~ x ~ ~ ~ x ~"], [1, silence])
+
+$: stack(
+  s("garagekit_kick").struct(kicks).gain(.27),
+  s("garagekit_snare").struct(backbeat).gain(.22),
+  s("garagekit_hatclosed").struct("x ~ x x ~ x x ~").gain(.14).cut(2).mask(riffBars),
+  s("garagekit_hatopen").struct("~ ~ ~ ~ ~ ~ ~ x").gain(.14).cut(2).mask("<0!4 1!8 0!24>"),
+  s("garagekit_ride").struct("x x x x x x x x").gain(.12).cut(3).mask(chorusBars),
+  s("cp").struct("~ ~ x ~ ~ ~ x ~").gain(.24).mask(chorusBars),
+  s("~ ~ ~ ~ garagekit_tomhi garagekit_tommid garagekit_tomlow garagekit_tomlow").gain(.22).mask("<0!11 1 0!7 1 0!3 1 0!7 1 0!4>"),
+  s("garagekit_crash").struct("x").gain(.19).mask("<0!12 1 0!11 1 0!7 1 0!2 1>")
+)._punchcard()
+$: stack(
+  note(roots).struct("x ~ ~ x ~ x x ~").s("fuzzbass_note").clip(1).gain(.19).mask("<0!4 1!8 0!20 1!3 0>"),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").s("fuzzbass_note").clip(1).gain(.19).mask(breakBars),
+  note(roots).struct("x x ~ x x ~ x x").s("fuzzbass_note").clip(1).gain(.19).mask(chorusBars)
+)._scope()
+$: stack(
+  note(riff).add(note(roots)).s("stoner_chord").cut(1).gain(.14).mask(riffBars),
+  note(roots).struct("x ~ ~ ~ x ~ x ~").s("stoner_chord").cut(1).gain(.14).mask(chorusBars),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").s("stoner_chord").cut(1).gain(.14).mask(breakBars),
+  note(roots).struct("x x ~ x x ~ x x").s("stoner_mute").cut(1).gain(.1).mask(breakBars),
+  note(roots).struct("x ~").s("stoner_chord").clip(1).gain(.2).mask(lastBar),
+  note(roots).add(note("12,19,24")).s("doomorgan_note").clip(1).gain(.06).mask(chorusBars)
+)
+$: n(lead).scale("a3:minor:pentatonic").s("stoner_note").clip(1).gain(.1).mask(chorusBars)`
+  },
+  {
     id: 'rust-and-rain',
     label: 'Rust and Rain (grunge)',
     code: `// Rust and Rain: a grunge song in E minor
@@ -664,6 +716,104 @@ $: stack(
     .lpf(1800).decay(.25).sustain(.1).room(.25).gain(.19).mask("<0!8 1!8 0!8 1!8 1!7 0>"),
   chord("<~!39 E5>").voicing().s("gm_overdriven_guitar").lpf(1600).release(2.5).room(.4).gain(.21)
 )`
+  },
+  {
+    id: 'paper-skies',
+    label: 'Paper Skies (grunge)',
+    code: `// Paper Skies: a grunge song in G minor at 112 BPM
+// Forty bars: quiet verse, loud chorus, quiet verse, loud chorus, bridge, outro. The verse is a clean guitar arpeggio
+// over an acoustic strum and a light kick; the chorus turns on the fuzz, the pumping bass and a shouted hook.
+// Instruments: clean guitar jangle_note, acoustic campfire_chord, fuzz guitar seattle_chord and seattle_note, bass grungebass_note, drums garagekit, side stick default rim, organ doomorgan_note
+setcpm(112/4)
+
+const plan = (verse, chorus, bridge, outro) =>
+  arrange([8, verse], [8, chorus], [8, verse], [8, chorus], [4, bridge], [4, outro])
+const changes = plan("<Gm Gm Eb F>", "<Gm Eb Bb F>", "<Cm Cm D D>", "<Gm Eb Gm Gm>")
+const roots = changes.rootNotes(2)
+const hook = "<[5 ~ 5 5 ~ 4 ~ 3] [4 ~ 4 4 ~ 3 ~ 1]>"
+
+const quiet = "<1!8 0!8 1!8 0!8 1!8>"
+const loud = "<0!8 1!8 0!8 1!8 0!8>"
+const bridgeBars = "<0!32 1!4 0!4>"
+const lastBar = "<0!39 1>"
+const chorusKick = "x ~ x ~ x ~ ~ x"
+
+$: stack(
+  s("garagekit_kick").struct("x ~ ~ ~ x ~ ~ ~").gain(.17).mask(quiet),
+  s("rim").struct("~ ~ x ~ ~ ~ x ~").gain(.28).mask(quiet),
+  s("garagekit_hatclosed").struct("x ~ x ~ x ~ x ~").gain(.28).cut(2).mask(quiet),
+  s("garagekit_kick").struct(chorusKick).gain(.28).mask(loud),
+  s("garagekit_snare").struct("~ ~ x ~ ~ ~ x ~").gain(.28).mask(loud),
+  s("garagekit_hatopen").struct("x x x x x x x x").swingBy(1/8, 8).gain(.14).cut(2).mask(loud),
+  s("garagekit_tomhi garagekit_tommid garagekit_tomlow garagekit_tomlow").gain(.25).mask("<0!7 1 0!7 1 0!7 1 0!7 1 0!8>"),
+  s("garagekit_crash").struct("x").gain(.2).mask("<0!8 1 0!15 1 0!11 1 0!2 1>")
+)._punchcard()
+$: stack(
+  note(roots).struct("x ~ ~ x ~ ~ x ~").s("grungebass_note").clip(1).gain(.31).mask(quiet),
+  note(roots).struct("x x x x x x x x").s("grungebass_note").clip(1).gain(.31).mask(loud)
+)._scope()
+$: stack(
+  n("0 1 2 1 0 1 2 1").chord(changes).voicing().s("jangle_note").clip(1).gain(.22).mask(quiet),
+  note(roots).add(note(12)).struct("x ~ x x ~ x x ~").s("campfire_chord").cut(1).gain(.17).mask(quiet),
+  note(roots).struct("x ~ x ~ x ~ x x").s("seattle_chord").cut(1).gain(.17).mask(loud),
+  note(roots).add(note("12,19")).s("doomorgan_note").clip(1).gain(.09).mask(bridgeBars),
+  note(roots).struct("x ~").s("seattle_chord").clip(1).gain(.17).mask(lastBar)
+)
+$: n(hook).scale("g3:minor:pentatonic").s("seattle_note").clip(1).gain(.14).mask(loud)`
+  },
+  {
+    id: 'hollow-chambers',
+    label: 'Hollow Chambers (death metal)',
+    code: `// Hollow Chambers: a death metal song in A minor at 200 BPM
+// Forty bars: intro, blast verse, half time groove, tremolo riff, final blast, outro. The guitar tremolo picks
+// sixteenths and gallops on palm mutes, the bass doubles the riff, and the drums blast, drop to half time and blast again.
+// Instruments: guitar chainsaw_note, chainsaw_mute and chainsaw_chord, bass deathbass_note, drums blastkit
+setcpm(200/4)
+
+const plan = (intro, verse, groove, tremolo, finale, outro) =>
+  arrange([4, intro], [8, verse], [8, groove], [8, tremolo], [8, finale], [4, outro])
+const roots = plan("<a1 a1 a1 a1>", "<a1 a1 bb1 a1>", "<a1 eb2 a1 e2>", "<a1 bb1 a1 eb2>", "<a1 a1 bb1 eb2>", "<a1 a1 a1 a1>")
+const riff = "<[0*4 0*4 1*4 0*4] [0*4 6*4 0*4 7*4]>"
+const lead = "<[0 ~ 1 ~ 0 ~ 6 ~] [7 ~ 6 ~ 1 ~ 0 ~]>"
+
+const tremoloBars = "<1!12 0!8 1!16 0!4>"
+const grooveBars = "<0!12 1!8 0!20>"
+const outroBars = "<0!36 1!3 0>"
+const lastBar = "<0!39 1>"
+const sixteenths = "x*16"
+const kicks = arrange(
+  [4, "x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~"], [8, "x ~ x ~ x ~ x ~ x ~ x ~ x ~ x ~"],
+  [8, "x ~ ~ ~ ~ ~ x ~ x ~ ~ ~ ~ x ~ ~"], [8, sixteenths],
+  [8, "x ~ x ~ x ~ x ~ x ~ x ~ x ~ x ~"], [3, "x ~ ~ ~ ~ ~ x ~ x ~ ~ ~ ~ ~ ~ ~"], [1, silence]
+)
+const snares = arrange(
+  [4, "~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~"], [8, "~ x ~ x ~ x ~ x ~ x ~ x ~ x ~ x"],
+  [8, "~ ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~"], [8, "x ~ x ~ x ~ x ~ x ~ x ~ x ~ x ~"],
+  [8, "~ x ~ x ~ x ~ x ~ x ~ x ~ x ~ x"], [3, "~ ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~"], [1, silence]
+)
+
+$: stack(
+  s("blastkit_kick").struct(kicks).clip(1).gain(.28),
+  s("blastkit_snare").struct(snares).clip(1).gain(.23),
+  s("blastkit_hatclosed").struct("x ~ x ~ x ~ x ~ x ~ x ~ x ~ x ~").clip(1).gain(.16).cut(2).mask("<1!4 0!36>"),
+  s("blastkit_hatopen").struct("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ x ~").gain(.14).cut(2).mask(grooveBars),
+  s("blastkit_ride").struct("x ~ x ~ x ~ x ~ x ~ x ~ x ~ x ~").gain(.14).cut(3).mask(grooveBars),
+  s("blastkit_tomhi blastkit_tomhi blastkit_tommid blastkit_tommid blastkit_tomlow blastkit_tomlow blastkit_tomlow blastkit_tomlow").gain(.23)
+    .mask("<0!3 1 0!7 1 0!7 1 0!7 1 0!7 1 0!4>"),
+  s("blastkit_crash").struct("x").gain(.19).cut(3).mask("<0!4 1 0!7 1 0!7 1 0!7 1 0!7 1 0!2 1>")
+)._punchcard()
+$: stack(
+  note(riff).add(note(roots)).s("deathbass_note").clip(1).gain(.27).mask(tremoloBars),
+  note(roots).struct("x ~ ~ x ~ ~ x ~").s("deathbass_note").clip(1).gain(.27).mask(grooveBars)
+)._scope()
+$: stack(
+  note(riff).add(note(roots)).s("chainsaw_note").clip(1).gain(.18).mask(tremoloBars),
+  note(roots).struct("x ~ x x x ~ x x x ~ x x x ~ x x").s("chainsaw_mute").clip(1).gain(.18).mask(grooveBars),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~").s("chainsaw_chord").cut(1).gain(.18).mask(grooveBars),
+  note(roots).struct("x ~ ~ ~ x ~ ~ ~").s("chainsaw_chord").cut(1).gain(.18).mask(outroBars),
+  note(roots).struct("x ~").s("chainsaw_chord").clip(1).gain(.18).mask(lastBar)
+)
+$: n(lead).scale("a3:chromatic").s("chainsaw_note").clip(1).gain(.11).mask("<0!20 1!16 0!4>")`
   },
   {
     id: 'winter-court',
@@ -1598,6 +1748,57 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     visuals: ['punchcard', 'scope']
   },
   {
+    id: 'death-metal',
+    label: 'Death metal',
+    keywords: ['death metal', 'brutal death', 'blast beat', 'tremolo picking'],
+    definingRoles: ['kick', 'snare', 'chords'],
+    minBeatsPerMinute: 170,
+    maxBeatsPerMinute: 230,
+    beatsPerMinute: 200,
+    instruments: [
+      {
+        role: 'kick',
+        label: 'a sixteenth note kick',
+        snippet: 's("blastkit_kick*16").clip(1).gain(.6)',
+        reason: 'The kick runs in sixteenths and is cut at each event, so the blast stays tight.'
+      },
+      {
+        role: 'snare',
+        label: 'a blast beat snare',
+        snippet: 's("blastkit_snare").struct("~ x ~ x ~ x ~ x ~ x ~ x ~ x ~ x").clip(1).gain(.5)',
+        reason: 'Snare and kick alternate on sixteenths, or the snare keeps eighths over the kick.'
+      },
+      {
+        role: 'hihat',
+        label: 'tight closed hi-hats',
+        snippet: 's("blastkit_hatclosed*8").clip(1).gain(.3)',
+        reason: 'Closed hats mark the pulse in the intro; the blast moves to the cymbals.'
+      },
+      {
+        role: 'bass',
+        label: 'a picked bass doubling the riff',
+        snippet: 'note("<[a1*8 bb1*8] [a1*8 eb2*8]>").s("deathbass_note").clip(1).gain(.45)',
+        reason: 'The bass picks the riff in unison with the guitar, with a bright attack.'
+      },
+      {
+        role: 'chords',
+        label: 'a tremolo picked riff',
+        snippet:
+          'note("<[a1*4 a1*4 bb1*4 a1*4] [a1*4 eb2*4 a1*4 e2*4]>").s("chainsaw_note").clip(1).gain(.3)',
+        reason:
+          'Sixteenth notes on one pitch, moving by a semitone and a tritone, are the riff; a drop tuning makes it heavy.'
+      },
+      {
+        role: 'melody',
+        label: 'a chromatic lead',
+        snippet: 'note("<[a3@2 bb3 a3] [eb4@2 d4 a3]>").s("chainsaw_note").clip(1).gain(.2)',
+        reason:
+          'A short chromatic phrase over the riff, with a tritone leap, instead of a scale run.'
+      }
+    ],
+    visuals: ['punchcard', 'scope']
+  },
+  {
     id: 'classical',
     label: 'Classical',
     keywords: ['classical', 'orchestral', 'baroque', 'romantic', 'chamber music'],
@@ -1838,11 +2039,48 @@ export const STRUDEL_INSTRUMENT_SOUND_NAMES: Record<StrudelInstrumentRole, strin
   kick: ['bd', 'kick', '808bd', '909bd'],
   snare: ['sd', 'sn', 'snare', '808sd', '909sd'],
   clap: ['cp', 'clap', 'rm', 'rim', 'realclaps'],
-  hihat: ['hh', 'hc', 'oh', 'ho', 'hihat', '808hc', '808oh', 'hh27'],
-  percussion: ['perc', 'lt', 'mt', 'ht', 'tabla', 'cr', 'click', 'cb', 'cowbell', 'shaker', 'tom'],
+  hihat: ['hh', 'hc', 'oh', 'ho', 'hihat', '808hc', '808oh', 'hh27', 'hatclosed', 'hatopen'],
+  percussion: [
+    'perc',
+    'lt',
+    'mt',
+    'ht',
+    'tabla',
+    'cr',
+    'click',
+    'cb',
+    'cowbell',
+    'shaker',
+    'tom',
+    'tomhi',
+    'tommid',
+    'tomlow',
+    'ride',
+    'crash'
+  ],
   breaks: ['breaks125', 'breaks152', 'breaks157', 'breaks165', 'amencutup', 'amen'],
-  bass: ['bass', 'bass1', 'bass2', 'bass3', 'jvbass', 'subroc3d'],
-  chords: ['pad', 'padlong'],
+  bass: [
+    'bass',
+    'bass1',
+    'bass2',
+    'bass3',
+    'jvbass',
+    'subroc3d',
+    'fuzzbass',
+    'grungebass',
+    'deathbass'
+  ],
+  chords: [
+    'pad',
+    'padlong',
+    'chord',
+    'stoner',
+    'seattle',
+    'jangle',
+    'chainsaw',
+    'campfire',
+    'doomorgan'
+  ],
   melody: ['arpy', 'piano', 'casio', 'pluck', 'lead']
 }
 
