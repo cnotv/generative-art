@@ -1,4 +1,4 @@
-import type { StonerGuitarTone } from './types'
+import type { StonerGuitarTone, StonerGuitarToneKnob } from './types'
 
 export const STONER_GUITAR_DEFAULT_TONE: StonerGuitarTone = {
   drive: 0.75,
@@ -52,9 +52,23 @@ export const STONER_GUITAR_REGENERATE_DELAY_MS = 400
 export const STONER_GUITAR_OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 export const STONER_GUITAR_DEFAULT_MODEL = 'anthropic/claude-haiku-5.5'
 
+/** OpenRouter models that support strict JSON schema answers, checked against its model list. */
+export const STONER_GUITAR_MODEL_OPTIONS = [
+  { value: 'anthropic/claude-haiku-5.5', label: 'Claude Haiku 5.5' },
+  { value: 'anthropic/claude-sonnet-5.5', label: 'Claude Sonnet 5.5' },
+  { value: 'google/gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+  { value: 'openai/gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+  { value: 'deepseek/deepseek-v4.1-flash', label: 'DeepSeek V4.1 Flash' },
+  { value: 'qwen/qwen3.8-flash', label: 'Qwen3.8 Flash' }
+]
+
 export const STONER_GUITAR_USAGE_HINT = 'note("c2 c2 ds2 f2").s("stoner_chord")'
 
-export const STONER_GUITAR_KNOB_LABELS = [
+export const STONER_GUITAR_KNOB_LABELS: {
+  id: StonerGuitarToneKnob
+  label: string
+  hint: string
+}[] = [
   { id: 'drive', label: 'Drive', hint: 'Fuzz gain' },
   { id: 'tone', label: 'Tone', hint: 'Treble' },
   { id: 'bass', label: 'Bass', hint: 'Low end before the fuzz' },

@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   STONER_GUITAR_ASSISTANT_ERRORS,
+  STONER_GUITAR_DEFAULT_MODEL,
   STONER_GUITAR_DEFAULT_TONE,
   STONER_GUITAR_OPENROUTER_URL
 } from './config'
 import {
   askStonerToneAssistant,
   buildStonerToneRequest,
-  parseStonerToneResponse
+  parseStonerToneResponse,
+  readKnownStonerToneModel
 } from './stonerToneAssistant'
 
 const buildResponseBody = (content: string): unknown => ({ choices: [{ message: { content } }] })
@@ -139,5 +141,19 @@ describe('askStonerToneAssistant', () => {
 
     // Act and Assert
     await expect(ask(mockFetch)).rejects.toThrow(STONER_GUITAR_ASSISTANT_ERRORS.badAnswer)
+  })
+})
+
+describe('readKnownStonerToneModel', () => {
+  it.each([
+    ['a listed model', 'google/gemini-3.8-flash', 'google/gemini-3.8-flash'],
+    ['nothing stored', null, STONER_GUITAR_DEFAULT_MODEL],
+    ['a model no longer listed', 'someone/old-model', STONER_GUITAR_DEFAULT_MODEL]
+  ])('keeps only a model the dropdown offers: %s', (_case, storedModel, expectedModel) => {
+    // Arrange, Act
+    const model = readKnownStonerToneModel(storedModel)
+
+    // Assert
+    expect(model).toBe(expectedModel)
   })
 })

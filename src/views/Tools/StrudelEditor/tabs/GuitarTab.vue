@@ -3,8 +3,13 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import { STONER_GUITAR_KNOB_LABELS, STONER_GUITAR_USAGE_HINT } from '../guitar/config'
+import {
+  STONER_GUITAR_KNOB_LABELS,
+  STONER_GUITAR_MODEL_OPTIONS,
+  STONER_GUITAR_USAGE_HINT
+} from '../guitar/config'
 import { loadStrudelSoundLibrary } from '../strudelSoundLibrary'
 import { useStonerGuitar } from '../guitar/useStonerGuitar'
 
@@ -89,7 +94,9 @@ const onAsk = (): void => {
         The key is kept only in this browser's local storage, on this device. It is sent to
         OpenRouter and nowhere else.
       </p>
-      <Input v-model="model" placeholder="Model" aria-label="OpenRouter model" />
+      <span class="strudel-guitar__label">Model</span>
+      <Select v-model="model" :options="STONER_GUITAR_MODEL_OPTIONS" />
+
       <div class="strudel-guitar__actions">
         <Button size="sm" :disabled="!canAsk" @click="onAsk">
           {{ assistantBusy ? 'Asking...' : 'Ask' }}

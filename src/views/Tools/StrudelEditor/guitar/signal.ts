@@ -26,5 +26,5 @@ export const scaleSignal = (signal: Float32Array, factor: number): Float32Array 
  */
 export const normalisePeak = (signal: Float32Array, targetPeak: number): Float32Array => {
   const peak = readPeak(signal)
-  return peak === 0 ? [...signal] : scaleSignal(signal, targetPeak / peak)
+  return peak === 0 ? new Float32Array(signal) : scaleSignal(signal, targetPeak / peak)
 }

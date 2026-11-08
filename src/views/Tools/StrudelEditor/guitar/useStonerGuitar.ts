@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { isRecordModule, requireCallable, requireRecordModule } from '../strudelModules'
 import {
-  STONER_GUITAR_DEFAULT_MODEL,
   STONER_GUITAR_DEFAULT_TONE,
   STONER_GUITAR_REGENERATE_DELAY_MS,
   STONER_GUITAR_STORAGE_KEY_API_KEY,
@@ -10,7 +9,11 @@ import {
   STONER_GUITAR_STORAGE_KEY_TONE
 } from './config'
 import { registerStonerGuitar } from './registerStonerGuitar'
-import { askStonerToneAssistant, parseToneKnobs } from './stonerToneAssistant'
+import {
+  askStonerToneAssistant,
+  parseToneKnobs,
+  readKnownStonerToneModel
+} from './stonerToneAssistant'
 import type {
   StonerGuitarSampleRegistrar,
   StonerGuitarStatus,
@@ -57,7 +60,7 @@ export const useStonerGuitar = defineStore('stonerGuitar', () => {
   const status = ref<StonerGuitarStatus>('idle')
   const errorMessage = ref('')
   const apiKey = ref(readStored(STONER_GUITAR_STORAGE_KEY_API_KEY) ?? '')
-  const model = ref(readStored(STONER_GUITAR_STORAGE_KEY_MODEL) ?? STONER_GUITAR_DEFAULT_MODEL)
+  const model = ref(readKnownStonerToneModel(readStored(STONER_GUITAR_STORAGE_KEY_MODEL)))
   const assistantBusy = ref(false)
   const assistantExplanation = ref('')
   const assistantError = ref('')

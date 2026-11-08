@@ -2,10 +2,23 @@ import { isRecordModule } from '../strudelModules'
 import {
   STONER_GUITAR_ASSISTANT_ERRORS,
   STONER_GUITAR_ASSISTANT_SYSTEM_PROMPT,
+  STONER_GUITAR_DEFAULT_MODEL,
+  STONER_GUITAR_MODEL_OPTIONS,
   STONER_GUITAR_OPENROUTER_URL,
   STONER_GUITAR_TONE_JSON_SCHEMA
 } from './config'
 import type { StonerGuitarTone, StonerToneRequestOptions, StonerToneSuggestion } from './types'
+
+/**
+ * The model the dropdown should show. A model saved before the list changed, or typed in by an
+ * older version of the tab, falls back to the default so the dropdown never shows a blank choice.
+ * @param storedModel - the model id kept in local storage, if any
+ * @returns a model id from the dropdown's options
+ */
+export const readKnownStonerToneModel = (storedModel: string | null): string =>
+  storedModel !== null && STONER_GUITAR_MODEL_OPTIONS.some(({ value }) => value === storedModel)
+    ? storedModel
+    : STONER_GUITAR_DEFAULT_MODEL
 
 const clampToUnit = (value: number): number => Math.min(1, Math.max(0, value))
 
