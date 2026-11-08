@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { STONER_GUITAR_KNOB_LABELS, STONER_GUITAR_USAGE_HINT } from '../guitar/config'
+import { loadStrudelSoundLibrary } from '../strudelSoundLibrary'
 import { useStonerGuitar } from '../guitar/useStonerGuitar'
 
 const guitarStore = useStonerGuitar()
@@ -21,6 +22,11 @@ const {
 const { setKnob, resetTone, forgetApiKey, askAssistant } = guitarStore
 
 const description = ref('')
+
+// The guitar renders as part of the sound library, which otherwise waits for Play or the Sounds tab.
+onMounted(() => {
+  loadStrudelSoundLibrary().catch(() => undefined)
+})
 
 const statusMessage = computed(() => {
   const messages = {

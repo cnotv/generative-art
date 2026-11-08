@@ -163,13 +163,13 @@ const bassHits = "x ~ x x ~ ~ x ~ x ~ x ~ ~ x ~ ~"
 const drummed = arrange([2, "0"], [13, "1"], [1, "0"])
 const lastBar = arrange([15, silence], [1, "x"])
 
-$: note(roots).s("stoner_chord").struct(chordHits).gain(.9)
-$: note(roots).s("stoner_mute").struct(chugHits).gain(.8)
+$: note(roots).s("stoner_chord").struct(chordHits).gain(.2)
+$: note(roots).s("stoner_mute").struct(chugHits).gain(.16)
 $: note(roots).add(note(-12)).s("sawtooth").struct(bassHits).lpf(300).decay(.25).sustain(.2).gain(.7)
-$: s("bd").struct(riffHits).mask(drummed).gain(.9)
-$: s("sd").struct("~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~").mask(drummed).gain(.8)
-$: s("hh*8").mask(drummed).gain(.4)
-$: s("cr").struct(lastBar).gain(.7)`
+$: s("bd").struct(riffHits).mask(drummed).gain(.4)
+$: s("sd").struct("~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~").mask(drummed).gain(.4)
+$: s("hh*8").mask(drummed).gain(.2)
+$: s("cr").struct(lastBar).gain(.25)`
   }
 ]
 

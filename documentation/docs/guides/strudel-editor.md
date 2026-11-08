@@ -544,6 +544,28 @@ one file on its own writes exactly its single import code either way. The audio 
 left alone: it writes one `stack(...)` of drums, bass and chords, where a pianoroll would draw the
 drums too.
 
+## The stoner guitar
+
+The editor ships a distorted guitar that is built in your browser, so no audio files are downloaded. It registers three sounds: `stoner_chord` (a power chord of root, fifth and octave), `stoner_mute` (the same chord palm muted, for chugs) and `stoner_note` (a single string). The note you give is the root.
+
+```js
+note('c2 c2 ds2 f2').s('stoner_chord')
+```
+
+The **Guitar** tab has five sliders. Moving one renders the sounds again after a short pause, and the tab shows when they are ready. The tone is remembered on this device.
+
+| Slider  | What it does                          |
+| ------- | ------------------------------------- |
+| Drive   | the fuzz gain                         |
+| Tone    | the treble: dark and woolly to bright |
+| Bass    | the low end boosted ahead of the fuzz |
+| Mids    | scooped, neutral or a hump            |
+| Sustain | how long the strings ring             |
+
+The **AI tone** section turns a description such as "dry desert fuzz, scooped mids" into slider settings through OpenRouter. It needs your own OpenRouter key, which is kept only in this browser's local storage and is sent only to OpenRouter. "Forget key" removes it. The model id can be changed; the assistant only moves the sliders, so you can still adjust them. The "Stoner riff" example plays all three sounds with a bass line and drums.
+
+Why it is built this way, and how it was measured: [Stoner guitar](../journey/stoner-guitar.md).
+
 ## MIDI devices
 
 ![The midi tab with its Connect MIDI devices button and the three device snippets](/img/strudel-editor/midi-tab.webp)
