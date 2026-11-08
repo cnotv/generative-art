@@ -44,6 +44,8 @@ export type StrudelFlowSoundGroup = {
 export type StrudelFlowSampleOption = {
   value: string
   label: string
+  /** The picker's family when the name cannot tell it, such as a host's named instrument. */
+  familyId?: string
 }
 
 /** The host's samples under one heading, such as a drum machine, for the sample pickers. */

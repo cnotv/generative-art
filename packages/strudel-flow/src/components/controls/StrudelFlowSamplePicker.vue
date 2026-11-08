@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Component } from 'vue'
 import { ChevronDown, Play, Search } from 'lucide-vue-next'
 import { STRUDEL_FLOW_SAMPLE_FAMILIES } from '../../config'
@@ -72,7 +72,11 @@ const entries = computed<PickerEntry[]>(() => {
       }
       seen.add(sample.value)
       return [
-        { ...sample, group: group.label, familyId: findStrudelFlowSampleFamily(sample.value).id }
+        {
+          ...sample,
+          group: group.label,
+          familyId: sample.familyId ?? findStrudelFlowSampleFamily(sample.value).id
+        }
       ]
     })
   )
@@ -106,7 +110,9 @@ const triggerText = computed(() =>
     : (current.value?.label ?? props.modelValue)
 )
 const triggerFamilyId = computed(() =>
-  props.modelValue.length === 0 ? ALL_FAMILIES : findStrudelFlowSampleFamily(props.modelValue).id
+  props.modelValue.length === 0
+    ? ALL_FAMILIES
+    : (current.value?.familyId ?? findStrudelFlowSampleFamily(props.modelValue).id)
 )
 
 const nativeGroups = computed(() =>
@@ -148,6 +154,14 @@ const open = (): void => {
   isOpen.value = true
   void nextTick(() => searchField.value?.focus())
 }
+
+// The picker opens on the current sound's family, so a search started there would miss every
+// other family; starting to type widens it to all, and a family can still be picked to narrow.
+watch(query, (nextQuery, previousQuery) => {
+  if (nextQuery.trim().length > 0 && previousQuery.trim().length === 0) {
+    activeFamilyId.value = ALL_FAMILIES
+  }
+})
 
 const pick = (value: string): void => {
   emit('update:modelValue', value)

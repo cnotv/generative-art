@@ -175,6 +175,7 @@ export type StrudelMusicStyleId =
   | 'synthwave'
   | 'stoner-rock'
   | 'grunge'
+  | 'death-metal'
   | 'classical'
   | 'funk'
   | 'jazz'
@@ -331,6 +332,7 @@ export type StrudelTabId =
   | 'export'
   | 'console'
   | 'settings'
+  | 'instruments'
 
 export type StrudelSoundEntry = {
   /** What code plays it by, as in `s("rolandtr909_bd")`. */

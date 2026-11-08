@@ -15,6 +15,7 @@ import {
 } from './strudelOfflineRender'
 import { findLoopBars, findRepetitionCycles } from './patternRepetition'
 import { isRecordModule, requireCallable, requireRecordModule, toCallable } from './strudelModules'
+import { useInstruments } from './instruments/useInstruments'
 import { loadStrudelSoundLibrary } from './strudelSoundLibrary'
 import type {
   StrudelEvaluationMeta,
@@ -132,6 +133,16 @@ const unlockPageAudioContext = (): AudioContext | null => {
   void audioContext.resume()
   playSilentSound(audioContext)
   return audioContext
+}
+
+// Instrument presets render only when code plays one of their sounds, so the pattern waits for
+// them. A failure is recorded on the preset and leaves the rest of the pattern playing.
+const prepareInstrumentsForCode = async (patternCode: string): Promise<void> => {
+  try {
+    await useInstruments().ensureRenderedForCode(patternCode)
+  } catch {
+    // Without an active store there are no presets to wait for.
+  }
 }
 
 const toUnknownList = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
@@ -361,6 +372,7 @@ export const loadDefaultStrudelPlayback = async (
   // Exporting evaluates without starting the scheduler, so nothing plays while a file renders.
   const evaluateForExport = async (patternCode: string): Promise<unknown> => {
     await stopFunction()
+    await prepareInstrumentsForCode(patternCode)
     latestEvaluationError = null
     const pattern: unknown = await evaluateFunction(patternCode, false)
     if (latestEvaluationError !== null || pattern === undefined) {
@@ -396,6 +408,7 @@ export const loadDefaultStrudelPlayback = async (
     evaluateCode: async (patternCode: string): Promise<StrudelEvaluationResult> => {
       // Each Play or Update is a tap, and iOS may have suspended the context since the last.
       void resumeAudioContext(audioContext)
+      await prepareInstrumentsForCode(patternCode)
       latestEvaluationError = null
       await evaluateFunction(patternCode)
       return latestEvaluationError === null
@@ -466,7 +479,8 @@ const loadPreviewSound = async (
   webaudioModule: Record<string, unknown>,
   soundValue: Record<string, unknown>
 ): Promise<void> => {
-  const soundName = String(soundValue.s)
+  // A pitched sound keeps one file per sampled note, so each note is loaded on its own.
+  const soundName = `${String(soundValue.s)}:${String(soundValue.note ?? '')}:${String(soundValue.n ?? '')}`
   if (loadedPreviewSounds.has(soundName)) {
     return
   }
@@ -489,13 +503,12 @@ const assertAudioRunning = async (audioContext: unknown): Promise<void> => {
 }
 
 /**
- * Plays one sound on its own, as clicking a name in strudel.cc's sounds tab does. Unlocks the
- * page's audio first, inside the click, for the same iOS reason Play does.
- * @param soundName - a registered sound, such as "bd" or "gm_piano"
- * @param soundType - its registration type; synths and soundfonts are given a note to play
- * @throws {Error} when the browser keeps the audio context suspended, so the sound would be silent
+ * Gets the engine ready to play a preview. Unlocks the page's audio first, synchronously inside
+ * the click, for the same iOS reason Play does, then waits for every sound to be registered.
+ * @returns the engine module
+ * @throws {Error} when the browser keeps the audio context suspended, so the preview would be silent
  */
-export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
+const prepareStrudelPreview = async (): Promise<Record<string, unknown>> => {
   const gestureAudioContext = unlockPageAudioContext()
   const webaudioModule = requireRecordModule(await import('@strudel/webaudio'))
   if (gestureAudioContext !== null) {
@@ -503,19 +516,122 @@ export const previewStrudelSound = async (soundName: string, soundType: string):
   }
   await requireCallable(webaudioModule.initAudio)()
   await loadStrudelSoundLibrary()
+  await assertAudioRunning(requireCallable(webaudioModule.getAudioContext)())
+  return webaudioModule
+}
+
+const readPreviewStartTime = (webaudioModule: Record<string, unknown>): number =>
+  readAudioTime(requireCallable(webaudioModule.getAudioContext)()) +
+  STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
+
+const readSampleSelector = (selector: string | undefined): number | string | undefined => {
+  if (selector === undefined || selector === '') {
+    return undefined
+  }
+  return Number.isNaN(Number(selector)) ? selector : Number(selector)
+}
+
+/**
+ * The value superdough plays for one picked sound. Strudel's own `s` control splits `name:2` into
+ * the sound and its sample selector, but superdough takes the two apart, so it is split here.
+ * @param soundName - a registered sound, with an optional sample index or technique such as "chainsaw:1" or "chainsaw:mute"
+ * @param soundType - its registration type; synths and soundfonts are given a note to play
+ * @returns the sound, its index when there is one, a note when the type needs one, and a clip
+ */
+export const readPreviewSoundValue = (
+  soundName: string,
+  soundType: string
+): Record<string, unknown> => {
+  const [sampleName = soundName, sampleIndex] = soundName.split(':')
   const needsNote = soundType === 'synth' || soundType === 'soundfont'
-  const soundValue = {
-    s: soundName,
+  return {
+    s: sampleName,
+    n: readSampleSelector(sampleIndex),
     note: needsNote ? STRUDEL_SOUND_PREVIEW_NOTE : undefined,
     clip: 1
   }
-  const audioContext = requireCallable(webaudioModule.getAudioContext)()
-  await assertAudioRunning(audioContext)
+}
+
+/**
+ * Plays one sound on its own, as clicking a name in strudel.cc's sounds tab does.
+ * @param soundName - a registered sound, such as "bd" or "gm_piano", with an optional ":index"
+ * @param soundType - its registration type; synths and soundfonts are given a note to play
+ * @throws {Error} when the browser keeps the audio context suspended, so the sound would be silent
+ */
+export const previewStrudelSound = async (soundName: string, soundType: string): Promise<void> => {
+  const webaudioModule = await prepareStrudelPreview()
+  // Quoted, since the scan finds a bare preset name only inside a pattern string.
+  await prepareInstrumentsForCode(`s("${soundName}")`)
+  const soundValue = readPreviewSoundValue(soundName, soundType)
   await loadPreviewSound(webaudioModule, soundValue)
-  const startTime = readAudioTime(audioContext) + STRUDEL_SOUND_PREVIEW_LEAD_SECONDS
   await requireCallable(webaudioModule.superdough)(
     soundValue,
-    startTime,
+    readPreviewStartTime(webaudioModule),
     STRUDEL_SOUND_PREVIEW_SECONDS
   )
+}
+
+const SILENT_PLAYBACK_HOOKS: StrudelPlaybackHooks = {
+  onEvaluated: () => undefined,
+  onFrame: () => undefined,
+  onStopped: () => undefined,
+  getDrawContext: () => null
+}
+
+const silentPlayback: { loading: Promise<StrudelPlayback> | null } = { loading: null }
+
+const loadSilentPlayback = (): Promise<StrudelPlayback> => {
+  silentPlayback.loading ??= loadDefaultStrudelPlayback(SILENT_PLAYBACK_HOOKS).catch(
+    (error: unknown) => {
+      silentPlayback.loading = null
+      throw error
+    }
+  )
+  return silentPlayback.loading
+}
+
+/**
+ * Renders code offline to a WAV file, outside the editor's own playback, so the Instruments tab
+ * can make a preview without touching what is in the code editor.
+ * @param patternCode - Strudel code that sets its own tempo and plays one cycle
+ * @returns the WAV file
+ * @throws {Error} when the code does not render
+ */
+export const renderStrudelCodeToWav = async (patternCode: string): Promise<ArrayBuffer> => {
+  await prepareInstrumentsForCode(patternCode)
+  const playback = await loadSilentPlayback()
+  const result = await playback.renderToWavBytes(patternCode, EXPORT_DEFAULT_OPTIONS)
+  if (!result.success || result.file === undefined) {
+    throw new Error(result.errorMessage ?? 'The code did not render.')
+  }
+  return result.file
+}
+
+/**
+ * Plays a rendered WAV once on the page's audio and hands back a way to stop it. One buffer,
+ * unlike sounds scheduled one by one, can be stopped at any moment. The audio is unlocked
+ * before anything is awaited, so call it straight from the click.
+ * @param loadWav - gives the file to play, rendering it if needed
+ * @param onEnded - called once when it finishes or is stopped
+ * @returns a function that stops it
+ * @throws {Error} when the browser keeps the audio context suspended, so it would be silent
+ */
+export const playStrudelWavPreview = async (
+  loadWav: () => Promise<ArrayBuffer>,
+  onEnded: () => void
+): Promise<() => void> => {
+  const audioContext = unlockPageAudioContext()
+  if (audioContext === null) {
+    throw new Error('This browser has no Web Audio.')
+  }
+  const wav = await loadWav()
+  await assertAudioRunning(audioContext)
+  // decodeAudioData detaches the buffer it is given, and the caller keeps its copy for later.
+  const audioBuffer = await audioContext.decodeAudioData(structuredClone(wav))
+  const source = audioContext.createBufferSource()
+  source.buffer = audioBuffer
+  source.connect(audioContext.destination)
+  source.addEventListener('ended', onEnded, { once: true })
+  source.start()
+  return () => source.stop()
 }

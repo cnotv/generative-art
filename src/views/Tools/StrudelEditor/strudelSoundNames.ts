@@ -5,6 +5,8 @@ import {
   STRUDEL_SAMPLE_BANKS,
   STRUDEL_SYNTHS_GROUP_LABEL
 } from './config'
+import { INSTRUMENT_KINDS, INSTRUMENT_TAG_PREFIX } from './instruments/config'
+import { isInstrumentKind } from './instruments/presetScan'
 import type { StrudelSoundLibrary } from './types'
 
 const GENERAL_MIDI_PREFIX = 'gm_'
@@ -96,6 +98,15 @@ const describeSample = (
   }
 }
 
+// A preset's sounds are tagged `instrument:<kind>:<name>`, and listed as "<Kind label>: <name>".
+const describeInstrumentGroup = (tag: unknown): string | null => {
+  if (typeof tag !== 'string' || !tag.startsWith(`${INSTRUMENT_TAG_PREFIX}:`)) {
+    return null
+  }
+  const [, kind = '', presetName = ''] = tag.split(':')
+  return isInstrumentKind(kind) ? `${INSTRUMENT_KINDS[kind].label}: ${presetName}` : null
+}
+
 /**
  * Where the sounds tab lists a sound and the readable name it shows: drum machine sounds under
  * their machine and named for the drum, soundfonts under their General MIDI family, synths
@@ -120,6 +131,10 @@ export const describeStrudelSound = (
       group: STRUDEL_GENERAL_MIDI_FAMILIES[familyIndex] ?? UNKNOWN_BANK_GROUP_LABEL,
       groupPosition: familyIndex + 1
     }
+  }
+  const instrumentGroup = describeInstrumentGroup(data.tag)
+  if (instrumentGroup !== null) {
+    return { label: readableName(name), group: instrumentGroup, groupPosition: 0 }
   }
   return describeSample(name, data.baseUrl, soundLibrary)
 }

@@ -229,6 +229,56 @@ describe('StrudelFlowSamplePicker on a desktop pointer', () => {
     expect(families).toEqual(['All', 'Kicks', 'Keys'])
   })
 
+  it('files a sample under the family its host names, when its own name cannot tell', async () => {
+    // Arrange
+    useFinePointer()
+    const wrapper = mount(StrudelFlowSamplePicker, {
+      props: {
+        label: 'Voice sound',
+        modelValue: 'chainsaw_chord',
+        groups: [
+          {
+            label: 'Electric guitar: chainsaw',
+            samples: [{ value: 'chainsaw_chord', label: 'Power chord', familyId: 'strings' }]
+          }
+        ]
+      },
+      attachTo: document.body
+    })
+    await nextTick()
+
+    // Act
+    await wrapper.get('button[aria-label="Voice sound"]').trigger('click')
+
+    // Assert
+    const activeFamily = document.body.querySelector(
+      '.strudel-flow-sample-picker__family[aria-pressed="true"]'
+    )
+    expect(activeFamily?.textContent).toContain('Guitar and strings')
+    expect(optionLabels()).toEqual(['Power chord'])
+  })
+
+  it('searches every family once typing starts, not just the one it opened on', async () => {
+    // Arrange
+    const wrapper = await mountPicker()
+    await wrapper.get('button[aria-label="Track 1 sound"]').trigger('click')
+    const search = document.body.querySelector<HTMLInputElement>('input[type="search"]')
+
+    // Act
+    if (search !== null) {
+      search.value = 'casio'
+      search.dispatchEvent(new Event('input'))
+      await nextTick()
+    }
+
+    // Assert
+    const activeFamily = document.body.querySelector(
+      '.strudel-flow-sample-picker__family[aria-pressed="true"]'
+    )
+    expect(activeFamily?.textContent).toContain('All')
+    expect(optionLabels()).toEqual(['Casio'])
+  })
+
   it('opens on the family of the current sample rather than on all of them', async () => {
     // Arrange
     const wrapper = await mountPicker()

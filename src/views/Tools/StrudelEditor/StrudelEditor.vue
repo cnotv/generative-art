@@ -12,6 +12,7 @@ import {
   Boxes,
   Cable,
   CircleHelp,
+  Guitar,
   Music,
   Save,
   Settings,
@@ -38,6 +39,7 @@ import { useStrudelSounds } from './useStrudelSounds'
 import { previewStrudelSound } from './strudelPlayback'
 import type { StrudelEditorMode, StrudelSoundEntry, StrudelTabId } from './types'
 import FlowTab from './tabs/FlowTab.vue'
+import InstrumentsTab from './tabs/InstrumentsTab.vue'
 import HintsTab from './tabs/HintsTab.vue'
 import PatternLibrary from './tabs/PatternLibrary.vue'
 import SoundsTab from './tabs/SoundsTab.vue'
@@ -145,21 +147,25 @@ watch(
   { immediate: true }
 )
 
-const onSoundPreview = (soundEntry: StrudelSoundEntry): void => {
+const previewSound = (soundName: string, soundType: string): void => {
   // A sound that cannot play is written to the Console tab rather than left silent unexplained.
-  previewStrudelSound(soundEntry.name, soundEntry.type).catch((error: unknown) =>
+  previewStrudelSound(soundName, soundType).catch((error: unknown) =>
     appendLog(
-      `Could not play ${soundEntry.name}: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not play ${soundName}: ${error instanceof Error ? error.message : String(error)}`,
       'error'
     )
   )
 }
 
+const onSoundPreview = (soundEntry: StrudelSoundEntry): void => {
+  previewSound(soundEntry.name, soundEntry.type)
+}
+
+// An instrument preset is listed before it has rendered, so a sound missing from the loaded
+// list is still played, as a sample; the preview renders the preset first.
 const onFlowSoundPreview = (soundName: string): void => {
   const soundEntry = soundEntries.value.find((entry) => entry.name === soundName)
-  if (soundEntry !== undefined) {
-    onSoundPreview(soundEntry)
-  }
+  previewSound(soundName, soundEntry?.type ?? 'sample')
 }
 let replayTimer: number | null = null
 let codeParseTimer: number | null = null
@@ -342,6 +348,7 @@ const toolbarTools = [
   { id: 'export', label: 'Export', icon: Save },
   { id: 'midi', label: 'MIDI', icon: Cable },
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
+  { id: 'instruments', label: 'Instruments', icon: Guitar },
   { id: 'console', label: 'Console', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'flow', label: 'Nodes', icon: Boxes },
@@ -514,6 +521,7 @@ onBeforeUnmount(() => {
           :sounds-status="soundsStatus"
           @preview="onSoundPreview"
         />
+        <InstrumentsTab v-else-if="activeTab === 'instruments'" />
         <MidiTab v-else-if="activeTab === 'midi'" @code="updatePatternCode" />
         <ExportTab
           v-else-if="activeTab === 'export'"
