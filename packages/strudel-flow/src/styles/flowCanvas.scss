@@ -2256,3 +2256,23 @@
   margin: 0;
   padding: var(--spacing-2) var(--spacing-3);
 }
+
+.strudel-flow-envelope-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--sf-border);
+  border-radius: var(--radius-2, 4px);
+  background: var(--sf-muted);
+
+  .fill {
+    fill: var(--sf-accent-soft);
+  }
+
+  .line {
+    fill: none;
+    stroke: var(--sf-accent);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+}
