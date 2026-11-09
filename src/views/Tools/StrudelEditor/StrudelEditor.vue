@@ -24,7 +24,7 @@ import {
 import { useRoute, useRouter } from 'vue-router'
 import IconButton from '@/components/IconButton.vue'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
-import { FLOW_SYNC_DELAY_MS, STRUDEL_LICENSE_NOTE } from './config'
+import { FLOW_SYNC_DELAY_MS, STRUDEL_BEATS_PER_CYCLE, STRUDEL_LICENSE_NOTE } from './config'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import {
   findStrudelFlowNodeCode,
@@ -98,9 +98,9 @@ const {
   playheadCycle,
   timelineBars,
   cyclesPerSecond,
-  loopBars,
-  loopMeasured,
   seekToCycle,
+  rewind,
+  loopEnabled,
   holdPlayingPosition,
   playingCode,
   playingSourceOffsets
@@ -318,13 +318,27 @@ const onPlayRequested = (): void => {
 
 const onStopRequested = (): void => {
   void stopPattern()
+  rewind()
 }
 
 // A pause is a stop that keeps where it was, so the next Play carries on from there.
 const onPauseRequested = (): void => {
   holdPlayingPosition()
+  void stopPattern()
+}
+
+// CodeMirror claims Ctrl+. itself while the code has focus; this covers flow mode and the
+// timeline, and skips what CodeMirror already handled so a stop never runs twice.
+const onWindowKeydown = (event: KeyboardEvent): void => {
+  if (event.defaultPrevented || !(event.ctrlKey || event.altKey) || event.key !== '.') {
+    return
+  }
+  event.preventDefault()
   onStopRequested()
 }
+
+onMounted(() => window.addEventListener('keydown', onWindowKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
 
 const onFilesChosen = (chosenFiles: File[]): void => {
   void transcribeFiles(chosenFiles)
@@ -451,7 +465,7 @@ onBeforeUnmount(() => {
       </p>
       <p v-else class="strudel-editor__hint">
         Drag a node by its header to arrange it; drag from an output dot into an effect input to
-        route it.
+        route it. Ctrl+. stops playback.
       </p>
       <p v-if="flowErrorMessage !== null" class="strudel-editor__error" role="alert">
         {{ flowErrorMessage }}
@@ -463,12 +477,14 @@ onBeforeUnmount(() => {
         :playhead-cycle="playheadCycle"
         :timeline-bars="timelineBars"
         :cycles-per-second="cyclesPerSecond"
-        :loop-bars="loopBars"
-        :loop-measured="loopMeasured"
+        :steps-per-cycle="editorMode === 'flow' ? flowBeatsPerCycle : STRUDEL_BEATS_PER_CYCLE"
+        :loop-enabled="loopEnabled"
         :is-playing="editorStatus === 'playing'"
         @seek="seekToCycle"
         @play="onPlayRequested"
         @pause="onPauseRequested"
+        @stop="onStopRequested"
+        @update:loop-enabled="loopEnabled = $event"
       />
     </section>
 

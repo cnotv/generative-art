@@ -339,7 +339,7 @@ describe('loadDefaultStrudelPlayback', () => {
     // Arrange
     const playedPattern = { kind: 'pattern' }
     vi.mocked(readScheduledHaps).mockReturnValueOnce(
-      Array.from({ length: 32 }, (_, bar) => ({
+      Array.from({ length: 128 }, (_, bar) => ({
         value: { s: 'bd' },
         beginCycle: bar,
         durationCycles: 1
@@ -360,7 +360,7 @@ describe('loadDefaultStrudelPlayback', () => {
     // Assert
     expect(vi.mocked(readScheduledHaps)).toHaveBeenCalledWith(
       playedPattern,
-      expect.objectContaining({ startCycle: 0, endCycle: 32 }),
+      expect.objectContaining({ startCycle: 0, endCycle: 128 }),
       0.5
     )
     expect(loopBars).toBe(1)

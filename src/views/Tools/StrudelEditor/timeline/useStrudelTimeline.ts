@@ -1,12 +1,14 @@
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
-import { DEFAULT_CPS, STRUDEL_TIMELINE_MAX_LOOP_BARS } from '../config'
+import { DEFAULT_CPS, STRUDEL_MAX_SONG_CYCLES } from '../config'
 import type { StrudelEditorStatus, StrudelPlayback } from '../types'
 
 type StrudelTimelineHooks = {
   editorStatus: Ref<StrudelEditorStatus>
   /** The loaded playback, or null before the first Play loads the engine. */
   getPlayback: () => StrudelPlayback | null
+  /** Called once when playback reaches the end of the song while looping is off; the timeline then rewinds. */
+  onSongEnd: () => void
   requestFrame?: (callback: () => void) => number
   cancelFrame?: (frameHandle: number) => void
 }
@@ -17,13 +19,17 @@ type StrudelTimelineState = {
   /** Where the playhead sits inside the timeline, in cycles. */
   playheadCycle: Ref<number>
   cyclesPerSecond: Ref<number>
+  /** Whether playback wraps at the end of the song; off plays it once, then ends. */
+  loopEnabled: Ref<boolean>
   /** Bars the played pattern takes to repeat, or null when it does not within the limit. */
   loopBars: Ref<number | null>
   /** False until a pattern has played, since only an evaluated pattern can be measured. */
   loopMeasured: Ref<boolean>
-  /** How many bars the timeline spans: the loop, or the limit when there is none. */
+  /** How many cycles the song lasts: the loop, or the song limit when there is none. */
   timelineBars: ComputedRef<number>
   seekToCycle: (cycle: number) => void
+  /** Puts the next Play and the playhead back on the first cycle. */
+  rewind: () => void
   /** Moves a stopped scheduler to the start cycle, just before Play evaluates. */
   applyStartCycle: () => void
   /** Reads the loop and tempo of the pattern that just started or updated. */
@@ -46,18 +52,37 @@ export const useStrudelTimeline = (hooks: StrudelTimelineHooks): StrudelTimeline
   const startCycle = ref(0)
   const playheadCycle = ref(0)
   const cyclesPerSecond = ref(DEFAULT_CPS)
+  const loopEnabled = ref(true)
   const loopBars = ref<number | null>(null)
   const loopMeasured = ref(false)
-  const timelineBars = computed(() => loopBars.value ?? STRUDEL_TIMELINE_MAX_LOOP_BARS)
+  const timelineBars = computed(() => loopBars.value ?? STRUDEL_MAX_SONG_CYCLES)
   let frameHandle: number | null = null
+  let songEndReported = false
 
   const wrapIntoTimeline = (cycle: number): number => cycle % timelineBars.value
+
+  const placeOnTimeline = (cycle: number): number =>
+    loopEnabled.value ? wrapIntoTimeline(cycle) : Math.min(cycle, timelineBars.value)
+
+  const rewind = (): void => {
+    startCycle.value = 0
+    playheadCycle.value = 0
+  }
+
+  const reportSongEndOnce = (cycle: number): void => {
+    if (!loopEnabled.value && !songEndReported && cycle >= timelineBars.value) {
+      songEndReported = true
+      hooks.onSongEnd()
+      rewind()
+    }
+  }
 
   const followPlayback = (): void => {
     const position = hooks.getPlayback()?.readPosition()
     if (position !== undefined) {
-      playheadCycle.value = wrapIntoTimeline(position.cycle)
+      playheadCycle.value = placeOnTimeline(position.cycle)
       cyclesPerSecond.value = position.cyclesPerSecond
+      reportSongEndOnce(position.cycle)
     }
     frameHandle = requestFrame(followPlayback)
   }
@@ -72,6 +97,7 @@ export const useStrudelTimeline = (hooks: StrudelTimelineHooks): StrudelTimeline
   watch(hooks.editorStatus, (status) => {
     stopFollowing()
     if (status === 'playing') {
+      songEndReported = false
       frameHandle = requestFrame(followPlayback)
       return
     }
@@ -115,10 +141,12 @@ export const useStrudelTimeline = (hooks: StrudelTimelineHooks): StrudelTimeline
     startCycle,
     playheadCycle,
     cyclesPerSecond,
+    loopEnabled,
     loopBars,
     loopMeasured,
     timelineBars,
     seekToCycle,
+    rewind,
     applyStartCycle,
     measurePlayedPattern,
     holdPlayingPosition

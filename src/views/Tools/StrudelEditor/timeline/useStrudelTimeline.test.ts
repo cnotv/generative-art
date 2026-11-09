@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
-import { DEFAULT_CPS, STRUDEL_TIMELINE_MAX_LOOP_BARS } from '../config'
+import { DEFAULT_CPS, STRUDEL_MAX_SONG_CYCLES } from '../config'
 import type { StrudelEditorStatus, StrudelPlayback } from '../types'
 import { useStrudelTimeline } from './useStrudelTimeline'
 
@@ -19,18 +19,20 @@ const buildPlayback = (cycle = 0, loopBars: number | null = 4): StrudelPlayback 
 const buildTimeline = (playback: StrudelPlayback | null, status: StrudelEditorStatus = 'idle') => {
   const editorStatus = ref<StrudelEditorStatus>(status)
   const frameCallbacks: (() => void)[] = []
+  const onSongEnd = vi.fn()
   const timeline = useStrudelTimeline({
     editorStatus,
+    onSongEnd,
     getPlayback: () => playback,
     requestFrame: (callback) => frameCallbacks.push(callback),
     cancelFrame: vi.fn()
   })
   const runFrame = (): void => frameCallbacks.shift()?.()
-  return { editorStatus, timeline, runFrame }
+  return { editorStatus, timeline, runFrame, onSongEnd }
 }
 
 describe('useStrudelTimeline', () => {
-  it('opens at the first bar over the longest window, before any loop is measured', () => {
+  it('opens at the first bar over the longest song, before any loop is measured', () => {
     // Act
     const { timeline } = buildTimeline(null)
 
@@ -38,7 +40,7 @@ describe('useStrudelTimeline', () => {
     expect(timeline.startCycle.value).toBe(0)
     expect(timeline.playheadCycle.value).toBe(0)
     expect(timeline.loopMeasured.value).toBe(false)
-    expect(timeline.timelineBars.value).toBe(STRUDEL_TIMELINE_MAX_LOOP_BARS)
+    expect(timeline.timelineBars.value).toBe(STRUDEL_MAX_SONG_CYCLES)
     expect(timeline.cyclesPerSecond.value).toBe(DEFAULT_CPS)
   })
 
@@ -112,7 +114,7 @@ describe('useStrudelTimeline', () => {
     // Assert
     expect(timeline.loopMeasured.value).toBe(true)
     expect(timeline.loopBars.value).toBeNull()
-    expect(timeline.timelineBars.value).toBe(STRUDEL_TIMELINE_MAX_LOOP_BARS)
+    expect(timeline.timelineBars.value).toBe(STRUDEL_MAX_SONG_CYCLES)
   })
 
   it('follows playback each frame, wrapped into the loop', async () => {
@@ -159,5 +161,83 @@ describe('useStrudelTimeline', () => {
 
     // Assert
     expect(timeline.playheadCycle.value).toBe(1)
+  })
+
+  it('seeks a cycle that sits in a later section of a long song', () => {
+    // Arrange
+    const playback = buildPlayback(0, null)
+    const { timeline } = buildTimeline(playback, 'playing')
+
+    // Act
+    timeline.seekToCycle(40.25)
+
+    // Assert
+    expect(playback.seekToCycle).toHaveBeenCalledWith(40.25)
+    expect(timeline.playheadCycle.value).toBe(40.25)
+  })
+
+  it('rewinds the start and the playhead to the first cycle', () => {
+    // Arrange
+    const { timeline } = buildTimeline(buildPlayback())
+    timeline.seekToCycle(3)
+
+    // Act
+    timeline.rewind()
+
+    // Assert
+    expect(timeline.startCycle.value).toBe(0)
+    expect(timeline.playheadCycle.value).toBe(0)
+  })
+
+  it('loops by default, wrapping the playhead past the end of the song', async () => {
+    // Arrange
+    const playback = buildPlayback(5, 4)
+    const { timeline, editorStatus, runFrame, onSongEnd } = buildTimeline(playback)
+    timeline.measurePlayedPattern()
+    editorStatus.value = 'playing'
+    await nextTick()
+
+    // Act
+    runFrame()
+
+    // Assert
+    expect(timeline.loopEnabled.value).toBe(true)
+    expect(timeline.playheadCycle.value).toBe(1)
+    expect(onSongEnd).not.toHaveBeenCalled()
+  })
+
+  it('reports the end of the song once when looping is off', async () => {
+    // Arrange
+    const playback = buildPlayback(4, 4)
+    const { timeline, editorStatus, runFrame, onSongEnd } = buildTimeline(playback)
+    timeline.measurePlayedPattern()
+    timeline.loopEnabled.value = false
+    editorStatus.value = 'playing'
+    await nextTick()
+
+    // Act
+    runFrame()
+    runFrame()
+
+    // Assert
+    expect(onSongEnd).toHaveBeenCalledTimes(1)
+    expect(timeline.startCycle.value).toBe(0)
+  })
+
+  it('does not report the end of the song before it is reached', async () => {
+    // Arrange
+    const playback = buildPlayback(3.9, 4)
+    const { timeline, editorStatus, runFrame, onSongEnd } = buildTimeline(playback)
+    timeline.measurePlayedPattern()
+    timeline.loopEnabled.value = false
+    editorStatus.value = 'playing'
+    await nextTick()
+
+    // Act
+    runFrame()
+
+    // Assert
+    expect(onSongEnd).not.toHaveBeenCalled()
+    expect(timeline.playheadCycle.value).toBe(3.9)
   })
 })

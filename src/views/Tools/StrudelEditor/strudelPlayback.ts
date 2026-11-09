@@ -6,8 +6,7 @@ import {
   STRUDEL_SOUND_PREVIEW_LEAD_SECONDS,
   STRUDEL_SOUND_PREVIEW_NOTE,
   STRUDEL_SOUND_PREVIEW_SECONDS,
-  STRUDEL_MAX_SONG_CYCLES,
-  STRUDEL_TIMELINE_MAX_LOOP_BARS
+  STRUDEL_MAX_SONG_CYCLES
 } from './config'
 import {
   downloadExportFile,
@@ -433,8 +432,8 @@ export const loadDefaultStrudelPlayback = async (
       latestPattern === null
         ? null
         : findLoopBars(
-            readOpeningHaps(latestPattern, STRUDEL_TIMELINE_MAX_LOOP_BARS * 2),
-            STRUDEL_TIMELINE_MAX_LOOP_BARS
+            readOpeningHaps(latestPattern, STRUDEL_MAX_SONG_CYCLES * 2),
+            STRUDEL_MAX_SONG_CYCLES
           ),
     measureRepetition: async (patternCode: string): Promise<number | null> =>
       findPatternRepetition(

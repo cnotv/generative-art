@@ -57,22 +57,38 @@ export const findRepetitionCycles = (haps: StrudelScheduledHap[]): number => {
   return repetitionsPerCycle === undefined ? 1 : 1 / repetitionsPerCycle
 }
 
+const describeWholeCycles = (haps: StrudelScheduledHap[], cycleCount: number): string[] => {
+  const hapsByCycle = haps.reduce<Map<number, StrudelScheduledHap[]>>((groups, hap) => {
+    const cycleIndex = Math.floor(roundCycle(hap.beginCycle))
+    groups.set(cycleIndex, [...(groups.get(cycleIndex) ?? []), hap])
+    return groups
+  }, new Map())
+  return Array.from({ length: cycleCount }, (_, cycleIndex) =>
+    (hapsByCycle.get(cycleIndex) ?? [])
+      .map((hap) => describeHap(hap, cycleIndex))
+      .sort()
+      .join('|')
+  )
+}
+
 /**
  * How many bars the whole mix takes to come round again, for the timeline. Instruments that
  * repeat at different lengths, such as three bars under four, only line up again at their
  * least common multiple, so that is the loop: the shortest whole number of bars every
- * instrument repeats in at once.
+ * instrument repeats in at once. Each bar is described once and compared by index, because
+ * describing every slice of every candidate again is too slow for a 128 bar query.
  * @param haps - the events of the first `maxBars * 2` bars, so every candidate is seen twice
  * @param maxBars - the longest loop to look for
  * @returns the loop length in bars, or null when nothing repeats within `maxBars`
  */
 export const findLoopBars = (haps: StrudelScheduledHap[], maxBars: number): number | null => {
   const queriedBars = maxBars * 2
-  return (
-    Array.from({ length: maxBars }, (_, index) => index + 1).find((candidateBars) =>
-      sliceRepeats(haps, candidateBars, Math.floor(queriedBars / candidateBars))
-    ) ?? null
-  )
+  const cycleSignatures = describeWholeCycles(haps, queriedBars)
+  const repeatsEvery = (candidateBars: number): boolean =>
+    cycleSignatures
+      .slice(0, Math.floor(queriedBars / candidateBars) * candidateBars)
+      .every((signature, cycleIndex) => signature === cycleSignatures[cycleIndex % candidateBars])
+  return Array.from({ length: maxBars }, (_, index) => index + 1).find(repeatsEvery) ?? null
 }
 
 /**
