@@ -76,17 +76,20 @@ export const createPresetLibrary = (onSelect: (name: string) => void) => {
     onSelect(name)
   }
 
-  const setKnobs = (knobs: InstrumentKnobs): void => {
-    const preset = selectedPreset.value
-    if (preset === undefined) {
-      return
-    }
-    if (isBuiltInName(preset.name)) {
-      tweaks.value = { ...tweaks.value, [preset.name]: knobs }
+  const setPresetKnobs = (name: string, knobs: InstrumentKnobs): void => {
+    if (isBuiltInName(name)) {
+      tweaks.value = { ...tweaks.value, [name]: knobs }
     } else {
       userPresets.value = userPresets.value.map((candidate) =>
-        candidate.name === preset.name ? { ...candidate, knobs } : candidate
+        candidate.name === name ? { ...candidate, knobs } : candidate
       )
+    }
+  }
+
+  const setKnobs = (knobs: InstrumentKnobs): void => {
+    const name = selectedPreset.value?.name
+    if (name !== undefined) {
+      setPresetKnobs(name, knobs)
     }
   }
 
@@ -168,6 +171,7 @@ export const createPresetLibrary = (onSelect: (name: string) => void) => {
     selectPreset,
     setKnob,
     setKnobs,
+    setPresetKnobs,
     resetPreset,
     createPreset,
     duplicatePreset,

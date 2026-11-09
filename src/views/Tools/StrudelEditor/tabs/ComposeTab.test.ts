@@ -1,8 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS } from '../ai/config'
 import { useAiSettings } from '../ai/useAiSettings'
+import { useStrudelComposer } from '../ai/useStrudelComposer'
+import type { StrudelComposerInstrumentResult } from '../ai/types'
 import ComposeTab from './ComposeTab.vue'
+
+vi.mock('@strudel/webaudio', () => ({
+  samples: vi.fn(),
+  registerSound: vi.fn(),
+  soundMap: { get: () => ({}) }
+}))
 
 const mountComposeTab = (code: string, editorError = '') =>
   mount(ComposeTab, { props: { code, editorError } })
@@ -100,11 +109,68 @@ describe('ComposeTab', () => {
     await findButton(wrapper, 'Compose')?.trigger('click')
     await flushPromises()
     await findButton(wrapper, 'Apply')?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.emitted('apply')).toBeDefined())
 
     // Assert
     expect(wrapper.text()).toContain('A house loop.')
     expect(wrapper.find('pre').text()).toBe('$: s("bd*4")')
     expect(wrapper.emitted('apply')).toEqual([['$: s("bd*4")']])
     expect(findButton(wrapper, 'Apply')?.element.disabled).toBe(true)
+  })
+})
+
+const ANSWER = {
+  action: 'compose' as const,
+  explanation: 'A bass groove.',
+  code: '$: note("a1").s("grit")',
+  instruments: [
+    { name: 'grit', kind: 'bass-guitar' as const, description: 'A dirty pick bass' },
+    { name: 'stoner', kind: 'electric-guitar' as const, description: 'Fuzz' }
+  ]
+}
+
+const mountWithAnswer = (instrumentResults: StrudelComposerInstrumentResult[]) => {
+  const composer = useStrudelComposer()
+  composer.answer = ANSWER
+  composer.instrumentResults = instrumentResults
+  return mount(ComposeTab, { props: { code: '', editorError: '' } })
+}
+
+const rowTexts = (wrapper: ReturnType<typeof mountWithAnswer>): string[] =>
+  wrapper.findAll('.strudel-compose__instrument').map((row) => row.text())
+
+describe('ComposeTab designed instruments', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('lists each designed instrument with its kind, sound and that it is made on Apply', () => {
+    // Act
+    const wrapper = mountWithAnswer([])
+
+    // Assert
+    const rows = rowTexts(wrapper)
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toContain('grit')
+    expect(rows[0]).toContain('Bass guitar')
+    expect(rows[0]).toContain('A dirty pick bass')
+    expect(rows[0]).toContain(STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS.pending)
+  })
+
+  it.each([
+    ['ready', '', STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS.ready],
+    ['existed', '', STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS.existed],
+    ['creating', '', STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS.creating],
+    ['failed', 'Strudel already has a sound with this name.', 'Strudel already has a sound']
+  ] as const)('shows the %s status of an applied instrument', (status, message, expectedText) => {
+    // Act
+    const wrapper = mountWithAnswer([
+      { status, message },
+      { status: 'existed', message: '' }
+    ])
+
+    // Assert
+    expect(rowTexts(wrapper)[0]).toContain(expectedText)
   })
 })

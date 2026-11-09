@@ -85,4 +85,19 @@ Write code that runs as is:
 
 Sounds: drum machines such as rolandtr909_bd, rolandtr909_sd, rolandtr909_hh, rolandtr808_bd; synths sawtooth, square, triangle, sine; General MIDI voices such as gm_acoustic_bass, gm_electric_guitar_clean, gm_epiano1, gm_string_ensemble_1.
 
-Answer in JSON with "explanation", a few sentences on what you wrote or found, and "code", the program.`
+You can also design new instruments for the piece, modelled physically and rendered as samples. List each in "instruments" with:
+- "name": a new name, lowercase letters and digits starting with a letter, at most 16 characters, that is not a listed preset or a Strudel sound, such as "grit" or "warmkeys".
+- "kind": electric-guitar, bass-guitar, acoustic-guitar, organ or drum-kit.
+- "description": one sentence on the sound, such as "a dirty pick bass with a hard attack and short sustain"; a sound designer turns it into the instrument's knobs.
+Play a guitar, bass or organ as note("a1 c2").s("<name>") for single notes, s("<name>:mute") for palm-muted notes and s("<name>:chord") for strummed chords; play a drum kit's pieces as s("<name>_kick <name>_snare"), with <name>_tomhi, <name>_tommid, <name>_tomlow, <name>_hatclosed, <name>_hatopen, <name>_ride and <name>_crash. Name a designed instrument in the code only if it is in "instruments" or the preset list. Design one only where it suits the piece better than an existing sound; otherwise leave "instruments" empty.
+
+Answer in JSON with "explanation", a few sentences on what you wrote or found, "code", the program, and "instruments", the instruments you designed.`
+
+/** What the Compose tab says about a designed instrument, before and while the answer is applied. */
+export const STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS = {
+  pending: 'Made when the code is applied',
+  creating: 'Designing the sound...',
+  ready: 'Ready',
+  existed: 'Already exists, kept as it is',
+  failed: 'Not made'
+}

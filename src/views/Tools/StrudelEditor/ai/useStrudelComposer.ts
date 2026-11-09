@@ -5,7 +5,11 @@ import { useInstruments } from '../instruments/useInstruments'
 import { STRUDEL_AI_STORAGE_KEY_AUTO_APPLY } from './config'
 import { askStrudelComposer } from './strudelComposer'
 import { useAiSettings } from './useAiSettings'
-import type { StrudelComposerAction, StrudelComposerAnswer } from './types'
+import type {
+  StrudelComposerAction,
+  StrudelComposerAnswer,
+  StrudelComposerInstrumentResult
+} from './types'
 
 /**
  * The Compose tab's state. It is a store so an answer that arrives after the drawer moved to
@@ -21,12 +25,45 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
 
   watch(autoApply, (isOn) => writeStored(STRUDEL_AI_STORAGE_KEY_AUTO_APPLY, String(isOn)))
 
-  const applyAnswer = (applyCode: (code: string) => void): void => {
-    if (answer.value === null || answer.value.code.length === 0) {
+  // One result for each of the held answer's instruments, filled in while it is applied.
+  const instrumentResults = ref<StrudelComposerInstrumentResult[]>([])
+  const applying = ref(false)
+
+  const setInstrumentResult = (index: number, result: StrudelComposerInstrumentResult): void => {
+    instrumentResults.value = instrumentResults.value.map((current, currentIndex) =>
+      currentIndex === index ? result : current
+    )
+  }
+
+  /**
+   * Creates the instruments the answer designed, then writes its code into the editor, so the
+   * code never plays a preset that does not exist yet or still has its starting knobs.
+   * @param applyCode - writes code into the editor
+   * @returns once the instruments are designed and the code is written
+   */
+  const applyAnswer = async (applyCode: (code: string) => void): Promise<void> => {
+    const heldAnswer = answer.value
+    if (heldAnswer === null || heldAnswer.code.length === 0 || applying.value) {
       return
     }
-    applyCode(answer.value.code)
-    answerApplied.value = true
+    applying.value = true
+    instrumentResults.value = heldAnswer.instruments.map(() => ({
+      status: 'creating',
+      message: ''
+    }))
+    try {
+      const instruments = useInstruments()
+      await instruments.refreshForeignSoundNames()
+      await Promise.all(
+        heldAnswer.instruments.map(async (instrument, index) =>
+          setInstrumentResult(index, await instruments.designPreset(instrument))
+        )
+      )
+      applyCode(heldAnswer.code)
+      answerApplied.value = true
+    } finally {
+      applying.value = false
+    }
   }
 
   /**
@@ -56,8 +93,9 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
         apiKey: settings.apiKey
       })
       answerApplied.value = false
+      instrumentResults.value = []
       if (autoApply.value) {
-        applyAnswer(applyCode)
+        await applyAnswer(applyCode)
       }
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : String(error)
@@ -66,5 +104,16 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
     }
   }
 
-  return { request, autoApply, busyAction, answer, answerApplied, errorMessage, run, applyAnswer }
+  return {
+    request,
+    autoApply,
+    busyAction,
+    answer,
+    answerApplied,
+    instrumentResults,
+    applying,
+    errorMessage,
+    run,
+    applyAnswer
+  }
 })

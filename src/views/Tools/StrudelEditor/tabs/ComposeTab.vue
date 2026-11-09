@@ -4,7 +4,8 @@ import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { STRUDEL_COMPOSER_ACTIONS } from '../ai/config'
+import { STRUDEL_COMPOSER_ACTIONS, STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS } from '../ai/config'
+import { INSTRUMENT_KINDS } from '../instruments/config'
 import { useAiSettings } from '../ai/useAiSettings'
 import { useStrudelComposer } from '../ai/useStrudelComposer'
 import type { StrudelComposerAction } from '../ai/types'
@@ -15,8 +16,16 @@ const props = defineProps<{ code: string; editorError: string }>()
 const emit = defineEmits<{ apply: [code: string] }>()
 
 const composer = useStrudelComposer()
-const { request, autoApply, busyAction, answer, answerApplied, errorMessage } =
-  storeToRefs(composer)
+const {
+  request,
+  autoApply,
+  busyAction,
+  answer,
+  answerApplied,
+  instrumentResults,
+  applying,
+  errorMessage
+} = storeToRefs(composer)
 const { apiKey } = storeToRefs(useAiSettings())
 
 const applyCode = (code: string): void => emit('apply', code)
@@ -39,11 +48,33 @@ const canFix = computed(
 )
 
 const canApply = computed(
-  () => answer.value !== null && answer.value.code.length > 0 && !answerApplied.value
+  () =>
+    answer.value !== null && answer.value.code.length > 0 && !answerApplied.value && !applying.value
+)
+
+// Before Apply an instrument has no result yet; a failure says why.
+const instrumentRows = computed(() =>
+  (answer.value?.instruments ?? []).map((instrument, index) => {
+    const result = instrumentResults.value[index]
+    const statusLabel =
+      result === undefined
+        ? STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS.pending
+        : STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS[result.status]
+    return {
+      ...instrument,
+      kindLabel: INSTRUMENT_KINDS[instrument.kind].label,
+      statusLabel: result?.message ? `${statusLabel}: ${result.message}` : statusLabel,
+      failed: result?.status === 'failed'
+    }
+  })
 )
 
 const onRun = (action: StrudelComposerAction): void => {
   void composer.run(action, props.code, applyCode)
+}
+
+const onApply = (): void => {
+  void composer.applyAnswer(applyCode)
 }
 
 const onFix = (): void => {
@@ -106,14 +137,29 @@ const onFix = (): void => {
       <p v-if="answer.explanation" class="strudel-compose__explanation">
         {{ answer.explanation }}
       </p>
+      <ul
+        v-if="instrumentRows.length > 0"
+        class="strudel-compose__instruments"
+        aria-label="Designed instruments"
+      >
+        <li v-for="row in instrumentRows" :key="row.name" class="strudel-compose__instrument">
+          <span class="strudel-compose__instrument-name">{{ row.name }}</span>
+          {{ row.kindLabel }}: {{ row.description }}
+          <span
+            class="strudel-compose__instrument-status"
+            :class="{ 'strudel-compose__instrument-status--failed': row.failed }"
+            >{{ row.statusLabel }}</span
+          >
+        </li>
+      </ul>
       <template v-if="answer.code">
         <pre
           class="strudel-compose__code"
           aria-label="Answered code"
         ><code>{{ answer.code }}</code></pre>
         <div class="strudel-compose__actions">
-          <Button size="sm" :disabled="!canApply" @click="composer.applyAnswer(applyCode)">
-            Apply
+          <Button size="sm" :disabled="!canApply" :aria-busy="applying" @click="onApply">
+            {{ applying ? 'Applying...' : 'Apply' }}
           </Button>
         </div>
         <p v-if="answerApplied" class="strudel-compose__hint" role="status">
@@ -178,6 +224,30 @@ const onFix = (): void => {
   color: var(--color-foreground);
   background: var(--color-muted);
   border-radius: var(--radius-md);
+}
+
+.strudel-compose__instruments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-foreground);
+}
+
+.strudel-compose__instrument-name {
+  font-family: var(--font-mono, monospace);
+}
+
+.strudel-compose__instrument-status {
+  display: block;
+  color: var(--color-muted-foreground);
+}
+
+.strudel-compose__instrument-status--failed {
+  color: var(--color-destructive);
 }
 
 .strudel-compose__error {

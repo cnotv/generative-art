@@ -4,10 +4,12 @@ import { isRecordModule, requireCallable, requireRecordModule } from '../strudel
 import { useAiSettings } from '../ai/useAiSettings'
 import { INSTRUMENT_REGENERATE_DELAY_MS, INSTRUMENT_TAG_PREFIX } from './config'
 import { askInstrumentToneAssistant } from './instrumentToneAssistant'
+import { designInstrumentPreset } from './designPreset'
 import { createPresetLibrary } from './presetLibrary'
 import { findReferencedInstrumentPresets } from './presetScan'
 import { makeNotesEndAtEvent } from './eventLengthNotes'
 import { registerInstrument } from './registerInstrument'
+import type { StrudelComposerInstrument } from '../ai/types'
 import type { InstrumentPreset, InstrumentRenderStatus } from './types'
 
 // One import shared by every caller, so the sound list and a render never load the engine twice.
@@ -191,6 +193,8 @@ export const useInstruments = defineStore('instruments', () => {
     duplicatePreset: library.duplicatePreset,
     renamePreset: library.renamePreset,
     deletePreset: library.deletePreset,
-    askAssistant
+    askAssistant,
+    designPreset: (instrument: StrudelComposerInstrument) =>
+      designInstrumentPreset(library, instrument)
   }
 })

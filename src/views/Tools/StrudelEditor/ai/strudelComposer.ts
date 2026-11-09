@@ -3,20 +3,39 @@ import {
   STRUDEL_COMPOSER_ACTIONS,
   STRUDEL_COMPOSER_SYSTEM_PROMPT
 } from './config'
+import { INSTRUMENT_KINDS } from '../instruments/config'
+import { isRecordModule } from '../strudelModules'
 import { askOpenRouter, buildStrictJsonFormat } from './openRouter'
+import type { InstrumentKind } from '../instruments/types'
 import type {
   StrudelComposerAction,
   StrudelComposerAnswer,
+  StrudelComposerInstrument,
   StrudelComposerRequestOptions
 } from './types'
+
+const INSTRUMENT_KIND_IDS = Object.keys(INSTRUMENT_KINDS)
 
 const STRUDEL_COMPOSER_SCHEMA = {
   type: 'object',
   properties: {
     explanation: { type: 'string' },
-    code: { type: 'string' }
+    code: { type: 'string' },
+    instruments: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          kind: { type: 'string', enum: INSTRUMENT_KIND_IDS },
+          description: { type: 'string' }
+        },
+        required: ['name', 'kind', 'description'],
+        additionalProperties: false
+      }
+    }
   },
-  required: ['explanation', 'code'],
+  required: ['explanation', 'code', 'instruments'],
   additionalProperties: false
 }
 
@@ -59,12 +78,29 @@ const stripMarkdownFence = (code: string): string =>
     .replace(/\n?```$/, '')
     .trim()
 
+const isInstrumentKind = (kind: unknown): kind is InstrumentKind =>
+  typeof kind === 'string' && INSTRUMENT_KIND_IDS.includes(kind)
+
+const readInstrument = (candidate: unknown): StrudelComposerInstrument[] => {
+  if (!isRecordModule(candidate)) {
+    return []
+  }
+  const { name, kind, description } = candidate
+  return typeof name === 'string' && typeof description === 'string' && isInstrumentKind(kind)
+    ? [{ name: name.trim(), kind, description: description.trim() }]
+    : []
+}
+
+const readInstruments = (instruments: unknown): StrudelComposerInstrument[] =>
+  Array.isArray(instruments) ? instruments.flatMap(readInstrument) : []
+
 /**
  * Reads the model's answer. A review keeps only its explanation; compose and revise must return
- * code, with any Markdown fence the model wrapped it in removed.
+ * code, with any Markdown fence the model wrapped it in removed, and keep the instruments they
+ * designed whose kind exists. A fix keeps the music as it is, so it designs none.
  * @param action - the action the answer is for
  * @param parsed - the JSON object the model answered with
- * @returns the explanation and, except for a review, the code
+ * @returns the explanation, the code except for a review, and any designed instruments
  * @throws {Error} a readable error when compose or revise returned no code
  */
 export const parseStrudelComposerAnswer = (
@@ -73,13 +109,14 @@ export const parseStrudelComposerAnswer = (
 ): StrudelComposerAnswer => {
   const explanation = typeof parsed.explanation === 'string' ? parsed.explanation.trim() : ''
   if (action === 'review') {
-    return { action, explanation, code: '' }
+    return { action, explanation, code: '', instruments: [] }
   }
   const code = typeof parsed.code === 'string' ? stripMarkdownFence(parsed.code) : ''
   if (code.length === 0) {
     throw new Error(STRUDEL_AI_ERRORS.noCode)
   }
-  return { action, explanation, code }
+  const instruments = action === 'fix' ? [] : readInstruments(parsed.instruments)
+  return { action, explanation, code, instruments }
 }
 
 /**

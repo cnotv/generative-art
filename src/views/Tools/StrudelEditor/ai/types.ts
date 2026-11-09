@@ -1,3 +1,5 @@
+import type { InstrumentKind } from '../instruments/types'
+
 export type StrudelComposerAction = 'compose' | 'revise' | 'review' | 'fix'
 
 export type StrudelComposerActionDefinition = {
@@ -17,11 +19,30 @@ export type StrudelComposerRequestOptions = {
   presetNames: string[]
 }
 
+/** An instrument preset the model designed for the piece, described in words. */
+export type StrudelComposerInstrument = {
+  name: string
+  kind: InstrumentKind
+  /** The wanted sound, which the sound model turns into the kind's knobs. */
+  description: string
+}
+
 export type StrudelComposerAnswer = {
   action: StrudelComposerAction
   explanation: string
   /** Empty for a review, which only comments. */
   code: string
+  /** New presets the code plays; empty for a review or a fix. */
+  instruments: StrudelComposerInstrument[]
+}
+
+/** What applying the answer did with one designed instrument. */
+export type StrudelComposerInstrumentStatus = 'creating' | 'ready' | 'existed' | 'failed'
+
+export type StrudelComposerInstrumentResult = {
+  status: StrudelComposerInstrumentStatus
+  /** Why it failed, or empty. */
+  message: string
 }
 
 export type OpenRouterRequestOptions = {
