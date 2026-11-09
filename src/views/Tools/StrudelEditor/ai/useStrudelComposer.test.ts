@@ -6,7 +6,8 @@ import {
   STRUDEL_AI_DEFAULT_SOUND_MODEL,
   STRUDEL_AI_ERRORS,
   STRUDEL_AI_STORAGE_KEY_API_KEY,
-  STRUDEL_AI_STORAGE_KEY_SOUND_MODEL
+  STRUDEL_AI_STORAGE_KEY_SOUND_MODEL,
+  STRUDEL_COMPOSER_NO_DESIGN_PROMPT
 } from './config'
 import { useInstruments } from '../instruments/useInstruments'
 import { useAiSettings } from './useAiSettings'
@@ -243,5 +244,40 @@ describe('useStrudelComposer', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(composer.instrumentResults).toEqual([])
     expect(useInstruments().presets.map(({ name }) => name)).not.toContain('grit')
+  })
+
+  it('remembers whether to design instruments, on until unticked', async () => {
+    // Arrange
+    const composer = useStrudelComposer()
+    const startedOn = composer.designInstruments
+
+    // Act
+    composer.designInstruments = false
+    await nextTick()
+    setActivePinia(createPinia())
+
+    // Assert
+    expect(startedOn).toBe(true)
+    expect(useStrudelComposer().designInstruments).toBe(false)
+  })
+
+  it('with designing off, asks for no instruments and makes none on Apply', async () => {
+    // Arrange
+    const mockFetch = stubComposeAndTone()
+    const composer = useStrudelComposer()
+    composer.designInstruments = false
+    composer.request = 'a bass groove'
+    const applyCode = vi.fn()
+    await composer.run('compose', '', applyCode)
+
+    // Act
+    await composer.applyAnswer(applyCode)
+
+    // Assert
+    const systemPrompt = JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)).messages[0].content
+    expect(systemPrompt).toContain(STRUDEL_COMPOSER_NO_DESIGN_PROMPT)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(composer.instrumentResults).toEqual([])
+    expect(applyCode).toHaveBeenCalledWith(DESIGNED.code)
   })
 })

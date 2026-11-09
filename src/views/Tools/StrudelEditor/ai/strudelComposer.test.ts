@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   STRUDEL_AI_ERRORS,
   STRUDEL_COMPOSER_ACTIONS,
+  STRUDEL_COMPOSER_DESIGN_PROMPT,
   STRUDEL_COMPOSER_MAX_INSTRUMENTS,
+  STRUDEL_COMPOSER_NO_DESIGN_PROMPT,
   STRUDEL_COMPOSER_SYSTEM_PROMPT
 } from './config'
 import {
@@ -17,7 +19,8 @@ const REQUEST_OPTIONS = {
   request: 'add a hi-hat',
   currentCode: 'setcpm(30)\n$: s("bd*4")',
   model: 'a/b',
-  presetNames: ['stoner', 'garagekit']
+  presetNames: ['stoner', 'garagekit'],
+  designInstruments: true
 }
 
 describe('buildStrudelComposerRequest', () => {
@@ -69,10 +72,27 @@ describe('buildStrudelComposerRequest', () => {
 
   it('teaches how to design an instrument and play it', () => {
     // Assert
-    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('"instruments"')
-    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('<name>:chord')
-    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('<name>_kick')
+    expect(STRUDEL_COMPOSER_DESIGN_PROMPT).toContain('"instruments"')
+    expect(STRUDEL_COMPOSER_DESIGN_PROMPT).toContain('<name>:chord')
+    expect(STRUDEL_COMPOSER_DESIGN_PROMPT).toContain('<name>_kick')
   })
+
+  it.each([
+    [true, STRUDEL_COMPOSER_DESIGN_PROMPT, STRUDEL_COMPOSER_NO_DESIGN_PROMPT],
+    [false, STRUDEL_COMPOSER_NO_DESIGN_PROMPT, STRUDEL_COMPOSER_DESIGN_PROMPT]
+  ])(
+    'with designing instruments %s, tells the model only the matching rule',
+    (designInstruments, expectedPrompt, absentPrompt) => {
+      // Act
+      const body = JSON.parse(
+        JSON.stringify(buildStrudelComposerRequest({ ...REQUEST_OPTIONS, designInstruments }))
+      )
+
+      // Assert
+      expect(body.messages[0].content).toContain(expectedPrompt)
+      expect(body.messages[0].content).not.toContain(absentPrompt)
+    }
+  )
 
   it('leaves the preset line out when there are no presets', () => {
     // Act
@@ -81,7 +101,9 @@ describe('buildStrudelComposerRequest', () => {
     )
 
     // Assert
-    expect(body.messages[0].content).toBe(STRUDEL_COMPOSER_SYSTEM_PROMPT)
+    expect(body.messages[0].content).toBe(
+      `${STRUDEL_COMPOSER_SYSTEM_PROMPT}${STRUDEL_COMPOSER_DESIGN_PROMPT}`
+    )
   })
 })
 
@@ -211,5 +233,28 @@ describe('askStrudelComposer', () => {
       code: '$: s("hh*8")',
       instruments: []
     })
+  })
+
+  it('drops any instrument the model designed anyway when designing is off', async () => {
+    // Arrange
+    const content = JSON.stringify({
+      explanation: '',
+      code: '$: note("a1").s("grit")',
+      instruments: [{ name: 'grit', kind: 'bass-guitar', description: 'A dirty pick bass' }]
+    })
+    const mockFetch = vi.fn<typeof fetch>(
+      async () => new Response(JSON.stringify({ choices: [{ message: { content } }] }))
+    )
+
+    // Act
+    const answer = await askStrudelComposer({
+      ...REQUEST_OPTIONS,
+      designInstruments: false,
+      apiKey: 'secret-key',
+      fetchImplementation: mockFetch
+    })
+
+    // Assert
+    expect(answer.instruments).toEqual([])
   })
 })

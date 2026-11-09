@@ -19,6 +19,7 @@ const composer = useStrudelComposer()
 const {
   request,
   autoApply,
+  designInstruments,
   busyAction,
   answer,
   answerApplied,
@@ -123,6 +124,12 @@ const onFix = (): void => {
     <div class="strudel-compose__checkbox">
       <Checkbox id="strudel-compose-auto-apply" v-model="autoApply" />
       <label for="strudel-compose-auto-apply">Auto apply the code to the editor</label>
+    </div>
+    <div class="strudel-compose__checkbox">
+      <Checkbox id="strudel-compose-design-instruments" v-model="designInstruments" />
+      <label for="strudel-compose-design-instruments">
+        Create new instruments for the piece with the Sound model
+      </label>
     </div>
     <p class="strudel-compose__hint">
       Compose writes a new piece, Revise changes the code in the editor, Review only comments on it.

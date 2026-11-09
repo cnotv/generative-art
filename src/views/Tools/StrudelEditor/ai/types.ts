@@ -17,6 +17,8 @@ export type StrudelComposerRequestOptions = {
   model: string
   /** Instrument preset names the code can play, such as "stoner". */
   presetNames: string[]
+  /** Whether the model may design new instrument presets for the piece. */
+  designInstruments: boolean
 }
 
 /** An instrument preset the model designed for the piece, described in words. */

@@ -1,7 +1,9 @@
 import {
   STRUDEL_AI_ERRORS,
   STRUDEL_COMPOSER_ACTIONS,
+  STRUDEL_COMPOSER_DESIGN_PROMPT,
   STRUDEL_COMPOSER_MAX_INSTRUMENTS,
+  STRUDEL_COMPOSER_NO_DESIGN_PROMPT,
   STRUDEL_COMPOSER_SYSTEM_PROMPT
 } from './config'
 import { INSTRUMENT_KINDS } from '../instruments/config'
@@ -50,8 +52,8 @@ const findInstruction = (action: StrudelComposerAction): string =>
 
 /**
  * The chat completion body that asks for Strudel code, or a review of it, as strict JSON.
- * @param options - the action, the player's request, the code in the editor, the model id and
- * the instrument presets the code can play
+ * @param options - the action, the player's request, the code in the editor, the model id, the
+ * instrument presets the code can play and whether the model may design new ones
  * @returns the request body to post to OpenRouter
  */
 export const buildStrudelComposerRequest = ({
@@ -59,11 +61,15 @@ export const buildStrudelComposerRequest = ({
   request,
   currentCode,
   model,
-  presetNames
+  presetNames,
+  designInstruments
 }: StrudelComposerRequestOptions): Record<string, unknown> => ({
   model,
   messages: [
-    { role: 'system', content: `${STRUDEL_COMPOSER_SYSTEM_PROMPT}${describePresets(presetNames)}` },
+    {
+      role: 'system',
+      content: `${STRUDEL_COMPOSER_SYSTEM_PROMPT}${designInstruments ? STRUDEL_COMPOSER_DESIGN_PROMPT : STRUDEL_COMPOSER_NO_DESIGN_PROMPT}${describePresets(presetNames)}`
+    },
     {
       role: 'user',
       content: `Task: ${findInstruction(action)}\n\nRequest: ${request}\n\nCurrent code:\n${currentCode}`
@@ -125,14 +131,14 @@ export const parseStrudelComposerAnswer = (
 /**
  * Asks OpenRouter to compose, revise or review Strudel code.
  * @param options - the request options plus the player's own key and, for tests, a fetch
- * @returns the explanation and the code to apply
+ * @returns the explanation, the code to apply and, when allowed, the designed instruments
  * @throws {Error} a readable error for a missing or refused key, no credit, a network failure or
  * a bad answer
  */
 export const askStrudelComposer = async (
   options: StrudelComposerRequestOptions & { apiKey: string; fetchImplementation?: typeof fetch }
-): Promise<StrudelComposerAnswer> =>
-  parseStrudelComposerAnswer(
+): Promise<StrudelComposerAnswer> => {
+  const answer = parseStrudelComposerAnswer(
     options.action,
     await askOpenRouter({
       apiKey: options.apiKey,
@@ -140,3 +146,6 @@ export const askStrudelComposer = async (
       fetchImplementation: options.fetchImplementation
     })
   )
+  // A model told to design none may still list some; the player's choice wins.
+  return options.designInstruments ? answer : { ...answer, instruments: [] }
+}

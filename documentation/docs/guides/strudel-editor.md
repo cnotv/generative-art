@@ -608,6 +608,8 @@ Nothing is made until the code is applied. Applying first creates each instrumen
 - **Already exists, kept as it is**: a preset of that name was there before, built in or your own, and it is never overwritten; the code plays it as it is.
 - **Not made**, with the reason: the name cannot be a preset name, for example because Strudel already has a sound called that. If only the Sound model failed, the preset is kept at its kind's starting knobs.
 
+Untick **Create new instruments for the piece with the Sound model** to keep the composer to the sounds and presets that already exist: it is then told to design none, and nothing is created on Apply. It is ticked until you untick it, and the choice is remembered in this browser.
+
 Designed presets stay after the piece is replaced, saved and editable like any preset you made yourself, and can be renamed or deleted in the Instruments tab.
 
 ### AI settings

@@ -2,7 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { readStored, writeStored } from '../instruments/storage'
 import { useInstruments } from '../instruments/useInstruments'
-import { STRUDEL_AI_STORAGE_KEY_AUTO_APPLY } from './config'
+import {
+  STRUDEL_AI_STORAGE_KEY_AUTO_APPLY,
+  STRUDEL_AI_STORAGE_KEY_DESIGN_INSTRUMENTS
+} from './config'
 import { askStrudelComposer } from './strudelComposer'
 import { useAiSettings } from './useAiSettings'
 import type {
@@ -23,7 +26,13 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
   const answerApplied = ref(false)
   const errorMessage = ref('')
 
+  // On unless the player turned it off, since it is what lets a piece bring its own sounds.
+  const designInstruments = ref(readStored(STRUDEL_AI_STORAGE_KEY_DESIGN_INSTRUMENTS) !== 'false')
+
   watch(autoApply, (isOn) => writeStored(STRUDEL_AI_STORAGE_KEY_AUTO_APPLY, String(isOn)))
+  watch(designInstruments, (isOn) =>
+    writeStored(STRUDEL_AI_STORAGE_KEY_DESIGN_INSTRUMENTS, String(isOn))
+  )
 
   // One result for each of the held answer's instruments, filled in while it is applied.
   const instrumentResults = ref<StrudelComposerInstrumentResult[]>([])
@@ -90,6 +99,7 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
         currentCode,
         model: settings.composeModel,
         presetNames: useInstruments().presets.map(({ name }) => name),
+        designInstruments: designInstruments.value,
         apiKey: settings.apiKey
       })
       answerApplied.value = false
@@ -107,6 +117,7 @@ export const useStrudelComposer = defineStore('strudelComposer', () => {
   return {
     request,
     autoApply,
+    designInstruments,
     busyAction,
     answer,
     answerApplied,
