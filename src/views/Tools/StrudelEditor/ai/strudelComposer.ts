@@ -1,6 +1,7 @@
 import {
   STRUDEL_AI_ERRORS,
   STRUDEL_COMPOSER_ACTIONS,
+  STRUDEL_COMPOSER_MAX_INSTRUMENTS,
   STRUDEL_COMPOSER_SYSTEM_PROMPT
 } from './config'
 import { INSTRUMENT_KINDS } from '../instruments/config'
@@ -92,11 +93,13 @@ const readInstrument = (candidate: unknown): StrudelComposerInstrument[] => {
 }
 
 const readInstruments = (instruments: unknown): StrudelComposerInstrument[] =>
-  Array.isArray(instruments) ? instruments.flatMap(readInstrument) : []
+  Array.isArray(instruments)
+    ? instruments.flatMap(readInstrument).slice(0, STRUDEL_COMPOSER_MAX_INSTRUMENTS)
+    : []
 
 /**
  * Reads the model's answer. A review keeps only its explanation; compose and revise must return
- * code, with any Markdown fence the model wrapped it in removed, and keep the instruments they
+ * code, with any Markdown fence the model wrapped it in removed, and keep the first few instruments they
  * designed whose kind exists. A fix keeps the music as it is, so it designs none.
  * @param action - the action the answer is for
  * @param parsed - the JSON object the model answered with

@@ -9,6 +9,9 @@ export const STRUDEL_AI_STORAGE_KEY_SOUND_MODEL = 'strudel-instruments-openroute
 export const STRUDEL_AI_STORAGE_KEY_COMPOSE_MODEL = 'strudel-ai-compose-model'
 export const STRUDEL_AI_STORAGE_KEY_AUTO_APPLY = 'strudel-ai-auto-apply'
 
+/** Each designed instrument costs the player a sound model call, so an answer designs at most this many. */
+export const STRUDEL_COMPOSER_MAX_INSTRUMENTS = 4
+
 export const STRUDEL_AI_DEFAULT_SOUND_MODEL = 'anthropic/claude-haiku-5.5'
 export const STRUDEL_AI_DEFAULT_COMPOSE_MODEL = 'anthropic/claude-sonnet-5.5'
 
@@ -89,7 +92,7 @@ You can also design new instruments for the piece, modelled physically and rende
 - "name": a new name, lowercase letters and digits starting with a letter, at most 16 characters, that is not a listed preset or a Strudel sound, such as "grit" or "warmkeys".
 - "kind": electric-guitar, bass-guitar, acoustic-guitar, organ or drum-kit.
 - "description": one sentence on the sound, such as "a dirty pick bass with a hard attack and short sustain"; a sound designer turns it into the instrument's knobs.
-Play a guitar, bass or organ as note("a1 c2").s("<name>") for single notes, s("<name>:mute") for palm-muted notes and s("<name>:chord") for strummed chords; play a drum kit's pieces as s("<name>_kick <name>_snare"), with <name>_tomhi, <name>_tommid, <name>_tomlow, <name>_hatclosed, <name>_hatopen, <name>_ride and <name>_crash. Name a designed instrument in the code only if it is in "instruments" or the preset list. Design one only where it suits the piece better than an existing sound; otherwise leave "instruments" empty.
+Play a guitar, bass or organ as note("a1 c2").s("<name>") for single notes, s("<name>:mute") for palm-muted notes and s("<name>:chord") for strummed chords; play a drum kit's pieces as s("<name>_kick <name>_snare"), with <name>_tomhi, <name>_tommid, <name>_tomlow, <name>_hatclosed, <name>_hatopen, <name>_ride and <name>_crash. Name a designed instrument in the code only if it is in "instruments" or the preset list. Design at most four, and only where one suits the piece better than an existing sound; otherwise leave "instruments" empty.
 
 Answer in JSON with "explanation", a few sentences on what you wrote or found, "code", the program, and "instruments", the instruments you designed.`
 

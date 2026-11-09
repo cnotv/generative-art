@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   STRUDEL_AI_ERRORS,
   STRUDEL_COMPOSER_ACTIONS,
+  STRUDEL_COMPOSER_MAX_INSTRUMENTS,
   STRUDEL_COMPOSER_SYSTEM_PROMPT
 } from './config'
 import {
@@ -144,6 +145,27 @@ describe('parseStrudelComposerAnswer', () => {
     expect(answer.instruments).toEqual([
       { name: 'grit', kind: 'bass-guitar', description: 'A dirty pick bass' }
     ])
+  })
+
+  it('keeps only the first few instruments, since each one costs a sound model call', () => {
+    // Arrange
+    const instruments = Array.from({ length: 50 }, (_, index) => ({
+      name: `bass${index}`,
+      kind: 'bass-guitar',
+      description: 'A bass'
+    }))
+
+    // Act
+    const answer = parseStrudelComposerAnswer('compose', {
+      explanation: '',
+      code: '$: s("bd")',
+      instruments
+    })
+
+    // Assert
+    expect(answer.instruments.map(({ name }) => name)).toEqual(
+      instruments.slice(0, STRUDEL_COMPOSER_MAX_INSTRUMENTS).map(({ name }) => name)
+    )
   })
 
   it.each(['review', 'fix'] as const)('designs no instruments in a %s', (action) => {
