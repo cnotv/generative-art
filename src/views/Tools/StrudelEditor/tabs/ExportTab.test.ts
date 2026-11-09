@@ -66,3 +66,23 @@ describe('ExportTab cycle count', () => {
     expect(wrapper.emitted('measureRepetition')).toHaveLength(1)
   })
 })
+
+describe('ExportTab save feedback', () => {
+  const findSave = (wrapper: ReturnType<typeof mountExportTab>) =>
+    wrapper.findAll('button').find((button) => button.text() === 'Save pattern')!
+
+  it('says the pattern was saved, and clears it when the name changes', async () => {
+    // Arrange
+    const wrapper = mountExportTab(null)
+    await wrapper.find('input').setValue('My song')
+
+    // Act
+    await findSave(wrapper).trigger('click')
+
+    // Assert
+    expect(wrapper.emitted('save')).toEqual([['My song']])
+    expect(wrapper.text()).toContain('Saved "My song" in this browser.')
+    await wrapper.find('input').setValue('Other')
+    expect(wrapper.text()).not.toContain('Saved')
+  })
+})
