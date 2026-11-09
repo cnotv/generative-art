@@ -147,15 +147,18 @@ Semantic colours (`#ffd700` winner, `#f44` danger) stay as they are.
 
 ## Layout
 
-- **A checkbox label is at most 12 characters** ("Auto apply", not "Auto apply the code to
-  the editor"). Longer explanation goes in a `title` on the label, or in a collapsed
-  `Accordion`. Go past 12 only when no shorter word keeps the meaning.
 - Every view adds `padding-top: var(--nav-height)` so the fixed nav does not cover content.
 - Name every distinct region twice: a BEM element class describing its role (`.me__topbar`,
   never `.me__box1` or a positional name like `.me__left`), and — when regions share a
   container — a named `grid-template-areas` area, so the grid places them and they cannot
   overlap. Never stack independently absolute-positioned regions that can drift over
   each other.
+
+## UI
+
+- **A checkbox label is at most 12 characters** ("Auto apply", not "Auto apply the code to
+  the editor"). Longer explanation goes in a `title` on the label, or in a collapsed
+  `Accordion`. Go past 12 only when no shorter word keeps the meaning.
 
 ## Accessibility
 
