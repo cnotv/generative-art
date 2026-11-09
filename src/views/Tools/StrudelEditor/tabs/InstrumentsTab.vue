@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
-import { Play, Square } from 'lucide-vue-next'
+import {
+  Copy,
+  CopyPlus,
+  Download,
+  PencilLine,
+  Play,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  Square,
+  Trash2
+} from 'lucide-vue-next'
+import IconButton from '@/components/IconButton.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -172,18 +184,32 @@ const onAsk = (): void => {
         <Play v-if="previewState === 'idle'" :size="16" aria-hidden="true" />
         <Square v-else :size="16" aria-hidden="true" />
       </Button>
-      <Button
+      <IconButton
         variant="outline"
-        size="sm"
+        title="Download WAV"
+        aria-label="Download WAV"
         :disabled="selectedStatus !== 'ready'"
         @click="downloadPreview"
       >
-        Download WAV
-      </Button>
-      <Button variant="outline" size="sm" :disabled="!exampleCode" @click="copyExample">
-        Copy
-      </Button>
-      <Button variant="outline" size="sm" @click="store.resetPreset">Reset</Button>
+        <Download :size="16" aria-hidden="true" />
+      </IconButton>
+      <IconButton
+        variant="outline"
+        title="Copy the example code"
+        aria-label="Copy"
+        :disabled="!exampleCode"
+        @click="copyExample"
+      >
+        <Copy :size="16" aria-hidden="true" />
+      </IconButton>
+      <IconButton
+        variant="outline"
+        title="Reset the knobs"
+        aria-label="Reset"
+        @click="store.resetPreset"
+      >
+        <RotateCcw :size="16" aria-hidden="true" />
+      </IconButton>
     </div>
     <p v-if="copyMessage" class="strudel-instruments__hint" role="status">{{ copyMessage }}</p>
     <p v-if="previewState === 'rendering'" class="strudel-instruments__hint" role="status">
@@ -195,48 +221,73 @@ const onAsk = (): void => {
 
     <section class="strudel-instruments__section" aria-label="Manage presets">
       <h4 class="strudel-instruments__title">Presets</h4>
-      <div class="strudel-instruments__actions">
-        <Button variant="outline" size="sm" @click="store.duplicatePreset">Duplicate</Button>
-        <Button
+      <div class="strudel-instruments__inline">
+        <Input
+          v-if="!isSelectedBuiltIn"
+          v-model="renameValue"
+          class="strudel-instruments__inline-input"
+          aria-label="Rename preset"
+          placeholder="Rename preset"
+        />
+        <IconButton
+          v-if="!isSelectedBuiltIn"
           variant="outline"
-          size="sm"
+          title="Rename the preset"
+          aria-label="Rename"
+          :disabled="!canRename"
+          @click="store.renamePreset(renameValue)"
+        >
+          <PencilLine :size="16" aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          variant="outline"
+          title="Duplicate the preset"
+          aria-label="Duplicate"
+          @click="store.duplicatePreset"
+        >
+          <CopyPlus :size="16" aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          variant="outline"
+          title="Delete the preset"
+          aria-label="Delete"
           :disabled="isSelectedBuiltIn"
           @click="store.deletePreset"
         >
-          Delete
-        </Button>
+          <Trash2 :size="16" aria-hidden="true" />
+        </IconButton>
       </div>
-      <template v-if="!isSelectedBuiltIn">
-        <Input v-model="renameValue" aria-label="Rename preset" placeholder="Rename preset" />
-        <p v-if="renameCheck && !renameCheck.valid" class="strudel-instruments__error" role="alert">
-          {{ renameCheck.message }}
-        </p>
-        <div class="strudel-instruments__actions">
-          <Button
-            variant="outline"
-            size="sm"
-            :disabled="!canRename"
-            @click="store.renamePreset(renameValue)"
-          >
-            Rename
-          </Button>
-        </div>
-      </template>
-      <Input v-model="newName" aria-label="New preset name" placeholder="New preset name" />
-      <div class="strudel-instruments__row">
-        <span class="strudel-instruments__label">Kind</span>
-        <Select
-          :model-value="newKind"
-          :options="INSTRUMENT_KIND_OPTIONS"
-          @update:model-value="onKindPicked"
+      <p v-if="renameCheck && !renameCheck.valid" class="strudel-instruments__error" role="alert">
+        {{ renameCheck.message }}
+      </p>
+      <div class="strudel-instruments__inline">
+        <Input
+          v-model="newName"
+          class="strudel-instruments__inline-input"
+          aria-label="New preset name"
+          placeholder="New preset name"
         />
+        <div class="strudel-instruments__inline-kind">
+          <Select
+            :model-value="newKind"
+            :options="INSTRUMENT_KIND_OPTIONS"
+            aria-label="Kind of the new preset"
+            @update:model-value="onKindPicked"
+          />
+        </div>
+        <IconButton
+          variant="default"
+          title="Create the preset"
+          aria-label="Create"
+          :disabled="!canCreate"
+          @click="onCreate"
+        >
+          <Plus :size="16" aria-hidden="true" />
+        </IconButton>
       </div>
       <p v-if="newNameCheck && !newNameCheck.valid" class="strudel-instruments__error" role="alert">
         {{ newNameCheck.message }}
       </p>
-      <div class="strudel-instruments__actions">
-        <Button size="sm" :disabled="!canCreate" @click="onCreate">Create</Button>
-      </div>
       <p class="strudel-instruments__hint">
         Built-in presets can be tweaked and reset, not renamed or deleted. Your presets and tweaks
         are kept in this browser.
@@ -245,19 +296,27 @@ const onAsk = (): void => {
 
     <section class="strudel-instruments__section" aria-label="AI tone">
       <h4 class="strudel-instruments__title">AI tone</h4>
-      <Input
-        v-model="description"
-        placeholder="Dry desert fuzz, scooped mids"
-        aria-label="Describe the tone"
-      />
+      <div class="strudel-instruments__inline">
+        <Input
+          v-model="description"
+          class="strudel-instruments__inline-input"
+          placeholder="Dry desert fuzz, scooped mids"
+          aria-label="Describe the tone"
+        />
+        <IconButton
+          variant="default"
+          :title="assistantBusy ? 'Asking...' : 'Ask for the knobs'"
+          aria-label="Ask"
+          :aria-busy="assistantBusy"
+          :disabled="!canAsk"
+          @click="onAsk"
+        >
+          <Sparkles :size="16" aria-hidden="true" />
+        </IconButton>
+      </div>
       <p v-if="apiKey.length === 0" class="strudel-instruments__hint">
         Add your OpenRouter key in the Settings tab, where the model is picked too.
       </p>
-      <div class="strudel-instruments__actions">
-        <Button size="sm" :disabled="!canAsk" @click="onAsk">
-          {{ assistantBusy ? 'Asking...' : 'Ask' }}
-        </Button>
-      </div>
       <p v-if="assistantError" class="strudel-instruments__error" role="alert">
         {{ assistantError }}
       </p>
@@ -330,9 +389,20 @@ const onAsk = (): void => {
   color: var(--color-foreground);
 }
 
-.strudel-instruments__actions {
+.strudel-instruments__actions,
+.strudel-instruments__inline {
   display: flex;
+  align-items: center;
   gap: var(--spacing-2);
+}
+
+.strudel-instruments__inline-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.strudel-instruments__inline-kind {
+  flex: none;
 }
 
 .strudel-instruments__error {
