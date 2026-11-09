@@ -8,22 +8,24 @@ import {
 import { useAiSettings } from '../ai/useAiSettings'
 import { useInstruments } from './useInstruments'
 
-const { mockRegister, mockSamples } = vi.hoisted(() => ({
+// Strudel's synths exist only once its sound library has loaded, so sawtooth is added by it.
+const { mockRegister, mockSamples, registeredSounds } = vi.hoisted(() => ({
   mockRegister: vi.fn(),
-  mockSamples: vi.fn()
+  mockSamples: vi.fn(),
+  registeredSounds: {} as Record<string, unknown>
 }))
 
 vi.mock('./registerInstrument', () => ({ registerInstrument: mockRegister }))
 vi.mock('@strudel/webaudio', () => ({
   samples: mockSamples,
   registerSound: vi.fn(),
-  soundMap: {
-    get: () => ({
-      sawtooth: { data: { type: 'synth' } },
-      rolandtr909_bd: { data: { type: 'sample' } },
-      stoner_chord: { data: { tag: 'instrument:electric-guitar:stoner' } }
-    })
-  }
+  soundMap: { get: () => registeredSounds }
+}))
+vi.mock('../strudelSoundLibrary', () => ({
+  loadStrudelSoundLibrary: vi.fn(async () => {
+    registeredSounds.sawtooth = { data: { type: 'synth' } }
+    return { drumMachines: [] }
+  })
 }))
 
 const renderedNames = (): string[] =>
@@ -34,6 +36,11 @@ describe('useInstruments', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     mockRegister.mockReset().mockResolvedValue(undefined)
+    Object.keys(registeredSounds).forEach((soundName) => delete registeredSounds[soundName])
+    Object.assign(registeredSounds, {
+      rolandtr909_bd: { data: { type: 'sample' } },
+      stoner_chord: { data: { tag: 'instrument:electric-guitar:stoner' } }
+    })
   })
 
   afterEach(() => vi.useRealTimers())
