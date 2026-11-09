@@ -8,10 +8,45 @@ import {
   STRUDEL_AI_STORAGE_KEY_API_KEY,
   STRUDEL_AI_STORAGE_KEY_SOUND_MODEL
 } from './config'
+import { useInstruments } from '../instruments/useInstruments'
 import { useAiSettings } from './useAiSettings'
 import { useStrudelComposer } from './useStrudelComposer'
 
 const COMPOSED = { explanation: 'A house loop.', code: '$: s("bd*4")' }
+
+vi.mock('@strudel/webaudio', () => ({
+  samples: vi.fn(),
+  registerSound: vi.fn(),
+  soundMap: { get: () => ({ sawtooth: { data: { type: 'synth' } } }) }
+}))
+
+const BASS_KNOBS = { drive: 0.9, tone: 0.2, attack: 0.7, mids: 0.6, sustain: 0.4 }
+
+const DESIGNED = {
+  explanation: 'A bass groove.',
+  code: '$: note("a1").s("grit")',
+  instruments: [
+    { name: 'grit', kind: 'bass-guitar', description: 'A dirty pick bass' },
+    { name: 'stoner', kind: 'electric-guitar', description: 'Already there' },
+    { name: 'sawtooth', kind: 'organ', description: 'Hides a synth' }
+  ]
+}
+
+// The compose model and the sound model answer the same endpoint; the schema name tells them apart.
+const stubComposeAndTone = () => {
+  const mockFetch = vi.fn<typeof fetch>(async (_url, init) => {
+    const body = JSON.parse(String(init?.body))
+    const answer =
+      body.response_format.json_schema.name === 'strudel_composition'
+        ? DESIGNED
+        : { ...BASS_KNOBS, explanation: '' }
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content: JSON.stringify(answer) } }] })
+    )
+  })
+  vi.stubGlobal('fetch', mockFetch)
+  return mockFetch
+}
 
 const stubOpenRouter = (answer: Record<string, unknown>) => {
   const content = JSON.stringify(answer)
@@ -100,7 +135,7 @@ describe('useStrudelComposer', () => {
     await composer.run('revise', '$: s("hh")', applyCode)
 
     // Act
-    composer.applyAnswer(applyCode)
+    await composer.applyAnswer(applyCode)
 
     // Assert
     expect(applyCode).toHaveBeenCalledWith(COMPOSED.code)
@@ -168,5 +203,45 @@ describe('useStrudelComposer', () => {
     // Assert
     expect(composer.errorMessage).toBe(STRUDEL_AI_ERRORS.noKey)
     expect(composer.busyAction).toBeNull()
+  })
+
+  it('designs the answer instruments before writing the code that plays them', async () => {
+    // Arrange
+    stubComposeAndTone()
+    const composer = useStrudelComposer()
+    composer.request = 'a bass groove'
+    const applyCode = vi.fn(() =>
+      expect(useInstruments().presets.find(({ name }) => name === 'grit')?.knobs).toEqual(
+        BASS_KNOBS
+      )
+    )
+    await composer.run('compose', '', applyCode)
+
+    // Act
+    await composer.applyAnswer(applyCode)
+
+    // Assert
+    expect(applyCode).toHaveBeenCalledWith(DESIGNED.code)
+    expect(composer.instrumentResults.map(({ status }) => status)).toEqual([
+      'ready',
+      'existed',
+      'failed'
+    ])
+    expect(composer.answerApplied).toBe(true)
+  })
+
+  it('designs nothing until the answer is applied', async () => {
+    // Arrange
+    const mockFetch = stubComposeAndTone()
+    const composer = useStrudelComposer()
+    composer.request = 'a bass groove'
+
+    // Act
+    await composer.run('compose', '', vi.fn())
+
+    // Assert
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(composer.instrumentResults).toEqual([])
+    expect(useInstruments().presets.map(({ name }) => name)).not.toContain('grit')
   })
 })

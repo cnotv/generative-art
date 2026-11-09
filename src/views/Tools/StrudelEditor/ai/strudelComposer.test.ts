@@ -31,7 +31,14 @@ describe('buildStrudelComposerRequest', () => {
     expect(body.messages[1].content).toContain('add a hi-hat')
     expect(body.messages[1].content).toContain('$: s("bd*4")')
     expect(body.response_format.json_schema.strict).toBe(true)
-    expect(body.response_format.json_schema.schema.required).toEqual(['explanation', 'code'])
+    expect(body.response_format.json_schema.schema.required).toEqual([
+      'explanation',
+      'code',
+      'instruments'
+    ])
+    expect(
+      body.response_format.json_schema.schema.properties.instruments.items.properties.kind.enum
+    ).toEqual(['electric-guitar', 'bass-guitar', 'acoustic-guitar', 'organ', 'drum-kit'])
   })
 
   it.each(STRUDEL_COMPOSER_ACTIONS.map(({ id, instruction }) => [id, instruction]))(
@@ -59,6 +66,13 @@ describe('buildStrudelComposerRequest', () => {
     expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('chords.rootNotes(2).note()')
   })
 
+  it('teaches how to design an instrument and play it', () => {
+    // Assert
+    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('"instruments"')
+    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('<name>:chord')
+    expect(STRUDEL_COMPOSER_SYSTEM_PROMPT).toContain('<name>_kick')
+  })
+
   it('leaves the preset line out when there are no presets', () => {
     // Act
     const body = JSON.parse(
@@ -79,7 +93,12 @@ describe('parseStrudelComposerAnswer', () => {
     })
 
     // Assert
-    expect(answer).toEqual({ action: 'compose', explanation: 'A dub loop.', code: '$: s("bd")' })
+    expect(answer).toEqual({
+      action: 'compose',
+      explanation: 'A dub loop.',
+      code: '$: s("bd")',
+      instruments: []
+    })
   })
 
   it('removes a Markdown fence around the code', () => {
@@ -101,7 +120,42 @@ describe('parseStrudelComposerAnswer', () => {
     })
 
     // Assert
-    expect(answer).toEqual({ action: 'review', explanation: 'Too busy.', code: '' })
+    expect(answer).toEqual({
+      action: 'review',
+      explanation: 'Too busy.',
+      code: '',
+      instruments: []
+    })
+  })
+
+  it('keeps the designed instruments of a composition, dropping any it cannot use', () => {
+    // Act
+    const answer = parseStrudelComposerAnswer('compose', {
+      explanation: '',
+      code: '$: note("a1").s("grit")',
+      instruments: [
+        { name: ' grit ', kind: 'bass-guitar', description: 'A dirty pick bass' },
+        { name: 'harp', kind: 'harp', description: 'Not a kind' },
+        { name: 7, kind: 'organ', description: 'No name' }
+      ]
+    })
+
+    // Assert
+    expect(answer.instruments).toEqual([
+      { name: 'grit', kind: 'bass-guitar', description: 'A dirty pick bass' }
+    ])
+  })
+
+  it.each(['review', 'fix'] as const)('designs no instruments in a %s', (action) => {
+    // Act
+    const answer = parseStrudelComposerAnswer(action, {
+      explanation: '',
+      code: '$: s("bd")',
+      instruments: [{ name: 'grit', kind: 'bass-guitar', description: 'A dirty pick bass' }]
+    })
+
+    // Assert
+    expect(answer.instruments).toEqual([])
   })
 
   it.each(['compose', 'revise'] as const)('rejects %s with no code', (action) => {
@@ -129,6 +183,11 @@ describe('askStrudelComposer', () => {
 
     // Assert
     expect(JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)).model).toBe('a/b')
-    expect(answer).toEqual({ action: 'revise', explanation: 'Added hats.', code: '$: s("hh*8")' })
+    expect(answer).toEqual({
+      action: 'revise',
+      explanation: 'Added hats.',
+      code: '$: s("hh*8")',
+      instruments: []
+    })
   })
 })
