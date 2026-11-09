@@ -261,6 +261,43 @@ describe('InstrumentsTab', () => {
   })
 
   describe('managing presets', () => {
+    it('shows every action as an icon in one line with its input', async () => {
+      // Arrange
+      const wrapper = await mountReady()
+      useInstruments().createPreset('mine', 'organ')
+      await flushPromises()
+      const rowOf = (selector: string) => wrapper.find(selector).element.parentElement
+
+      // Act
+      const labels = [
+        'Download WAV',
+        'Copy',
+        'Reset',
+        'Rename',
+        'Duplicate',
+        'Delete',
+        'Create',
+        'Ask'
+      ]
+      const buttons = labels.map((label) => findButton(wrapper, label))
+
+      // Assert
+      expect(buttons.map((button) => button?.text())).toEqual(labels.map(() => ''))
+      expect(buttons.map((button) => button?.attributes('aria-label'))).toEqual(labels)
+      expect(rowOf('input[aria-label="Rename preset"]')).toBe(
+        findButton(wrapper, 'Rename')?.element.parentElement
+      )
+      expect(rowOf('input[aria-label="Rename preset"]')).toBe(
+        findButton(wrapper, 'Delete')?.element.parentElement
+      )
+      expect(rowOf('input[aria-label="New preset name"]')).toBe(
+        findButton(wrapper, 'Create')?.element.parentElement
+      )
+      expect(rowOf('input[aria-label="Describe the tone"]')).toBe(
+        findButton(wrapper, 'Ask')?.element.parentElement
+      )
+    })
+
     it('keeps rename and delete away from a built-in preset', async () => {
       // Arrange
       const wrapper = await mountReady()

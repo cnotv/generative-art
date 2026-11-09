@@ -598,13 +598,27 @@ The answer shows in the tab: the model's explanation and, for Compose and Revise
 
 The model is told how a song is written here: pattern strings in double quotes (a single-quoted string is plain JavaScript, so `'<Am F>'.rootNotes(2)` fails), the tempo with `setcpm`, one `$:` block per layer with its own sound, a chord plan written once as a `const`, sections with `arrange`, and the names of the instrument presets it can play. A request that runs while the drawer shows another tab still lands, and is still applied with Auto apply on.
 
+### Instruments the composer designs
+
+Compose and Revise can design up to four new instrument presets for the piece, when an existing sound would not suit it. The answer then lists each one under the explanation: its name, its kind (electric guitar, bass guitar, acoustic guitar, organ or drum kit) and a sentence describing the sound. The code plays them like any preset, as `<name>`, `<name>:mute` and `<name>:chord`, or `<name>_kick` and the other pieces for a drum kit.
+
+Nothing is made until the code is applied. Applying first creates each instrument as one of your own presets in the Instruments tab, and asks the **Sound model** to turn its description into the kind's five knobs, the same as the Instruments tab's AI tone; only then does the code go into the editor, so it never plays a preset that does not exist yet. Each row shows how that went:
+
+- **Ready**: the preset exists with the knobs the Sound model chose.
+- **Already exists, kept as it is**: a preset of that name was there before, built in or your own, and it is never overwritten; the code plays it as it is.
+- **Not made**, with the reason: the name cannot be a preset name, for example because Strudel already has a sound called that. If only the Sound model failed, the preset is kept at its kind's starting knobs.
+
+Untick **Create new instruments for the piece with the Sound model** to keep the composer to the sounds and presets that already exist: it is then told to design none, and nothing is created on Apply. It is ticked until you untick it, and the choice is remembered in this browser.
+
+Designed presets stay after the piece is replaced, saved and editable like any preset you made yourself, and can be renamed or deleted in the Instruments tab.
+
 ### AI settings
 
 The **AI** section of the Settings tab holds what every AI feature shares:
 
 - your OpenRouter key, kept only in this browser's local storage and sent only to OpenRouter. **Forget key** removes it. A key entered in the Instruments tab before the AI section existed is still found;
 - the **Compose model**, used by the Compose tab, Claude Sonnet 5.5 by default;
-- the **Sound model**, used by the Instruments tab's AI tone, Claude Haiku 5.5 by default.
+- the **Sound model**, used by the Instruments tab's AI tone and for the instruments the composer designs, Claude Haiku 5.5 by default.
 
 Both dropdowns list the same OpenRouter models, the ones that answer in strict JSON.
 

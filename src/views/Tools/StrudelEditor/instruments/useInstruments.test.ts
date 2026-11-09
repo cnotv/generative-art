@@ -5,24 +5,27 @@ import {
   INSTRUMENT_REGENERATE_DELAY_MS,
   INSTRUMENT_STORAGE_KEY
 } from './config'
+import { useAiSettings } from '../ai/useAiSettings'
 import { useInstruments } from './useInstruments'
 
-const { mockRegister, mockSamples } = vi.hoisted(() => ({
+// Strudel's synths exist only once its sound library has loaded, so sawtooth is added by it.
+const { mockRegister, mockSamples, registeredSounds } = vi.hoisted(() => ({
   mockRegister: vi.fn(),
-  mockSamples: vi.fn()
+  mockSamples: vi.fn(),
+  registeredSounds: {} as Record<string, unknown>
 }))
 
 vi.mock('./registerInstrument', () => ({ registerInstrument: mockRegister }))
 vi.mock('@strudel/webaudio', () => ({
   samples: mockSamples,
   registerSound: vi.fn(),
-  soundMap: {
-    get: () => ({
-      sawtooth: { data: { type: 'synth' } },
-      rolandtr909_bd: { data: { type: 'sample' } },
-      stoner_chord: { data: { tag: 'instrument:electric-guitar:stoner' } }
-    })
-  }
+  soundMap: { get: () => registeredSounds }
+}))
+vi.mock('../strudelSoundLibrary', () => ({
+  loadStrudelSoundLibrary: vi.fn(async () => {
+    registeredSounds.sawtooth = { data: { type: 'synth' } }
+    return { drumMachines: [] }
+  })
 }))
 
 const renderedNames = (): string[] =>
@@ -33,6 +36,11 @@ describe('useInstruments', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     mockRegister.mockReset().mockResolvedValue(undefined)
+    Object.keys(registeredSounds).forEach((soundName) => delete registeredSounds[soundName])
+    Object.assign(registeredSounds, {
+      rolandtr909_bd: { data: { type: 'sample' } },
+      stoner_chord: { data: { tag: 'instrument:electric-guitar:stoner' } }
+    })
   })
 
   afterEach(() => vi.useRealTimers())
@@ -258,6 +266,111 @@ describe('useInstruments', () => {
 
       // Assert
       expect(store.selectedPreset?.knobs.drive).toBe(0.3)
+    })
+  })
+
+  describe('presets designed by the composer', () => {
+    const DESIGN = { name: 'grit', kind: 'bass-guitar' as const, description: 'A dirty pick bass' }
+    const KNOBS = { drive: 0.9, tone: 0.2, attack: 0.7, mids: 0.6, sustain: 0.4 }
+
+    const stubToneAnswer = (answer: Record<string, unknown>) => {
+      const content = JSON.stringify(answer)
+      const mockFetch = vi.fn<typeof fetch>(
+        async () => new Response(JSON.stringify({ choices: [{ message: { content } }] }))
+      )
+      vi.stubGlobal('fetch', mockFetch)
+      return mockFetch
+    }
+
+    beforeEach(() => {
+      useAiSettings().apiKey = 'secret-key'
+      useAiSettings().soundModel = 'google/gemini-3.8-flash'
+    })
+
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('creates the preset and sets its knobs from the sound model', async () => {
+      // Arrange
+      const mockFetch = stubToneAnswer({ ...KNOBS, explanation: 'Gritty.' })
+      const store = useInstruments()
+
+      // Act
+      const result = await store.designPreset(DESIGN)
+
+      // Assert
+      const body = JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body))
+      expect(result).toEqual({ status: 'ready', message: '' })
+      expect(body.model).toBe('google/gemini-3.8-flash')
+      expect(body.messages[1].content).toContain('A dirty pick bass')
+      expect(store.presets.find(({ name }) => name === 'grit')).toMatchObject({
+        kind: 'bass-guitar',
+        knobs: KNOBS
+      })
+    })
+
+    it('sets the knobs of the designed preset even when the selection moved meanwhile', async () => {
+      // Arrange
+      stubToneAnswer({ ...KNOBS, explanation: '' })
+      const store = useInstruments()
+
+      // Act
+      const pending = store.designPreset(DESIGN)
+      store.selectPreset('stoner')
+      await pending
+
+      // Assert
+      expect(store.presets.find(({ name }) => name === 'grit')?.knobs).toEqual(KNOBS)
+      expect(store.presets.find(({ name }) => name === 'stoner')?.knobs).toEqual(
+        INSTRUMENT_BUILT_IN_PRESETS.find(({ name }) => name === 'stoner')?.knobs
+      )
+    })
+
+    it('keeps a preset that already exists as it is, without asking the model', async () => {
+      // Arrange
+      const mockFetch = stubToneAnswer({ ...KNOBS, explanation: '' })
+      const store = useInstruments()
+
+      // Act
+      const result = await store.designPreset({ ...DESIGN, name: 'stoner' })
+
+      // Assert
+      expect(result.status).toBe('existed')
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(store.presets).toHaveLength(INSTRUMENT_BUILT_IN_PRESETS.length)
+    })
+
+    it('fails a name that hides a Strudel sound, with the reason', async () => {
+      // Arrange
+      const mockFetch = stubToneAnswer({ ...KNOBS, explanation: '' })
+      const store = useInstruments()
+      await store.refreshForeignSoundNames()
+
+      // Act
+      const result = await store.designPreset({ ...DESIGN, name: 'sawtooth' })
+
+      // Assert
+      expect(result).toEqual({
+        status: 'failed',
+        message: 'Strudel already has a sound with this name.'
+      })
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it('keeps the new preset at its starting knobs when the sound model fails', async () => {
+      // Arrange
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>(async () => new Response('', { status: 402 }))
+      )
+      const store = useInstruments()
+
+      // Act
+      const result = await store.designPreset(DESIGN)
+
+      // Assert
+      expect(result.status).toBe('failed')
+      expect(result.message).toContain('credit')
+      expect(store.presets.map(({ name }) => name)).toContain('grit')
     })
   })
 })

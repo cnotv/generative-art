@@ -1,13 +1,16 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { isRecordModule, requireCallable, requireRecordModule } from '../strudelModules'
+import { loadStrudelSoundLibrary } from '../strudelSoundLibrary'
 import { useAiSettings } from '../ai/useAiSettings'
 import { INSTRUMENT_REGENERATE_DELAY_MS, INSTRUMENT_TAG_PREFIX } from './config'
 import { askInstrumentToneAssistant } from './instrumentToneAssistant'
+import { designInstrumentPreset } from './designPreset'
 import { createPresetLibrary } from './presetLibrary'
 import { findReferencedInstrumentPresets } from './presetScan'
 import { makeNotesEndAtEvent } from './eventLengthNotes'
 import { registerInstrument } from './registerInstrument'
+import type { StrudelComposerInstrument } from '../ai/types'
 import type { InstrumentPreset, InstrumentRenderStatus } from './types'
 
 // One import shared by every caller, so the sound list and a render never load the engine twice.
@@ -137,7 +140,10 @@ export const useInstruments = defineStore('instruments', () => {
     () => statusByName.value[selectedPreset.value?.name ?? ''] ?? 'idle'
   )
 
+  // Strudel's synths and banks register only when its sound library loads, which may not have
+  // happened yet, and a name checked before then could hide one of them.
   const refreshForeignSoundNames = async (): Promise<void> => {
+    await loadStrudelSoundLibrary().catch(() => undefined)
     library.foreignSoundNames.value = await readForeignSoundNames().catch(
       () => library.foreignSoundNames.value
     )
@@ -191,6 +197,8 @@ export const useInstruments = defineStore('instruments', () => {
     duplicatePreset: library.duplicatePreset,
     renamePreset: library.renamePreset,
     deletePreset: library.deletePreset,
-    askAssistant
+    askAssistant,
+    designPreset: (instrument: StrudelComposerInstrument) =>
+      designInstrumentPreset(library, instrument)
   }
 })
