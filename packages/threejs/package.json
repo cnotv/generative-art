@@ -1,6 +1,6 @@
 {
   "name": "@webgamekit/threejs",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "files": [
     "dist"
@@ -36,7 +36,6 @@
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
-    "@webgamekit/animation": "*",
     "three": "^0.178.0"
   }
 }
