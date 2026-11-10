@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { config, mount } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
+import { createPinia, setActivePinia } from 'pinia'
 import { page, userEvent } from 'vitest/browser'
 // The app's global styles size the nav and lock the page, which the phone layout depends on.
 import '@/style.css'
@@ -118,9 +119,10 @@ const router = createRouter({
 config.global.plugins = [router]
 
 describe('StrudelEditor audible playback', () => {
-  // The editor saves its code to local storage and reads the address, so both would carry one
-  // test's pattern into the next.
+  // The editor saves its code to local storage and reads the address, and its stores keep
+  // state, so each would carry one test's pattern into the next.
   beforeEach(async () => {
+    setActivePinia(createPinia())
     await router.replace({ query: {} })
     localStorage.clear()
   })
@@ -665,7 +667,9 @@ describe('StrudelEditor audible playback', () => {
       if (effectsCategory === null) {
         return
       }
-      await userEvent.click(effectsCategory)
+      // The labels take no pointer events so the wedge under them is the target; force clicks
+      // where a user would, at the label, and the wedge receives it.
+      await userEvent.click(effectsCategory, { force: true })
       const levelItem = [
         ...document.querySelectorAll<HTMLButtonElement>('.strudel-flow-radial__item')
       ].find((item) => item.textContent?.includes('Level'))
@@ -673,7 +677,7 @@ describe('StrudelEditor audible playback', () => {
       if (levelItem === undefined) {
         return
       }
-      await userEvent.click(levelItem)
+      await userEvent.click(levelItem, { force: true })
 
       // Assert
       await vi.waitFor(
@@ -743,7 +747,7 @@ describe('StrudelEditor audible playback', () => {
           const kinds = [...document.querySelectorAll<HTMLElement>('.strudel-flow-node')].map(
             (node) => node.dataset.nodeKind
           )
-          expect(kinds.sort()).toEqual(['filter', 'notes', 'pad', 'voice'])
+          expect(kinds.sort()).toEqual(['effect', 'filter', 'notes', 'pad', 'voice'])
         },
         { timeout: 15000 }
       )
