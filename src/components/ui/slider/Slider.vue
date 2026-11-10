@@ -12,6 +12,8 @@ const props = defineProps<{
   class?: string
   /** Names the thumb for assistive technology, since the thumb is what takes focus. */
   label?: string
+  /** `playhead` draws a thin line with a line for a thumb, for scrubbing through time. */
+  variant?: 'default' | 'playhead'
 }>()
 
 const emit = defineEmits<{
@@ -27,7 +29,7 @@ const emit = defineEmits<{
     :max="max ?? 100"
     :step="step ?? 1"
     :disabled="disabled"
-    :class="cn('slider', props.class)"
+    :class="cn('slider', { 'slider--playhead': variant === 'playhead' }, props.class)"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <SliderTrack class="slider__track">
@@ -88,5 +90,18 @@ const emit = defineEmits<{
 .slider__thumb:disabled {
   pointer-events: none;
   opacity: 0.5;
+}
+
+.slider--playhead .slider__track {
+  height: 2px;
+  border-radius: 0;
+}
+
+.slider--playhead .slider__thumb {
+  height: var(--spacing-5);
+  width: 2px;
+  border: none;
+  border-radius: 0;
+  background-color: var(--color-playhead);
 }
 </style>

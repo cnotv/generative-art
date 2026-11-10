@@ -68,6 +68,29 @@ describe('StrudelTimeline', () => {
     expect(sliders[0]?.attributes('aria-valuemax')).toBe('64')
   })
 
+  it('leaves the scroll where it is while the playhead runs past the visible part', async () => {
+    // Arrange
+    const wrapper = mountTimeline({ playheadCycle: 0, timelineBars: 64 })
+    const scroller = wrapper.get('.strudel-timeline__scroller').element as HTMLElement
+    Object.defineProperty(scroller, 'clientWidth', { value: 300 })
+    Object.defineProperty(scroller, 'scrollWidth', { value: 64 * STRUDEL_TIMELINE_MIN_CYCLE_WIDTH })
+    scroller.scrollLeft = 0
+
+    // Act
+    await wrapper.setProps({ playheadCycle: 60 })
+
+    // Assert
+    expect(scroller.scrollLeft).toBe(0)
+  })
+
+  it('declares the playhead slider horizontal', () => {
+    // Act
+    const slider = mountTimeline().get('[role="slider"]')
+
+    // Assert
+    expect(slider.attributes('aria-orientation')).toBe('horizontal')
+  })
+
   it('gives a long song room for every cycle, so it scrolls rather than squeezes', () => {
     // Act
     const trackWidth = mountTimeline({ timelineBars: 64 })

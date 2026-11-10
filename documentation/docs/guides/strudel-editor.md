@@ -167,9 +167,9 @@ seconds. Its playhead follows the sound while the pattern plays.
   focus.
 - **One row for the whole song**: every cycle is marked with a line and every step with a
   shorter tick, drawn behind the playhead. A cycle is at least 48 pixels wide, so a song longer
-  than the window scrolls sideways. A faded edge shows there is more of the song that way, and
-  the timeline scrolls on its own once the playhead runs off the visible part, or when Stop
-  rewinds it.
+  than the window scrolls sideways. A faded edge shows there is more of the song that way. The
+  timeline never scrolls on its own: the playhead, a thin coloured line, can run off the
+  visible part while you look elsewhere in the song.
 - **The readout** shows three values, each behind an icon with a tooltip: the cycle (`3/8`), the
   step (`2/4`) and the time (`5.1s`). A step is one beat: the flow patch sets how many a cycle
   holds, and code mode uses 4. One bar is one cycle, and the seconds come from the tempo the code
