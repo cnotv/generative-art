@@ -605,9 +605,3 @@ export type ScoreTranscription = {
   bars: ScoreBar[]
   warnings: string[]
 }
-
-/** One row of the timeline: the cycles it shows, from `startCycle` up to `endCycle`. */
-export type TimelineSection = {
-  startCycle: number
-  endCycle: number
-}

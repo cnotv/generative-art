@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Disc3, Footprints, Pause, Play, Repeat, Square, Timer } from 'lucide-vue-next'
 import IconButton from '@/components/IconButton.vue'
 import { Slider } from '@/components/ui/slider'
 import { Toggle } from '@/components/ui/toggle'
 import {
-  STRUDEL_TIMELINE_FALLBACK_WIDTH,
+  STRUDEL_TIMELINE_FOLLOW_EDGE,
+  STRUDEL_TIMELINE_FOLLOW_LEAD,
   STRUDEL_TIMELINE_MIN_CYCLE_WIDTH,
   STRUDEL_TIMELINE_SEEK_STEP
 } from '../config'
-import { findSectionIndexForCycle, splitTimelineSections } from './timelineSections'
 
 const props = defineProps<{
   playheadCycle: number
@@ -29,34 +29,48 @@ const emit = defineEmits<{
   'update:loopEnabled': [enabled: boolean]
 }>()
 
-const timelineElement = ref<HTMLElement | null>(null)
-const timelineWidth = ref(0)
+const scrollerElement = ref<HTMLElement | null>(null)
+const hiddenBefore = ref(false)
+const hiddenAfter = ref(false)
 let resizeObserver: ResizeObserver | null = null
 
-onMounted(() => {
-  const element = timelineElement.value
-  if (element === null || typeof ResizeObserver === 'undefined') {
+// The fades at either end are the clue that the song goes on past the edge.
+const readHiddenEnds = (): void => {
+  const scroller = scrollerElement.value
+  if (scroller === null) {
     return
   }
-  resizeObserver = new ResizeObserver(([entry]) => {
-    timelineWidth.value = entry?.contentRect.width ?? 0
-  })
-  resizeObserver.observe(element)
+  hiddenBefore.value = scroller.scrollLeft > 0
+  hiddenAfter.value = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1
+}
+
+// Scrolls only once the playhead leaves the view, so someone looking further along is not
+// pulled back on every frame.
+const keepPlayheadInView = (): void => {
+  const scroller = scrollerElement.value
+  if (scroller === null || props.timelineBars <= 0) {
+    return
+  }
+  const playheadOffset = (props.playheadCycle / props.timelineBars) * scroller.scrollWidth
+  const visibleEnd = scroller.scrollLeft + scroller.clientWidth * STRUDEL_TIMELINE_FOLLOW_EDGE
+  if (playheadOffset < scroller.scrollLeft || playheadOffset > visibleEnd) {
+    scroller.scrollLeft = playheadOffset - scroller.clientWidth * STRUDEL_TIMELINE_FOLLOW_LEAD
+  }
+}
+
+onMounted(() => {
+  const scroller = scrollerElement.value
+  if (scroller === null || typeof ResizeObserver === 'undefined') {
+    return
+  }
+  resizeObserver = new ResizeObserver(readHiddenEnds)
+  resizeObserver.observe(scroller)
 })
 
 onBeforeUnmount(() => resizeObserver?.disconnect())
 
-const sections = computed(() =>
-  splitTimelineSections(
-    props.timelineBars,
-    timelineWidth.value || STRUDEL_TIMELINE_FALLBACK_WIDTH,
-    STRUDEL_TIMELINE_MIN_CYCLE_WIDTH
-  )
-)
-
-const playheadSectionIndex = computed(() =>
-  findSectionIndexForCycle(sections.value, props.playheadCycle)
-)
+watch(() => props.playheadCycle, keepPlayheadInView)
+watch(() => props.timelineBars, readHiddenEnds, { flush: 'post' })
 
 const playPauseLabel = computed(() => (props.isPlaying ? 'Pause' : 'Play from here'))
 const loopLabel = computed(() => (props.loopEnabled ? 'Loop on' : 'Loop off'))
@@ -69,15 +83,18 @@ const onPlayPausePressed = (): void => {
   emit('play')
 }
 
-const readSectionValue = (sectionIndex: number, startCycle: number): number =>
-  sectionIndex === playheadSectionIndex.value ? props.playheadCycle : startCycle
-
 const onSliderMoved = (values: number[] | undefined): void => {
   const [cycle] = values ?? []
   if (cycle !== undefined) {
     emit('seek', cycle)
   }
 }
+
+const trackStyle = computed(() => ({
+  width: `max(100%, ${props.timelineBars * STRUDEL_TIMELINE_MIN_CYCLE_WIDTH}px)`,
+  '--timeline-cycles': props.timelineBars,
+  '--timeline-steps-per-cycle': props.stepsPerCycle
+}))
 
 const cycleReadout = computed(() => `${Math.floor(props.playheadCycle) + 1}/${props.timelineBars}`)
 const stepReadout = computed(() => {
@@ -88,7 +105,7 @@ const timeReadout = computed(() => `${(props.playheadCycle / props.cyclesPerSeco
 </script>
 
 <template>
-  <section ref="timelineElement" class="strudel-timeline" aria-label="Timeline">
+  <section class="strudel-timeline" aria-label="Timeline">
     <div class="strudel-timeline__controls">
       <IconButton
         size="sm"
@@ -116,7 +133,7 @@ const timeReadout = computed(() => `${(props.playheadCycle / props.cyclesPerSeco
         :aria-label="loopLabel"
         @update:model-value="emit('update:loopEnabled', $event)"
       >
-        <Repeat class="h-4 w-4" aria-hidden="true" />
+        <Repeat aria-hidden="true" />
       </Toggle>
       <p class="strudel-timeline__readout">
         <span class="strudel-timeline__reading">
@@ -133,26 +150,27 @@ const timeReadout = computed(() => `${(props.playheadCycle / props.cyclesPerSeco
         </span>
       </p>
     </div>
-    <!-- The row hosts the cycle and step overlay: scoped styles never reach the slider's
-         radix root, so the overlay cannot live on the slider itself. -->
     <div
-      v-for="(section, sectionIndex) in sections"
-      :key="section.startCycle"
-      class="strudel-timeline__track"
-      :style="{
-        '--timeline-section-cycles': section.endCycle - section.startCycle,
-        '--timeline-steps-per-cycle': stepsPerCycle
+      ref="scrollerElement"
+      class="strudel-timeline__scroller"
+      :class="{
+        'strudel-timeline__scroller--hidden-before': hiddenBefore,
+        'strudel-timeline__scroller--hidden-after': hiddenAfter
       }"
+      @scroll.passive="readHiddenEnds"
     >
-      <Slider
-        :hide-thumb="sectionIndex !== playheadSectionIndex"
-        :model-value="[readSectionValue(sectionIndex, section.startCycle)]"
-        :min="section.startCycle"
-        :max="section.endCycle"
-        :step="STRUDEL_TIMELINE_SEEK_STEP"
-        :label="`Cycles ${section.startCycle + 1} to ${section.endCycle}`"
-        @update:model-value="onSliderMoved"
-      />
+      <!-- The track hosts the cycle and step marks: scoped styles never reach the slider's
+           radix root, so the marks cannot live on the slider itself. -->
+      <div class="strudel-timeline__track" :style="trackStyle">
+        <Slider
+          :model-value="[playheadCycle]"
+          :min="0"
+          :max="timelineBars"
+          :step="STRUDEL_TIMELINE_SEEK_STEP"
+          label="Playhead"
+          @update:model-value="onSliderMoved"
+        />
+      </div>
     </div>
   </section>
 </template>
@@ -191,41 +209,67 @@ const timeReadout = computed(() => `${(props.playheadCycle / props.cyclesPerSeco
   height: 1rem;
 }
 
-/* Cycle lines and shorter step ticks are drawn over the slider, through custom properties set
-   on this same element. */
-.strudel-timeline__track {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 1.25rem;
+.strudel-timeline__scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: var(--spacing-1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
-.strudel-timeline__track::after {
+.strudel-timeline__scroller--hidden-before {
+  mask-image: linear-gradient(to right, transparent, black var(--spacing-8));
+}
+
+.strudel-timeline__scroller--hidden-after {
+  mask-image: linear-gradient(to left, transparent, black var(--spacing-8));
+}
+
+.strudel-timeline__scroller--hidden-before.strudel-timeline__scroller--hidden-after {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--spacing-8),
+    black calc(100% - var(--spacing-8)),
+    transparent
+  );
+}
+
+/* A new stacking context, so the marks drawn at z-index -1 sit under the slider's line and
+   playhead but above whatever is behind the timeline. */
+.strudel-timeline__track {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  height: var(--spacing-5);
+}
+
+/* A taller line on every cycle and a short tick on every step, from custom properties set on
+   this same element. */
+.strudel-timeline__track::before {
   content: '';
   position: absolute;
+  z-index: -1;
   inset: 0;
   pointer-events: none;
   background-image:
     repeating-linear-gradient(
       to right,
-      transparent 0 calc(100% / var(--timeline-section-cycles) - 1px),
-      var(--color-muted-foreground) calc(100% / var(--timeline-section-cycles) - 1px)
-        calc(100% / var(--timeline-section-cycles))
+      var(--color-muted-foreground) 0 1px,
+      transparent 1px calc(100% / var(--timeline-cycles))
     ),
     repeating-linear-gradient(
       to right,
-      transparent 0
-        calc(100% / (var(--timeline-section-cycles) * var(--timeline-steps-per-cycle)) - 1px),
-      var(--color-border)
-        calc(100% / (var(--timeline-section-cycles) * var(--timeline-steps-per-cycle)) - 1px)
-        calc(100% / (var(--timeline-section-cycles) * var(--timeline-steps-per-cycle)))
+      var(--color-border) 0 1px,
+      transparent 1px calc(100% / (var(--timeline-cycles) * var(--timeline-steps-per-cycle)))
     );
   background-size:
     100% 100%,
-    100% 40%;
+    100% 50%;
   background-position:
     0 0,
-    0 100%;
+    0 50%;
   background-repeat: no-repeat;
 }
 </style>

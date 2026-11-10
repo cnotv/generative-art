@@ -12,8 +12,6 @@ const props = defineProps<{
   class?: string
   /** Names the thumb for assistive technology, since the thumb is what takes focus. */
   label?: string
-  /** Keeps the thumb invisible while the track still takes clicks and drags. */
-  hideThumb?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -39,7 +37,6 @@ const emit = defineEmits<{
       v-for="(_, index) in modelValue ?? defaultValue ?? [0]"
       :key="index"
       class="slider__thumb"
-      :class="{ 'slider__thumb--hidden': hideThumb }"
       :aria-label="label"
     />
   </SliderRoot>
@@ -86,10 +83,6 @@ const emit = defineEmits<{
 .slider__thumb:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--color-ring);
-}
-
-.slider__thumb--hidden {
-  opacity: 0;
 }
 
 .slider__thumb:disabled {

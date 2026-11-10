@@ -165,11 +165,11 @@ seconds. Its playhead follows the sound while the pattern plays.
 - **Click or drag** the timeline to pick a time. While the pattern plays it carries on from there;
   while it is stopped, the next Play starts there. The arrow keys move it once the playhead has
   focus.
-- **Sections**: every cycle is a segment on the track, with a tick for each step. When the song
-  is wider than the window allows (at least 48 pixels a cycle), it wraps into rows. Each row
-  starts on the last cycle of the one above, so a variation that crosses a row boundary can be
-  picked whole from either row. The playhead sits in the row that holds it, in the later row
-  inside an overlap, and clicking any row seeks to that cycle and step.
+- **One row for the whole song**: every cycle is marked with a line and every step with a
+  shorter tick, drawn behind the playhead. A cycle is at least 48 pixels wide, so a song longer
+  than the window scrolls sideways. A faded edge shows there is more of the song that way, and
+  the timeline scrolls on its own once the playhead runs off the visible part, or when Stop
+  rewinds it.
 - **The readout** shows three values, each behind an icon with a tooltip: the cycle (`3/8`), the
   step (`2/4`) and the time (`5.1s`). A step is one beat: the flow patch sets how many a cycle
   holds, and code mode uses 4. One bar is one cycle, and the seconds come from the tempo the code
@@ -587,7 +587,7 @@ In flow mode every preset is in the pickers, rendered or not: a guitar, bass, ac
 
 A name is lowercase letters and digits, starts with a letter, is at most 16 characters, is not used by another preset and does not collide with a sound Strudel already has (`sawtooth`, or the front of a drum machine such as `rolandtr909`). The tab says what to change.
 
-A preset renders when it is selected, and when code that is about to play or export names one of its sounds; the pattern waits for it. Nothing else is rendered, so an unused preset costs nothing. Moving a slider renders only that preset again, after a short pause. A preset's sounds appear in the Sounds tab under `Kind: name` once it has rendered. Deleting or renaming a preset does not unregister sounds already made; they go at the next reload.
+A preset renders when it is selected, and as soon as code naming one of its sounds is loaded, typed or pasted, so Play does not wait for it. If Play comes first, the pattern waits for the render to finish. Nothing else is rendered, so an unused preset costs nothing. Moving a slider renders only that preset again, after a short pause. A preset's sounds appear in the Sounds tab under `Kind: name` once it has rendered. Deleting or renaming a preset does not unregister sounds already made; they go at the next reload.
 
 The **AI tone** section turns a description such as "dry desert fuzz, scooped mids" into slider settings for the selected kind through OpenRouter. It uses the key and the **Sound model** set in the Settings tab (see [AI settings](#ai-settings)); the assistant only moves the sliders, so you can still adjust them.
 

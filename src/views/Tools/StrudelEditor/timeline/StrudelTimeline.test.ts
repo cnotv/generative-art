@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { STRUDEL_TIMELINE_MIN_CYCLE_WIDTH } from '../config'
 import StrudelTimeline from './StrudelTimeline.vue'
 
 const mountTimeline = (props: Partial<InstanceType<typeof StrudelTimeline>['$props']> = {}) =>
@@ -58,21 +59,22 @@ describe('StrudelTimeline', () => {
     expect(iconNames).toEqual(['Cycle', 'Step', 'Time'])
   })
 
-  it('shows one row for a song that fits and several for a long one', () => {
+  it('lays the whole song out on one slider that ends on its last cycle', () => {
     // Act
-    const shortRows = mountTimeline({ timelineBars: 4 }).findAll('[role="slider"]')
-    const longRows = mountTimeline({ timelineBars: 64 }).findAll('[role="slider"]')
+    const sliders = mountTimeline({ timelineBars: 64 }).findAll('[role="slider"]')
 
     // Assert
-    expect(shortRows).toHaveLength(1)
-    expect(longRows.length).toBeGreaterThan(1)
+    expect(sliders).toHaveLength(1)
+    expect(sliders[0]?.attributes('aria-valuemax')).toBe('64')
   })
 
-  it('labels each row with the cycles it covers', () => {
+  it('gives a long song room for every cycle, so it scrolls rather than squeezes', () => {
     // Act
-    const label = mountTimeline({ timelineBars: 4 }).get('[role="slider"]').attributes('aria-label')
+    const trackWidth = mountTimeline({ timelineBars: 64 })
+      .get('.strudel-timeline__track')
+      .attributes('style')
 
     // Assert
-    expect(label).toBe('Cycles 1 to 4')
+    expect(trackWidth).toContain(`${64 * STRUDEL_TIMELINE_MIN_CYCLE_WIDTH}px`)
   })
 })

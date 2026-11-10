@@ -27,7 +27,11 @@ import type {
   StrudelTranscriptionState,
   TranscriptionRunner
 } from './types'
-import { loadDefaultStrudelPlayback, readHapSourceOffsets } from './strudelPlayback'
+import {
+  loadDefaultStrudelPlayback,
+  prepareInstrumentsForCode,
+  readHapSourceOffsets
+} from './strudelPlayback'
 import { runTranscription } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 import { useStrudelTimeline } from './timeline/useStrudelTimeline'
@@ -167,6 +171,7 @@ export const useStrudelEditor = (
   // The code from the last visit, so a refresh or a closed tab loses nothing.
   const patternCode = ref(readStorage(STRUDEL_SAVED_CODE_STORAGE_KEY) ?? defaultExample?.code ?? '')
   watch(patternCode, (code) => writeStorage(STRUDEL_SAVED_CODE_STORAGE_KEY, code))
+  watch(patternCode, (code) => void prepareInstrumentsForCode(code), { immediate: true })
   const editorStatus = ref<StrudelEditorStatus>('idle')
   const errorMessage = ref('')
   const playbackReference = ref<StrudelPlayback | null>(null)

@@ -136,9 +136,15 @@ const unlockPageAudioContext = (): AudioContext | null => {
   return audioContext
 }
 
-// Instrument presets render only when code plays one of their sounds, so the pattern waits for
-// them. A failure is recorded on the preset and leaves the rest of the pattern playing.
-const prepareInstrumentsForCode = async (patternCode: string): Promise<void> => {
+/**
+ * Renders the instrument presets the code names. Play waits for them, so the editor also calls
+ * this as soon as code loads or changes: rendering a preset takes seconds, and done at Play it
+ * held back both the sound and the timeline. A failure is recorded on the preset and leaves the
+ * rest of the pattern playing.
+ * @param patternCode - Strudel code about to be played, exported or shown
+ * @returns once every named preset is rendered or has failed
+ */
+export const prepareInstrumentsForCode = async (patternCode: string): Promise<void> => {
   try {
     await useInstruments().ensureRenderedForCode(patternCode)
   } catch {
