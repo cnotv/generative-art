@@ -613,8 +613,15 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
+/*
+ * On a phone the editor fills the screen; an open drawer stacks below it, and only then does
+ * the editor give up height so the drawer can be scrolled to.
+ */
 @media (width <= 900px) {
-  .strudel-editor,
+  .strudel-editor {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
   .strudel-editor--drawer-open {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 70dvh max-content;

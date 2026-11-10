@@ -838,7 +838,7 @@ describe('StrudelEditor audible playback', () => {
   )
 
   it.each([{ modeLabel: 'Code' }, { modeLabel: 'Flow' }])(
-    'fits the $modeLabel header on a 375px phone with every tool icon on one row',
+    'fits the $modeLabel view on a 375px phone: full height, every tool icon on one row',
     { timeout: 30000 },
     async ({ modeLabel }) => {
       // Arrange
@@ -863,6 +863,15 @@ describe('StrudelEditor audible playback', () => {
           (toolButton) => toolButton.getBoundingClientRect().top
         )
         expect(new Set(toolTops).size).toBe(1)
+        const editorView = document.querySelector('.strudel-editor')
+        const bottomPadding = editorView
+          ? Number.parseFloat(getComputedStyle(editorView).paddingBottom)
+          : Number.NaN
+        const codeColumn = document.querySelector('.strudel-editor__code')
+        expect(codeColumn?.getBoundingClientRect().bottom).toBeCloseTo(
+          window.innerHeight - bottomPadding,
+          0
+        )
       } finally {
         wrapper.unmount()
       }
