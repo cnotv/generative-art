@@ -426,7 +426,6 @@ onBeforeUnmount(() => {
         <slot name="actions" />
         <Toggle
           class="strudel-editor__mode"
-          size="icon"
           :model-value="editorMode === 'flow'"
           aria-label="Flow editor"
           :title="
@@ -434,12 +433,8 @@ onBeforeUnmount(() => {
           "
           @update:model-value="onEditorModeChange($event ? 'flow' : 'code')"
         >
-          <Workflow
-            v-if="editorMode === 'flow'"
-            class="strudel-editor__mode-icon"
-            aria-hidden="true"
-          />
-          <Code v-else class="strudel-editor__mode-icon" aria-hidden="true" />
+          <Workflow v-if="editorMode === 'flow'" aria-hidden="true" />
+          <Code v-else aria-hidden="true" />
         </Toggle>
       </header>
       <StrudelCodeEditor
@@ -672,11 +667,6 @@ onBeforeUnmount(() => {
 
 .strudel-editor__mode {
   margin-left: auto;
-}
-
-.strudel-editor__mode-icon {
-  width: var(--font-size-md);
-  height: var(--font-size-md);
 }
 
 /*
