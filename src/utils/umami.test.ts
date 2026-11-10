@@ -20,4 +20,10 @@ describe('useUmami loadUmami', () => {
 
     expect(umamiScript()?.getAttribute('data-website-id')).toBe('site-id')
   })
+
+  it('limits tracking to the configured domains', () => {
+    useUmami().loadUmami({ websiteId: 'site-id', domains: 'cnotv.xyz' })
+
+    expect(umamiScript()?.getAttribute('data-domains')).toBe('cnotv.xyz')
+  })
 })

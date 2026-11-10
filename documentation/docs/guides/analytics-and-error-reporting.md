@@ -19,9 +19,16 @@ reach the build, not the running container.
 | `VITE_UMAMI_WEBSITE_ID` | Umami, Settings, Websites, the site's Website ID  |
 | `VITE_SENTRY_DSN`       | Sentry, the project's Settings, Client Keys (DSN) |
 
-Each site gets its own Umami website and its own Sentry project, so their numbers and errors
-never mix. Store both as repository secrets under exactly these names; `deploy.yml` passes
-them to the Docker build as build arguments.
+Store both as repository secrets under exactly these names; `deploy.yml` passes them to the
+Docker build as build arguments.
+
+## Which site reports what
+
+Every site has its own Sentry project, so their errors never mix. Umami counts the portfolio
+at cnotv.xyz only, because the Umami plan does not cover more sites. The image that serves
+cnotv.xyz also answers lab.cnotv.xyz until the portfolio moves to its own repository, so
+`src/main.ts` passes `domains: 'cnotv.xyz'` and Umami ignores every other host. The games,
+Strudel and lab sites carry no Umami at all once they are split out.
 
 ## When a value is missing
 
