@@ -55,8 +55,8 @@ await page.waitForTimeout(1000)
 
 ## Noise that is not a bug
 
-The console repeats `HTTP 400 https://gateway.umami.is/api/send` on every view. That is the
-external analytics script, not an app error.
+A local run loads no analytics: Umami only starts when the build carries a website id, which
+only the deployed image does ([Analytics and error reporting](./analytics-and-error-reporting.md)).
 
 ## When the screenshot does not change
 

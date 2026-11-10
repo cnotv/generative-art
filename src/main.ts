@@ -17,11 +17,16 @@ const app = createApp(App)
 Sentry.init({
   app,
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  sendDefaultPii: true
+  environment: import.meta.env.MODE,
+  // IP addresses and cookies are personal data under the GDPR; errors are useful without them
+  sendDefaultPii: false
 })
 
+// Umami counts the portfolio only (plan limits). The same image also answers lab.cnotv.xyz
+// until the portfolio moves to its own repository, so every other host sends nothing.
 loadUmami({
-  websiteId: import.meta.env.VITE_UMAMI_WEBSITE_ID!
+  websiteId: import.meta.env.VITE_UMAMI_WEBSITE_ID,
+  domains: 'cnotv.xyz'
 })
 
 app.use(createPinia())

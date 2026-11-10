@@ -1,5 +1,5 @@
 interface UmamiConfig {
-  websiteId: string
+  websiteId: string | undefined
   srcUrl?: string // Defaults to Umami Cloud
   domains?: string // Optional: comma-separated list of allowed domains
 }
@@ -12,8 +12,8 @@ const DEFAULT_SCRIPT_URL = 'https://cloud.umami.is/script.js'
  */
 export function useUmami() {
   const loadUmami = (config: UmamiConfig) => {
-    // Prevent loading the script twice
-    if (document.getElementById('umami-script')) {
+    // A build without a website id would post every view to Umami and get a 400 back
+    if (!config.websiteId || document.getElementById('umami-script')) {
       return
     }
 
