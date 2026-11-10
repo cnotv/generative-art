@@ -17,11 +17,13 @@ const app = createApp(App)
 Sentry.init({
   app,
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  sendDefaultPii: true
+  environment: import.meta.env.MODE,
+  // IP addresses and cookies are personal data under the GDPR; errors are useful without them
+  sendDefaultPii: false
 })
 
 loadUmami({
-  websiteId: import.meta.env.VITE_UMAMI_WEBSITE_ID!
+  websiteId: import.meta.env.VITE_UMAMI_WEBSITE_ID
 })
 
 app.use(createPinia())
