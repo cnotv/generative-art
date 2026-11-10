@@ -55,19 +55,30 @@ describe('findRepetitionCycles', () => {
 const everyBar = (barCount: number, notes: string[]): StrudelScheduledHap[] =>
   Array.from({ length: barCount }, (_, bar) => hap(bar, 1, notes[bar % notes.length] ?? 'c3'))
 
+const randomNotes = (barCount: number): StrudelScheduledHap[] =>
+  Array.from({ length: barCount }, (_, bar) => hap(bar, 1, `random${bar}`))
+
 describe('findLoopBars', () => {
   it.each([
-    ['a one bar groove', everyBar(32, ['c3']), 1],
-    ['a three bar melody', everyBar(32, ['c3', 'e3', 'g3']), 3],
+    ['a one bar groove', everyBar(128, ['c3']), 1],
+    ['a three bar melody', everyBar(128, ['c3', 'e3', 'g3']), 3],
     [
       'a three bar bass under a four bar lead, which meet again after twelve',
-      [...everyBar(32, ['c2', 'f2', 'g2']), ...everyBar(32, ['c4', 'd4', 'e4', 'f4'])],
+      [...everyBar(128, ['c2', 'f2', 'g2']), ...everyBar(128, ['c4', 'd4', 'e4', 'f4'])],
       12
+    ],
+    [
+      'a twenty bar part, past the old sixteen bar limit',
+      everyBar(
+        128,
+        Array.from({ length: 20 }, (_, bar) => `n${bar}`)
+      ),
+      20
     ],
     ['a pattern with no events', [], 1]
   ])('measures %s', (_, haps, expectedBars) => {
     // Act
-    const loopBars = findLoopBars(haps, 16)
+    const loopBars = findLoopBars(haps, 64)
 
     // Assert
     expect(loopBars).toBe(expectedBars)
@@ -75,10 +86,23 @@ describe('findLoopBars', () => {
 
   it('reports no loop when nothing repeats inside the limit', () => {
     // Arrange
-    const haps = Array.from({ length: 32 }, (_, bar) => hap(bar, 1, `n${bar}`))
+    const haps = randomNotes(128)
 
     // Act
-    const loopBars = findLoopBars(haps, 16)
+    const loopBars = findLoopBars(haps, 64)
+
+    // Assert
+    expect(loopBars).toBeNull()
+  })
+})
+
+describe('findLoopBars with a layer that never repeats', () => {
+  it('reports no loop for a random layer beside a two bar loop', () => {
+    // Arrange
+    const haps = [...everyBar(128, ['c2', 'g2']), ...randomNotes(128)]
+
+    // Act
+    const loopBars = findLoopBars(haps, 64)
 
     // Assert
     expect(loopBars).toBeNull()

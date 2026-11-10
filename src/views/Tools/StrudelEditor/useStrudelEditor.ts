@@ -27,7 +27,11 @@ import type {
   StrudelTranscriptionState,
   TranscriptionRunner
 } from './types'
-import { loadDefaultStrudelPlayback, readHapSourceOffsets } from './strudelPlayback'
+import {
+  loadDefaultStrudelPlayback,
+  prepareInstrumentsForCode,
+  readHapSourceOffsets
+} from './strudelPlayback'
 import { runTranscription } from './transcription/runTranscription'
 import { useStrudelTranscription } from './transcription/useStrudelTranscription'
 import { useStrudelTimeline } from './timeline/useStrudelTimeline'
@@ -141,6 +145,16 @@ const createPlaybackHooks = (
   getDrawContext: () => editorHandle.value?.getDrawContext() ?? null
 })
 
+const resolveStartingExamples = (editorOptions?: StrudelEditorOptions) => {
+  const exampleList = editorOptions?.initialExamples ?? STRUDEL_EXAMPLES
+  const defaultExample =
+    resolveDefaultStrudelExample(
+      exampleList,
+      editorOptions?.initialExampleId ?? DEFAULT_STRUDEL_EXAMPLE_ID
+    ) ?? exampleList[0]
+  return { exampleList, defaultExample }
+}
+
 /**
  * Editor state: the selected example, the code, playback, the console log, the active tab
  * and audio transcription.
@@ -150,18 +164,14 @@ const createPlaybackHooks = (
 export const useStrudelEditor = (
   editorOptions?: StrudelEditorOptions
 ): StrudelEditorState & ReturnType<typeof useStrudelTimeline> => {
-  const exampleList = editorOptions?.initialExamples ?? STRUDEL_EXAMPLES
-  const defaultExample =
-    resolveDefaultStrudelExample(
-      exampleList,
-      editorOptions?.initialExampleId ?? DEFAULT_STRUDEL_EXAMPLE_ID
-    ) ?? exampleList[0]
+  const { exampleList, defaultExample } = resolveStartingExamples(editorOptions)
   const playbackLoader = editorOptions?.playbackLoader ?? loadDefaultStrudelPlayback
 
   const selectedExampleId = ref(defaultExample?.id ?? '')
   // The code from the last visit, so a refresh or a closed tab loses nothing.
   const patternCode = ref(readStorage(STRUDEL_SAVED_CODE_STORAGE_KEY) ?? defaultExample?.code ?? '')
   watch(patternCode, (code) => writeStorage(STRUDEL_SAVED_CODE_STORAGE_KEY, code))
+  watch(patternCode, (code) => void prepareInstrumentsForCode(code), { immediate: true })
   const editorStatus = ref<StrudelEditorStatus>('idle')
   const errorMessage = ref('')
   const playbackReference = ref<StrudelPlayback | null>(null)
@@ -176,7 +186,11 @@ export const useStrudelEditor = (
 
   const playbackHooks = createPlaybackHooks(editorHandle, playingSourceOffsets)
 
-  const timeline = useStrudelTimeline({ editorStatus, getPlayback: () => playbackReference.value })
+  const timeline = useStrudelTimeline({
+    editorStatus,
+    getPlayback: () => playbackReference.value,
+    onSongEnd: () => void stopPattern()
+  })
 
   const reportError = (message: string): void => {
     editorStatus.value = 'error'

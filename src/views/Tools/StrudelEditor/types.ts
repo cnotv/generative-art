@@ -66,7 +66,7 @@ export type StrudelPlayback = {
   readPosition: () => StrudelPlaybackPosition
   /** Plays on from this cycle, or starts there on the next Play when stopped. */
   seekToCycle: (cycle: number) => void
-  /** Bars the last played pattern takes to repeat as a whole, or null when it does not within the timeline's limit. */
+  /** Bars the last played pattern takes to repeat as a whole, or null when it does not within `STRUDEL_MAX_SONG_CYCLES`. */
   measureLoop: () => number | null
   /** Renders the cycles offline and downloads them as a WAV file. */
   renderToWav: (

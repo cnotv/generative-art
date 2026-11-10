@@ -6,8 +6,7 @@ import {
   STRUDEL_SOUND_PREVIEW_LEAD_SECONDS,
   STRUDEL_SOUND_PREVIEW_NOTE,
   STRUDEL_SOUND_PREVIEW_SECONDS,
-  STRUDEL_MAX_SONG_CYCLES,
-  STRUDEL_TIMELINE_MAX_LOOP_BARS
+  STRUDEL_MAX_SONG_CYCLES
 } from './config'
 import {
   downloadExportFile,
@@ -137,9 +136,15 @@ const unlockPageAudioContext = (): AudioContext | null => {
   return audioContext
 }
 
-// Instrument presets render only when code plays one of their sounds, so the pattern waits for
-// them. A failure is recorded on the preset and leaves the rest of the pattern playing.
-const prepareInstrumentsForCode = async (patternCode: string): Promise<void> => {
+/**
+ * Renders the instrument presets the code names. Play waits for them, so the editor also calls
+ * this as soon as code loads or changes: rendering a preset takes seconds, and done at Play it
+ * held back both the sound and the timeline. A failure is recorded on the preset and leaves the
+ * rest of the pattern playing.
+ * @param patternCode - Strudel code about to be played, exported or shown
+ * @returns once every named preset is rendered or has failed
+ */
+export const prepareInstrumentsForCode = async (patternCode: string): Promise<void> => {
   try {
     await useInstruments().ensureRenderedForCode(patternCode)
   } catch {
@@ -433,8 +438,8 @@ export const loadDefaultStrudelPlayback = async (
       latestPattern === null
         ? null
         : findLoopBars(
-            readOpeningHaps(latestPattern, STRUDEL_TIMELINE_MAX_LOOP_BARS * 2),
-            STRUDEL_TIMELINE_MAX_LOOP_BARS
+            readOpeningHaps(latestPattern, STRUDEL_MAX_SONG_CYCLES * 2),
+            STRUDEL_MAX_SONG_CYCLES
           ),
     measureRepetition: async (patternCode: string): Promise<number | null> =>
       findPatternRepetition(

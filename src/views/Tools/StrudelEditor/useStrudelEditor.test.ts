@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { nextTick } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import {
   DEFAULT_STRUDEL_EXAMPLE_ID,
   STRUDEL_EXPORT_MEASURE_DELAY_MS,
@@ -17,6 +18,7 @@ import type {
 } from './types'
 import { loadDefaultStrudelPlayback } from './strudelPlayback'
 import { readScheduledHaps } from './strudelOfflineRender'
+import { useInstruments } from './instruments/useInstruments'
 import {
   findStrudelExample,
   resolveDefaultStrudelExample,
@@ -339,7 +341,7 @@ describe('loadDefaultStrudelPlayback', () => {
     // Arrange
     const playedPattern = { kind: 'pattern' }
     vi.mocked(readScheduledHaps).mockReturnValueOnce(
-      Array.from({ length: 32 }, (_, bar) => ({
+      Array.from({ length: 128 }, (_, bar) => ({
         value: { s: 'bd' },
         beginCycle: bar,
         durationCycles: 1
@@ -360,7 +362,7 @@ describe('loadDefaultStrudelPlayback', () => {
     // Assert
     expect(vi.mocked(readScheduledHaps)).toHaveBeenCalledWith(
       playedPattern,
-      expect.objectContaining({ startCycle: 0, endCycle: 32 }),
+      expect.objectContaining({ startCycle: 0, endCycle: 128 }),
       0.5
     )
     expect(loopBars).toBe(1)
@@ -631,6 +633,24 @@ describe('useStrudelEditor', () => {
 
     // Assert
     expect(patternCode.value).toBe(expectedCode)
+  })
+
+  it('renders the presets the code names as soon as it loads and again when it changes', async () => {
+    // Arrange
+    setActivePinia(createPinia())
+    const renderPresets = vi.spyOn(useInstruments(), 'ensureRenderedForCode').mockResolvedValue()
+    localStorage.setItem(STRUDEL_SAVED_CODE_STORAGE_KEY, 'note("a1").s("stoner_chord")')
+
+    // Act
+    const { updatePatternCode } = useStrudelEditor({ initialExamples: buildExampleList() })
+    updatePatternCode('s("garagekit_kick")')
+    await nextTick()
+
+    // Assert
+    expect(renderPresets.mock.calls).toEqual([
+      ['note("a1").s("stoner_chord")'],
+      ['s("garagekit_kick")']
+    ])
   })
 
   it('saves the code under a name, lists it and keeps it for the next visit', () => {

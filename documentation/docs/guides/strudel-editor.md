@@ -149,26 +149,37 @@ balanced to play together without clipping: the reasoning is in
 
 ## The timeline
 
-A timeline runs along the bottom of the left side, under the code editor or the flow canvas, and
-shows where the pattern is in its loop: the bar, the time in seconds and the loop's length. Its
-playhead follows the sound while the pattern plays.
+A timeline runs along the bottom of the left side, under the code editor or the flow canvas. It
+shows where the pattern is in the song: the cycle, the step inside the cycle and the time in
+seconds. Its playhead follows the sound while the pattern plays.
 
 ![Two instruments playing from bar 5: the Pause button beside the timeline, which reads Bar 5 of 12 and Loops every 12 bars, and the boxed notes are the fifth bar's](/img/strudel-editor/timeline.webp)
 
-- **The button beside it** plays from the picked time and, while the pattern plays, pauses it.
-  A pause stops the sound where it is and makes that the picked time, so the next Play, here or
-  above the editor, carries on from there. Stop above the editor goes back to the picked time
-  instead.
+- **Play and Pause** play from the picked time and, while the pattern plays, pause it. A pause
+  stops the sound where it is and makes that the picked time, so the next Play carries on from
+  there.
+- **Stop** (the square button, or Ctrl+. anywhere in the editor, in flow mode too) stops the
+  sound and rewinds to cycle 1. The same stop sits above the editor.
+- **Loop** (the repeat toggle) is on by default and plays on past the end of the song. Off plays
+  from the picked time to the end of the song once, then stops and rewinds.
 - **Click or drag** the timeline to pick a time. While the pattern plays it carries on from there;
-  while it is stopped, the next Play starts there. Stop puts the playhead back on the picked time.
-  The arrow keys move it once the playhead has focus.
-- **One bar is one cycle**, the same bar the flow tempo bar counts beats in, and the seconds come
-  from the tempo the code sets.
-- **The loop** is measured each time the pattern plays or updates: the shortest number of whole
-  bars after which every instrument comes round together. Instruments of different lengths only
-  line up at their least common multiple, so a 3 bar bass under a 4 bar lead loops every 12 bars.
-  A pattern that does not repeat within 16 bars, such as one built on `rand`, shows a 16 bar
-  window and says so. Until the first Play the timeline spans 16 bars.
+  while it is stopped, the next Play starts there. The arrow keys move it once the playhead has
+  focus.
+- **One row for the whole song**: every cycle is marked with a line and every step with a
+  shorter tick, drawn behind the playhead. A cycle is at least 48 pixels wide, so a song longer
+  than the window scrolls sideways. A faded edge shows there is more of the song that way, and
+  the timeline scrolls on its own once the playhead runs off the visible part, or when Stop
+  rewinds it.
+- **The readout** shows three values, each behind an icon with a tooltip: the cycle (`3/8`), the
+  step (`2/4`) and the time (`5.1s`). A step is one beat: the flow patch sets how many a cycle
+  holds, and code mode uses 4. One bar is one cycle, and the seconds come from the tempo the code
+  sets.
+- **The song length** is measured each time the pattern plays or updates: the shortest number of
+  whole cycles after which every instrument comes round together. Instruments of different
+  lengths only line up at their least common multiple, so a 3 bar bass under a 4 bar lead gives
+  12, and an `arrange` gives its total. A pattern with a layer that never repeats, such as one
+  built on `rand`, runs to the cap of 64 cycles so every variation stays reachable. The Export
+  tab shares the same 64 cycle cap and fills its cycle count from it.
 - **Code and flow mode share one position**: both play the same compiled code through one
   scheduler, so switching mode keeps the playhead where it is.
 
@@ -576,7 +587,7 @@ In flow mode every preset is in the pickers, rendered or not: a guitar, bass, ac
 
 A name is lowercase letters and digits, starts with a letter, is at most 16 characters, is not used by another preset and does not collide with a sound Strudel already has (`sawtooth`, or the front of a drum machine such as `rolandtr909`). The tab says what to change.
 
-A preset renders when it is selected, and when code that is about to play or export names one of its sounds; the pattern waits for it. Nothing else is rendered, so an unused preset costs nothing. Moving a slider renders only that preset again, after a short pause. A preset's sounds appear in the Sounds tab under `Kind: name` once it has rendered. Deleting or renaming a preset does not unregister sounds already made; they go at the next reload.
+A preset renders when it is selected, and as soon as code naming one of its sounds is loaded, typed or pasted, so Play does not wait for it. If Play comes first, the pattern waits for the render to finish. Nothing else is rendered, so an unused preset costs nothing. Moving a slider renders only that preset again, after a short pause. A preset's sounds appear in the Sounds tab under `Kind: name` once it has rendered. Deleting or renaming a preset does not unregister sounds already made; they go at the next reload.
 
 The **AI tone** section turns a description such as "dry desert fuzz, scooped mids" into slider settings for the selected kind through OpenRouter. It uses the key and the **Sound model** set in the Settings tab (see [AI settings](#ai-settings)); the assistant only moves the sliders, so you can still adjust them.
 

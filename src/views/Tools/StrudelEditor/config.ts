@@ -1106,8 +1106,12 @@ export const STRUDEL_MAX_REPETITIONS_PER_CYCLE = 16
 export const STRUDEL_MAX_SONG_CYCLES = 64
 /** The quiet after the last keystroke before the open export tab measures the code again. */
 export const STRUDEL_EXPORT_MEASURE_DELAY_MS = 600
-/** The longest loop the timeline looks for, in bars; a pattern that has not repeated by then shows this many. */
-export const STRUDEL_TIMELINE_MAX_LOOP_BARS = 16
+/** The narrowest a cycle may be drawn on the timeline, in pixels; a longer song scrolls sideways. */
+export const STRUDEL_TIMELINE_MIN_CYCLE_WIDTH = 48
+/** How far across the visible timeline the playhead may run, as a fraction, before it scrolls. */
+export const STRUDEL_TIMELINE_FOLLOW_EDGE = 0.9
+/** Where the playhead lands after the timeline scrolls to it, as a fraction of the visible width. */
+export const STRUDEL_TIMELINE_FOLLOW_LEAD = 0.25
 /** The finest point the timeline seeks to: a sixteenth of a bar. */
 export const STRUDEL_TIMELINE_SEEK_STEP = 0.0625
 export const EXPORT_FORMAT_OPTIONS = [
