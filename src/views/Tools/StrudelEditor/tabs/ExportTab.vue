@@ -81,9 +81,16 @@ const onFormatChange = (nextFormat: string): void => {
   format.value = nextFormat === 'midi' ? 'midi' : 'wav'
 }
 
+// The name that was last saved, so the button can say it worked; typing another name clears it.
+const savedName = ref('')
+watch(name, () => {
+  savedName.value = ''
+})
+
 const onSave = (): void => {
   if (hasName.value) {
     emit('save', name.value)
+    savedName.value = name.value.trim()
   }
 }
 
@@ -132,6 +139,9 @@ const onExport = (): void => {
       <Save aria-hidden="true" />
       Save pattern
     </Button>
+    <p v-if="savedName" class="strudel-export__status" role="status">
+      Saved "{{ savedName }}" in this browser.
+    </p>
     <h3 class="strudel-export__heading">Export</h3>
     <div class="strudel-export__field">
       <span class="strudel-export__label">Format</span>

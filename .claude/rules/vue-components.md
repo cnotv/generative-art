@@ -154,6 +154,12 @@ Semantic colours (`#ffd700` winner, `#f44` danger) stay as they are.
   overlap. Never stack independently absolute-positioned regions that can drift over
   each other.
 
+## UI
+
+- **A checkbox label is at most 12 characters** ("Auto apply", not "Auto apply the code to
+  the editor"). Longer explanation goes in a `title` on the label, or in a collapsed
+  `Accordion`. Go past 12 only when no shorter word keeps the meaning.
+
 ## Accessibility
 
 - Every icon-only button carries an accessible label describing its action — an `aria-label`

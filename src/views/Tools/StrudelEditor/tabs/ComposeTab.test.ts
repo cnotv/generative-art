@@ -19,6 +19,13 @@ const mountComposeTab = (code: string, editorError = '') =>
 const findButton = (wrapper: ReturnType<typeof mountComposeTab>, label: string) =>
   wrapper.findAll('button').find((button) => button.text() === label)
 
+const openReport = async (wrapper: ReturnType<typeof mountComposeTab>): Promise<void> => {
+  await wrapper
+    .findAll('button')
+    .find((button) => button.text() === 'Report')
+    ?.trigger('click')
+}
+
 const stubOpenRouter = (answer: Record<string, unknown>): void => {
   const content = JSON.stringify(answer)
   vi.stubGlobal(
@@ -43,7 +50,7 @@ describe('ComposeTab', () => {
     await wrapper.find('input').setValue('house')
 
     // Assert
-    expect(wrapper.text()).toContain('Add your OpenRouter key in the Settings tab')
+    expect(wrapper.text()).toContain('Add an OpenRouter key in Settings')
     expect(
       ['Compose', 'Revise', 'Review'].map((label) => findButton(wrapper, label)?.element.disabled)
     ).toEqual([true, true, true])
@@ -91,6 +98,8 @@ describe('ComposeTab', () => {
     await findButton(wrapper, 'Fix error')?.trigger('click')
     await flushPromises()
 
+    await openReport(wrapper)
+
     // Assert
     const fetchMock = vi.mocked(fetch)
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
@@ -112,10 +121,40 @@ describe('ComposeTab', () => {
     await vi.waitFor(() => expect(wrapper.emitted('apply')).toBeDefined())
 
     // Assert
+    expect(wrapper.text()).not.toContain('A house loop.')
+    await openReport(wrapper)
     expect(wrapper.text()).toContain('A house loop.')
     expect(wrapper.find('pre').text()).toBe('$: s("bd*4")')
     expect(wrapper.emitted('apply')).toEqual([['$: s("bd*4")']])
-    expect(findButton(wrapper, 'Apply')?.element.disabled).toBe(true)
+  })
+
+  it('applies the answer again after an edit', async () => {
+    // Arrange
+    useAiSettings().apiKey = 'secret-key'
+    stubOpenRouter({ explanation: 'A house loop.', code: '$: s("bd*4")' })
+    const wrapper = mountComposeTab('')
+    await wrapper.find('input').setValue('house')
+    await findButton(wrapper, 'Compose')?.trigger('click')
+    await flushPromises()
+
+    // Act
+    await findButton(wrapper, 'Apply')?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.emitted('apply')).toHaveLength(1))
+    await findButton(wrapper, 'Apply')?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.emitted('apply')).toHaveLength(2))
+
+    // Assert
+    expect(findButton(wrapper, 'Apply')?.element.disabled).toBe(false)
+  })
+
+  it('keeps the checkbox labels short', () => {
+    // Act
+    const wrapper = mountComposeTab('')
+
+    // Assert
+    const labels = wrapper.findAll('.strudel-compose__checkbox label').map((label) => label.text())
+    expect(labels).toEqual(['Auto apply', 'Instruments'])
+    expect(labels.every((label) => label.length <= 12)).toBe(true)
   })
 })
 
@@ -136,8 +175,10 @@ const mountWithAnswer = (instrumentResults: StrudelComposerInstrumentResult[]) =
   return mount(ComposeTab, { props: { code: '', editorError: '' } })
 }
 
-const rowTexts = (wrapper: ReturnType<typeof mountWithAnswer>): string[] =>
-  wrapper.findAll('.strudel-compose__instrument').map((row) => row.text())
+const rowTexts = async (wrapper: ReturnType<typeof mountWithAnswer>): Promise<string[]> => {
+  await openReport(wrapper)
+  return wrapper.findAll('.strudel-compose__instrument').map((row) => row.text())
+}
 
 describe('ComposeTab designed instruments', () => {
   beforeEach(() => {
@@ -145,12 +186,12 @@ describe('ComposeTab designed instruments', () => {
     setActivePinia(createPinia())
   })
 
-  it('lists each designed instrument with its kind, sound and that it is made on Apply', () => {
+  it('lists each designed instrument with its kind, sound and that it is made on Apply', async () => {
     // Act
     const wrapper = mountWithAnswer([])
 
     // Assert
-    const rows = rowTexts(wrapper)
+    const rows = await rowTexts(wrapper)
     expect(rows).toHaveLength(2)
     expect(rows[0]).toContain('grit')
     expect(rows[0]).toContain('Bass guitar')
@@ -163,14 +204,17 @@ describe('ComposeTab designed instruments', () => {
     ['existed', '', STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS.existed],
     ['creating', '', STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS.creating],
     ['failed', 'Strudel already has a sound with this name.', 'Strudel already has a sound']
-  ] as const)('shows the %s status of an applied instrument', (status, message, expectedText) => {
-    // Act
-    const wrapper = mountWithAnswer([
-      { status, message },
-      { status: 'existed', message: '' }
-    ])
+  ] as const)(
+    'shows the %s status of an applied instrument',
+    async (status, message, expectedText) => {
+      // Act
+      const wrapper = mountWithAnswer([
+        { status, message },
+        { status: 'existed', message: '' }
+      ])
 
-    // Assert
-    expect(rowTexts(wrapper)[0]).toContain(expectedText)
-  })
+      // Assert
+      expect((await rowTexts(wrapper))[0]).toContain(expectedText)
+    }
+  )
 })

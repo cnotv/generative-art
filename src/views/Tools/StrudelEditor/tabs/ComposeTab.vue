@@ -2,6 +2,12 @@
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { STRUDEL_COMPOSER_ACTIONS, STRUDEL_COMPOSER_INSTRUMENT_STATUS_LABELS } from '../ai/config'
@@ -48,9 +54,9 @@ const canFix = computed(
     props.code.trim().length > 0
 )
 
+// Applying again is allowed, so a later edit in the editor can be put back to the answer.
 const canApply = computed(
-  () =>
-    answer.value !== null && answer.value.code.length > 0 && !answerApplied.value && !applying.value
+  () => answer.value !== null && answer.value.code.length > 0 && !applying.value
 )
 
 // Before Apply an instrument has no result yet; a failure says why.
@@ -123,42 +129,62 @@ const onFix = (): void => {
     </section>
     <div class="strudel-compose__checkbox">
       <Checkbox id="strudel-compose-auto-apply" v-model="autoApply" />
-      <label for="strudel-compose-auto-apply">Auto apply the code to the editor</label>
+      <label
+        for="strudel-compose-auto-apply"
+        title="Write the answer into the editor as soon as it arrives"
+        >Auto apply</label
+      >
     </div>
     <div class="strudel-compose__checkbox">
       <Checkbox id="strudel-compose-design-instruments" v-model="designInstruments" />
-      <label for="strudel-compose-design-instruments">
-        Create new instruments for the piece with the Sound model
-      </label>
+      <label
+        for="strudel-compose-design-instruments"
+        title="Let the Sound model design new instruments for the piece"
+        >Instruments</label
+      >
     </div>
-    <p class="strudel-compose__hint">
-      Compose writes a new piece, Revise changes the code in the editor, Review only comments on it.
-      Ctrl+Z in the editor undoes an applied answer.
-    </p>
+    <Accordion>
+      <AccordionItem value="about">
+        <AccordionTrigger>About composing</AccordionTrigger>
+        <AccordionContent>
+          <p class="strudel-compose__hint">
+            Compose writes a new piece, Revise changes the code in the editor, Review only comments
+            on it. Ctrl+Z in the editor undoes an applied answer.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
     <p v-if="apiKey.length === 0" class="strudel-compose__hint">
-      Add your OpenRouter key in the Settings tab, where the compose model is picked too.
+      Add an OpenRouter key in Settings.
     </p>
 
     <p v-if="errorMessage" class="strudel-compose__error" role="alert">{{ errorMessage }}</p>
     <section v-else-if="answer" class="strudel-compose__answer" aria-label="Answer">
-      <p v-if="answer.explanation" class="strudel-compose__explanation">
-        {{ answer.explanation }}
-      </p>
-      <ul
-        v-if="instrumentRows.length > 0"
-        class="strudel-compose__instruments"
-        aria-label="Designed instruments"
-      >
-        <li v-for="row in instrumentRows" :key="row.name" class="strudel-compose__instrument">
-          <span class="strudel-compose__instrument-name">{{ row.name }}</span>
-          {{ row.kindLabel }}: {{ row.description }}
-          <span
-            class="strudel-compose__instrument-status"
-            :class="{ 'strudel-compose__instrument-status--failed': row.failed }"
-            >{{ row.statusLabel }}</span
-          >
-        </li>
-      </ul>
+      <Accordion v-if="answer.explanation || instrumentRows.length > 0">
+        <AccordionItem value="report">
+          <AccordionTrigger>Report</AccordionTrigger>
+          <AccordionContent>
+            <p v-if="answer.explanation" class="strudel-compose__explanation">
+              {{ answer.explanation }}
+            </p>
+            <ul
+              v-if="instrumentRows.length > 0"
+              class="strudel-compose__instruments"
+              aria-label="Designed instruments"
+            >
+              <li v-for="row in instrumentRows" :key="row.name" class="strudel-compose__instrument">
+                <span class="strudel-compose__instrument-name">{{ row.name }}</span>
+                {{ row.kindLabel }}: {{ row.description }}
+                <span
+                  class="strudel-compose__instrument-status"
+                  :class="{ 'strudel-compose__instrument-status--failed': row.failed }"
+                  >{{ row.statusLabel }}</span
+                >
+              </li>
+            </ul>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
       <template v-if="answer.code">
         <pre
           class="strudel-compose__code"
