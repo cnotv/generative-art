@@ -12,6 +12,7 @@ import {
   Boxes,
   Cable,
   CircleHelp,
+  Code,
   Guitar,
   Music,
   Save,
@@ -19,13 +20,13 @@ import {
   Sparkles,
   Terminal,
   Volume2,
+  Workflow,
   X
 } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import IconButton from '@/components/IconButton.vue'
-import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
+import { Toggle } from '@/components/ui/toggle'
 import { FLOW_SYNC_DELAY_MS, STRUDEL_BEATS_PER_CYCLE, STRUDEL_LICENSE_NOTE } from './config'
-import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
 import {
   findStrudelFlowNodeCode,
   findStrudelFlowPlayingNodeIds,
@@ -363,14 +364,14 @@ const toolbarTools = [
   { id: 'import', label: 'Import', icon: Music },
   { id: 'export', label: 'Export', icon: Save },
   { id: 'midi', label: 'MIDI', icon: Cable },
-  { id: 'sounds', label: 'Sounds', icon: Volume2 },
+  { id: 'sounds', label: 'Sounds', icon: Volume2, wideOnly: true },
   { id: 'instruments', label: 'Instruments', icon: Guitar },
   { id: 'compose', label: 'Compose', icon: Sparkles },
   { id: 'console', label: 'Console', icon: Terminal },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'flow', label: 'Nodes', icon: Boxes },
   { id: 'hints', label: 'Hints', icon: CircleHelp }
-] as const satisfies { id: StrudelTabId; label: string; icon: unknown }[]
+] as const satisfies { id: StrudelTabId; label: string; icon: unknown; wideOnly?: boolean }[]
 
 const visibleTools = computed(() =>
   toolbarTools.filter((tool) => tool.id !== 'flow' || editorMode.value === 'flow')
@@ -416,19 +417,25 @@ onBeforeUnmount(() => {
             :title="tool.label"
             :aria-label="tool.label"
             :aria-pressed="activeTab === tool.id"
+            :class="{ 'strudel-editor__tool--wide-only': 'wideOnly' in tool }"
             @click="toggleDrawer(tool.id)"
           >
             <component :is="tool.icon" aria-hidden="true" />
           </IconButton>
         </div>
         <slot name="actions" />
-        <div class="strudel-editor__mode" role="group" aria-label="Editor mode">
-          <ButtonSelector
-            :model-value="editorMode"
-            :options="STRUDEL_FLOW_EDITOR_MODE_OPTIONS"
-            @update:model-value="onEditorModeChange"
-          />
-        </div>
+        <Toggle
+          class="strudel-editor__mode"
+          :model-value="editorMode === 'flow'"
+          aria-label="Flow editor"
+          :title="
+            editorMode === 'flow' ? 'Flow editor: switch to code' : 'Code editor: switch to flow'
+          "
+          @update:model-value="onEditorModeChange($event ? 'flow' : 'code')"
+        >
+          <Workflow v-if="editorMode === 'flow'" aria-hidden="true" />
+          <Code v-else aria-hidden="true" />
+        </Toggle>
       </header>
       <StrudelCodeEditor
         v-show="editorMode === 'code'"
@@ -613,8 +620,15 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
+/*
+ * On a phone the editor fills the screen; an open drawer stacks below it, and only then does
+ * the editor give up height so the drawer can be scrolled to.
+ */
 @media (width <= 900px) {
-  .strudel-editor,
+  .strudel-editor {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
   .strudel-editor--drawer-open {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 70dvh max-content;
@@ -639,18 +653,38 @@ onBeforeUnmount(() => {
 
 .strudel-editor__code-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-3);
 }
 
 .strudel-editor__toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-1);
 }
 
 .strudel-editor__mode {
   margin-left: auto;
+}
+
+/*
+ * A 375px phone leaves 343px: nine 2rem tools and the mode toggle fit on one bar only with the
+ * gaps closed and the Sounds browser left to wider screens.
+ */
+@media (width <= 480px) {
+  .strudel-editor__code-header {
+    gap: var(--spacing-1);
+  }
+
+  .strudel-editor__toolbar {
+    gap: var(--spacing-px);
+  }
+
+  .strudel-editor__tool--wide-only {
+    display: none;
+  }
 }
 
 .strudel-editor__drawer {

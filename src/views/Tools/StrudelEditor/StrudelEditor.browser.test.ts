@@ -492,7 +492,7 @@ describe('StrudelEditor audible playback', () => {
 
       try {
         // Act: open flow on the starter patch, add Beats, and connect it to the Filter.
-        await page.getByRole('button', { name: 'Flow', exact: true }).click()
+        await page.getByRole('button', { name: 'Flow editor' }).click()
         await page.getByRole('button', { name: 'Nodes', exact: true }).click()
         await page.getByRole('button', { name: 'Reset patch' }).click()
         await vi.waitFor(
@@ -563,7 +563,7 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Flow editor' }).click()
       await page.getByRole('button', { name: 'Nodes', exact: true }).click()
       await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
@@ -601,7 +601,7 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Flow editor' }).click()
       await page.getByRole('button', { name: 'Nodes', exact: true }).click()
       await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
@@ -648,7 +648,7 @@ describe('StrudelEditor audible playback', () => {
     const wrapper = mount(StrudelEditor, { attachTo: document.body })
 
     try {
-      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Flow editor' }).click()
       await page.getByRole('button', { name: 'Nodes', exact: true }).click()
       await page.getByRole('button', { name: 'Reset patch' }).click()
       await vi.waitFor(
@@ -706,7 +706,7 @@ describe('StrudelEditor audible playback', () => {
           .fill('$: note("c3 e3")._punchcard()._scope()')
 
         // Act
-        await page.getByRole('button', { name: 'Flow', exact: true }).click()
+        await page.getByRole('button', { name: 'Flow editor' }).click()
         await page.getByRole('button', { name: 'Nodes', exact: true }).click()
 
         // Assert
@@ -738,7 +738,7 @@ describe('StrudelEditor audible playback', () => {
         .fill(
           'setcpm(120/4)\n$: n("[0 2] [4]").scale("A4:minor").sound("sine")\n$: note("c3 e3").lpf(800).fast(2)'
         )
-      await page.getByRole('button', { name: 'Flow', exact: true }).click()
+      await page.getByRole('button', { name: 'Flow editor' }).click()
       await page.getByRole('button', { name: 'Nodes', exact: true }).click()
 
       // Assert
@@ -831,6 +831,59 @@ describe('StrudelEditor audible playback', () => {
           expect(editorTop).toBeLessThan(window.innerHeight)
         })
         expect(readEditorCode()).toContain('"Caverave"')
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
+  it.each([
+    { modeLabel: 'code', isFlowMode: false },
+    { modeLabel: 'flow', isFlowMode: true }
+  ])(
+    'fits the $modeLabel view on a 375px phone: one icon bar ending in the mode toggle, full height',
+    { timeout: 30000 },
+    async ({ isFlowMode }) => {
+      // Arrange
+      await page.viewport(375, 812)
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await vi.waitFor(
+          () => {
+            expect(document.querySelector('.cm-content')).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+
+        // Act
+        if (isFlowMode) {
+          await page.getByRole('button', { name: 'Flow editor' }).click()
+        }
+
+        // Assert
+        const modeToggle = page.getByRole('button', { name: 'Flow editor' }).element()
+        expect(modeToggle.getAttribute('aria-pressed')).toBe(String(isFlowMode))
+        const toggleBox = modeToggle.getBoundingClientRect()
+        expect(toggleBox.right).toBeLessThanOrEqual(window.innerWidth)
+        const toolBoxes = [...document.querySelectorAll('.strudel-editor__toolbar > button')]
+          .filter((toolButton) => toolButton instanceof HTMLElement && toolButton.offsetParent)
+          .map((toolButton) => toolButton.getBoundingClientRect())
+        expect(new Set(toolBoxes.map((toolBox) => toolBox.top)).size).toBe(1)
+        expect(toggleBox.top).toBeLessThan(toolBoxes[0].bottom)
+        expect(toggleBox.left).toBeGreaterThan(
+          Math.max(...toolBoxes.map((toolBox) => toolBox.right))
+        )
+        expect(page.getByRole('button', { name: 'Sounds', exact: true }).query()).toBeNull()
+        const editorView = document.querySelector('.strudel-editor')
+        const bottomPadding = editorView
+          ? Number.parseFloat(getComputedStyle(editorView).paddingBottom)
+          : Number.NaN
+        const codeColumn = document.querySelector('.strudel-editor__code')
+        expect(codeColumn?.getBoundingClientRect().bottom).toBeCloseTo(
+          window.innerHeight - bottomPadding,
+          0
+        )
       } finally {
         wrapper.unmount()
       }

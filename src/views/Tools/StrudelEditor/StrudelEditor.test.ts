@@ -127,10 +127,11 @@ const clickMode = async (
   wrapper: Awaited<ReturnType<typeof mountEditorView>>,
   label: string
 ): Promise<void> => {
-  await wrapper
-    .findAll('.strudel-editor__mode button')
-    .find((button) => button.text() === label)
-    ?.trigger('click')
+  const modeToggle = wrapper.get('button[aria-label="Flow editor"]')
+  const isFlowMode = modeToggle.attributes('aria-pressed') === 'true'
+  if (isFlowMode !== (label === 'Flow')) {
+    await modeToggle.trigger('click')
+  }
 }
 
 describe('StrudelEditor view', () => {
