@@ -594,13 +594,13 @@ The **Compose** tab sends a request in your own words, together with the code in
 
 When the code in the editor fails to run, the tab shows the error and a **Fix error** button, which sends the code and the error back to the model to repair, keeping the music as it is. The answer is applied like any other.
 
-The answer shows in the tab: the model's explanation and, for Compose and Revise, the code. **Apply** puts that code in the editor, replacing what was there; Ctrl+Z in the editor brings the old code back. With **Auto apply** ticked, the code goes into the editor as soon as it arrives. A pattern that is playing picks up the new code as it would after typing. Revise and Review need code in the editor; all three need a key.
+The answer shows in the tab: for Compose and Revise the code, and under a collapsed **Report** the model's explanation. **Apply** puts that code in the editor, replacing what was there; Ctrl+Z in the editor brings the old code back. Apply stays available, so the answer can be put back after you edit the code. The tab's own hints sit under a collapsed **About composing**. With **Auto apply** ticked, the code goes into the editor as soon as it arrives. A pattern that is playing picks up the new code as it would after typing. Revise and Review need code in the editor; all three need a key.
 
 The model is told how a song is written here: pattern strings in double quotes (a single-quoted string is plain JavaScript, so `'<Am F>'.rootNotes(2)` fails), the tempo with `setcpm`, one `$:` block per layer with its own sound, a chord plan written once as a `const`, sections with `arrange`, and the names of the instrument presets it can play. A request that runs while the drawer shows another tab still lands, and is still applied with Auto apply on.
 
 ### Instruments the composer designs
 
-Compose and Revise can design up to four new instrument presets for the piece, when an existing sound would not suit it. The answer then lists each one under the explanation: its name, its kind (electric guitar, bass guitar, acoustic guitar, organ or drum kit) and a sentence describing the sound. The code plays them like any preset, as `<name>`, `<name>:mute` and `<name>:chord`, or `<name>_kick` and the other pieces for a drum kit.
+Compose and Revise can design up to four new instrument presets for the piece, when an existing sound would not suit it. The Report then lists each one under the explanation: its name, its kind (electric guitar, bass guitar, acoustic guitar, organ or drum kit) and a sentence describing the sound. The code plays them like any preset, as `<name>`, `<name>:mute` and `<name>:chord`, or `<name>_kick` and the other pieces for a drum kit.
 
 Nothing is made until the code is applied. Applying first creates each instrument as one of your own presets in the Instruments tab, and asks the **Sound model** to turn its description into the kind's five knobs, the same as the Instruments tab's AI tone; only then does the code go into the editor, so it never plays a preset that does not exist yet. Each row shows how that went:
 
@@ -608,7 +608,7 @@ Nothing is made until the code is applied. Applying first creates each instrumen
 - **Already exists, kept as it is**: a preset of that name was there before, built in or your own, and it is never overwritten; the code plays it as it is.
 - **Not made**, with the reason: the name cannot be a preset name, for example because Strudel already has a sound called that. If only the Sound model failed, the preset is kept at its kind's starting knobs.
 
-Untick **Create new instruments for the piece with the Sound model** to keep the composer to the sounds and presets that already exist: it is then told to design none, and nothing is created on Apply. It is ticked until you untick it, and the choice is remembered in this browser.
+Untick **Instruments** (hover for its meaning) to keep the composer to the sounds and presets that already exist: it is then told to design none, and nothing is created on Apply. It is ticked until you untick it, and the choice is remembered in this browser.
 
 Designed presets stay after the piece is replaced, saved and editable like any preset you made yourself, and can be renamed or deleted in the Instruments tab.
 
