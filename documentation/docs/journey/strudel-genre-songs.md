@@ -96,18 +96,21 @@ Each song was written from a brief in the `audio-brief` form, after reading its 
 
 | Song            | Tempo and key       | Form                                                          | Must not                                              |
 | --------------- | ------------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
-| Neon Drive      | 100, A minor        | intro 8, verse 8, chorus 8, break 4, chorus 8, outro 4        | a scale-run lead; an arpeggio that ignores the chords |
+| Neon Drive      | 128, A minor        | intro 4, verse 8, chorus 8, breakdown 4, chorus 8, outro 4    | a scale-run lead; an arpeggio that ignores the chords |
 | Dust and Diesel | 80, D minor, drop D | riff 8, verse 8, chorus 8, breakdown 8, chorus 8, outro 8     | triads; a polite crunch; one drum loop for 48 bars    |
 | Rust and Rain   | 120, E minor        | quiet verse 8, loud chorus 8, twice, bridge 4, outro 4        | the same level in verse and chorus                    |
 | Winter Court    | 80, D minor         | theme 8, turn to F major 8, theme with counter-line 8, coda 8 | a pad with a scale run; a drum kit                    |
-| Uptown Strut    | 105, E              | intro 8, vamp 16, chorus 8, break 8, chorus 8                 | root notes on the beat; chords on every beat          |
+| Uptown Strut    | 105, E              | intro 8, vamp 8, chorus 8, break 8, chorus 8 and a last hit   | root notes on the beat; chords on every beat          |
 | Blue Hour       | 136, B flat major   | intro 4, rhythm changes AABA 32, tag 4                        | straight eighths; block chords on every beat          |
 
 The choices that follow from them:
 
 - **Neon Drive** keeps the guide's verse Am F G E and chorus Am F C G. The octave bass follows
   the root of each bar, a chord-tone arpeggio runs under a two-bar lead motif that is sequenced
-  down on its repeat, and the delays are dotted eighths at the tempo.
+  down on its repeat, and the delays are dotted eighths at the tempo. It was rewritten at 128 BPM
+  in four sections of drums, bass, arpeggio, lead and a string pad, each its own `arrange` line:
+  a sparse syncopated bass in the intro and outro against driving sixteenths in the verse and chorus,
+  a square lead an octave up that arrives only in the choruses, and a pad that returns in the breakdown.
 - **Dust and Diesel** plays one riff on bass and guitar, low and fuzzed in the manner of Kyuss's
   desert rock. The guitar sits at the written pitch of the riff, in drop D, with a fifth added,
   doubled by a second distorted guitar sample; nothing is raised an octave. The first version
@@ -125,7 +128,8 @@ The choices that follow from them:
   major in the second section, brings the theme back with a viola counter-line, and ends on a D
   major chord. Timpani mark the four cadences.
 - **Uptown Strut** gives the lead to a slap bass that outlines E9, A9 and B9 with octave jumps and
-  a slide into each chord, answered by brass in the chorus, and ends on one stab.
+  a slide into each chord, answered by brass in the chorus, and ends on one stab. The rewrite is
+  thirty-two bars: a short intro on the E9 vamp, a chorus, a break, a second chorus and a last hit.
 - **Blue Hour** uses rhythm changes, two chords a bar, a bass that walks in quarters with
   chromatic approaches, comping on beat two and the and of three, and swung eighths everywhere
   but the bass.
@@ -165,7 +169,7 @@ Three more songs play the instrument presets of the Instruments tab, so they sou
 
 The measured value is the shortest gap between note onsets on the busiest pitched track, multiplied back to beats (eighths in the first two, tremolo sixteenths in the third), and the file's own tempo agrees. Drums are not in the MIDI file, since a drum preset sound has no pitch, so the guitar and bass carry the check.
 
-- **Sun Bleached** is a different feel from the 72 BPM riff and the 80 BPM Dust and Diesel: faster, in A, with the guitar riff, the bass and the kick each on its own rhythm. The chorus adds ride, claps and a doom organ, and the break drops to half time.
+- **Sun Bleached** is a different feel from the 72 BPM riff and the 80 BPM Dust and Diesel: faster, in A, with the guitar riff, the bass and the kick each on its own rhythm. The chorus adds a ride from the TR-909 bank, claps and a soft, low `doomorgan_note` organ, and the break drops to half time.
 - **Paper Skies** is a clean `jangle` arpeggio over a `campfire` acoustic strum and a light kick against a `seattle` fuzz chorus with pumping eighth bass and a pentatonic hook. The bridge holds an organ.
 - **Hollow Chambers** tremolo picks sixteenths at 200 BPM in drop A, with a semitone and a tritone around the root, a half time groove of palm muted gallops, and a blast beat in two forms. Every kick and snare is clipped to its event: a sixteenth is 75 ms, and a 0.6 s kick sample would otherwise run on through the next hits.
 
@@ -176,3 +180,15 @@ The measured value is the shortest gap between note onsets on the busiest pitche
 | Hollow Chambers | -12.3 LUFS | -1.6 dBTP |
 
 The first mixes peaked at or above 0 dBTP in the choruses, where fuzz guitar, bass and drums land together, so every gain was lowered rather than the file normalised. The harmony check reports only fifths, flat sevenths and passing fourths of the lead over power chords, which belong: the chord track holds only roots, because the fifth and octave are inside the sample. None of these numbers says the songs are good. They have not been listened to.
+
+## Two more songs and a refresh
+
+Acid Doom (psytrance doom) and Late Fusion (jazz funk) joined the list, and Neon Drive, Uptown Strut and Sun Bleached were rewritten. The loudness figures above were measured on the earlier versions of those three and have not been taken again.
+
+| Song        | Style          | BPM | Form                                              |
+| ----------- | -------------- | --- | ------------------------------------------------- |
+| Acid Doom   | psytrance doom | 145 | intro 8, groove 16, breakdown 8, drop 16, outro 4 |
+| Late Fusion | jazz funk      | 100 | intro 4, three 8 bar choruses, one final hit bar  |
+
+- **Acid Doom** plays a rolling psytrance bass of three sixteenths between each kick against a half time square fuzz riff on the same roots. A sawtooth acid arpeggio opens the filter in the drop, and a distorted clean guitar wails slowly over the breakdown and the drop. Every part derives from one chord a bar, `Em F Em Bb`.
+- **Late Fusion** stacks a slap bass with root, octave pop and ghost note layers over a LinnDrum groove with a displaced kick and ghosted snares. Electric piano stabs change rhythm between choruses, a tenor sax states a motif and then solos on the chord plan, and a clean guitar solo and a string pad come in for the return of the head. It is a funk groove on jazz chords, so it sits beside Blue Hour rather than replacing it.

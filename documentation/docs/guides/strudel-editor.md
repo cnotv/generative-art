@@ -34,7 +34,7 @@ flow tab:
   (techno), Second Floor (house), Long Way Down (drum and bass), Corner Store (hip hop),
   Tideline (ambient), Lift Off (trance), Harbour Steps (dub), Wire Fence (breakbeat), Neon Drive
   (synthwave), Dust and Diesel and Sun Bleached (stoner rock), Rust and Rain and Paper Skies (grunge), Hollow Chambers (death metal), Winter Court (classical),
-  Uptown Strut (funk) and Blue Hour (jazz). They are written
+  Uptown Strut (funk), Blue Hour and Late Fusion (jazz), and Acid Doom (psytrance doom). They are written
   as `$:` layers with a `.mask` holding one number a bar, so each layer can be read, muted or
   rearranged on its own, and the hints tab finds nothing missing in them. Each is a link that puts
   it in the address, so `/tools/StrudelEditor?pattern=caverave` opens on Caverave, Back returns

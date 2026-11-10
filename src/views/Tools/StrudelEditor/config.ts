@@ -478,45 +478,40 @@ $: s("perc(5,8)").hpf(500).gain(.5).pan(sine.range(.3, .7).slow(4)).mask("<0!12 
   {
     id: 'neon-drive',
     label: 'Neon Drive (synthwave)',
-    code: `// Neon Drive: a synthwave song in A minor
-// Forty bars: intro, verse, chorus, break, chorus, outro. Every part follows one chord plan.
-// Instruments: drums RolandTR909, bass sawtooth, chords supersaw, arpeggio square, lead gm_lead_2_sawtooth
-setcpm(100/4)
+    code: `// Neon Drive: a synthwave song in A minor at 128 BPM
+// Instruments: bass sawtooth, drums RolandTR909, arpeggio sawtooth, lead square, pad gm_string_ensemble_1
+setcpm(128/4)
 
-const plan = (verse, chorus, outro) =>
-  arrange([16, verse], [8, chorus], [4, verse], [8, chorus], [4, outro])
-const changes = plan("<Am F G E>", "<Am F C G>", "<Am F E Am>")
-const roots = plan("<a1 f1 g1 e1>", "<a1 f1 c2 g1>", "<a1 f1 e1 a1>")
+const chords = "<Am F C G>"
 
-const chorusLead = "<[e5@2 a5 g5] [f5@2 c5 a4] [e5@2 g5 e5] [d5@3 b4] [c5@2 e5 a5] [a5@2 f5 c5] [g5@2 e5 c5] [b4@2 d5 g5]>"
-const lead = arrange(
-  [8, silence],
-  [8, "<[e5@3 c5] [a4@2 c5 a4] [d5@3 b4] [b4@3 g#4] [c5@3 a4] [a4@2 f4 a4] [b4@3 g4] [g#4@2 e4@2]>"],
-  [8, chorusLead],
-  [4, silence],
-  [8, chorusLead],
-  [4, "<[e5@4] [c5@4] [b4@2 g#4@2] [a4@4]>"]
-)
+// drums
+const kick = s("rolandtr909_bd*4").gain(0.9)
+const snare = s("~ rolandtr909_sd ~ rolandtr909_sd*[1 2]").gain(0.6).clip(1).room(0.3)
+const clap = s("~ rolandtr909_cp ~ ~").gain(0.5).clip(1)
+const hatOff = s("[~ rolandtr909_hh]*4").gain(0.4).clip(1)
+const hat16 = s("rolandtr909_hh*16").gain(0.2).clip(1)
 
-$: stack(
-  s("bd*4").gain(.34).mask("<0!8 1!16 0!4 1!8 0!4>"),
-  s("~ cp ~ cp").gain(.27).room(.35).roomsize(1.5).mask("<0!8 1!16 0!4 1!8 0!4>"),
-  s("[~ hh]*4").gain(.24).mask("<0!4 1!20 0!4 1!8 0!4>"),
-  s("~ ~ mt lt").gain(.3).mask("<0!15 1 0!7 1 0!12 1 0!3>")
-).bank("RolandTR909")._punchcard()
-$: stack(
-  note(roots).struct("x*8").add(note("[0 12]*4"))
-    .s("sawtooth").lpf(520).decay(.16).sustain(0).gain(.37)
-    .mask("<0!4 1!20 0!4 1!11 0>"),
-  note("<~!39 a1>").s("sawtooth").lpf(400).decay(2.4).sustain(0).gain(.4)
-)
-$: chord(changes).voicing().s("supersaw").lpf(1300).attack(.3).release(1).room(.45).gain(.07)._pianoroll()
-$: stack(
-  n("[0 1 2 3 2 1 0 1]*2").chord(changes).voicing().s("square").lpf(2400).decay(.12).sustain(0)
-    .delay(.3).delaytime(.45).delayfeedback(.3).gain(.05).mask("<1!39 0>"),
-  note(lead).s("gm_lead_2_sawtooth").lpf(3000).attack(.02).release(.4)
-    .delay(.35).delaytime(.45).delayfeedback(.35).room(.3).gain(.24)
-)._spectrum()`
+// bass: Perturbator-style driving 16ths vs. a sparse syncopated intro line
+const bassDrive = chords.rootNotes(2).struct("[x x x x]*4").note().s("sawtooth").lpf(sine.range(400,1600).slow(8)).gain(0.7).clip(1)
+const bassSparse = chords.rootNotes(2).struct("x ~ ~ x ~ x ~ ~").note().s("sawtooth").lpf(500).gain(0.7).clip(1)
+
+// arpeggio from chord tones
+const arp = n("[0 1 2 3 2 1 2 1]*2").chord(chords).voicing().s("sawtooth").lpf(sine.range(900,3000).slow(8)).gain(0.28).clip(1).delay(0.3).delaytime(0.1875).delayfeedback(0.35)
+
+// motif: a singing Cinnamon Chasers lead on chord tones, an octave up
+const lead = n("4 ~ 2 ~ 1 ~ 2 3").chord(chords).voicing().transpose(12).s("square").lpf(2800).gain(0.35).clip(1).room(0.4).delay(0.25).delaytime(0.375).delayfeedback(0.4)
+
+// strings pad
+const pad = chord(chords).voicing().s("gm_string_ensemble_1").gain(0.3).attack(0.4).release(0.8)
+
+// sections: intro 4, verse 8, chorus 8, breakdown 4, chorus 8, outro 4
+$: arrange([4, kick],[8, kick],[8, kick],[4, silence],[8, kick],[4, silence])
+$: arrange([4, silence],[8, snare],[8, stack(snare, clap)],[4, silence],[8, stack(snare, clap)],[4, silence])
+$: arrange([4, silence],[8, hatOff],[8, stack(hatOff, hat16)],[4, silence],[8, stack(hatOff, hat16)],[4, silence])
+$: arrange([4, bassSparse],[8, bassDrive],[8, bassDrive],[4, silence],[8, bassDrive],[3, bassSparse],[1, note("a1").s("sawtooth").lpf(500).gain(0.7).clip(1)])
+$: arrange([4, silence],[8, arp],[8, arp],[4, arp],[8, arp],[4, silence])
+$: arrange([4, silence],[8, silence],[8, lead],[4, silence],[8, lead],[4, silence])._spectrum()
+$: arrange([4, pad],[8, silence],[8, pad],[4, pad],[8, pad],[4, pad])._pianoroll()`
   },
   {
     id: 'dust-and-diesel',
@@ -621,8 +616,8 @@ $: note(lead).add(note(-12)).s("gm_distortion_guitar").shape(.5).lpf(1500).attac
     label: 'Sun Bleached (stoner rock)',
     code: `// Sun Bleached: a stoner rock song in A minor at 96 BPM
 // Thirty-six bars: intro, verse, chorus, half time break, chorus, outro. The guitar plays the riff, the bass
-// answers it on another rhythm, the kick sits between them, and the chorus opens onto ride, claps and organ.
-// Instruments: guitar stoner_chord and stoner_mute, lead stoner_note, bass fuzzbass_note, drums garagekit, organ doomorgan_note, claps default cp
+// answers it on another rhythm, the kick sits between them, and the chorus opens onto ride, claps and a soft organ.
+// Instruments: guitar stoner_chord and stoner_mute, lead stoner_note, bass fuzzbass, drums garagekit plus rolandtr909_rd ride, organ doomorgan_note (low, dark and soft), claps default cp
 setcpm(96/4)
 
 const plan = (intro, verse, chorus, breakdown, outro) =>
@@ -648,15 +643,15 @@ $: stack(
   s("garagekit_snare").struct(backbeat).gain(.22),
   s("garagekit_hatclosed").struct("x ~ x x ~ x x ~").gain(.14).cut(2).mask(riffBars),
   s("garagekit_hatopen").struct("~ ~ ~ ~ ~ ~ ~ x").gain(.14).cut(2).mask("<0!4 1!8 0!24>"),
-  s("garagekit_ride").struct("x x x x x x x x").gain(.12).cut(3).mask(chorusBars),
+  s("rolandtr909_rd").struct("x x x x x x x x").gain(.12).cut(3).clip(1).mask(chorusBars),
   s("cp").struct("~ ~ x ~ ~ ~ x ~").gain(.24).mask(chorusBars),
   s("~ ~ ~ ~ garagekit_tomhi garagekit_tommid garagekit_tomlow garagekit_tomlow").gain(.22).mask("<0!11 1 0!7 1 0!3 1 0!7 1 0!4>"),
   s("garagekit_crash").struct("x").gain(.19).mask("<0!12 1 0!11 1 0!7 1 0!2 1>")
 )._punchcard()
 $: stack(
-  note(roots).struct("x ~ ~ x ~ x x ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.38).mask("<0!4 1!8 0!20 1!3 0>"),
-  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").add(note(-12)).s("fuzzbass_note").clip(1).gain(.38).mask(breakBars),
-  note(roots).struct("x x ~ x x ~ x x").add(note(-12)).s("fuzzbass_note").clip(1).gain(.38).mask(chorusBars)
+  note(roots).struct("x ~ ~ x ~ x x ~").s("fuzzbass").clip(1).gain(.38).mask("<0!4 1!8 0!20 1!3 0>"),
+  note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").s("fuzzbass").clip(1).gain(.38).mask(breakBars),
+  note(roots).struct("x x ~ x x ~ x x").s("fuzzbass").clip(1).gain(.38).mask(chorusBars)
 )._scope()
 $: stack(
   note(riff).add(note(roots)).s("stoner_chord").cut(1).gain(.28).mask(riffBars),
@@ -664,7 +659,7 @@ $: stack(
   note(roots).struct("x ~ ~ ~ ~ ~ ~ ~").s("stoner_chord").cut(1).gain(.28).mask(breakBars),
   note(roots).struct("x x ~ x x ~ x x").s("stoner_mute").cut(1).gain(.2).mask(breakBars),
   note(roots).struct("x ~").s("stoner_chord").clip(1).gain(.4).mask(lastBar),
-  note(roots).add(note("12,19,24")).s("doomorgan_note").clip(1).gain(.12).mask(chorusBars)
+  note(roots).add(note("0,7")).s("doomorgan_note").lpf(450).attack(.06).release(.3).clip(1).gain(.06).mask(chorusBars)
 )
 $: n(lead).scale("a3:minor:pentatonic").s("stoner_note").clip(1).gain(.2).mask(chorusBars)`
   },
@@ -856,46 +851,46 @@ $: stack(
     id: 'uptown-strut',
     label: 'Uptown Strut (funk)',
     code: `// Uptown Strut: a funk song in E
-// Forty-eight bars: intro, verse vamp, chorus, break, chorus and a last hit. The bass leads.
+// Thirty-two bars: a short funky intro, chorus, break, chorus and a last hit. The bass leads.
 // Instruments: drums default kit, bass gm_slap_bass_1, clavinet gm_clavinet, guitar gm_electric_guitar_muted, brass gm_brass_section
 setcpm(105/4)
 
 const vamp = "<A9 A9 E9 E9 B9 A9 E9 B9>"
-const changes = arrange([24, "E9"], [8, vamp], [8, "E9"], [8, vamp])
+const changes = arrange([8, "E9"], [8, vamp], [8, "E9"], [8, vamp])
 
 const slapE = "<[e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ e2 ~ ~ e1 ~ b1 ~ ~ e2 d2 ~ b1 a1 g#1]>"
 const slapChorus = "<[a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2] [a1 ~ ~ a2 ~ ~ a1 ~ e2 ~ g2 ~ a2 ~ c2 c#2] [e1 ~ ~ e2 ~ ~ e1 ~ b1 ~ d2 ~ e2 ~ g1 g#1] [b1 ~ ~ b2 ~ ~ b1 ~ f#2 ~ a2 ~ b2 ~ d2 d#2]>"
-const bass = arrange([24, slapE], [8, slapChorus], [8, slapE], [7, slapChorus], [1, "e1 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~"])
+const bass = arrange([8, slapE], [8, slapChorus], [8, slapE], [7, slapChorus], [1, "e1 ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~"])
 
 const horns = "<[~ ~ ~ ~ ~ c#5 e5 ~] [g5 ~ e5 ~ c#5 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~] [d5 ~ b4 ~ g#4 ~ ~ ~] [~ ~ ~ ~ ~ d#5 f#5 ~] [e5 ~ c#5 ~ a4 ~ ~ ~] [~ ~ ~ ~ ~ g#4 b4 ~]>"
 const brass = arrange(
-  [24, silence], [7, horns], [1, "f#5 ~ d#5 ~ b4 ~ a4 ~"],
+  [6, silence], [1, "~ ~ ~ ~ ~ c#5 e5 ~"], [1, "g5 ~ e5 ~ c#5 ~ ~ ~"],
+  [7, horns], [1, "f#5 ~ d#5 ~ b4 ~ a4 ~"],
   [8, silence], [7, horns], [1, "e5 ~ ~ ~ ~ ~ ~ ~"]
 )
 
-const full = "<1!8 1!24 0!8 1!7 0>"
-const comp = "<0!8 1!24 0!8 1!7 0>"
-const kit = "<1!38 0!2 1!7 0>"
+const full = "<1!16 0!8 1!7 0>"
+const comp = "<0!2 1!14 0!8 1!7 0>"
+const kit = "<0 1!21 0!2 1!7 0>"
 
 $: stack(
   s("bd ~ ~ bd ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~").gain(.85).mask(kit),
-  s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~").gain(.75).mask(kit),
-  s("~ sd ~ ~ ~ ~ ~ sd ~ sd ~ ~ ~ ~ ~ sd").gain(.14).mask(full),
+  s("~ ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ sd ~ ~ ~").gain(.55).lpf(3500).room(.1).mask(kit),
+  s("~ sd ~ ~ ~ ~ ~ sd ~ sd ~ ~ ~ ~ ~ sd").gain(.1).lpf(2500).mask(full),
   s("hh*16").gain("[.5 .25 .4 .25]*4").mask(full),
   s("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ oh ~").gain(.4).mask(full),
-  s("perc(5,8)").hpf(600).gain(.3).mask("<0!8 1!24 0!8 1!7 0>")
+  s("perc(5,8)").hpf(600).gain(.3).mask("<0!4 1!12 0!8 1!7 0>")
 ).gain(.3)._punchcard()
 $: stack(
-  note(bass).s("gm_slap_bass_1").decay(.25).sustain(0).gain(.9)
-    .mask("<0!4 1!44>"),
-  s("<~!47 [bd,cr]>").gain(.4)
+  note(bass).s("gm_slap_bass_1").decay(.25).sustain(0).gain(.9),
+  s("<~!31 [bd,cr]>").gain(.4)
 )
 $: stack(
   chord(changes).voicing().struct("~ x ~ x ~ ~ x ~ ~ x ~ x ~ ~ x ~").s("gm_clavinet")
     .decay(.06).sustain(0).room(.15).gain(.18).mask(comp),
   chord(changes).voicing().struct("~ ~ x ~ ~ ~ x ~ ~ ~ x ~ ~ ~ x ~").s("gm_electric_guitar_muted")
     .decay(.08).sustain(0).gain(.14).mask(comp),
-  chord("<~!47 E9>").voicing().s("gm_clavinet").decay(1.5).sustain(0).room(.3).gain(.22)
+  chord("<~!31 E9>").voicing().s("gm_clavinet").decay(1.5).sustain(0).room(.3).gain(.22)
 )._pianoroll()
 $: note(brass).s("gm_brass_section").decay(.18).sustain(.2).room(.25).gain(.3)`
   },
@@ -943,6 +938,130 @@ $: stack(
   chord("<~!39 Bb^7>").voicing().s("gm_epiano1").release(2).room(.4).gain(.24)
 )._pianoroll()
 $: note(melody).s("gm_vibraphone").swingBy(1/3, 4).room(.3).gain(.4)._pitchwheel()`
+  },
+  {
+    id: 'acid-doom',
+    label: 'Acid Doom (psytrance doom)',
+    code: `// bass: sawtooth and square, drums: RolandTR909, arp: sawtooth, wail: gm_electric_guitar_clean, pad: gm_string_ensemble_1
+setcpm(145/4)
+
+// one chord a bar, everything below derives from this
+const plan = "<Em F Em Bb>"
+
+// drums
+const kick = s("rolandtr909_bd*4").gain(0.9)
+const clap = s("~ rolandtr909_sd ~ rolandtr909_sd").gain(0.45).clip(1)
+const hatOff = s("[~ rolandtr909_hh]*4").gain(0.45).clip(1)
+const hat16 = s("rolandtr909_hh*16").gain(0.22).clip(1)
+
+// psy rolling bass: three 16ths between each kick
+const rolling = plan.rootNotes(2).struct("[~ x x x]*4").note().s("sawtooth").lpf(450).gain(0.7)
+
+// Kyuss style half-time fuzz riff on the same roots
+const doom = plan.rootNotes(2).struct("x ~ ~ x x ~ ~ ~").note().s("square").lpf(600).distort(1.2).gain(0.6).clip(1)
+
+// acid arpeggio motif from the chord tones
+const acid = chord(plan).dict("ireal").voicing().arp("0 2 1 3 2 1 3 2").s("sawtooth").lpf(sine.range(500,3200).slow(4)).gain(0.3).clip(1)
+
+// Alice in Chains style slow grungy wail on chord tones
+const wail = chord(plan).dict("ireal").voicing().arp("3@3 2 1@3 3").s("gm_electric_guitar_clean").distort(1.5).gain(0.35).clip(1).room(0.4)
+
+// strings pad
+const pad = chord(plan).dict("ireal").voicing().s("gm_string_ensemble_1").gain(0.3).attack(0.3).release(0.6)
+
+// sections: intro 8, groove 16, breakdown 8, drop 16, outro 4
+$: arrange([8, kick],[16, kick],[8, silence],[16, kick],[4, kick])
+$: arrange([8, silence],[16, clap],[8, silence],[16, clap],[4, silence])
+$: arrange([8, silence],[16, hatOff],[8, silence],[16, stack(hatOff, hat16)],[4, silence])
+$: arrange([8, silence],[16, rolling],[8, doom],[16, rolling],[4, doom])
+$: arrange([8, silence],[16, silence],[8, silence],[16, acid],[4, silence])
+$: arrange([8, silence],[16, silence],[8, wail],[16, wail],[4, silence])
+$: arrange([8, pad],[16, silence],[8, pad],[16, silence],[4, pad])`
+  },
+  {
+    id: 'late-fusion',
+    label: 'Late Fusion (jazz funk)',
+    code: `// bass: gm_slap_bass_1, drums: LinnDrum, chords: gm_epiano1, lead: gm_tenor_sax, pad: gm_string_ensemble_1, solo: gm_electric_guitar_clean
+setcpm(100/4)
+
+const chords = "<Dm9 G13 Cmaj7 A7>"
+
+// bass: syncopated 16th grooves, roots plus octave pops plus ghost notes
+const bassIntro = chords.rootNotes(1).note().struct("x ~ ~ ~ ~ ~ x ~ ~ ~ x ~ ~ ~ ~ ~").s("gm_slap_bass_1").clip(1).gain(.9)
+const rootsA = chords.rootNotes(1).note().struct("x ~ ~ x ~ x ~ ~ x ~ ~ x ~ x ~ ~").s("gm_slap_bass_1").clip(1).gain(.9)
+const popsA = chords.rootNotes(2).note().struct("~ ~ ~ ~ ~ ~ ~ x ~ ~ x ~ ~ ~ ~ x").s("gm_slap_bass_1").clip(1).gain(.65)
+const ghostA = chords.rootNotes(1).note().struct("~ ~ x ~ ~ ~ x ~ ~ x ~ ~ ~ ~ x ~").s("gm_slap_bass_1").clip(1).lpf(600).gain(.35)
+const rootsB = chords.rootNotes(1).note().struct("x ~ x x ~ x ~ x x ~ ~ x x ~ x ~").s("gm_slap_bass_1").clip(1).gain(.9)
+const popsB = chords.rootNotes(2).note().struct("~ ~ ~ ~ x ~ ~ ~ ~ ~ x ~ ~ ~ ~ x").s("gm_slap_bass_1").clip(1).gain(.65)
+const ghostB = chords.rootNotes(1).note().struct("~ x ~ ~ ~ ~ x ~ ~ x ~ ~ ~ x ~ ~").s("gm_slap_bass_1").clip(1).lpf(600).gain(.35)
+const bassEnd = note("d1").s("gm_slap_bass_1").clip(1).gain(.9)
+
+$: arrange(
+  [4, bassIntro],
+  [8, stack(rootsA, popsA, ghostA)],
+  [8, stack(rootsB, popsB, ghostB)],
+  [8, stack(rootsA, popsA, ghostA)],
+  [1, bassEnd]
+)
+
+// drums: displaced kick, ghosted snares, accented 16th hats (sampled LinnDrum kit)
+const kick = s("linndrum_bd").struct("x ~ ~ ~ ~ ~ ~ x ~ ~ x ~ ~ ~ ~ ~").gain(.85).room(.08)
+const snare = s("linndrum_sd").struct("~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~").gain(.65).room(.2)
+const ghostSnare = s("linndrum_sd").struct("~ ~ ~ x ~ ~ ~ ~ ~ x ~ ~ ~ ~ x ~").gain(.15).lpf(2500)
+const hats = s("linndrum_hh*16").gain("[.5 .2 .35 .2]*4").hpf(4500).lpf(11000)
+const openHat = s("linndrum_oh").struct("~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~ x ~").gain(.3).lpf(11000)
+const groove = stack(kick, snare, ghostSnare, hats, openHat)
+const endHit = stack(s("linndrum_bd").struct("x ~ ~ ~").gain(.9).room(.1), s("linndrum_oh").struct("x ~ ~ ~").gain(.5))
+
+$: arrange(
+  [4, stack(kick, hats.gain(.3))],
+  [8, groove],
+  [8, groove],
+  [8, groove],
+  [1, endHit]
+)
+
+// electric piano stabs
+const stabsA = chord(chords).voicing().s("gm_epiano1").struct("~ ~ x ~ ~ x ~ ~ ~ ~ x ~ ~ ~ x ~").clip(1).room(.2).gain(.45)
+const stabsB = chord(chords).voicing().s("gm_epiano1").struct("~ x ~ ~ x ~ ~ x ~ ~ ~ x ~ x ~ ~").clip(1).room(.2).gain(.45)
+const endChord = chord("Dm9").voicing().s("gm_epiano1").struct("x ~ ~ ~").room(.3).gain(.5)
+
+$: arrange(
+  [4, silence],
+  [8, stabsA],
+  [8, stabsB],
+  [8, stabsA],
+  [1, endChord]
+)
+
+// tenor sax motif and solo, built on the chord plan
+const motif = n("~ 4 ~ 2 3 ~ 1 0 ~ 2 4 ~ 5 ~ 4 ~").chord(chords).voicing().s("gm_tenor_sax").clip(1).room(.25).gain(.45)
+const solo = n("0 2 4 3 2 4 5 4 3 2 1 2 4 ~ 5 3").chord(chords).voicing().s("gm_tenor_sax").clip(1).room(.25).gain(.4)
+const endNote = n("0 ~ ~ ~").chord("Dm9").voicing().s("gm_tenor_sax").room(.3).gain(.45)
+
+$: arrange(
+  [4, silence],
+  [8, motif],
+  [8, solo],
+  [8, motif],
+  [1, endNote]
+)
+
+// guitar melody solo: one bar per chord (Dm9 G13 Cmaj7 A7), twice through, over the final head
+const guitarSolo = note("<[~ a4 ~ f4 a4 ~ c5 d5] [b4 ~ d5 e5 ~ d5 b4 g4] [e5 ~ g5 e5 d5 ~ c5 b4] [c#5 ~ e5 g5 ~ e5 c#5 a4] [d5 f5 ~ a5 g5 f5 ~ e5] [d5 ~ b4 d5 e5 ~ g5 f5] [e5 d5 c5 ~ b4 c5 e5 ~] [e5 ~ c#5 a4 ~ g4 a4 ~]>").s("gm_electric_guitar_clean").clip(1).room(.2).gain(.4)
+
+$: arrange(
+  [20, silence],
+  [8, guitarSolo],
+  [1, silence]
+)
+
+// string pad under the solo and the return of the head
+$: arrange(
+  [12, silence],
+  [16, chord(chords).voicing().s("gm_string_ensemble_1").attack(.3).release(.5).room(.3).gain(.2)],
+  [1, silence]
+)`
   }
 ]
 
@@ -1603,7 +1722,7 @@ export const STRUDEL_MUSIC_STYLES: StrudelMusicStyle[] = [
     keywords: ['synthwave', 'synth wave', 'retrowave', 'outrun', '80s synth'],
     definingRoles: ['kick', 'bass'],
     minBeatsPerMinute: 80,
-    maxBeatsPerMinute: 105,
+    maxBeatsPerMinute: 130,
     beatsPerMinute: 100,
     instruments: [
       {
