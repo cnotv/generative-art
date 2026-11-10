@@ -1227,6 +1227,8 @@ export const STRUDEL_MAX_SONG_CYCLES = 64
 export const STRUDEL_EXPORT_MEASURE_DELAY_MS = 600
 /** The narrowest a cycle may be drawn on the timeline, in pixels; a longer song scrolls sideways. */
 export const STRUDEL_TIMELINE_MIN_CYCLE_WIDTH = 48
+/** The furthest a touch on the timeline may wander, in pixels, and still count as a tap that seeks. */
+export const STRUDEL_TIMELINE_TAP_SLOP = 8
 /** The finest point the timeline seeks to: a sixteenth of a bar. */
 export const STRUDEL_TIMELINE_SEEK_STEP = 0.0625
 export const EXPORT_FORMAT_OPTIONS = [

@@ -92,6 +92,13 @@ const emit = defineEmits<{
   opacity: 0.5;
 }
 
+/* The whole row takes clicks, not only the thin line, and a touch may pan the row sideways
+   unless it lands on the playhead, whose wider invisible grip keeps it for dragging. */
+.slider--playhead {
+  height: var(--spacing-5);
+  touch-action: pan-x;
+}
+
 .slider--playhead .slider__track {
   height: 2px;
   border-radius: 0;
@@ -103,5 +110,13 @@ const emit = defineEmits<{
   border: none;
   border-radius: 0;
   background-color: var(--color-playhead);
+  position: relative;
+  touch-action: none;
+}
+
+.slider--playhead .slider__thumb::before {
+  content: '';
+  position: absolute;
+  inset: 0 calc(var(--spacing-3) * -1);
 }
 </style>
