@@ -22,7 +22,15 @@ pnpm changeset
 ```
 
 It asks which packages changed and whether the change is a patch, a minor or a major, then
-writes a small markdown file under `.changeset/`. Commit that file with the rest of the work.
+writes a small markdown file under `.changeset/`. Then apply it in the same branch:
+
+```bash
+pnpm changeset version
+```
+
+That consumes the file, bumps every package version and writes the changelogs. Commit the
+result with the rest of the work. The pull request checks fail while any changeset file is
+left unversioned, because the release on `main` only publishes versions that already exist.
 
 Write a changeset when the change touches a package's behaviour, its API, its types or its
 dependencies. Skip it for work that never leaves `src/`, for documentation, and for tests —
@@ -47,18 +55,18 @@ consumer who reads the changelog will find entries that do not concern them.
 
 ## What happens on merge
 
-Merging to `main` does not publish. It runs `.github/workflows/publish.yml`, which behaves
-differently depending on whether changesets are pending:
+Merging to `main` runs `.github/workflows/publish.yml`, which only publishes: every package
+whose version is not on npm yet goes out with provenance and gets a git tag, and anything
+already published is skipped. A merge that bumped no version publishes nothing.
 
-- **Changesets are pending** — the workflow opens or updates a pull request titled
-  `chore: version packages`. That pull request applies the version bumps and writes the
-  changelogs. Nothing is published yet.
-- **No changesets are pending**, which is the state right after that pull request merges —
-  the workflow publishes every package to npm, tags the release and creates the GitHub
-  release.
+Versioning happens in the pull request rather than in a bot pull request after merge for two
+reasons that both hold here: GitHub Actions is not allowed to open pull requests in this
+repository, and the `main` ruleset accepts nothing but reviewed pull requests, so the release
+cannot push a version commit of its own. The pull request is therefore the place to read the
+changelog as a consumer will read it.
 
-So a release is two merges: the work, then the version pull request. Reviewing the second one
-is the last chance to read the changelog as a consumer will read it.
+Two pull requests that both version will conflict on the version fields; the second rebases
+and runs `pnpm changeset version` again.
 
 ## The gate before npm
 
@@ -94,6 +102,11 @@ check found a package that could not be imported outside a browser at all;
 DOM. A package that reads `window`, `document` or `localStorage` while its module is being
 evaluated fails there — and would equally fail for any consumer rendering on a server. Read
 browser globals inside the function that needs them, not at the top level of a module.
+
+**A peer dependency on a sibling package turns every release into a major.** Changesets bumps
+a package's major version whenever a package it lists in `peerDependencies` changes, and with
+one version for the whole scope that drags all of them along. Depend on a sibling through
+`dependencies` only.
 
 **`files` decides what ships.** Each manifest publishes only `dist`. A package that starts
 depending on a file outside `dist` at runtime will pass every local check and fail once
