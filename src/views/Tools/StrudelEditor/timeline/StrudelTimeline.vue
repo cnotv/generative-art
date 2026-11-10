@@ -4,12 +4,7 @@ import { Disc3, Footprints, Pause, Play, Repeat, Square, Timer } from 'lucide-vu
 import IconButton from '@/components/IconButton.vue'
 import { Slider } from '@/components/ui/slider'
 import { Toggle } from '@/components/ui/toggle'
-import {
-  STRUDEL_TIMELINE_FOLLOW_EDGE,
-  STRUDEL_TIMELINE_FOLLOW_LEAD,
-  STRUDEL_TIMELINE_MIN_CYCLE_WIDTH,
-  STRUDEL_TIMELINE_SEEK_STEP
-} from '../config'
+import { STRUDEL_TIMELINE_MIN_CYCLE_WIDTH, STRUDEL_TIMELINE_SEEK_STEP } from '../config'
 
 const props = defineProps<{
   playheadCycle: number
@@ -44,20 +39,6 @@ const readHiddenEnds = (): void => {
   hiddenAfter.value = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1
 }
 
-// Scrolls only once the playhead leaves the view, so someone looking further along is not
-// pulled back on every frame.
-const keepPlayheadInView = (): void => {
-  const scroller = scrollerElement.value
-  if (scroller === null || props.timelineBars <= 0) {
-    return
-  }
-  const playheadOffset = (props.playheadCycle / props.timelineBars) * scroller.scrollWidth
-  const visibleEnd = scroller.scrollLeft + scroller.clientWidth * STRUDEL_TIMELINE_FOLLOW_EDGE
-  if (playheadOffset < scroller.scrollLeft || playheadOffset > visibleEnd) {
-    scroller.scrollLeft = playheadOffset - scroller.clientWidth * STRUDEL_TIMELINE_FOLLOW_LEAD
-  }
-}
-
 onMounted(() => {
   const scroller = scrollerElement.value
   if (scroller === null || typeof ResizeObserver === 'undefined') {
@@ -69,7 +50,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => resizeObserver?.disconnect())
 
-watch(() => props.playheadCycle, keepPlayheadInView)
 watch(() => props.timelineBars, readHiddenEnds, { flush: 'post' })
 
 const playPauseLabel = computed(() => (props.isPlaying ? 'Pause' : 'Play from here'))
@@ -168,6 +148,8 @@ const timeReadout = computed(() => `${(props.playheadCycle / props.cyclesPerSeco
           :max="timelineBars"
           :step="STRUDEL_TIMELINE_SEEK_STEP"
           label="Playhead"
+          orientation="horizontal"
+          variant="playhead"
           @update:model-value="onSliderMoved"
         />
       </div>
@@ -212,6 +194,8 @@ const timeReadout = computed(() => `${(props.playheadCycle / props.cyclesPerSeco
 .strudel-timeline__scroller {
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
   padding-block: var(--spacing-1);
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;

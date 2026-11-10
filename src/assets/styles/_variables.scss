@@ -94,6 +94,9 @@
   --color-perf-warn: hsl(38deg 92% 50%);
   --color-perf-bad: hsl(0deg 84% 60%);
 
+  // The Strudel timeline playhead: a dusty rose that stands out from the grey track.
+  --color-playhead: hsl(350deg 55% 55%);
+
   // Timeline panel action colors. Cycled by row index to visually distinguish
   // actions; foreground stays fixed white across themes.
   --timeline-color-0: hsl(0deg 60% 50%);
@@ -277,6 +280,7 @@
   --color-perf-ok: hsl(142deg 60% 55%);
   --color-perf-warn: hsl(38deg 90% 58%);
   --color-perf-bad: hsl(0deg 80% 65%);
+  --color-playhead: hsl(350deg 70% 75%);
 
   // Timeline panel action colors (dark — brighter to stay visible)
   --timeline-color-0: hsl(0deg 65% 60%);
@@ -339,6 +343,7 @@
     --color-perf-ok: hsl(142deg 60% 55%);
     --color-perf-warn: hsl(38deg 90% 58%);
     --color-perf-bad: hsl(0deg 80% 65%);
+    --color-playhead: hsl(350deg 70% 75%);
     --timeline-color-0: hsl(0deg 65% 60%);
     --timeline-color-1: hsl(45deg 65% 55%);
     --timeline-color-2: hsl(90deg 55% 50%);
