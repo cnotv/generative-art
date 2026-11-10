@@ -318,7 +318,9 @@ describe('StrudelEditor view', () => {
       'Hollow Chambers (death metal)',
       'Winter Court (classical)',
       'Uptown Strut (funk)',
-      'Blue Hour (jazz)'
+      'Blue Hour (jazz)',
+      'Acid Doom (psytrance doom)',
+      'Late Fusion (jazz funk)'
     ])
   })
 
