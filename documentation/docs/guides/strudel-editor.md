@@ -162,9 +162,12 @@ seconds. Its playhead follows the sound while the pattern plays.
   sound and rewinds to cycle 1. The same stop sits above the editor.
 - **Loop** (the repeat toggle) is on by default and plays on past the end of the song. Off plays
   from the picked time to the end of the song once, then stops and rewinds.
-- **Click or drag** the timeline to pick a time. While the pattern plays it carries on from there;
-  while it is stopped, the next Play starts there. The arrow keys move it once the playhead has
-  focus.
+- **Click or drag** anywhere on the timeline row, not only on its line, to pick a time. While the
+  pattern plays it carries on from there; while it is stopped, the next Play starts there. The
+  arrow keys move it once the playhead has focus.
+- **On a touch screen** a swipe across the timeline scrolls it and leaves the playhead where it
+  is. A tap picks the time under your finger, and a touch on the playhead line, or just beside
+  it, drags it.
 - **One row for the whole song**: every cycle is marked with a line and every step with a
   shorter tick, drawn behind the playhead. A cycle is at least 48 pixels wide, so a song longer
   than the window scrolls sideways. A faded edge shows there is more of the song that way. The

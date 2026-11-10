@@ -605,3 +605,24 @@ export type ScoreTranscription = {
   bars: ScoreBar[]
   warnings: string[]
 }
+
+/** A point on screen, in client pixels. */
+export interface ScreenPoint {
+  clientX: number
+  clientY: number
+}
+
+/** A pointer's position on the timeline track, with what it takes to turn it into a cycle. */
+export interface TrackPointerReading {
+  clientX: number
+  trackLeft: number
+  trackWidth: number
+  timelineBars: number
+  seekStep: number
+}
+
+/** A touch on the timeline in progress: a tap until it lifts, or a drag of the playhead. */
+export interface TimelineTouchGesture extends ScreenPoint {
+  pointerId: number
+  kind: 'tap' | 'drag'
+}
