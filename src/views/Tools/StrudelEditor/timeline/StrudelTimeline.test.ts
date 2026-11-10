@@ -16,6 +16,25 @@ const mountTimeline = (props: Partial<InstanceType<typeof StrudelTimeline>['$pro
     }
   })
 
+const touchEvent = (type: string, init: { clientX: number; clientY?: number }): Event =>
+  Object.assign(new Event(type, { bubbles: true }), {
+    pointerId: 7,
+    pointerType: 'touch',
+    clientY: 10,
+    ...init
+  })
+
+const mountTimelineOnWideTrack = () => {
+  const wrapper = mountTimeline({ playheadCycle: 0, timelineBars: 8 })
+  const track = wrapper.get('.strudel-timeline__track').element as HTMLElement
+  track.getBoundingClientRect = () => new DOMRect(0, 0, 800, 20)
+  return {
+    wrapper,
+    sliderLine: wrapper.get('.slider__track').element,
+    playhead: wrapper.get('[role="slider"]').element
+  }
+}
+
 describe('StrudelTimeline', () => {
   it('asks to stop when the Stop button is pressed', async () => {
     // Arrange
@@ -81,6 +100,63 @@ describe('StrudelTimeline', () => {
 
     // Assert
     expect(scroller.scrollLeft).toBe(0)
+  })
+
+  it('seeks to the point a touch taps, away from the playhead', async () => {
+    // Arrange
+    const { wrapper, sliderLine } = mountTimelineOnWideTrack()
+
+    // Act
+    sliderLine.dispatchEvent(touchEvent('pointerdown', { clientX: 400 }))
+    sliderLine.dispatchEvent(touchEvent('pointerup', { clientX: 402 }))
+    await wrapper.vm.$nextTick()
+
+    // Assert
+    expect(wrapper.emitted('seek')).toEqual([[4]])
+  })
+
+  it('leaves the playhead alone when a touch swipes to scroll the timeline', async () => {
+    // Arrange
+    const { wrapper, sliderLine } = mountTimelineOnWideTrack()
+
+    // Act
+    sliderLine.dispatchEvent(touchEvent('pointerdown', { clientX: 400 }))
+    sliderLine.dispatchEvent(touchEvent('pointermove', { clientX: 350 }))
+    sliderLine.dispatchEvent(touchEvent('pointermove', { clientX: 300 }))
+    sliderLine.dispatchEvent(touchEvent('pointerup', { clientX: 300 }))
+    await wrapper.vm.$nextTick()
+
+    // Assert
+    expect(wrapper.emitted('seek')).toBeUndefined()
+  })
+
+  it('leaves the playhead alone when the browser takes the touch over to scroll', async () => {
+    // Arrange
+    const { wrapper, sliderLine } = mountTimelineOnWideTrack()
+
+    // Act
+    sliderLine.dispatchEvent(touchEvent('pointerdown', { clientX: 400 }))
+    sliderLine.dispatchEvent(touchEvent('pointermove', { clientX: 390 }))
+    sliderLine.dispatchEvent(touchEvent('pointercancel', { clientX: 0, clientY: 0 }))
+    await wrapper.vm.$nextTick()
+
+    // Assert
+    expect(wrapper.emitted('seek')).toBeUndefined()
+  })
+
+  it('drags the playhead along with a touch that starts on it', async () => {
+    // Arrange
+    const { wrapper, playhead } = mountTimelineOnWideTrack()
+
+    // Act
+    playhead.dispatchEvent(touchEvent('pointerdown', { clientX: 0 }))
+    playhead.dispatchEvent(touchEvent('pointermove', { clientX: 100 }))
+    playhead.dispatchEvent(touchEvent('pointermove', { clientX: 200 }))
+    playhead.dispatchEvent(touchEvent('pointerup', { clientX: 200 }))
+    await wrapper.vm.$nextTick()
+
+    // Assert
+    expect(wrapper.emitted('seek')).toEqual([[1], [2], [2]])
   })
 
   it('declares the playhead slider horizontal', () => {

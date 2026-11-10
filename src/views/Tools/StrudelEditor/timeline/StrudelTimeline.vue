@@ -5,6 +5,7 @@ import IconButton from '@/components/IconButton.vue'
 import { Slider } from '@/components/ui/slider'
 import { Toggle } from '@/components/ui/toggle'
 import { STRUDEL_TIMELINE_MIN_CYCLE_WIDTH, STRUDEL_TIMELINE_SEEK_STEP } from '../config'
+import { useTouchSeek } from './useTouchSeek'
 
 const props = defineProps<{
   playheadCycle: number
@@ -69,6 +70,13 @@ const onSliderMoved = (values: number[] | undefined): void => {
     emit('seek', cycle)
   }
 }
+
+const trackElement = ref<HTMLElement | null>(null)
+const touchSeek = useTouchSeek(
+  trackElement,
+  () => props.timelineBars,
+  (cycle) => emit('seek', cycle)
+)
 
 const trackStyle = computed(() => ({
   width: `max(100%, ${props.timelineBars * STRUDEL_TIMELINE_MIN_CYCLE_WIDTH}px)`,
@@ -141,7 +149,15 @@ const timeReadout = computed(() => `${(props.playheadCycle / props.cyclesPerSeco
     >
       <!-- The track hosts the cycle and step marks: scoped styles never reach the slider's
            radix root, so the marks cannot live on the slider itself. -->
-      <div class="strudel-timeline__track" :style="trackStyle">
+      <div
+        ref="trackElement"
+        class="strudel-timeline__track"
+        :style="trackStyle"
+        @pointerdown.capture="touchSeek.onPointerDown"
+        @pointermove.capture="touchSeek.onPointerMove"
+        @pointerup.capture="touchSeek.onPointerUp"
+        @pointercancel.capture="touchSeek.onPointerCancel"
+      >
         <Slider
           :model-value="[playheadCycle]"
           :min="0"
