@@ -837,6 +837,38 @@ describe('StrudelEditor audible playback', () => {
     }
   )
 
+  it.each([{ modeLabel: 'Code' }, { modeLabel: 'Flow' }])(
+    'fits the $modeLabel header on a 375px phone with every tool icon on one row',
+    { timeout: 30000 },
+    async ({ modeLabel }) => {
+      // Arrange
+      await page.viewport(375, 812)
+      const wrapper = mount(StrudelEditor, { attachTo: document.body })
+
+      try {
+        await vi.waitFor(
+          () => {
+            expect(document.querySelector('.cm-content')).not.toBeNull()
+          },
+          { timeout: 15000 }
+        )
+
+        // Act
+        await page.getByRole('button', { name: modeLabel, exact: true }).click()
+
+        // Assert
+        const modeGroup = page.getByRole('group', { name: 'Editor mode' }).element()
+        expect(modeGroup.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
+        const toolTops = [...document.querySelectorAll('.strudel-editor__toolbar > button')].map(
+          (toolButton) => toolButton.getBoundingClientRect().top
+        )
+        expect(new Set(toolTops).size).toBe(1)
+      } finally {
+        wrapper.unmount()
+      }
+    }
+  )
+
   it.each(STRUDEL_MUSIC_STYLES.map((style) => ({ styleId: style.id, keyword: style.keywords[0] })))(
     'applies every $styleId hint and idea and plays the result with no missing sounds',
     { timeout: 90000 },

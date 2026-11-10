@@ -637,16 +637,26 @@ onBeforeUnmount(() => {
   color: var(--color-destructive);
 }
 
+/* At phone width the mode switch wraps to its own row; margin-left: auto keeps it on the right. */
 .strudel-editor__code-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-3);
 }
 
 .strudel-editor__toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-1);
+}
+
+/* Ten 2rem icons fit a 375px phone only with the gap closed; wider gaps push the last one to a row of its own. */
+@media (width <= 480px) {
+  .strudel-editor__toolbar {
+    gap: var(--spacing-px);
+  }
 }
 
 .strudel-editor__mode {
