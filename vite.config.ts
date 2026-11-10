@@ -23,7 +23,9 @@ const packages = [
   'history',
   'strudel-flow'
 ]
-const allowedHosts = ['cnotv.xyz', 'test.cnotv.xyz', 'game.cnotv.xyz', 'cnotv.github.io']
+// The leading dot allows cnotv.xyz and every subdomain: lab, games, strudel and test all reach
+// a `vite preview` container, which rejects any Host header it does not list.
+const allowedHosts = ['.cnotv.xyz', 'cnotv.github.io']
 
 // The starters are standalone Vite apps, and the playground also runs them in a frame. The dev
 // server already serves any HTML below the root; a build only emits theirs if it is an entry.
