@@ -79,7 +79,7 @@ docker compose up -d --build multiplayer-server
 docker compose logs -f multiplayer-server
 ```
 
-Or directly, on whichever port suits. The demo view at `/experiments/MultiplayerClient`
+Or directly, on whichever port suits. The demo view at `/tests/MultiplayerClient`
 defaults to `http://localhost:3000`, so mapping to 3000 lets it connect without editing the
 field:
 

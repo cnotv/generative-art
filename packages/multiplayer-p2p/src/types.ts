@@ -7,6 +7,10 @@ export interface P2PConfig {
   appId?: string
   /** Minimum ms between position broadcasts (default: 30) */
   throttleMs?: number
+  /** Nostr relays used to find peers (default: a short list that accepts Trystero events) */
+  relayUrls?: string[]
+  /** How many of the relays to use at once (default: 3) */
+  relayRedundancy?: number
 }
 
 export interface P2PSession {

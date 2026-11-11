@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { PlayerState } from './types'
+import { DEFAULT_RELAY_URLS, DEFAULT_RELAY_REDUNDANCY } from './config'
 
 // ── Mock trystero/nostr ────────────────────────────────────────────────────
 type ActionCallback<T> = (data: T, peerId: string) => void
@@ -67,13 +68,29 @@ describe('p2pJoin', () => {
   it('calls joinRoom with the provided roomId and default appId', async () => {
     const { joinRoom } = await import('trystero/nostr')
     p2pJoin('level-abc')
-    expect(joinRoom).toHaveBeenCalledWith({ appId: 'webgamekit' }, 'level-abc')
+    expect(joinRoom).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appId: 'webgamekit',
+        relayUrls: DEFAULT_RELAY_URLS,
+        relayRedundancy: DEFAULT_RELAY_REDUNDANCY
+      }),
+      'level-abc'
+    )
   })
 
   it('uses custom appId from config', async () => {
     const { joinRoom } = await import('trystero/nostr')
     p2pJoin('room-2', { appId: 'my-game' })
-    expect(joinRoom).toHaveBeenCalledWith({ appId: 'my-game' }, 'room-2')
+    expect(joinRoom).toHaveBeenCalledWith(expect.objectContaining({ appId: 'my-game' }), 'room-2')
+  })
+
+  it('uses custom relays from config', async () => {
+    const { joinRoom } = await import('trystero/nostr')
+    p2pJoin('room-3', { relayUrls: ['wss://example.test'], relayRedundancy: 1 })
+    expect(joinRoom).toHaveBeenCalledWith(
+      expect.objectContaining({ relayUrls: ['wss://example.test'], relayRedundancy: 1 }),
+      'room-3'
+    )
   })
 })
 

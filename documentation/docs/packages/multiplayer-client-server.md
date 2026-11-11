@@ -223,6 +223,6 @@ interface MultiplayerServerHandle {
 
 ## Demo
 
-`/experiments/MultiplayerClient` connects to a server URL, lists connected players, and
+`/tests/MultiplayerClient` connects to a server URL, lists connected players, and
 broadcasts a random position on demand. It needs a Socket.IO server running separately —
 the app itself is a static build and ships no server.

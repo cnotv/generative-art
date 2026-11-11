@@ -1,5 +1,6 @@
 import { joinRoom, selfId } from 'trystero/nostr'
 import type { P2PConfig, P2PSession } from './types'
+import { DEFAULT_APP_ID, DEFAULT_RELAY_URLS, DEFAULT_RELAY_REDUNDANCY } from './config'
 
 /**
  * Check whether the browser exposes crypto.subtle (requires HTTPS or localhost).
@@ -18,7 +19,7 @@ export const p2pIsSupported = (): boolean => {
 }
 
 /**
- * Join a P2P room using WebRTC via Trystero (torrent signaling — no server required).
+ * Join a P2P room using WebRTC via Trystero (Nostr relay signalling, no server of our own).
  * All peers in the same roomId can communicate directly.
  * Requires a secure context (HTTPS or localhost) — throws if crypto.subtle is unavailable.
  * @param roomId - Shared identifier for the game room (e.g. "level-1-abc123")
@@ -33,8 +34,14 @@ export const p2pJoin = (roomId: string, config?: P2PConfig): P2PSession => {
     )
   }
 
-  const appId = config?.appId ?? 'webgamekit'
-  const room = joinRoom({ appId }, roomId)
+  const room = joinRoom(
+    {
+      appId: config?.appId ?? DEFAULT_APP_ID,
+      relayUrls: config?.relayUrls ?? DEFAULT_RELAY_URLS,
+      relayRedundancy: config?.relayRedundancy ?? DEFAULT_RELAY_REDUNDANCY
+    },
+    roomId
+  )
 
   const destroy = () => {
     room.leave()
