@@ -1,7 +1,4 @@
 {
-  "Landing Page": {
-    "description": "Browse all generative art experiments, games, and interactive 3D tools."
-  },
   "Camera Presets": {
     "description": "Explore different Three.js camera configurations and presets."
   },
