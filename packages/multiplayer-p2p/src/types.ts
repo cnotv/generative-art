@@ -9,7 +9,7 @@ export interface P2PConfig {
   throttleMs?: number
   /** Nostr relays used to find peers (default: a short list that accepts Trystero events) */
   relayUrls?: string[]
-  /** How many of the relays to use at once (default: 3) */
+  /** How many of the relays to use at once (default: 5) */
   relayRedundancy?: number
 }
 
