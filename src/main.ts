@@ -9,6 +9,9 @@ import App from './App.vue'
 import router from './router'
 import * as Sentry from '@sentry/vue'
 import { useUmami } from '@/utils/umami'
+import { polyfillRandomUuid } from '@/utils/polyfillRandomUuid'
+
+polyfillRandomUuid()
 
 const { loadUmami } = useUmami()
 

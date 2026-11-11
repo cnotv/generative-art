@@ -12,7 +12,7 @@ broadcasting that to everyone. This example adds a coin arena on top of it.
 pnpm --filter @webgamekit/example-multiplayer-server start
 ```
 
-It listens on `PORT` (default 3000), so the demo view at `/experiments/MultiplayerClient`
+It listens on `PORT` (default 3000), so the demo view at `/tests/MultiplayerClient`
 connects to it without changing the URL field.
 
 ## What it demonstrates

@@ -8,9 +8,6 @@
   "Camera Presets": {
     "description": "Explore different Three.js camera configurations and presets."
   },
-  "Complex Animation": {
-    "description": "Complex layered animation sequences with Three.js timeline."
-  },
   "Continuous World": {
     "description": "Procedurally generated infinite terrain with real-time chunk streaming."
   },
@@ -36,10 +33,10 @@
     "description": "Detailed 3D Moon view with realistic surface shading."
   },
   "Matchmaker": {
-    "description": "Browse online players and negotiate a P2P session \u2014 request, accept, or ignore individual matches."
+    "description": "Browse online players and negotiate a P2P session — request, accept, or ignore individual matches."
   },
   "Multiplayer Client": {
-    "description": "Socket.IO client demo \u2014 connect to a dedicated server and watch the player registry update."
+    "description": "Socket.IO client demo — connect to a dedicated server and watch the player registry update."
   },
   "Multiplayer P 2 P": {
     "description": "Peer-to-peer multiplayer demo using WebRTC data channels."
@@ -71,9 +68,6 @@
   "Visualizer Main": {
     "description": "Music visualiser with frequency-reactive 3D geometry."
   },
-  "Chick Run": {
-    "description": "Endless runner game \u2014 dodge obstacles as a speedy chick."
-  },
   "Generative Canvas": {
     "description": "Compile a Vue component in the page and hot-swap it into a sandboxed frame without losing the page's state."
   },
@@ -87,7 +81,7 @@
     "description": "3D maze navigation game with procedural maze generation and pathfinding enemies."
   },
   "Tilt Maze": {
-    "description": "Roll a ball through a maze of pits by tilting your phone \u2014 each escape levels up into a finer, deadlier maze."
+    "description": "Roll a ball through a maze of pits by tilting your phone — each escape levels up into a finer, deadlier maze."
   },
   "Pictionary": {
     "description": "Multiplayer drawing and guessing game with real-time collaboration."
@@ -97,9 +91,6 @@
   },
   "Cube Matrix 2": {
     "description": "Second iteration of the cube matrix with enhanced shader effects."
-  },
-  "Cube Matrix Threejs": {
-    "description": "Three.js GPU-accelerated cube matrix with instanced rendering."
   },
   "Cube Sequences": {
     "description": "Sequenced cube animations driven by a custom timeline."
@@ -119,9 +110,6 @@
   "Metal Cubes 2": {
     "description": "Enhanced metallic cube array with dynamic lighting."
   },
-  "Simplex Cached": {
-    "description": "Simplex noise terrain with chunk caching for performance."
-  },
   "Simplex Worker": {
     "description": "Simplex noise generation offloaded to a Web Worker."
   },
@@ -130,9 +118,6 @@
   },
   "Mixamo Playground": {
     "description": "Test and preview Mixamo character animations in 3D."
-  },
-  "Model Editor": {
-    "description": "Reshape any humanoid model, rigged or not: resize every body part and facial feature, then download the result as a GLB."
   },
   "Rig Animator": {
     "description": "Upload a rigged or plain model, pose its skeleton, and interpolate between poses to export a standalone animation."
