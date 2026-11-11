@@ -4,6 +4,7 @@ import { VIEW_META } from '@/config/viewsMeta'
 import { updatePageMeta } from '@/utils/pageMeta'
 import { OWNER_NAME, OWNER_PROFESSION } from '@/views/Experiments/LandingPage/config'
 
+const INITIAL_PAGE_PATH = '/tools/RigAnimator'
 const HOME_TITLE = `${OWNER_NAME} - ${OWNER_PROFESSION}`
 
 const router = createRouter({
@@ -11,12 +12,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: () => import('@/views/Experiments/LandingPage/LandingPage.vue')
+      redirect: INITIAL_PAGE_PATH
     },
     {
       path: '/:pathMatch(.*)*',
       name: 'NotFound',
-      redirect: '/experiments/LandingPage'
+      redirect: INITIAL_PAGE_PATH
     },
     ...generatedRoutes.filter((r) => r !== null)
   ]
