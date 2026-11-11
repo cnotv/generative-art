@@ -1,6 +1,11 @@
 {
   "name": "@webgamekit/multiplayer-server",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cnotv/generative-art.git",
+    "directory": "packages/multiplayer-server"
+  },
   "type": "module",
   "files": [
     "dist"
