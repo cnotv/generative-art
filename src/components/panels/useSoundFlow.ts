@@ -1,7 +1,6 @@
 import { ref, watch, type Ref } from 'vue'
 import { useStrudelFlow } from '@webgamekit/strudel-flow'
-import { useStrudelSounds } from '@/views/Tools/StrudelEditor/useStrudelSounds'
-import type { StrudelEditorMode } from '@/views/Tools/StrudelEditor/types'
+import { useStrudelSounds, type StrudelEditorMode } from '@webgamekit/strudel-editor/helpers'
 
 export const UNPARSEABLE_FLOW_MESSAGE =
   'This code has a syntax error, so it cannot open as a flow. Fix it in the code view.'

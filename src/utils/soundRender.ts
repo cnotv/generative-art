@@ -1,5 +1,5 @@
 import type { SoundSlot } from '@/types/soundPanel'
-import type { StrudelPlayback } from '@/views/Tools/StrudelEditor/types'
+import type { StrudelPlayback } from '@webgamekit/strudel-editor'
 
 export const PEAK_TARGET = 0.9
 export const SEAM_CROSSFADE_SECONDS = 0.03
@@ -16,7 +16,7 @@ const playbackCache: { load: Promise<StrudelPlayback> | null } = { load: null }
  * @returns The playback that renders offline.
  */
 const loadPlayback = (): Promise<StrudelPlayback> => {
-  playbackCache.load ??= import('@/views/Tools/StrudelEditor/strudelPlayback')
+  playbackCache.load ??= import('@webgamekit/strudel-editor')
     .then(({ loadDefaultStrudelPlayback }) =>
       loadDefaultStrudelPlayback({
         onEvaluated: NO_OP,

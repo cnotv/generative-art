@@ -20,8 +20,7 @@ const packages = [
   'dictionary',
   'chat',
   'canvas-editor',
-  'history',
-  'strudel-flow'
+  'history'
 ]
 // The leading dot allows cnotv.xyz and every subdomain: lab, games, strudel and test all reach
 // a `vite preview` container, which rejects any Host header it does not list.
@@ -57,14 +56,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
-      ...Object.entries(packageAliases).map(([find, replacement]) => ({ find, replacement })),
-      // @strudel/midi's source reaches superdough through a monorepo-only relative path.
-      {
-        find: /^\.\.\/superdough\/helpers\.mjs$/,
-        replacement: fileURLToPath(
-          new URL('./src/views/Tools/StrudelEditor/strudelMidiScheduling.ts', import.meta.url)
-        )
-      }
+      ...Object.entries(packageAliases).map(([find, replacement]) => ({ find, replacement }))
     ],
     dedupe: ['three']
   },
@@ -95,8 +87,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    // @strudel/midi stays out of pre-bundling so the alias above can reach its relative import.
-    exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr', '@strudel/midi']
+    exclude: ['@dimforge/rapier3d-compat', 'trystero', 'trystero/nostr']
   },
   server: {
     allowedHosts

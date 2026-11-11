@@ -5,11 +5,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { usePanelsStore } from '@/stores/panels'
 import { useSoundPanelStore } from '@/stores/soundPanel'
-import { writeStrudelAddress } from '@/views/Tools/StrudelEditor/strudelAddress'
+import { writeStrudelAddress } from '@webgamekit/strudel-editor/helpers'
 
 // The whole editor, with its patterns, sounds, timeline and MIDI, only loads when it is opened.
-const StrudelEditor = defineAsyncComponent(
-  () => import('@/views/Tools/StrudelEditor/StrudelEditor.vue')
+const StrudelEditor = defineAsyncComponent(() =>
+  import('@webgamekit/strudel-editor').then((module) => module.StrudelEditor)
 )
 
 const soundStore = useSoundPanelStore()
