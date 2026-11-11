@@ -13,12 +13,12 @@ Every sound here is a Strudel pattern rendered by the Strudel Editor, so the fil
 what the editor plays and the pattern can be edited and rendered again. Writing the pattern and
 choosing between WAV and MIDI are covered by `workflow:music-sound`, and what a sound should be
 made of by `sound-design`; this file is how to do it in this repository. The editor itself is
-documented in `documentation/docs/guides/strudel-editor.md`.
+documented in [`guides/strudel-editor.md`](https://github.com/cnotv/strudel-node-editor/blob/main/documentation/docs/guides/strudel-editor.md) in strudel-node-editor.
 
 ## 1. Write the pattern for this editor
 
 Before writing a named style, look it up: its entry in
-`documentation/docs/guides/strudel-genres.md` for the form, groove and harmonic language, and
+[`guides/strudel-genres.md`](https://github.com/cnotv/strudel-node-editor/blob/main/documentation/docs/guides/strudel-genres.md) in strudel-node-editor for the form, groove and harmonic language, and
 its `STRUDEL_MUSIC_STYLES` entry in `src/views/Tools/StrudelEditor/config.ts` for the tempo,
 roles, instruments and visuals the editor's hints expect.
 
@@ -61,7 +61,7 @@ bass or chord line inline: a layer written as `s(kicks)` hides its drums from th
 
 After a rewrite, export the old and the new version to MIDI and compare them track by track. Every
 note should match at the same time: a refactor must not change the music. The fourteen style songs
-were rewritten this way, and `documentation/docs/journey/strudel-genre-songs.md` shows what each
+were rewritten this way, and [`journey/strudel-genre-songs.md`](https://github.com/cnotv/strudel-node-editor/blob/main/documentation/docs/journey/strudel-genre-songs.md) in strudel-node-editor shows what each
 pattern became.
 
 ## 2. Render it

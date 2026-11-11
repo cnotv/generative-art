@@ -8,7 +8,7 @@ paths:
 # Music
 
 Before writing or changing a style or a song, read its entry in
-`documentation/docs/guides/strudel-genres.md` and its `STRUDEL_MUSIC_STYLES` entry in
+[`guides/strudel-genres.md`](https://github.com/cnotv/strudel-node-editor/blob/main/documentation/docs/guides/strudel-genres.md) in strudel-node-editor and its `STRUDEL_MUSIC_STYLES` entry in
 `src/views/Tools/StrudelEditor/config.ts`. The first gives the form, groove, harmony and melody;
 the second the tempo, roles, instruments and visuals the hints expect.
 

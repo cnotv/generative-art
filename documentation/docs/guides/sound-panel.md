@@ -58,7 +58,7 @@ loads on the first Apply, not when the game starts, so a game that nobody edits 
 
 Edits live in the page only: a reload goes back to the shipped sounds. To keep one, copy the code
 into the sound's `.strudel` file and render it with `scripts/strudel-export.mjs` (see the
-[Strudel Editor guide](./strudel-editor.md)).
+[Strudel Editor guide](https://cnotv.github.io/strudel-node-editor/guides/strudel-editor)).
 
 ## Registering a game's sounds
 
