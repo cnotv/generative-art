@@ -1,6 +1,11 @@
 {
   "name": "@webgamekit/game",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cnotv/generative-art.git",
+    "directory": "packages/game"
+  },
   "type": "module",
   "files": [
     "dist"

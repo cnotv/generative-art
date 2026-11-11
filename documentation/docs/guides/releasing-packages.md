@@ -108,6 +108,12 @@ a package's major version whenever a package it lists in `peerDependencies` chan
 one version for the whole scope that drags all of them along. Depend on a sibling through
 `dependencies` only.
 
+**Provenance needs `repository`.** The release publishes with provenance, which signs each
+tarball with the repository that built it, and npm rejects the upload with a 422 when the
+manifest's `repository.url` does not name that repository. Every public manifest carries
+`repository` with this repository's URL and the package folder as `directory`;
+`src/tests/packageManifests.test.ts` fails for a package that does not.
+
 **`files` decides what ships.** Each manifest publishes only `dist`. A package that starts
 depending on a file outside `dist` at runtime will pass every local check and fail once
 installed.
