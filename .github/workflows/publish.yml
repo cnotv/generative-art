@@ -44,11 +44,15 @@ jobs:
       # because Actions may not open pull requests here and the main ruleset refuses direct
       # pushes. So this only publishes: every package whose version is not on npm yet goes
       # out, and anything already there is skipped.
+      # verify:packages above already built every dist. Publishing runs in parallel, and each
+      # package's prepublishOnly and prepare would rebuild it, emptying a dependency's dist
+      # while a dependent type-checks against it, so lifecycle scripts are skipped here.
       - name: Publish
         run: pnpm changeset publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+          NPM_CONFIG_IGNORE_SCRIPTS: true
 
       - name: Push release tags
         run: git push origin --tags

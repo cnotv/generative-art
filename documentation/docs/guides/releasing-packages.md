@@ -114,6 +114,12 @@ manifest's `repository.url` does not name that repository. Every public manifest
 `repository` with this repository's URL and the package folder as `directory`;
 `src/tests/packageManifests.test.ts` fails for a package that does not.
 
+**Publishing never rebuilds.** Changesets publishes the packages in parallel, and each
+package's `prepublishOnly` and `prepare` would rebuild it, so a package with a dependency
+(canvas-editor on history) could type-check while that dependency's `dist` was being emptied.
+The release step sets `NPM_CONFIG_IGNORE_SCRIPTS` and publishes the builds `verify:packages`
+made one step earlier.
+
 **`files` decides what ships.** Each manifest publishes only `dist`. A package that starts
 depending on a file outside `dist` at runtime will pass every local check and fail once
 installed.
