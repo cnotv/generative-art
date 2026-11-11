@@ -2,21 +2,21 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { generatedRoutes } from '@/config/router'
 import { VIEW_META } from '@/config/viewsMeta'
 import { updatePageMeta } from '@/utils/pageMeta'
-import { OWNER_NAME, OWNER_PROFESSION } from '@/views/Experiments/LandingPage/config'
 
-const HOME_TITLE = `${OWNER_NAME} - ${OWNER_PROFESSION}`
+const INITIAL_PAGE_PATH = '/tools/RigAnimator'
+const HOME_TITLE = 'Generative Art'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      component: () => import('@/views/Experiments/LandingPage/LandingPage.vue')
+      redirect: INITIAL_PAGE_PATH
     },
     {
       path: '/:pathMatch(.*)*',
       name: 'NotFound',
-      redirect: '/experiments/LandingPage'
+      redirect: INITIAL_PAGE_PATH
     },
     ...generatedRoutes.filter((r) => r !== null)
   ]
