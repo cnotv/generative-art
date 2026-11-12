@@ -80,15 +80,21 @@ set `--strudel-editor-height` on the editor or any ancestor:
 
 ## Reading and writing the editor's state
 
-| Export                                       | Use                                                                                                  |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `StrudelCodeEditor`                          | Only the CodeMirror editor, with `v-model:code` and `evaluate`, `stop` and `ready` events.           |
-| `STRUDEL_SAVED_CODE_STORAGE_KEY`             | The `localStorage` key holding the code the editor last had, so a host can seed or read it.          |
-| `readStrudelAddress`, `writeStrudelAddress`  | Read or clear `tab`, `pattern` and `mode` on a route query, so a host can keep its own query intact. |
-| `readStrudelNoteBars`                        | The note bars of a pattern's code, for drawing a timeline.                                           |
-| `useStrudelSounds`                           | The sound names Strudel has loaded.                                                                  |
-| `loadDefaultStrudelPlayback`                 | A playback with no UI, for playing or rendering code in the host.                                    |
-| Types `StrudelEditorMode`, `StrudelPlayback` | The shapes the above return.                                                                         |
+The package has two entries, so a host that only needs a helper does not load the editor.
+Importing a helper from the root would pull CodeMirror and the Strudel engine into the host's
+main bundle; in this repo that made the main chunk half a megabyte larger.
+
+| Export                                       | Entry            | Use                                                                                                  |
+| -------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `StrudelCodeEditor`                          | root             | Only the CodeMirror editor, with `v-model:code` and `evaluate`, `stop` and `ready` events.           |
+| `loadDefaultStrudelPlayback`                 | root             | A playback with no UI, for playing or rendering code in the host.                                    |
+| `STRUDEL_SAVED_CODE_STORAGE_KEY`             | `/helpers`       | The `localStorage` key holding the code the editor last had, so a host can seed or read it.          |
+| `readStrudelAddress`, `writeStrudelAddress`  | `/helpers`       | Read or clear `tab`, `pattern` and `mode` on a route query, so a host can keep its own query intact. |
+| `readStrudelNoteBars`                        | `/helpers`       | The note bars of a pattern's code, for drawing a timeline.                                           |
+| `useStrudelSounds`                           | `/helpers`       | The sound names Strudel has loaded.                                                                  |
+| Types `StrudelPlayback`, `StrudelEditorMode` | root, `/helpers` | The shapes the above return.                                                                         |
+
+The helpers import from `@webgamekit/strudel-editor/helpers`.
 
 Because the editor writes its tab and pattern into the route query, a host that does not want
 them should clear them when it closes the editor, as the Sound panel does with

@@ -8,9 +8,17 @@ import { useSoundPanelStore } from '@/stores/soundPanel'
 import type { SoundSlot } from '@/types/soundPanel'
 
 vi.mock('@/utils/soundRender', () => ({ renderStrudelSound: vi.fn() }))
-vi.mock('@/views/Tools/StrudelEditor/StrudelEditor.vue', () => ({
-  __esModule: true,
-  default: defineComponent({ template: '<div data-testid="editor"><slot name="actions" /></div>' })
+vi.mock('@webgamekit/strudel-editor', () => ({
+  StrudelEditor: defineComponent({
+    template: '<div data-testid="editor"><slot name="actions" /></div>'
+  })
+}))
+vi.mock('@webgamekit/strudel-editor/helpers', () => ({
+  STRUDEL_SAVED_CODE_STORAGE_KEY: 'strudel-editor-code',
+  writeStrudelAddress: (
+    query: Record<string, unknown>,
+    change: { patternId?: string; tabName?: string }
+  ) => ({ ...query, pattern: change.patternId, tab: change.tabName })
 }))
 const { mockReplace } = vi.hoisted(() => ({ mockReplace: vi.fn() }))
 vi.mock('vue-router', () => ({

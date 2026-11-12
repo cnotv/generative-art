@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { useSoundFlow, UNPARSEABLE_FLOW_MESSAGE } from './useSoundFlow'
 
-vi.mock('@/views/Tools/StrudelEditor/useStrudelSounds', () => ({
+vi.mock('@webgamekit/strudel-editor/helpers', () => ({
   useStrudelSounds: () => ({
     sampleGroups: ref([]),
     voiceGroups: ref([]),

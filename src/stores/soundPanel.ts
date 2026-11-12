@@ -3,7 +3,7 @@ import { computed, ref, shallowRef } from 'vue'
 import { renderStrudelSound } from '@/utils/soundRender'
 import { playPreview } from '@/utils/soundPreview'
 import { readStorage, writeStorage } from '@/utils/storage'
-import { STRUDEL_SAVED_CODE_STORAGE_KEY } from '@/views/Tools/StrudelEditor/config'
+import { STRUDEL_SAVED_CODE_STORAGE_KEY } from '@webgamekit/strudel-editor/helpers'
 import type { SoundApplyHandler, SoundSlot, SoundSlotStatus } from '@/types/soundPanel'
 
 /**

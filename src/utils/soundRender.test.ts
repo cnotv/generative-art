@@ -6,7 +6,7 @@ const playback = vi.hoisted(() => ({
   renderToWavBytes: vi.fn()
 }))
 const loadDefaultStrudelPlayback = vi.hoisted(() => vi.fn())
-vi.mock('@/views/Tools/StrudelEditor/strudelPlayback', () => ({ loadDefaultStrudelPlayback }))
+vi.mock('@webgamekit/strudel-editor', () => ({ loadDefaultStrudelPlayback }))
 
 import {
   crossfadeLoopSeam,

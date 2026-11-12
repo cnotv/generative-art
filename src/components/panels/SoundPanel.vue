@@ -5,13 +5,13 @@ import GenericPanel from './GenericPanel.vue'
 import { Button } from '@/components/ui/button'
 import ButtonSelector from '@/components/ui/button-selector/ButtonSelector.vue'
 import { STRUDEL_FLOW_EDITOR_MODE_OPTIONS } from '@webgamekit/strudel-flow'
-import { readStrudelNoteBars } from '@/views/Tools/StrudelEditor/noteBars'
+import { readStrudelNoteBars } from '@webgamekit/strudel-editor/helpers'
 import { useSoundPanelStore } from '@/stores/soundPanel'
 import { useSoundFlow } from './useSoundFlow'
 
 // CodeMirror stays out of every game's bundle until the panel is opened.
-const StrudelCodeEditor = defineAsyncComponent(
-  () => import('@/views/Tools/StrudelEditor/StrudelCodeEditor.vue')
+const StrudelCodeEditor = defineAsyncComponent(() =>
+  import('@webgamekit/strudel-editor').then((module) => module.StrudelCodeEditor)
 )
 
 // Vue Flow is a large canvas library and only loads when someone opens the flow.

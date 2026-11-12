@@ -19,7 +19,8 @@ documented in `documentation/docs/guides/strudel-editor.md`.
 
 Before writing a named style, look it up: its entry in
 `documentation/docs/guides/strudel-genres.md` for the form, groove and harmonic language, and
-its `STRUDEL_MUSIC_STYLES` entry in `src/views/Tools/StrudelEditor/config.ts` for the tempo,
+its `STRUDEL_MUSIC_STYLES` entry in the editor package's `config.ts` in the cnotv/strudel-node-editor
+repository for the tempo,
 roles, instruments and visuals the editor's hints expect.
 
 Note: when modifying a song, always modify the claps and hats too: not every song should sound

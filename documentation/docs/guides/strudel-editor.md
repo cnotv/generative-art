@@ -4,6 +4,12 @@ sidebar_position: 25
 
 # Live-coding music with Strudel
 
+The editor's source lives in [cnotv/strudel-node-editor](https://github.com/cnotv/strudel-node-editor),
+which also serves it on its own. This site mounts it from the published
+`@webgamekit/strudel-editor` package at `/tools/StrudelEditor` and in the Sound panel; see
+[Embedding the Strudel Editor](./embedding-the-strudel-editor.md). The paths below are in that
+repository, under `packages/strudel-editor/src/editor/`.
+
 The Strudel Editor at `/tools/StrudelEditor` reproduces the strudel.cc player: pick a pattern,
 edit the code, and press the play button above the editor.
 
@@ -418,7 +424,7 @@ when it differs from the committed file, so upgrading a Strudel package without 
 fails the unit tests. To regenerate it:
 
 ```sh
-pnpm vitest run src/views/Tools/StrudelEditor/codeEditor/strudelDocumentation.test.ts -u
+pnpm vitest run packages/strudel-editor/src/editor/codeEditor/strudelDocumentation.test.ts -u
 ```
 
 ## Turning an MP3 into a pattern
@@ -703,5 +709,5 @@ The electro tunes are ported from [strudel.cc](https://strudel.cc/) repl tunes b
 under CC BY-NC-SA 4.0. The eight style songs were written for this editor.
 
 The Strudel engine is AGPL-3.0-or-later while this repo is MIT, so a deployed build of this
-view carries that obligation. The dependency stays isolated to
-`src/views/Tools/StrudelEditor/` for that reason.
+view carries that obligation. The engine stays isolated in the `@webgamekit/strudel-editor`
+package for that reason.
