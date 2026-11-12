@@ -94,6 +94,19 @@ describe('p2pJoin', () => {
   })
 })
 
+describe('default relays', () => {
+  it('pins the relays that were seen to deliver peers and uses all of them', () => {
+    expect(DEFAULT_RELAY_URLS).toEqual([
+      'wss://relay.angor.io',
+      'wss://relay.satlantis.io',
+      'wss://relay.mostro.network',
+      'wss://relay.snort.social',
+      'wss://nostr.oxtr.dev'
+    ])
+    expect(DEFAULT_RELAY_REDUNDANCY).toBe(DEFAULT_RELAY_URLS.length)
+  })
+})
+
 describe('p2pLeave', () => {
   beforeEach(() => {
     vi.clearAllMocks()
