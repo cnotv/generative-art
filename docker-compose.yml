@@ -18,3 +18,56 @@ services:
     ports:
       - 3001:3001
     restart: unless-stopped
+
+  # Local development database. The credentials are throwaway defaults for a container that only
+  # listens on this machine; override them with POSTGRES_* in the shell or an .env file.
+  postgres:
+    image: postgres:17
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements,auto_explain
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - log_min_duration_statement=200ms
+      - -c
+      - auto_explain.log_min_duration=200ms
+      - -c
+      - auto_explain.log_analyze=on
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dev_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_not_a_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-generative_art_dev}
+    ports:
+      - 127.0.0.1:5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Transaction pooling: a server connection is lent out only for the length of one transaction.
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-dev_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_not_a_secret}
+      DB_NAME: ${POSTGRES_DB:-generative_art_dev}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      LISTEN_PORT: 6432
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+    ports:
+      - 127.0.0.1:6432:6432
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

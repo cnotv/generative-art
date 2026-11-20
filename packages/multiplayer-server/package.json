@@ -22,7 +22,8 @@
     "build": "vite build && tsc",
     "start": "node dist/main.js",
     "prepare": "vite build && tsc",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "migrate": "node-pg-migrate --migrations-dir migrations --database-url-var DATABASE_URL"
   },
   "publishConfig": {
     "access": "public"
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "node-pg-migrate": "^9.0.0",
     "typescript": "^5.0.0",
     "vite": "^5.0.0",
     "vitest": "^4.0.18"
